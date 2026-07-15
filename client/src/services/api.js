@@ -48,7 +48,8 @@ export const courseService = {
     enroll: (id) => API.post(`/courses/${id}/enroll`),
     getInstructorCourses: () => API.get('/courses/instructor/mine'),
     getStudentEnrollments: () => API.get('/courses/student/enrolled'),
-    toggleClearance: (enrollmentId) => API.patch(`/courses/enrollment/${enrollmentId}/clear`)
+    toggleClearance: (enrollmentId) => API.patch(`/courses/enrollment/${enrollmentId}/clear`),
+    streamVideo: (lessonId) => API.get(`/courses/lessons/${lessonId}/stream`)
 };
 
 // ── Quiz API Calls ─────────────────────────────────────────

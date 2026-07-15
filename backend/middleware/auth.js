@@ -36,6 +36,16 @@ const protect = async (req, res, next) => {
             return res.status(401).json({ success: false, message: 'Your account has been deactivated. Contact admin.' });
         }
 
+        // Validate that token matches the latest login session
+        if (decoded.lastLogin && req.user.lastLoginTimestamp) {
+            const tokenTime = new Date(decoded.lastLogin).getTime();
+            const userTime = new Date(req.user.lastLoginTimestamp).getTime();
+            // If database has a newer login timestamp, reject the request (allow 1s tolerance for saves)
+            if (userTime - tokenTime > 1000) {
+                return res.status(401).json({ success: false, message: 'Your session has been invalidated by a newer login.' });
+            }
+        }
+
         next();
     } catch (err) {
         return res.status(401).json({ success: false, message: 'Session expired or token invalid. Please log in again.' });
@@ -58,4 +68,29 @@ const authorizeRoles = (...allowedRoles) => {
     };
 };
 
-module.exports = { protect, authorizeRoles };
+/**
+ * optionalProtect - Optionally verifies JWT and hydrates req.user if token is present
+ */
+const optionalProtect = async (req, res, next) => {
+    let token;
+
+    if (req.cookies && req.cookies.token) {
+        token = req.cookies.token;
+    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+        return next();
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = await User.findById(decoded.id).select('-securedPassword');
+        next();
+    } catch (err) {
+        next(); // Ignore errors, proceed as guest
+    }
+};
+
+module.exports = { protect, authorizeRoles, optionalProtect };

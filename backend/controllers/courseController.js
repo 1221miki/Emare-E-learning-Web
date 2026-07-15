@@ -58,7 +58,40 @@ const getCourseById = async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Course not found.' });
         }
 
-        res.status(200).json({ success: true, data: course });
+        // Check if user is authorized to view full videos (Admin, Instructor owner, or Cleared Student)
+        let isAuthorized = false;
+        if (req.user) {
+            if (req.user.assignedRole === 'Admin') {
+                isAuthorized = true;
+            } else if (req.user.assignedRole === 'Instructor' && course.creatorRef.toString() === req.user.id) {
+                isAuthorized = true;
+            } else if (req.user.assignedRole === 'Student') {
+                const enrollment = await Enrollment.findOne({ studentRef: req.user.id, courseRef: course._id });
+                if (enrollment && enrollment.tuitionClearanceFlag) {
+                    isAuthorized = true;
+                }
+            }
+        }
+
+        // Convert Mongoose doc to plain object to allow field modification
+        const courseObj = course.toObject();
+
+        // If not authorized, redact videoUrl for non-preview lessons
+        if (!isAuthorized && courseObj.curriculumTree) {
+            courseObj.curriculumTree = courseObj.curriculumTree.map(chapter => {
+                if (chapter.lessons) {
+                    chapter.lessons = chapter.lessons.map(lesson => {
+                        if (!lesson.isFreePreview) {
+                            lesson.videoUrl = ''; // Redact video link
+                        }
+                        return lesson;
+                    });
+                }
+                return chapter;
+            });
+        }
+
+        res.status(200).json({ success: true, data: courseObj });
     } catch (err) {
         next(err);
     }
@@ -195,7 +228,25 @@ const getStudentEnrollments = async (req, res, next) => {
             .populate({ path: 'courseRef', populate: { path: 'creatorRef', select: 'fullName' } })
             .lean();
 
-        res.status(200).json({ success: true, count: enrollments.length, data: enrollments });
+        // Sanitize video URLs if tuition is not cleared
+        const sanitizedEnrollments = enrollments.map(enrollment => {
+            if (!enrollment.tuitionClearanceFlag && enrollment.courseRef && enrollment.courseRef.curriculumTree) {
+                enrollment.courseRef.curriculumTree = enrollment.courseRef.curriculumTree.map(chapter => {
+                    if (chapter.lessons) {
+                        chapter.lessons = chapter.lessons.map(lesson => {
+                            if (!lesson.isFreePreview) {
+                                lesson.videoUrl = '';
+                            }
+                            return lesson;
+                        });
+                    }
+                    return chapter;
+                });
+            }
+            return enrollment;
+        });
+
+        res.status(200).json({ success: true, count: sanitizedEnrollments.length, data: sanitizedEnrollments });
     } catch (err) {
         next(err);
     }
@@ -225,6 +276,66 @@ const toggleTuitionClearance = async (req, res, next) => {
     }
 };
 
+// ─────────────────────────────────────────────
+// @desc    Securely stream lesson video if student has tuition clearance
+// @route   GET /api/courses/lessons/:id/stream
+// @access  Private (Authenticated users)
+// ─────────────────────────────────────────────
+const streamLessonVideo = async (req, res, next) => {
+    try {
+        const lessonId = req.params.id;
+        // Find the course that contains this lesson
+        const course = await Course.findOne({ "curriculumTree.lessons._id": lessonId });
+
+        if (!course) {
+            return res.status(404).json({ success: false, message: 'Lesson or Course not found.' });
+        }
+
+        // Find the lesson in the course's curriculumTree
+        let lesson = null;
+        for (const chapter of course.curriculumTree) {
+            const found = chapter.lessons.find(l => l._id.toString() === lessonId);
+            if (found) {
+                lesson = found;
+                break;
+            }
+        }
+
+        if (!lesson) {
+            return res.status(404).json({ success: false, message: 'Lesson not found.' });
+        }
+
+        // If it's a free preview, allow access
+        if (lesson.isFreePreview) {
+            return res.status(200).json({ success: true, videoUrl: lesson.videoUrl });
+        }
+
+        // Otherwise check authorization: Admin, Instructor owner, or Cleared Student
+        let isAuthorized = false;
+        if (req.user.assignedRole === 'Admin') {
+            isAuthorized = true;
+        } else if (req.user.assignedRole === 'Instructor' && course.creatorRef.toString() === req.user.id) {
+            isAuthorized = true;
+        } else if (req.user.assignedRole === 'Student') {
+            const enrollment = await Enrollment.findOne({ studentRef: req.user.id, courseRef: course._id });
+            if (enrollment && enrollment.tuitionClearanceFlag) {
+                isAuthorized = true;
+            }
+        }
+
+        if (!isAuthorized) {
+            return res.status(402).json({
+                success: false,
+                message: 'Tuition clearance is required to stream this video.'
+            });
+        }
+
+        res.status(200).json({ success: true, videoUrl: lesson.videoUrl });
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     createCourse,
     getPublishedCourses,
@@ -235,5 +346,6 @@ module.exports = {
     enrollInCourse,
     getInstructorCourses,
     getStudentEnrollments,
-    toggleTuitionClearance
+    toggleTuitionClearance,
+    streamLessonVideo
 };

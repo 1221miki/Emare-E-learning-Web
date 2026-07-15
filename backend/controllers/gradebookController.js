@@ -1,5 +1,7 @@
 const GradeBook = require('../models/GradeBook');
 const Course = require('../models/Course');
+const Quiz = require('../models/Quiz');
+const Assignment = require('../models/Assignment');
 
 // ─────────────────────────────────────────────
 // @desc    Submit an assignment (student uploads file/URL)
@@ -12,6 +14,30 @@ const submitAssignment = async (req, res, next) => {
 
         if (!assessmentRef) {
             return res.status(400).json({ success: false, message: 'Assessment reference is required.' });
+        }
+
+        // Fetch deadline from Quiz or Assignment
+        let deadline = null;
+        const quiz = await Quiz.findById(assessmentRef);
+        if (quiz) {
+            deadline = quiz.submissionDeadline;
+        } else {
+            const assignment = await Assignment.findById(assessmentRef);
+            if (assignment) {
+                deadline = assignment.dueDate;
+            }
+        }
+
+        // Enforce BR-03: Hard cutoff after 3 days
+        if (deadline) {
+            const timePassed = Date.now() - new Date(deadline).getTime();
+            const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+            if (timePassed > threeDaysMs) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Submission rejected. Submissions are not accepted more than 3 days after the deadline.'
+                });
+            }
         }
 
         // Prevent duplicate submissions for the same assessment
@@ -85,8 +111,35 @@ const gradeSubmission = async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Submission not found.' });
         }
 
-        submission.numericalScoreEarned = numericalScoreEarned;
+        // Fetch deadline to calculate late penalty
+        let deadline = null;
+        const quiz = await Quiz.findById(submission.assessmentRef);
+        if (quiz) {
+            deadline = quiz.submissionDeadline;
+        } else {
+            const assignment = await Assignment.findById(submission.assessmentRef);
+            if (assignment) {
+                deadline = assignment.dueDate;
+            }
+        }
+
+        let penaltyAppliedPercent = 0;
+        let finalScore = parseFloat(numericalScoreEarned);
+
+        if (deadline) {
+            const timePassed = new Date(submission.submissionTimestamp).getTime() - new Date(deadline).getTime();
+            if (timePassed > 0) {
+                const daysLate = Math.ceil(timePassed / (24 * 60 * 60 * 1000));
+                penaltyAppliedPercent = Math.min(daysLate * 10, 30);
+                finalScore = parseFloat((numericalScoreEarned * (1 - penaltyAppliedPercent / 100)).toFixed(2));
+            }
+        }
+
+        submission.numericalScoreEarned = finalScore;
         submission.instructorReviewNotes = instructorReviewNotes || '';
+        if (penaltyAppliedPercent > 0) {
+            submission.instructorReviewNotes += ` [Late penalty of ${penaltyAppliedPercent}% applied. Original score: ${numericalScoreEarned}]`;
+        }
         submission.gradingTimestamp = Date.now();
         submission.isGraded = true;
         await submission.save();
