@@ -127,6 +127,20 @@ export default function LandingPage() {
             </section>
 
             {/* ═══════════════════════════════════════════════════ */}
+            {/* ── PLATFORM DEMO ────────────────────────────────── */}
+            {/* ═══════════════════════════════════════════════════ */}
+            <section style={p.section}>
+                <div style={p.sectionHeader}>
+                    <span style={p.sectionBadge}>See It In Action</span>
+                    <h2 style={p.sectionTitle}>Platform Overview</h2>
+                    <p style={p.sectionSubtitle}>Watch a quick demo of how Emare ICT Hub works</p>
+                </div>
+                <div style={p.videoContainer}>
+                    <iframe width="100%" height="100%" src="https://www.youtube.com/embed/NgrXxAPxmEY?start=16" title="Platform Demo" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={p.videoFrame}></iframe>
+                </div>
+            </section>
+
+            {/* ═══════════════════════════════════════════════════ */}
             {/* ── PLATFORM STATISTICS ────────────────────────── */}
             {/* ═══════════════════════════════════════════════════ */}
             <section style={p.statsSection}>
@@ -369,6 +383,10 @@ const p = {
     secondaryBtn: { background: 'rgba(255,255,255,0.05)', color: '#f1f5f9', border: '1px solid rgba(51,65,85,0.6)', padding: '14px 32px', borderRadius: '12px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' },
     heroGlow1: { position: 'absolute', width: '600px', height: '600px', background: '#3b82f6', filter: 'blur(150px)', opacity: 0.12, top: '-200px', left: '-100px', borderRadius: '50%' },
     heroGlow2: { position: 'absolute', width: '500px', height: '500px', background: '#8b5cf6', filter: 'blur(150px)', opacity: 0.12, bottom: '-100px', right: '-100px', borderRadius: '50%' },
+
+    // Video
+    videoContainer: { maxWidth: '900px', margin: '0 auto', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(59,130,246,0.3)', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' },
+    videoFrame: { width: '100%', height: '100%', display: 'block' },
 
     // Stats
     statsSection: { padding: '0 5%', marginTop: '-50px', position: 'relative', zIndex: 3 },
