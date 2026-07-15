@@ -3,9 +3,11 @@ const jwt = require('jsonwebtoken');
 
 // Helper: Generate JWT and set as HTTP-Only cookie
 const sendTokenResponse = (user, statusCode, res) => {
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRE || '120m'
-    });
+    const token = jwt.sign(
+        { id: user._id, lastLogin: user.lastLoginTimestamp ? user.lastLoginTimestamp.getTime() : null }, 
+        process.env.JWT_SECRET, 
+        { expiresIn: process.env.JWT_EXPIRE || '120m' }
+    );
 
     const cookieOptions = {
         httpOnly: true, // Prevents XSS access via document.cookie
@@ -49,12 +51,13 @@ const register = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
         }
 
-        // Create new user - password is hashed via pre-save hook in User model
+                // Create new user - password is hashed via pre-save hook in User model
         const user = await User.create({
             fullName,
             accountEmail,
             securedPassword,
-            assignedRole: assignedRole || 'Student'
+            assignedRole: assignedRole || 'Student',
+            lastLoginTimestamp: Date.now()
         });
 
         sendTokenResponse(user, 201, res);

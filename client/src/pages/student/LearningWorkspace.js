@@ -22,6 +22,11 @@ export default function LearningWorkspace() {
     const [activeChapterIndex, setActiveChapterIndex] = useState(0);
     const [activeLessonIndex, setActiveLessonIndex] = useState(0);
 
+    // Video Streaming States
+    const [videoUrl, setVideoUrl] = useState('');
+    const [videoError, setVideoError] = useState('');
+    const [videoLoading, setVideoLoading] = useState(false);
+
     useEffect(() => {
         const fetchWorkspace = async () => {
             try {
@@ -35,6 +40,27 @@ export default function LearningWorkspace() {
         };
         fetchWorkspace();
     }, [courseId]);
+
+    useEffect(() => {
+        const activeChapter = course?.curriculumTree?.[activeChapterIndex];
+        const activeLesson = activeChapter?.lessons?.[activeLessonIndex];
+
+        if (activeLesson) {
+            setVideoUrl('');
+            setVideoError('');
+            setVideoLoading(true);
+            courseService.streamVideo(activeLesson._id)
+                .then(res => {
+                    setVideoUrl(res.data.videoUrl);
+                })
+                .catch(err => {
+                    setVideoError(err.response?.data?.message || 'Tuition clearance is required to view this lesson video.');
+                })
+                .finally(() => {
+                    setVideoLoading(false);
+                });
+        }
+    }, [activeChapterIndex, activeLessonIndex, course]);
 
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -85,15 +111,33 @@ export default function LearningWorkspace() {
                 {/* Left Panel: Video & Content */}
                 <div style={styles.contentArea}>
                     <div style={styles.videoPlayerContainer}>
-                        {activeLesson?.contentType === 'Video' ? (
-                            <div style={styles.mockVideo}>
-                                <div style={styles.playIcon}>▶</div>
-                                <div style={styles.mockVideoText}>{activeLesson.lessonTitle}</div>
+                        {videoLoading ? (
+                            <div style={styles.videoOverlay}>
+                                <div>Loading Video Stream...</div>
                             </div>
+                        ) : videoError ? (
+                            <div style={styles.videoOverlayError}>
+                                <div style={styles.lockIcon}>🔒</div>
+                                <div style={styles.errorTitle}>Video Content Gated</div>
+                                <div style={styles.errorText}>{videoError}</div>
+                                <button 
+                                    onClick={() => navigate('/student/payments')} 
+                                    style={styles.payBtn}
+                                >
+                                    Proceed to Tuition Clearance
+                                </button>
+                            </div>
+                        ) : videoUrl ? (
+                            <video 
+                                src={videoUrl} 
+                                controls 
+                                controlsList="nodownload" 
+                                style={styles.videoPlayer}
+                                autoPlay
+                            />
                         ) : (
-                            <div style={styles.documentViewer}>
-                                <h3>{activeLesson?.lessonTitle}</h3>
-                                <p>Read the document instructions here...</p>
+                            <div style={styles.videoOverlay}>
+                                <div>Select a lesson to begin learning</div>
                             </div>
                         )}
                     </div>
@@ -204,10 +248,14 @@ const styles = {
     navActionBtn: { background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa', borderRadius: '6px', padding: '6px 12px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
     mainLayout: { display: 'flex', flex: 1, overflow: 'hidden' },
     contentArea: { flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' },
-    videoPlayerContainer: { background: '#000', width: '100%', aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-    mockVideo: { textAlign: 'center', color: '#fff' },
-    playIcon: { fontSize: '64px', opacity: 0.5, marginBottom: '16px' },
-    mockVideoText: { fontSize: '20px', fontWeight: '600' },
+    videoPlayerContainer: { background: '#000', width: '100%', aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' },
+    videoPlayer: { width: '100%', height: '100%', objectFit: 'contain' },
+    videoOverlay: { color: '#fff', fontSize: '16px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    videoOverlayError: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px', textAlign: 'center' },
+    lockIcon: { fontSize: '48px', marginBottom: '16px', color: '#f87171' },
+    errorTitle: { fontSize: '20px', fontWeight: '700', color: '#f87171', marginBottom: '8px' },
+    errorText: { fontSize: '14px', color: '#94a3b8', marginBottom: '20px', maxWidth: '400px', lineHeight: '1.5' },
+    payBtn: { background: '#3b82f6', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s' },
     documentViewer: { padding: '40px', color: '#fff' },
     lessonDetails: { padding: '32px', margin: '24px', borderRadius: '12px' },
     lessonTitle: { margin: '0 0 12px', fontSize: '24px', fontWeight: '800' },

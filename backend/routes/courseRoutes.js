@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect, authorizeRoles } = require('../middleware/auth');
+const { protect, authorizeRoles, optionalProtect } = require('../middleware/auth');
 const {
     createCourse,
     getPublishedCourses,
@@ -11,7 +11,8 @@ const {
     enrollInCourse,
     getInstructorCourses,
     getStudentEnrollments,
-    toggleTuitionClearance
+    toggleTuitionClearance,
+    streamLessonVideo
 } = require('../controllers/courseController');
 
 // ── Public Routes ──────────────────────────────────────────
@@ -32,6 +33,7 @@ router.patch('/:id/approve', protect, authorizeRoles('Admin'), approveCourse);
 router.patch('/enrollment/:enrollmentId/clear', protect, authorizeRoles('Admin'), toggleTuitionClearance);
 
 // ── Parameterized Routes (must be LAST to avoid catching string paths) ──
-router.get('/:id', getCourseById);
+router.get('/lessons/:id/stream', protect, streamLessonVideo);
+router.get('/:id', optionalProtect, getCourseById);
 
 module.exports = router;
