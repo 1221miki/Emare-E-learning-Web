@@ -1,5 +1,6 @@
 require('dotenv').config({ path: '../.env' });
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
@@ -26,6 +27,7 @@ const liveSessionRoutes = require('./routes/liveSessionRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const systemRoutes = require('./routes/systemRoutes');
 const { getAnalytics } = require('./controllers/userController');
 const { protect, authorizeRoles } = require('./middleware/auth');
 
@@ -66,6 +68,7 @@ app.use('/api/live-sessions', liveSessionRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/system', systemRoutes);
 app.use('/api/analytics/overview', protect, authorizeRoles('Admin'), getAnalytics);
 
 // ── Health Check ───────────────────────────────────────────
@@ -73,10 +76,26 @@ app.get('/api/health', (req, res) => {
     res.status(200).json({ success: true, message: 'Emare ELMS Backend is running.' });
 });
 
-// ── 404 Handler for unmatched routes ──────────────────────
-app.all('*', (req, res) => {
-    res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found on this server.` });
+// ── 404 Handler for API routes ──────────────────────────────
+app.all('/api/*', (req, res) => {
+    res.status(404).json({ success: false, message: `API Route ${req.originalUrl} not found on this server.` });
 });
+
+// ── Serve Frontend in Production ───────────────────────────
+if (process.env.NODE_ENV === 'production') {
+    // Serve static files from the React app build directory
+    app.use(express.static(path.join(__dirname, '../client/build')));
+
+    // The "catchall" handler: for any request that doesn't
+    // match one above, send back React's index.html file.
+    app.get('*', (req, res) => {
+        res.sendFile(path.resolve(__dirname, '../client/build', 'index.html'));
+    });
+} else {
+    app.get('/', (req, res) => {
+        res.send('API is running in development mode. Please run the React client separately.');
+    });
+}
 
 // ── Global Error Handler (must be last) ───────────────────
 app.use(errorHandler);

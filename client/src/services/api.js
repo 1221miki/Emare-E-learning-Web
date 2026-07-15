@@ -43,10 +43,15 @@ export const courseService = {
     getById: (id) => API.get(`/courses/${id}`),
     create: (data) => API.post('/courses', data),
     update: (id, data) => API.put(`/courses/${id}`, data),
+    delete: (id) => API.delete(`/courses/${id}`),
     submitForReview: (id) => API.patch(`/courses/${id}/submit`),
     approve: (id) => API.patch(`/courses/${id}/approve`),
+    archive: (id) => API.patch(`/courses/${id}/archive`),
+    unpublish: (id) => API.patch(`/courses/${id}/unpublish`),
+    duplicate: (id) => API.post(`/courses/${id}/duplicate`),
     enroll: (id) => API.post(`/courses/${id}/enroll`),
     getInstructorCourses: () => API.get('/courses/instructor/mine'),
+    getInstructorAnalytics: () => API.get('/courses/instructor/analytics'),
     getStudentEnrollments: () => API.get('/courses/student/enrolled'),
     toggleClearance: (enrollmentId) => API.patch(`/courses/enrollment/${enrollmentId}/clear`),
     streamVideo: (lessonId) => API.get(`/courses/lessons/${lessonId}/stream`)
@@ -61,13 +66,14 @@ export const quizService = {
     getResults: (id) => API.get(`/quizzes/${id}/results`)
 };
 
-// ── User Management API Calls (Admin) ──────────────────────
+// ── User Management API Calls ──────────────────────
 export const userService = {
     getAll: (params) => API.get('/users', { params }),
     getById: (id) => API.get(`/users/${id}`),
     update: (id, data) => API.patch(`/users/${id}`, data),
     resetPassword: (id, newPassword) => API.patch(`/users/${id}/reset-password`, { newPassword }),
-    deactivate: (id) => API.delete(`/users/${id}`)
+    deactivate: (id) => API.delete(`/users/${id}`),
+    updateInstructorProfile: (data) => API.put('/users/instructor/profile', data)
 };
 
 // ── Enrollment & Payment API Calls ─────────────────────────
@@ -183,6 +189,14 @@ export const uploadService = {
 export const paymentService = {
     initializePayment: (data) => API.post('/payments/initialize', data),
     verifyPayment: (tx_ref) => API.get(`/payments/verify/${tx_ref}`)
+};
+
+// ── System API Calls (Admin) ─────────────────────────────────
+export const systemService = {
+    getSettings: () => API.get('/system/settings'),
+    updateSettings: (data) => API.put('/system/settings', data),
+    createBackup: () => API.post('/system/backup'),
+    clearCache: () => API.post('/system/cache/clear')
 };
 
 export default API;

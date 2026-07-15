@@ -336,6 +336,137 @@ const streamLessonVideo = async (req, res, next) => {
     }
 };
 
+// ─────────────────────────────────────────────
+// @desc    Delete a course (Instructor - must be owner, Draft only)
+// @route   DELETE /api/courses/:id
+// @access  Private (Instructor only)
+// ─────────────────────────────────────────────
+const deleteCourse = async (req, res, next) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+        if (course.creatorRef.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Access denied.' });
+        if (course.publicationState === 'Active') return res.status(400).json({ success: false, message: 'Cannot delete an active course. Archive it first.' });
+
+        await Course.findByIdAndDelete(req.params.id);
+        res.status(200).json({ success: true, message: 'Course deleted permanently.' });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Archive a course
+// @route   PATCH /api/courses/:id/archive
+// @access  Private (Instructor - must be owner)
+// ─────────────────────────────────────────────
+const archiveCourse = async (req, res, next) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+        if (course.creatorRef.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Access denied.' });
+
+        course.publicationState = 'Archived';
+        await course.save();
+        res.status(200).json({ success: true, message: 'Course archived.', data: course });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Unpublish a course (set back to Draft)
+// @route   PATCH /api/courses/:id/unpublish
+// @access  Private (Instructor - must be owner)
+// ─────────────────────────────────────────────
+const unpublishCourse = async (req, res, next) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+        if (course.creatorRef.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Access denied.' });
+
+        course.publicationState = 'Draft';
+        await course.save();
+        res.status(200).json({ success: true, message: 'Course unpublished.', data: course });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Duplicate a course (creates a copy in Draft)
+// @route   POST /api/courses/:id/duplicate
+// @access  Private (Instructor - must be owner)
+// ─────────────────────────────────────────────
+const duplicateCourse = async (req, res, next) => {
+    try {
+        const source = await Course.findById(req.params.id).lean();
+        if (!source) return res.status(404).json({ success: false, message: 'Course not found.' });
+        if (source.creatorRef.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Access denied.' });
+
+        delete source._id;
+        delete source.creationTimestamp;
+        delete source.updatedAt;
+        source.courseTitle = `${source.courseTitle} (Copy)`;
+        source.publicationState = 'Draft';
+        source.totalEnrollments = 0;
+        source.averageRating = 0;
+        source.totalReviews = 0;
+
+        const duplicate = await Course.create(source);
+        res.status(201).json({ success: true, message: 'Course duplicated.', data: duplicate });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Get instructor analytics (stats for their courses)
+// @route   GET /api/courses/instructor/analytics
+// @access  Private (Instructor)
+// ─────────────────────────────────────────────
+const getInstructorAnalytics = async (req, res, next) => {
+    try {
+        const courses = await Course.find({ creatorRef: req.user.id }).lean();
+        const courseIds = courses.map(c => c._id);
+
+        const totalStudents = await Enrollment.countDocuments({ courseRef: { $in: courseIds } });
+        const clearedStudents = await Enrollment.countDocuments({ courseRef: { $in: courseIds }, tuitionClearanceFlag: true });
+
+        const totalEarnings = courses.reduce((sum, c) => {
+            return sum + (c.price || 0) * (c.totalEnrollments || 0);
+        }, 0);
+
+        const avgRating = courses.length > 0
+            ? parseFloat((courses.reduce((sum, c) => sum + (c.averageRating || 0), 0) / courses.length).toFixed(1))
+            : 0;
+
+        const enrollmentsByCategory = {};
+        for (const c of courses) {
+            const catEnrollments = await Enrollment.countDocuments({ courseRef: c._id });
+            const cat = c.technicalCategory || 'Other';
+            enrollmentsByCategory[cat] = (enrollmentsByCategory[cat] || 0) + catEnrollments;
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                totalCourses: courses.length,
+                activeCourses: courses.filter(c => c.publicationState === 'Active').length,
+                draftCourses: courses.filter(c => c.publicationState === 'Draft').length,
+                totalStudents,
+                clearedStudents,
+                totalEarnings,
+                avgRating,
+                totalReviews: courses.reduce((sum, c) => sum + (c.totalReviews || 0), 0),
+                enrollmentsByCategory
+            }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     createCourse,
     getPublishedCourses,
@@ -347,5 +478,10 @@ module.exports = {
     getInstructorCourses,
     getStudentEnrollments,
     toggleTuitionClearance,
-    streamLessonVideo
+    streamLessonVideo,
+    deleteCourse,
+    archiveCourse,
+    unpublishCourse,
+    duplicateCourse,
+    getInstructorAnalytics
 };

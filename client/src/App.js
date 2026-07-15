@@ -7,6 +7,12 @@ import { ThemeProvider } from './context/ThemeContext';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import AboutPage from './pages/AboutPage';
+import ContactPage from './pages/ContactPage';
+import HelpPage from './pages/HelpPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
+import CookiePage from './pages/CookiePage';
 import StudentDashboard from './pages/student/StudentDashboard';
 import InstructorDashboard from './pages/instructor/InstructorDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -39,6 +45,12 @@ function AppRoutes() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/help" element={<HelpPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/cookies" element={<CookiePage />} />
             <Route path="/courses" element={<CourseCatalog />} />
             <Route path="/courses/:courseId" element={<CourseDetailPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
