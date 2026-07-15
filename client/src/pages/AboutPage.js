@@ -21,6 +21,10 @@ export default function AboutPage() {
                 <span style={s.badge}>About Us</span>
                 <h1 style={s.heroTitle}>Empowering Ethiopia's<br />Tech Future</h1>
                 <p style={s.heroSub}>Emare ICT Hub is a premier e-learning platform based in Debre Birhan, Ethiopia. We provide accessible, high-quality technology education to learners across the country.</p>
+                
+                <div style={s.videoContainer}>
+                    <iframe width="100%" height="100%" src="https://www.youtube.com/embed/prLv5uwUtuY?start=3" title="About Emare" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={s.videoFrame}></iframe>
+                </div>
             </div>
 
             <section style={s.section}>
@@ -74,7 +78,9 @@ const s = {
     hero: { padding: '100px 5% 60px', textAlign: 'center' },
     badge: { display: 'inline-block', padding: '6px 16px', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', borderRadius: '20px', fontWeight: '700', fontSize: '13px', marginBottom: '20px', border: '1px solid rgba(59,130,246,0.2)' },
     heroTitle: { fontSize: '48px', fontWeight: '900', margin: '0 0 20px', lineHeight: 1.15, background: 'linear-gradient(135deg, #fff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
-    heroSub: { color: '#94a3b8', fontSize: '17px', lineHeight: 1.7, maxWidth: '650px', margin: '0 auto' },
+    heroSub: { color: '#94a3b8', fontSize: '17px', lineHeight: 1.7, maxWidth: '650px', margin: '0 auto 40px' },
+    videoContainer: { maxWidth: '800px', margin: '0 auto', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(59,130,246,0.3)', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' },
+    videoFrame: { width: '100%', height: '100%', display: 'block' },
     section: { padding: '80px 5%', maxWidth: '1200px', margin: '0 auto' },
     sTitle: { color: '#f1f5f9', fontSize: '28px', fontWeight: '800', marginBottom: '40px', textAlign: 'center' },
     grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' },

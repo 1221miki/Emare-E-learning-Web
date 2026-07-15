@@ -26,6 +26,13 @@ export default function HelpPage() {
             </div>
 
             <section style={s.section}>
+                <div style={{ ...s.card, marginBottom: '24px' }}>
+                    <h2 style={s.sTitle}>Video Tutorial: Getting Started</h2>
+                    <div style={s.videoContainer}>
+                        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/M5Inc52FAh8?start=2" title="Tutorial Video" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={s.videoFrame}></iframe>
+                    </div>
+                </div>
+
                 <div style={s.card}>
                     <h2 style={s.sTitle}>Frequently Asked Questions</h2>
                     <div style={s.faqList}>
@@ -63,6 +70,8 @@ const s = {
     heroSub: { color: '#94a3b8', fontSize: '16px' },
     section: { padding: '20px 5% 80px', maxWidth: '800px', margin: '0 auto' },
     card: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '16px', padding: '40px', border: '1px solid rgba(30,41,59,0.5)' },
+    videoContainer: { width: '100%', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(51,65,85,0.5)' },
+    videoFrame: { width: '100%', height: '100%', display: 'block' },
     sTitle: { color: '#f1f5f9', fontSize: '24px', fontWeight: '800', marginBottom: '32px', textAlign: 'center' },
     faqList: { display: 'flex', flexDirection: 'column', gap: '24px' },
     faqItem: { borderBottom: '1px solid rgba(51,65,85,0.5)', paddingBottom: '24px' },
