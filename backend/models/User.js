@@ -46,6 +46,34 @@ const UserSchema = new mongoose.Schema({
     earnedBadges: {
         type: [String],
         default: []
+    },
+    // Instructor Specific Fields
+    biography: {
+        type: String,
+        trim: true,
+        maxlength: [1000, 'Biography cannot exceed 1000 characters']
+    },
+    qualifications: {
+        type: [String],
+        default: []
+    },
+    workExperience: {
+        type: [String],
+        default: []
+    },
+    teachingLanguages: {
+        type: [String],
+        default: []
+    },
+    socialMediaLinks: {
+        linkedin: { type: String, trim: true },
+        twitter: { type: String, trim: true },
+        website: { type: String, trim: true },
+        youtube: { type: String, trim: true }
+    },
+    contactPhone: {
+        type: String,
+        trim: true
     }
 }, {
     timestamps: { createdAt: 'creationTimestamp', updatedAt: 'updatedAt' }

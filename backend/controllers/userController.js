@@ -215,4 +215,37 @@ const getAnalytics = async (req, res, next) => {
     }
 };
 
-module.exports = { getAllUsers, getUserById, updateUser, resetUserPassword, deleteUser, getAnalytics };
+// ─────────────────────────────────────────────
+// @desc    Update instructor profile (for instructors to manage themselves)
+// @route   PUT /api/users/instructor/profile
+// @access  Private (Instructor only)
+// ─────────────────────────────────────────────
+const updateInstructorProfile = async (req, res, next) => {
+    try {
+        const { biography, qualifications, workExperience, teachingLanguages, socialMediaLinks, contactPhone, fullName } = req.body;
+        const updateData = {};
+
+        if (biography !== undefined) updateData.biography = biography;
+        if (qualifications) updateData.qualifications = qualifications;
+        if (workExperience) updateData.workExperience = workExperience;
+        if (teachingLanguages) updateData.teachingLanguages = teachingLanguages;
+        if (socialMediaLinks) updateData.socialMediaLinks = socialMediaLinks;
+        if (contactPhone !== undefined) updateData.contactPhone = contactPhone;
+        if (fullName) updateData.fullName = fullName;
+
+        const user = await User.findByIdAndUpdate(req.user.id, updateData, {
+            new: true,
+            runValidators: true
+        }).select('-securedPassword');
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        res.status(200).json({ success: true, message: 'Instructor profile updated.', data: user });
+    } catch (err) {
+        next(err);
+    }
+};
+
+module.exports = { getAllUsers, getUserById, updateUser, resetUserPassword, deleteUser, getAnalytics, updateInstructorProfile };

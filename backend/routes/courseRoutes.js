@@ -12,7 +12,12 @@ const {
     getInstructorCourses,
     getStudentEnrollments,
     toggleTuitionClearance,
-    streamLessonVideo
+    streamLessonVideo,
+    deleteCourse,
+    archiveCourse,
+    unpublishCourse,
+    duplicateCourse,
+    getInstructorAnalytics
 } = require('../controllers/courseController');
 
 // ── Public Routes ──────────────────────────────────────────
@@ -24,9 +29,14 @@ router.post('/:id/enroll', protect, authorizeRoles('Student'), enrollInCourse);
 
 // ── Instructor Routes (must be above /:id to avoid param capture) ──
 router.get('/instructor/mine', protect, authorizeRoles('Instructor'), getInstructorCourses);
+router.get('/instructor/analytics', protect, authorizeRoles('Instructor'), getInstructorAnalytics);
 router.post('/', protect, authorizeRoles('Instructor'), createCourse);
 router.put('/:id', protect, authorizeRoles('Instructor'), updateCourse);
+router.delete('/:id', protect, authorizeRoles('Instructor'), deleteCourse);
 router.patch('/:id/submit', protect, authorizeRoles('Instructor'), submitCourseForReview);
+router.patch('/:id/archive', protect, authorizeRoles('Instructor'), archiveCourse);
+router.patch('/:id/unpublish', protect, authorizeRoles('Instructor'), unpublishCourse);
+router.post('/:id/duplicate', protect, authorizeRoles('Instructor'), duplicateCourse);
 
 // ── Admin Routes ────────────────────────────────────────────
 router.patch('/:id/approve', protect, authorizeRoles('Admin'), approveCourse);

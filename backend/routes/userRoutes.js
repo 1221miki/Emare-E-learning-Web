@@ -7,8 +7,12 @@ const {
     updateUser,
     resetUserPassword,
     deleteUser,
-    getAnalytics
+    getAnalytics,
+    updateInstructorProfile
 } = require('../controllers/userController');
+
+// ── Instructor Profile Management ────────────────────────────
+router.put('/instructor/profile', protect, authorizeRoles('Instructor'), updateInstructorProfile);
 
 // All routes below require Admin role
 router.use(protect, authorizeRoles('Admin'));
