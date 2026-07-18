@@ -114,7 +114,7 @@ export default function DiscussionPage() {
                                     <div style={{ padding: '20px 24px', background: colors.bgInput, display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                         {thread.replies.map((reply, idx) => (
                                             <div key={idx} style={{ display: 'flex', gap: '12px' }}>
-                                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: reply.authorRef?.assignedRole === 'Instructor' ? colors.accent : '#64748b', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', flexShrink: 0 }}>
+                                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: reply.authorRef?.assignedRole === 'Instructor' ? colors.accent : colors.textMuted, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', flexShrink: 0 }}>
                                                     {reply.authorRef?.fullName?.[0]}
                                                 </div>
                                                 <div>

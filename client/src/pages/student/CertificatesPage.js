@@ -63,12 +63,12 @@ export default function CertificatesPage() {
                                     Certificate of Completion
                                 </div>
                                 <h3 style={{ color: '#fff', fontSize: '22px', margin: '0 0 8px', lineHeight: 1.3 }}>{cert.courseRef.courseTitle}</h3>
-                                <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '24px' }}>
+                                <div style={{ color: colors.textMuted, fontSize: '14px', marginBottom: '24px' }}>
                                     Issued: {new Date(cert.completionDate).toLocaleDateString()}
                                 </div>
                                 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '24px' }}>
-                                    <span style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Certificate ID</span>
+                                    <span style={{ color: colors.textMuted, fontSize: '11px', textTransform: 'uppercase' }}>Certificate ID</span>
                                     <span style={{ color: '#e2e8f0', fontSize: '14px', fontFamily: 'monospace' }}>{cert.certificateNumber}</span>
                                 </div>
 

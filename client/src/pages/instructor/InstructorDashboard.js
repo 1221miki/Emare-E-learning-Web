@@ -9,9 +9,85 @@ import {
     userService,
     enrollmentService
 } from '../../services/api';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function InstructorDashboard() {
     const { user, logout } = useAuth();
+    const { theme, toggleTheme, colors } = useTheme();
+    const s = {
+        // Layout
+        page: { display: 'flex', minHeight: '100vh', fontFamily: "'Outfit', sans-serif" },
+        sidebar: { width: '260px', background: 'rgba(15,20,34,0.7)', backdropFilter: 'blur(12px)', borderRight: '1px solid rgba(30,41,59,0.5)', display: 'flex', flexDirection: 'column', padding: '24px 16px', position: 'fixed', height: '100vh', zIndex: 10 },
+        logoBox: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '36px', paddingLeft: '8px' },
+        logo: { width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#fff', fontSize: '18px' },
+        logoText: { color: '#fff', fontWeight: '700', fontSize: '16px' },
+        nav: { display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, overflowY: 'auto' },
+        navItem: { textAlign: 'left', background: 'transparent', border: 'none', color: colors.textMuted, padding: '10px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', outline: 'none' },
+        catalogBtn: { background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#60a5fa', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+        logoutBtn: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+
+        // Main
+        main: { marginLeft: '260px', flex: 1, padding: '40px', overflowY: 'auto' },
+        header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '36px' },
+        greeting: { color: '#f8fafc', fontSize: '26px', fontWeight: '800', margin: 0 },
+        subGreeting: { color: colors.textMuted, fontSize: '14px', margin: '4px 0 0' },
+        avatar: { width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '20px' },
+        loadingBox: { color: colors.textMuted, fontSize: '16px', textAlign: 'center', padding: '100px 0' },
+
+        // Tabs
+        tabHeader: { marginBottom: '28px' },
+        tabTitle: { color: '#f8fafc', fontSize: '22px', fontWeight: '800', margin: 0 },
+        tabSubtitle: { color: colors.textMuted, fontSize: '14px', margin: '4px 0 0' },
+
+        // Stats
+        statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' },
+        statCard: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '22px', border: '1px solid rgba(30,41,59,0.5)' },
+        statValue: { display: 'block', fontSize: '32px', fontWeight: '800' },
+        statLabel: { color: colors.textMuted, fontSize: '12px', fontWeight: '500', marginTop: '4px', display: 'block' },
+
+        // Cards
+        panelCard: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '28px', border: '1px solid rgba(30,41,59,0.5)', marginBottom: '24px', cursor: 'default', transition: 'border-color 0.2s' },
+        panelTitle: { color: colors.text, fontSize: '16px', fontWeight: '700', margin: '0 0 20px' },
+        recentItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid rgba(30,41,59,0.3)' },
+        courseRow: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '24px', border: '1px solid rgba(30,41,59,0.5)', display: 'flex', justifyContent: 'space-between', gap: '20px' },
+        badge: { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', display: 'inline-block' },
+        miniStat: { background: 'rgba(15,23,42,0.4)', padding: '14px 16px', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '2px' },
+
+        // Empty
+        emptyBox: { padding: '48px', textAlign: 'center', background: 'rgba(14,23,38,0.45)', borderRadius: '14px', border: '1px solid rgba(30,41,59,0.4)' },
+        emptyText: { color: colors.textMuted, fontSize: '14px', margin: 0 },
+
+        // Table
+        tableCard: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', border: '1px solid rgba(30,41,59,0.5)', overflow: 'hidden' },
+        table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
+        thRow: { background: 'rgba(15,20,34,0.6)' },
+        th: { padding: '14px 20px', color: colors.textMuted, fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' },
+        tr: { borderBottom: '1px solid rgba(30,41,59,0.4)' },
+        td: { padding: '14px 20px', color: colors.text, fontSize: '14px' },
+
+        // Buttons
+        primaryBtn: { background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', transition: 'opacity 0.2s' },
+        actionBtn: { background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', color: '#60a5fa', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'background 0.2s' },
+        actionBtnAlt: { background: 'transparent', border: '1px solid rgba(51,65,85,0.6)', color: colors.text, borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'background 0.2s' },
+        dangerBtn: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px' },
+        textBtn: { background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: '600', fontSize: '13px', textDecoration: 'underline' },
+
+        // Forms
+        formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
+        formGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
+        label: { color: colors.textMuted, fontSize: '12px', fontWeight: '600' },
+        input: { background: 'rgba(9,13,22,0.6)', border: '1px solid rgba(30,41,59,0.6)', color: '#fff', padding: '11px 14px', borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.2s' },
+        select: { background: 'rgba(9,13,22,0.6)', border: '1px solid rgba(30,41,59,0.6)', color: '#fff', padding: '11px 14px', borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit' },
+        successAlert: { background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px', fontWeight: '600' },
+
+        // Modals
+        backdrop: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' },
+        modal: { background: 'rgba(30,41,59,0.95)', backdropFilter: 'blur(16px)', border: '1px solid rgba(51,65,85,0.6)', borderRadius: '18px', width: '100%', maxWidth: '600px', maxHeight: '85vh', overflow: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.5)' },
+        modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px 0' },
+        modalTitle: { color: colors.text, fontSize: '18px', fontWeight: '700', margin: 0 },
+        closeBtn: { background: colors.bgInput, border: '1px solid rgba(51,65,85,0.6)', color: colors.textMuted, borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+        modalBody: { padding: '20px 24px 24px' }
+    };
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('overview');
     const [loading, setLoading] = useState(true);
@@ -94,7 +170,7 @@ export default function InstructorDashboard() {
         }
     }, [activeTab, selectedCourse]);
 
-    const handleLogout = async () => { await logout(); navigate('/login'); };
+    const handleLogout = async () => { await logout(); navigate('/'); };
 
     // ── Course Actions ─────────────────────────────────────────
     const handleCreateCourse = async (e) => {
@@ -287,8 +363,8 @@ export default function InstructorDashboard() {
                             <div key={c._id} style={s.recentItem}>
                                 <div>
                                     <span style={{ ...s.badge, background: c.publicationState === 'Active' ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)', color: c.publicationState === 'Active' ? '#10b981' : '#f59e0b' }}>{c.publicationState}</span>
-                                    <h4 style={{ color: '#f1f5f9', margin: '6px 0 2px', fontSize: '15px', fontWeight: '600' }}>{c.courseTitle}</h4>
-                                    <span style={{ color: '#64748b', fontSize: '12px' }}>{c.technicalCategory} · {c.estimatedDurationHours}h</span>
+                                    <h4 style={{ color: colors.text, margin: '6px 0 2px', fontSize: '15px', fontWeight: '600' }}>{c.courseTitle}</h4>
+                                    <span style={{ color: colors.textMuted, fontSize: '12px' }}>{c.technicalCategory} · {c.estimatedDurationHours}h</span>
                                 </div>
                                 <span style={{ color: '#3b82f6', fontSize: '13px', fontWeight: '600' }}>{c.totalEnrollments || 0} students</span>
                             </div>
@@ -336,7 +412,7 @@ export default function InstructorDashboard() {
 
                     {/* Social Links */}
                     <div style={{ gridColumn: '1 / -1', borderTop: '1px solid rgba(30,41,59,0.5)', paddingTop: '20px', marginTop: '8px' }}>
-                        <h4 style={{ color: '#f1f5f9', margin: '0 0 16px', fontSize: '15px' }}>🔗 Social Media Links</h4>
+                        <h4 style={{ color: colors.text, margin: '0 0 16px', fontSize: '15px' }}>🔗 Social Media Links</h4>
                     </div>
                     <div style={s.formGroup}>
                         <label style={s.label}>LinkedIn</label>
@@ -399,11 +475,11 @@ export default function InstructorDashboard() {
                         <div key={c._id} style={s.courseRow}>
                             <div style={{ flex: 1 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                                    <span style={{ ...s.badge, background: c.publicationState === 'Active' ? 'rgba(16,185,129,0.15)' : c.publicationState === 'Draft' ? 'rgba(245,158,11,0.15)' : c.publicationState === 'Pending Audit' ? 'rgba(59,130,246,0.15)' : 'rgba(100,116,139,0.15)', color: c.publicationState === 'Active' ? '#10b981' : c.publicationState === 'Draft' ? '#f59e0b' : c.publicationState === 'Pending Audit' ? '#60a5fa' : '#94a3b8' }}>{c.publicationState}</span>
-                                    <h3 style={{ margin: 0, color: '#f1f5f9', fontSize: '16px', fontWeight: '700' }}>{c.courseTitle}</h3>
+                                    <span style={{ ...s.badge, background: c.publicationState === 'Active' ? 'rgba(16,185,129,0.15)' : c.publicationState === 'Draft' ? 'rgba(245,158,11,0.15)' : c.publicationState === 'Pending Audit' ? 'rgba(59,130,246,0.15)' : 'rgba(100,116,139,0.15)', color: c.publicationState === 'Active' ? '#10b981' : c.publicationState === 'Draft' ? '#f59e0b' : c.publicationState === 'Pending Audit' ? '#60a5fa' : colors.textMuted }}>{c.publicationState}</span>
+                                    <h3 style={{ margin: 0, color: colors.text, fontSize: '16px', fontWeight: '700' }}>{c.courseTitle}</h3>
                                 </div>
-                                <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 8px' }}>{c.technicalCategory} · {c.estimatedDurationHours}h · {c.level} · ⭐ {c.averageRating || 0} ({c.totalReviews || 0} reviews)</p>
-                                <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>{c.descriptionText?.substring(0, 120)}...</p>
+                                <p style={{ color: colors.textMuted, fontSize: '13px', margin: '0 0 8px' }}>{c.technicalCategory} · {c.estimatedDurationHours}h · {c.level} · ⭐ {c.averageRating || 0} ({c.totalReviews || 0} reviews)</p>
+                                <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>{c.descriptionText?.substring(0, 120)}...</p>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '160px' }}>
                                 {c.publicationState === 'Draft' && (
@@ -449,19 +525,19 @@ export default function InstructorDashboard() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
                         <div style={{ ...s.miniStat, borderLeft: '3px solid #3b82f6' }}>
                             <span style={{ color: '#3b82f6', fontSize: '22px', fontWeight: '800' }}>{selectedCourse.totalEnrollments || 0}</span>
-                            <span style={{ color: '#64748b', fontSize: '12px' }}>Enrolled</span>
+                            <span style={{ color: colors.textMuted, fontSize: '12px' }}>Enrolled</span>
                         </div>
                         <div style={{ ...s.miniStat, borderLeft: '3px solid #10b981' }}>
                             <span style={{ color: '#10b981', fontSize: '22px', fontWeight: '800' }}>⭐ {selectedCourse.averageRating || 0}</span>
-                            <span style={{ color: '#64748b', fontSize: '12px' }}>Avg Rating</span>
+                            <span style={{ color: colors.textMuted, fontSize: '12px' }}>Avg Rating</span>
                         </div>
                         <div style={{ ...s.miniStat, borderLeft: '3px solid #8b5cf6' }}>
                             <span style={{ color: '#8b5cf6', fontSize: '22px', fontWeight: '800' }}>{selectedCourse.totalReviews || 0}</span>
-                            <span style={{ color: '#64748b', fontSize: '12px' }}>Reviews</span>
+                            <span style={{ color: colors.textMuted, fontSize: '12px' }}>Reviews</span>
                         </div>
                     </div>
                 )}
-                <p style={{ color: '#64748b', fontSize: '13px' }}>Detailed per-student progress tracking will be available once students begin engaging with the course materials.</p>
+                <p style={{ color: colors.textMuted, fontSize: '13px' }}>Detailed per-student progress tracking will be available once students begin engaging with the course materials.</p>
             </div>
         </div>
     );
@@ -528,23 +604,23 @@ export default function InstructorDashboard() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
                 <div style={s.panelCard} onClick={() => navigate('/messages')} role="button">
                     <div style={{ fontSize: '36px', marginBottom: '12px' }}>💬</div>
-                    <h3 style={{ color: '#f1f5f9', margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Direct Messages</h3>
-                    <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Send private messages to enrolled students</p>
+                    <h3 style={{ color: colors.text, margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Direct Messages</h3>
+                    <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Send private messages to enrolled students</p>
                 </div>
                 <div style={s.panelCard}>
                     <div style={{ fontSize: '36px', marginBottom: '12px' }}>📢</div>
-                    <h3 style={{ color: '#f1f5f9', margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Announcements</h3>
-                    <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Post announcements visible to all enrolled students</p>
+                    <h3 style={{ color: colors.text, margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Announcements</h3>
+                    <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Post announcements visible to all enrolled students</p>
                 </div>
                 <div style={s.panelCard}>
                     <div style={{ fontSize: '36px', marginBottom: '12px' }}>❓</div>
-                    <h3 style={{ color: '#f1f5f9', margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Discussion Forum</h3>
-                    <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Reply to student questions and discussion posts</p>
+                    <h3 style={{ color: colors.text, margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Discussion Forum</h3>
+                    <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Reply to student questions and discussion posts</p>
                 </div>
                 <div style={s.panelCard} onClick={() => navigate('/live-sessions')} role="button">
                     <div style={{ fontSize: '36px', marginBottom: '12px' }}>🎥</div>
-                    <h3 style={{ color: '#f1f5f9', margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Live Sessions</h3>
-                    <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Schedule and manage live Q&A sessions</p>
+                    <h3 style={{ color: colors.text, margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Live Sessions</h3>
+                    <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Schedule and manage live Q&A sessions</p>
                 </div>
             </div>
         </div>
@@ -571,8 +647,8 @@ export default function InstructorDashboard() {
                         <div key={r._id} style={s.panelCard}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                                 <div>
-                                    <strong style={{ color: '#f1f5f9' }}>{r.studentRef?.fullName}</strong>
-                                    <span style={{ color: '#64748b', fontSize: '12px', marginLeft: '12px' }}>{new Date(r.createdAt).toLocaleDateString()}</span>
+                                    <strong style={{ color: colors.text }}>{r.studentRef?.fullName}</strong>
+                                    <span style={{ color: colors.textMuted, fontSize: '12px', marginLeft: '12px' }}>{new Date(r.createdAt).toLocaleDateString()}</span>
                                 </div>
                                 <span style={{ color: '#f59e0b', fontWeight: '700' }}>{'⭐'.repeat(r.rating)}</span>
                             </div>
@@ -580,7 +656,7 @@ export default function InstructorDashboard() {
                             {r.instructorReply ? (
                                 <div style={{ background: 'rgba(59,130,246,0.08)', padding: '12px 16px', borderRadius: '8px', borderLeft: '3px solid #3b82f6' }}>
                                     <span style={{ color: '#60a5fa', fontSize: '12px', fontWeight: '700' }}>Your Reply:</span>
-                                    <p style={{ color: '#94a3b8', fontSize: '13px', margin: '4px 0 0' }}>{r.instructorReply}</p>
+                                    <p style={{ color: colors.textMuted, fontSize: '13px', margin: '4px 0 0' }}>{r.instructorReply}</p>
                                 </div>
                             ) : (
                                 <div>
@@ -628,11 +704,11 @@ export default function InstructorDashboard() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {Object.entries(analytics.enrollmentsByCategory).map(([cat, count]) => (
                             <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                <span style={{ color: '#94a3b8', fontSize: '13px', minWidth: '160px' }}>{cat}</span>
+                                <span style={{ color: colors.textMuted, fontSize: '13px', minWidth: '160px' }}>{cat}</span>
                                 <div style={{ flex: 1, background: 'rgba(30,41,59,0.5)', borderRadius: '8px', height: '8px', overflow: 'hidden' }}>
                                     <div style={{ height: '100%', background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', borderRadius: '8px', width: `${Math.min((count / (analytics.totalStudents || 1)) * 100, 100)}%` }} />
                                 </div>
-                                <span style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: '700', minWidth: '30px', textAlign: 'right' }}>{count}</span>
+                                <span style={{ color: colors.text, fontSize: '14px', fontWeight: '700', minWidth: '30px', textAlign: 'right' }}>{count}</span>
                             </div>
                         ))}
                     </div>
@@ -673,8 +749,8 @@ export default function InstructorDashboard() {
                         {courses.map(c => (
                             <div key={c._id} style={s.recentItem}>
                                 <div>
-                                    <h4 style={{ color: '#f1f5f9', margin: 0, fontSize: '14px', fontWeight: '600' }}>{c.courseTitle}</h4>
-                                    <span style={{ color: '#64748b', fontSize: '12px' }}>{c.totalEnrollments || 0} enrollments × {c.price || 0} ETB</span>
+                                    <h4 style={{ color: colors.text, margin: 0, fontSize: '14px', fontWeight: '600' }}>{c.courseTitle}</h4>
+                                    <span style={{ color: colors.textMuted, fontSize: '12px' }}>{c.totalEnrollments || 0} enrollments × {c.price || 0} ETB</span>
                                 </div>
                                 <span style={{ color: '#10b981', fontSize: '16px', fontWeight: '800' }}>{(c.totalEnrollments || 0) * (c.price || 0)} ETB</span>
                             </div>
@@ -704,14 +780,14 @@ export default function InstructorDashboard() {
                         <label key={pref.key} style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
                             <input type="checkbox" checked={settingsForm[pref.key]} onChange={e => setSettingsForm({ ...settingsForm, [pref.key]: e.target.checked })} style={{ width: '18px', height: '18px', accentColor: '#3b82f6' }} />
                             <span style={{ fontSize: '18px' }}>{pref.emoji}</span>
-                            <span style={{ color: '#f1f5f9', fontSize: '14px' }}>{pref.label}</span>
+                            <span style={{ color: colors.text, fontSize: '14px' }}>{pref.label}</span>
                         </label>
                     ))}
                 </div>
             </div>
             <div style={s.panelCard}>
                 <h3 style={s.panelTitle}>Danger Zone</h3>
-                <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '16px' }}>Permanently deactivate your instructor account. This action cannot be undone.</p>
+                <p style={{ color: colors.textMuted, fontSize: '13px', marginBottom: '16px' }}>Permanently deactivate your instructor account. This action cannot be undone.</p>
                 <button style={s.dangerBtn}>⚠️ Deactivate Account</button>
             </div>
         </div>
@@ -735,7 +811,7 @@ export default function InstructorDashboard() {
     ];
 
     return (
-        <div style={s.page}>
+        <div style={{ ...s.page, background: colors.bg, color: colors.text }}>
             {/* ── Sidebar ─────────────────────────────────────── */}
             <aside style={s.sidebar}>
                 <div style={s.logoBox}>
@@ -750,7 +826,7 @@ export default function InstructorDashboard() {
                             style={{
                                 ...s.navItem,
                                 background: activeTab === tab.key ? 'rgba(59,130,246,0.12)' : 'transparent',
-                                color: activeTab === tab.key ? '#60a5fa' : '#94a3b8',
+                                color: activeTab === tab.key ? '#60a5fa' : colors.textMuted,
                                 borderLeft: activeTab === tab.key ? '3px solid #3b82f6' : '3px solid transparent'
                             }}
                         >
@@ -759,7 +835,11 @@ export default function InstructorDashboard() {
                     ))}
                 </nav>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <button onClick={toggleTheme} style={s.catalogBtn}>
+                        {theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode'}
+                    </button>
                     <button onClick={() => navigate('/courses')} style={s.catalogBtn}>📚 Course Catalog</button>
+                    <button onClick={() => navigate('/')} style={{ ...s.catalogBtn, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#60a5fa' }}>🏠 Home Page</button>
                     <button onClick={handleLogout} style={s.logoutBtn}>↩ Sign Out</button>
                 </div>
             </aside>
@@ -881,9 +961,9 @@ export default function InstructorDashboard() {
 
                                 {/* Question Builder */}
                                 <div style={{ borderTop: '1px solid rgba(30,41,59,0.5)', paddingTop: '16px' }}>
-                                    <h4 style={{ color: '#f1f5f9', margin: '0 0 12px', fontSize: '15px' }}>Questions</h4>
+                                    <h4 style={{ color: colors.text, margin: '0 0 12px', fontSize: '15px' }}>Questions</h4>
                                     {quizForm.questions.map((q, qIdx) => (
-                                        <div key={qIdx} style={{ background: 'rgba(15,23,42,0.5)', padding: '16px', borderRadius: '10px', marginBottom: '12px', border: '1px solid rgba(30,41,59,0.5)' }}>
+                                        <div key={qIdx} style={{ background: colors.bgCard, padding: '16px', borderRadius: '10px', marginBottom: '12px', border: '1px solid rgba(30,41,59,0.5)' }}>
                                             <label style={{ ...s.label, marginBottom: '6px', display: 'block' }}>Q{qIdx + 1}: Question Text</label>
                                             <input style={{ ...s.input, marginBottom: '10px' }} value={q.questionText} onChange={e => updateQuestion(qIdx, 'questionText', e.target.value)} placeholder="Enter question..." />
                                             {q.options.map((opt, oIdx) => (
@@ -914,7 +994,7 @@ export default function InstructorDashboard() {
                         <div style={s.modalBody}>
                             {selectedSubmission?.submittedRepositoryURL && (
                                 <div style={{ marginBottom: '16px', padding: '12px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px' }}>
-                                    <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Submitted Link:</p>
+                                    <p style={{ margin: 0, fontSize: '12px', color: colors.textMuted }}>Submitted Link:</p>
                                     <a href={selectedSubmission.submittedRepositoryURL} target="_blank" rel="noreferrer" style={{ color: '#60a5fa', fontSize: '13px' }}>{selectedSubmission.submittedRepositoryURL}</a>
                                 </div>
                             )}
@@ -931,80 +1011,4 @@ export default function InstructorDashboard() {
     );
 }
 
-// ═══════════════════════════════════════════════════════════════
-// ── STYLES ────────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════
-const s = {
-    // Layout
-    page: { display: 'flex', minHeight: '100vh', background: 'linear-gradient(rgba(9,13,22,0.75), rgba(9,13,22,0.75)), url("/images/dashboard-bg.jpg") no-repeat center center fixed', backgroundSize: 'cover', fontFamily: "'Outfit', sans-serif" },
-    sidebar: { width: '260px', background: 'rgba(15,20,34,0.7)', backdropFilter: 'blur(12px)', borderRight: '1px solid rgba(30,41,59,0.5)', display: 'flex', flexDirection: 'column', padding: '24px 16px', position: 'fixed', height: '100vh', zIndex: 10 },
-    logoBox: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '36px', paddingLeft: '8px' },
-    logo: { width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#fff', fontSize: '18px' },
-    logoText: { color: '#fff', fontWeight: '700', fontSize: '16px' },
-    nav: { display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, overflowY: 'auto' },
-    navItem: { textAlign: 'left', background: 'transparent', border: 'none', color: '#94a3b8', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', outline: 'none' },
-    catalogBtn: { background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#60a5fa', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
-    logoutBtn: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
 
-    // Main
-    main: { marginLeft: '260px', flex: 1, padding: '40px', overflowY: 'auto' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '36px' },
-    greeting: { color: '#f8fafc', fontSize: '26px', fontWeight: '800', margin: 0 },
-    subGreeting: { color: '#64748b', fontSize: '14px', margin: '4px 0 0' },
-    avatar: { width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '20px' },
-    loadingBox: { color: '#64748b', fontSize: '16px', textAlign: 'center', padding: '100px 0' },
-
-    // Tabs
-    tabHeader: { marginBottom: '28px' },
-    tabTitle: { color: '#f8fafc', fontSize: '22px', fontWeight: '800', margin: 0 },
-    tabSubtitle: { color: '#64748b', fontSize: '14px', margin: '4px 0 0' },
-
-    // Stats
-    statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' },
-    statCard: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '22px', border: '1px solid rgba(30,41,59,0.5)' },
-    statValue: { display: 'block', fontSize: '32px', fontWeight: '800' },
-    statLabel: { color: '#64748b', fontSize: '12px', fontWeight: '500', marginTop: '4px', display: 'block' },
-
-    // Cards
-    panelCard: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '28px', border: '1px solid rgba(30,41,59,0.5)', marginBottom: '24px', cursor: 'default', transition: 'border-color 0.2s' },
-    panelTitle: { color: '#f1f5f9', fontSize: '16px', fontWeight: '700', margin: '0 0 20px' },
-    recentItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid rgba(30,41,59,0.3)' },
-    courseRow: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '24px', border: '1px solid rgba(30,41,59,0.5)', display: 'flex', justifyContent: 'space-between', gap: '20px' },
-    badge: { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', display: 'inline-block' },
-    miniStat: { background: 'rgba(15,23,42,0.4)', padding: '14px 16px', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '2px' },
-
-    // Empty
-    emptyBox: { padding: '48px', textAlign: 'center', background: 'rgba(14,23,38,0.45)', borderRadius: '14px', border: '1px solid rgba(30,41,59,0.4)' },
-    emptyText: { color: '#64748b', fontSize: '14px', margin: 0 },
-
-    // Table
-    tableCard: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', border: '1px solid rgba(30,41,59,0.5)', overflow: 'hidden' },
-    table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
-    thRow: { background: 'rgba(15,20,34,0.6)' },
-    th: { padding: '14px 20px', color: '#64748b', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' },
-    tr: { borderBottom: '1px solid rgba(30,41,59,0.4)' },
-    td: { padding: '14px 20px', color: '#f1f5f9', fontSize: '14px' },
-
-    // Buttons
-    primaryBtn: { background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', transition: 'opacity 0.2s' },
-    actionBtn: { background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', color: '#60a5fa', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'background 0.2s' },
-    actionBtnAlt: { background: 'transparent', border: '1px solid rgba(51,65,85,0.6)', color: '#f1f5f9', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'background 0.2s' },
-    dangerBtn: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px' },
-    textBtn: { background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: '600', fontSize: '13px', textDecoration: 'underline' },
-
-    // Forms
-    formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
-    formGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
-    label: { color: '#94a3b8', fontSize: '12px', fontWeight: '600' },
-    input: { background: 'rgba(9,13,22,0.6)', border: '1px solid rgba(30,41,59,0.6)', color: '#fff', padding: '11px 14px', borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.2s' },
-    select: { background: 'rgba(9,13,22,0.6)', border: '1px solid rgba(30,41,59,0.6)', color: '#fff', padding: '11px 14px', borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit' },
-    successAlert: { background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px', fontWeight: '600' },
-
-    // Modals
-    backdrop: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' },
-    modal: { background: 'rgba(30,41,59,0.95)', backdropFilter: 'blur(16px)', border: '1px solid rgba(51,65,85,0.6)', borderRadius: '18px', width: '100%', maxWidth: '600px', maxHeight: '85vh', overflow: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.5)' },
-    modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px 0' },
-    modalTitle: { color: '#f1f5f9', fontSize: '18px', fontWeight: '700', margin: 0 },
-    closeBtn: { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(51,65,85,0.6)', color: '#94a3b8', borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-    modalBody: { padding: '20px 24px 24px' }
-};

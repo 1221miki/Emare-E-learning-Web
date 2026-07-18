@@ -4,8 +4,10 @@ import Sidebar from '../../components/Sidebar';
 import StatCard from '../../components/StatCard';
 import Modal from '../../components/Modal';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function AdminDashboard() {
+    const { colors, theme } = useTheme();
     const [activeTab, setActiveTab] = useState('overview');
     const [loading, setLoading] = useState(true);
     
@@ -147,6 +149,36 @@ export default function AdminDashboard() {
 
     // ── RENDERERS ──────────────────────────────────────────────
 
+    const s = {
+        page: { display: 'flex', minHeight: '100vh', fontFamily: "'Outfit', 'Inter', sans-serif", background: colors.bg },
+        main: { marginLeft: '260px', flex: 1, padding: '40px', overflowY: 'auto' },
+        header: { marginBottom: '32px' },
+        greeting: { color: colors.text, fontSize: '32px', fontWeight: '900', margin: 0, letterSpacing: '-0.5px' },
+        notification: { position: 'fixed', top: '24px', right: '24px', background: colors.success, color: '#fff', padding: '16px 24px', borderRadius: '12px', fontWeight: '600', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', zIndex: 1000, animation: 'fadeIn 0.3s ease-out' },
+        tabContent: { animation: 'fadeIn 0.3s ease-in-out' },
+        sectionHeader: { marginBottom: '32px' },
+        sectionTitle: { color: colors.text, fontSize: '24px', fontWeight: '800', margin: '0 0 8px' },
+        sectionSub: { color: colors.textMuted, fontSize: '15px', margin: 0 },
+        statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' },
+        cardGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', alignItems: 'start' },
+        card: { background: colors.bgCard, backdropFilter: 'blur(10px)', borderRadius: '16px', padding: '28px', border: `1px solid ${colors.border}`, boxShadow: '0 4px 15px rgba(0,0,0,0.03)' },
+        cardTitle: { color: colors.text, fontSize: '18px', fontWeight:'700', margin:'0 0 20px' },
+        tableContainer: { background: colors.bgCard, backdropFilter: 'blur(10px)', borderRadius: '16px', border: `1px solid ${colors.border}`, overflowX: 'auto', padding: '4px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' },
+        table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: colors.text },
+        th: { padding: '16px 24px', color: colors.textMuted, fontSize: '13px', fontWeight: '700', borderBottom: `1px solid ${colors.border}` },
+        td: { padding: '16px 24px', fontSize: '14px', borderBottom: `1px solid ${colors.border}` },
+        badge: { padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700' },
+        select: { background: colors.bgInput, color: colors.text, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '10px 14px', outline: 'none', width: '100%' },
+        actionBtn: { background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px', textDecoration: 'underline', fontWeight: '600', padding: '0 8px' },
+        emptyState: { padding: '40px', textAlign: 'center', color: colors.textMuted, background: colors.bgInput, borderRadius: '12px', border: `1px dashed ${colors.border}` },
+        listItem: { background: colors.bgCard, borderRadius: '12px', padding: '20px 24px', border: `1px solid ${colors.border}`, marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+        input: { background: colors.bgInput, border: `1px solid ${colors.border}`, borderRadius: '8px', color: colors.text, padding: '12px 16px', width: '100%', boxSizing:'border-box', outline: 'none' },
+        label: { display: 'block', color: colors.textMuted, fontSize: '14px', fontWeight: '600', marginBottom: '8px' },
+        primaryBtn: { background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', transition: 'transform 0.1s' },
+        secondaryBtn: { background: 'transparent', color: colors.textMuted, border: `1px solid ${colors.border}`, borderRadius: '10px', padding: '12px 24px', fontWeight: '600', cursor: 'pointer' },
+        reportBtn: { background: colors.bgInput, color: colors.text, border: `1px solid ${colors.border}`, padding: '16px 24px', borderRadius: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }
+    };
+
     const renderOverview = () => {
         const revenueData = [
             { name: 'Jan', revenue: 4000 }, { name: 'Feb', revenue: 5200 }, { name: 'Mar', revenue: 6100 },
@@ -167,10 +199,10 @@ export default function AdminDashboard() {
                 </div>
                 
                 <div style={s.statsGrid}>
-                    <StatCard label="Total Users" value={analytics?.totalUsers || 0} color="#3b82f6" icon="👥" />
-                    <StatCard label="Active Enrollments" value={analytics?.totalEnrollments || 0} color="#10b981" icon="🎓" />
-                    <StatCard label="Total Courses" value={allCourses.length} color="#8b5cf6" icon="📚" />
-                    <StatCard label="Revenue (ETB)" value={(analytics?.clearedEnrollments || 0) * 1500} color="#f59e0b" icon="💰" />
+                    <StatCard label="Total Users" value={analytics?.totalUsers || 0} color={colors.primary} icon="👥" />
+                    <StatCard label="Active Enrollments" value={analytics?.totalEnrollments || 0} color={colors.success} icon="🎓" />
+                    <StatCard label="Total Courses" value={allCourses.length} color={colors.accent} icon="📚" />
+                    <StatCard label="Revenue (ETB)" value={(analytics?.clearedEnrollments || 0) * 1500} color={colors.warning} icon="💰" />
                 </div>
                 
                 <div style={s.cardGrid}>
@@ -181,15 +213,15 @@ export default function AdminDashboard() {
                                 <AreaChart data={revenueData}>
                                     <defs>
                                         <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                            <stop offset="5%" stopColor={colors.success} stopOpacity={0.8}/>
+                                            <stop offset="95%" stopColor={colors.success} stopOpacity={0}/>
                                         </linearGradient>
                                     </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                                    <XAxis dataKey="name" stroke="#94a3b8" axisLine={false} tickLine={false} />
-                                    <YAxis stroke="#94a3b8" axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
-                                    <Tooltip contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#fff' }} />
-                                    <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                                    <CartesianGrid strokeDasharray="3 3" stroke={colors.border} vertical={false} />
+                                    <XAxis dataKey="name" stroke={colors.textMuted} axisLine={false} tickLine={false} />
+                                    <YAxis stroke={colors.textMuted} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}`} />
+                                    <Tooltip contentStyle={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', color: colors.text }} />
+                                    <Area type="monotone" dataKey="revenue" stroke={colors.success} strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
@@ -200,12 +232,12 @@ export default function AdminDashboard() {
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie data={roleData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={5} dataKey="value" stroke="none">
-                                        <Cell fill="#3b82f6" />
-                                        <Cell fill="#8b5cf6" />
-                                        <Cell fill="#10b981" />
+                                        <Cell fill={colors.primary} />
+                                        <Cell fill={colors.accent} />
+                                        <Cell fill={colors.success} />
                                     </Pie>
-                                    <Tooltip contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#fff' }} />
-                                    <Legend verticalAlign="bottom" height={36} wrapperStyle={{ color: '#fff' }} />
+                                    <Tooltip contentStyle={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', color: colors.text }} />
+                                    <Legend verticalAlign="bottom" height={36} wrapperStyle={{ color: colors.text }} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
@@ -226,35 +258,35 @@ export default function AdminDashboard() {
                 <table style={s.table}>
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                            <th>Actions</th>
+                            <th style={s.th}>Name</th>
+                            <th style={s.th}>Email</th>
+                            <th style={s.th}>Role</th>
+                            <th style={s.th}>Status</th>
+                            <th style={s.th}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {users.map(u => (
                             <tr key={u._id}>
-                                <td>{u.fullName}</td>
-                                <td style={{ color: '#94a3b8' }}>{u.accountEmail}</td>
-                                <td>
+                                <td style={s.td}>{u.fullName}</td>
+                                <td style={{ ...s.td, color: colors.textMuted }}>{u.accountEmail}</td>
+                                <td style={s.td}>
                                     <select value={u.assignedRole} onChange={(e) => handleRoleChange(u._id, e.target.value)} style={s.select}>
                                         <option value="Student">Student</option>
                                         <option value="Instructor">Instructor</option>
                                         <option value="Admin">Admin</option>
                                     </select>
                                 </td>
-                                <td>
-                                    <span style={{...s.badge, background: u.isActive ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: u.isActive ? '#10b981' : '#ef4444'}}>
+                                <td style={s.td}>
+                                    <span style={{...s.badge, background: u.isActive ? `${colors.success}15` : `${colors.danger}15`, color: u.isActive ? colors.success : colors.danger}}>
                                         {u.isActive ? 'Active' : 'Suspended'}
                                     </span>
                                 </td>
-                                <td>
-                                    <button onClick={() => handleToggleUserStatus(u)} style={{...s.actionBtn, color: u.isActive ? '#ef4444' : '#10b981'}}>
+                                <td style={s.td}>
+                                    <button onClick={() => handleToggleUserStatus(u)} style={{...s.actionBtn, color: u.isActive ? colors.danger : colors.success}}>
                                         {u.isActive ? 'Suspend' : 'Activate'}
                                     </button>
-                                    <button onClick={() => { setSelectedUser(u); setIsPasswordModalOpen(true); }} style={{...s.actionBtn, color: '#3b82f6'}}>
+                                    <button onClick={() => { setSelectedUser(u); setIsPasswordModalOpen(true); }} style={{...s.actionBtn, color: colors.primary}}>
                                         Reset Pwd
                                     </button>
                                 </td>
@@ -275,7 +307,7 @@ export default function AdminDashboard() {
             <div style={s.cardGrid}>
                 <div style={s.card}>
                     <h3 style={s.cardTitle}>Active Sessions</h3>
-                    <p style={{ color: '#94a3b8', fontSize: '14px' }}>Currently tracking 45 active user sessions. No anomalies detected.</p>
+                    <p style={{ color: colors.textMuted, fontSize: '14px', marginBottom: '16px' }}>Currently tracking 45 active user sessions. No anomalies detected.</p>
                     <button style={s.secondaryBtn}>Force Logout All Users</button>
                 </div>
                 <div style={s.card}>
@@ -286,7 +318,7 @@ export default function AdminDashboard() {
             </div>
             <div style={{...s.card, marginTop: '24px'}}>
                 <h3 style={s.cardTitle}>Recent Audit Logs</h3>
-                <div style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.8 }}>
+                <div style={{ color: colors.textMuted, fontSize: '14px', lineHeight: 1.8 }}>
                     <div>[2026-07-15 09:12:00] Admin (you) updated system settings.</div>
                     <div>[2026-07-15 08:45:22] Instructor "Abeba" published course "React Basics".</div>
                     <div>[2026-07-15 08:30:11] User "Dawit" failed login attempt (IP: 192.168.1.5).</div>
@@ -306,43 +338,43 @@ export default function AdminDashboard() {
                     <p style={s.sectionSub}>Approve pending courses, manage categories, and oversee curriculum.</p>
                 </div>
 
-                <h3 style={{ color: '#f1f5f9', fontSize: '18px', marginBottom: '16px' }}>Audit Queue ({pending.length})</h3>
+                <h3 style={{ color: colors.text, fontSize: '18px', marginBottom: '16px' }}>Audit Queue ({pending.length})</h3>
                 {pending.length === 0 ? (
                     <div style={s.emptyState}>No courses pending review.</div>
                 ) : pending.map(course => (
                     <div key={course._id} style={s.listItem}>
                         <div style={{ flex: 1 }}>
-                            <span style={{...s.badge, background: 'rgba(245,158,11,0.1)', color: '#fbbf24', marginBottom: '8px', display: 'inline-block'}}>PENDING AUDIT</span>
-                            <h4 style={{ color: '#f1f5f9', margin: '0 0 8px', fontSize: '18px' }}>{course.courseTitle}</h4>
-                            <p style={{ color: '#94a3b8', margin: 0, fontSize: '14px' }}>Instructor: {course.creatorRef?.fullName} | Category: {course.technicalCategory}</p>
+                            <span style={{...s.badge, background: `${colors.warning}15`, color: colors.warning, marginBottom: '8px', display: 'inline-block'}}>PENDING AUDIT</span>
+                            <h4 style={{ color: colors.text, margin: '0 0 8px', fontSize: '18px' }}>{course.courseTitle}</h4>
+                            <p style={{ color: colors.textMuted, margin: 0, fontSize: '14px' }}>Instructor: {course.creatorRef?.fullName} | Category: {course.technicalCategory}</p>
                         </div>
                         <div style={{ display: 'flex', gap: '12px' }}>
-                            <button onClick={() => handleApproveCourse(course._id)} style={{...s.primaryBtn, background: '#10b981'}}>Approve</button>
-                            <button onClick={() => handleRejectCourse(course._id)} style={{...s.secondaryBtn, color: '#ef4444', borderColor: '#ef4444'}}>Reject</button>
+                            <button onClick={() => handleApproveCourse(course._id)} style={{...s.primaryBtn, background: colors.success}}>Approve</button>
+                            <button onClick={() => handleRejectCourse(course._id)} style={{...s.secondaryBtn, color: colors.danger, borderColor: colors.danger}}>Reject</button>
                         </div>
                     </div>
                 ))}
 
-                <h3 style={{ color: '#f1f5f9', fontSize: '18px', margin: '40px 0 16px' }}>Published Courses ({active.length})</h3>
+                <h3 style={{ color: colors.text, fontSize: '18px', margin: '40px 0 16px' }}>Published Courses ({active.length})</h3>
                 <div style={s.tableContainer}>
                     <table style={s.table}>
                         <thead>
                             <tr>
-                                <th>Title</th>
-                                <th>Category</th>
-                                <th>Price</th>
-                                <th>Actions</th>
+                                <th style={s.th}>Title</th>
+                                <th style={s.th}>Category</th>
+                                <th style={s.th}>Price</th>
+                                <th style={s.th}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {active.map(c => (
                                 <tr key={c._id}>
-                                    <td>{c.courseTitle}</td>
-                                    <td style={{ color: '#94a3b8' }}>{c.technicalCategory}</td>
-                                    <td>{c.price === 0 ? 'Free' : `ETB ${c.price}`}</td>
-                                    <td>
-                                        <button onClick={() => handleRejectCourse(c._id)} style={{...s.actionBtn, color: '#f59e0b'}}>Unpublish</button>
-                                        <button style={{...s.actionBtn, color: '#ef4444'}}>Delete</button>
+                                    <td style={s.td}>{c.courseTitle}</td>
+                                    <td style={{ ...s.td, color: colors.textMuted }}>{c.technicalCategory}</td>
+                                    <td style={s.td}>{c.price === 0 ? 'Free' : `ETB ${c.price}`}</td>
+                                    <td style={s.td}>
+                                        <button onClick={() => handleRejectCourse(c._id)} style={{...s.actionBtn, color: colors.warning}}>Unpublish</button>
+                                        <button style={{...s.actionBtn, color: colors.danger}}>Delete</button>
                                     </td>
                                 </tr>
                             ))}
@@ -381,8 +413,8 @@ export default function AdminDashboard() {
             <div style={s.card}>
                 <h3 style={s.cardTitle}>Certificate Templates</h3>
                 <div style={{ display: 'flex', gap: '20px' }}>
-                    <div style={{ width: '200px', height: '140px', background: 'linear-gradient(135deg, #1e293b, #0f172a)', border: '2px solid #3b82f6', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6', fontWeight: 'bold' }}>Standard Template</div>
-                    <div style={{ width: '200px', height: '140px', background: 'rgba(255,255,255,0.05)', border: '2px dashed #334155', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', cursor: 'pointer' }}>+ New Template</div>
+                    <div style={{ width: '200px', height: '140px', background: `linear-gradient(135deg, ${colors.bgInput}, ${colors.bgCard})`, border: `2px solid ${colors.primary}`, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.primary, fontWeight: 'bold' }}>Standard Template</div>
+                    <div style={{ width: '200px', height: '140px', background: colors.bgInput, border: `2px dashed ${colors.border}`, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.textMuted, cursor: 'pointer' }}>+ New Template</div>
                 </div>
             </div>
         </div>
@@ -395,9 +427,9 @@ export default function AdminDashboard() {
                 <p style={s.sectionSub}>Manage payments, manual clearings, instructor payouts, and refunds.</p>
             </div>
             <div style={s.statsGrid}>
-                <StatCard label="Total Revenue" value={`ETB ${(analytics?.clearedEnrollments || 0) * 1500}`} color="#10b981" icon="💵" />
-                <StatCard label="Pending Payouts" value="ETB 0" color="#f59e0b" icon="⏳" />
-                <StatCard label="Refunds Processed" value="0" color="#ef4444" icon="↩️" />
+                <StatCard label="Total Revenue" value={`ETB ${(analytics?.clearedEnrollments || 0) * 1500}`} color={colors.success} icon="💵" />
+                <StatCard label="Pending Payouts" value="ETB 0" color={colors.warning} icon="⏳" />
+                <StatCard label="Refunds Processed" value="0" color={colors.danger} icon="↩️" />
             </div>
             <div style={s.card}>
                 <h3 style={s.cardTitle}>Recent Transactions</h3>
@@ -405,20 +437,20 @@ export default function AdminDashboard() {
                     <table style={s.table}>
                         <thead>
                             <tr>
-                                <th>Student</th>
-                                <th>Course</th>
-                                <th>Amount</th>
-                                <th>Status</th>
+                                <th style={s.th}>Student</th>
+                                <th style={s.th}>Course</th>
+                                <th style={s.th}>Amount</th>
+                                <th style={s.th}>Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             {enrollments.slice(0,5).map(e => (
                                 <tr key={e._id}>
-                                    <td>{e.studentRef?.fullName}</td>
-                                    <td>{e.courseRef?.courseTitle}</td>
-                                    <td>ETB {e.courseRef?.price}</td>
-                                    <td>
-                                        <span style={{...s.badge, background: e.paymentStatus === 'Cleared' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', color: e.paymentStatus === 'Cleared' ? '#10b981' : '#f59e0b'}}>
+                                    <td style={s.td}>{e.studentRef?.fullName}</td>
+                                    <td style={s.td}>{e.courseRef?.courseTitle}</td>
+                                    <td style={s.td}>ETB {e.courseRef?.price}</td>
+                                    <td style={s.td}>
+                                        <span style={{...s.badge, background: e.paymentStatus === 'Cleared' ? `${colors.success}15` : `${colors.warning}15`, color: e.paymentStatus === 'Cleared' ? colors.success : colors.warning}}>
                                             {e.paymentStatus}
                                         </span>
                                     </td>
@@ -495,15 +527,15 @@ export default function AdminDashboard() {
 
                 <div style={s.card}>
                     <h3 style={s.cardTitle}>System Toggles</h3>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: '#cbd5e1', cursor: 'pointer' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: colors.textMuted, cursor: 'pointer' }}>
                         <input type="checkbox" checked={settings.maintenanceMode} onChange={e => setSettings({...settings, maintenanceMode: e.target.checked})} style={{ width: '18px', height: '18px' }} />
                         Enable Maintenance Mode
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: '#cbd5e1', cursor: 'pointer' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: colors.textMuted, cursor: 'pointer' }}>
                         <input type="checkbox" checked={settings.allowRegistration} onChange={e => setSettings({...settings, allowRegistration: e.target.checked})} style={{ width: '18px', height: '18px' }} />
                         Allow New User Registration
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: '#cbd5e1', cursor: 'pointer' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: colors.textMuted, cursor: 'pointer' }}>
                         <input type="checkbox" checked={settings.requireEmailVerification} onChange={e => setSettings({...settings, requireEmailVerification: e.target.checked})} style={{ width: '18px', height: '18px' }} />
                         Require Email Verification
                     </label>
@@ -511,8 +543,8 @@ export default function AdminDashboard() {
 
                 <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '16px' }}>
                     <button type="submit" style={s.primaryBtn}>Save Configuration</button>
-                    <button type="button" onClick={handleBackup} style={{...s.secondaryBtn, borderColor: '#10b981', color: '#10b981'}}>Trigger DB Backup</button>
-                    <button type="button" onClick={handleClearCache} style={{...s.secondaryBtn, borderColor: '#ef4444', color: '#ef4444'}}>Clear System Cache</button>
+                    <button type="button" onClick={handleBackup} style={{...s.secondaryBtn, borderColor: colors.success, color: colors.success}}>Trigger DB Backup</button>
+                    <button type="button" onClick={handleClearCache} style={{...s.secondaryBtn, borderColor: colors.danger, color: colors.danger}}>Clear System Cache</button>
                 </div>
             </form>
         </div>
@@ -547,7 +579,7 @@ export default function AdminDashboard() {
                 )}
 
                 {loading ? (
-                    <div style={{padding:'40px', color:'#64748b'}}>Loading system data...</div>
+                    <div style={{padding:'40px', color:colors.textMuted}}>Loading system data...</div>
                 ) : (
                     <>
                         {activeTab === 'overview' && renderOverview()}
@@ -573,31 +605,3 @@ export default function AdminDashboard() {
         </div>
     );
 }
-
-const s = {
-    page: { display: 'flex', minHeight: '100vh', background: '#090d16', fontFamily: "'Outfit', 'Inter', sans-serif" },
-    main: { marginLeft: '260px', flex: 1, padding: '40px', overflowY: 'auto' },
-    header: { marginBottom: '32px' },
-    greeting: { color: '#f1f5f9', fontSize: '32px', fontWeight: '900', margin: 0, letterSpacing: '-0.5px' },
-    notification: { position: 'fixed', top: '24px', right: '24px', background: 'rgba(16,185,129,0.9)', backdropFilter: 'blur(10px)', color: '#fff', padding: '16px 24px', borderRadius: '12px', fontWeight: '600', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', zIndex: 1000, animation: 'fadeIn 0.3s ease-out' },
-    tabContent: { animation: 'fadeIn 0.3s ease-in-out' },
-    sectionHeader: { marginBottom: '32px' },
-    sectionTitle: { color: '#f1f5f9', fontSize: '24px', fontWeight: '800', margin: '0 0 8px' },
-    sectionSub: { color: '#94a3b8', fontSize: '15px', margin: 0 },
-    statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' },
-    cardGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', alignItems: 'start' },
-    card: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '16px', padding: '28px', border: '1px solid rgba(30,41,59,0.5)' },
-    cardTitle: { color: '#f1f5f9', fontSize: '18px', fontWeight:'700', margin:'0 0 20px' },
-    tableContainer: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '16px', border: '1px solid rgba(30,41,59,0.5)', overflowX: 'auto', padding: '4px' },
-    table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: '#f1f5f9' },
-    badge: { padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700' },
-    select: { background: 'rgba(30,41,59,0.6)', color: '#fff', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '8px', padding: '10px 14px', outline: 'none', width: '100%' },
-    actionBtn: { background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px', textDecoration: 'underline', fontWeight: '600', padding: '0 8px' },
-    emptyState: { padding: '40px', textAlign: 'center', color: '#64748b', background: 'rgba(14,23,38,0.4)', borderRadius: '12px', border: '1px dashed rgba(51,65,85,0.6)' },
-    listItem: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '12px', padding: '20px 24px', border: '1px solid rgba(30,41,59,0.5)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    input: { background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '8px', color: '#fff', padding: '12px 16px', width: '100%', boxSizing:'border-box', outline: 'none' },
-    label: { display: 'block', color: '#cbd5e1', fontSize: '14px', fontWeight: '600', marginBottom: '8px' },
-    primaryBtn: { background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', transition: 'transform 0.1s' },
-    secondaryBtn: { background: 'transparent', color: '#cbd5e1', border: '1px solid rgba(51,65,85,0.8)', borderRadius: '10px', padding: '12px 24px', fontWeight: '600', cursor: 'pointer' },
-    reportBtn: { background: 'rgba(30,41,59,0.6)', color: '#f1f5f9', border: '1px solid rgba(51,65,85,0.5)', padding: '16px 24px', borderRadius: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }
-};

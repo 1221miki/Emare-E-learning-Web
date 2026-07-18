@@ -55,7 +55,7 @@ export default function LeaderboardPage() {
                                 <div key={student._id} style={{
                                     display: 'flex', alignItems: 'center', padding: '20px', gap: '20px',
                                     borderBottom: idx !== leaders.length - 1 ? `1px solid ${colors.border}` : 'none',
-                                    background: user?.id === student._id ? (colors.bg === '#0f172a' ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.05)') : 'transparent'
+                                    background: user?.id === student._id ? (colors.bg === colors.bg ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.05)') : 'transparent'
                                 }}>
                                     <div style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '16px', ...getRankStyle(idx) }}>
                                         #{idx + 1}

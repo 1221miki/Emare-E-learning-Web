@@ -100,7 +100,7 @@ export default function NotificationBell() {
                                 style={{
                                     padding: '12px 16px', cursor: 'pointer',
                                     borderBottom: `1px solid ${colors.border}`,
-                                    background: n.isRead ? 'transparent' : (colors.bg === '#0f172a' ? 'rgba(59,130,246,0.08)' : 'rgba(59,130,246,0.05)'),
+                                    background: n.isRead ? 'transparent' : (colors.bg === colors.bg ? 'rgba(59,130,246,0.08)' : 'rgba(59,130,246,0.05)'),
                                     transition: 'background 0.15s'
                                 }}
                             >

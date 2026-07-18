@@ -37,7 +37,7 @@ const app = express();
 // ── Core Middleware ────────────────────────────────────────
 app.use(helmet());                           // Set secure HTTP response headers
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: [process.env.FRONTEND_URL || 'http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3001', 'http://127.0.0.1:3000'],
     credentials: true                        // Allow cookies to be sent cross-origin
 }));
 app.use(cookieParser());                     // Parse HTTP-Only cookie tokens

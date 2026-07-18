@@ -11,7 +11,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange }) {
 
     const handleLogout = async () => {
         await logout();
-        navigate('/login');
+        navigate('/');
     };
 
     return (
@@ -76,8 +76,11 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange }) {
                 </div>
             </div>
 
-            {/* Logout */}
-            <button onClick={handleLogout} style={styles.logoutBtn}>↩ Sign Out</button>
+            {/* Home & Logout */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button onClick={() => navigate('/')} style={{ ...styles.homeBtn }}>🏠 Home Page</button>
+                <button onClick={handleLogout} style={styles.logoutBtn}>↩ Sign Out</button>
+            </div>
         </aside>
     );
 }
@@ -126,6 +129,11 @@ const styles = {
     logoutBtn: {
         background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
         color: '#ef4444', borderRadius: '10px', padding: '10px',
+        cursor: 'pointer', fontSize: '14px', fontWeight: '600', transition: 'background 0.2s'
+    },
+    homeBtn: {
+        background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)',
+        color: '#60a5fa', borderRadius: '10px', padding: '10px',
         cursor: 'pointer', fontSize: '14px', fontWeight: '600', transition: 'background 0.2s'
     }
 };

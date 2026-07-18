@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { courseService, reviewService, wishlistService, paymentService } from '../../services/api';
-import NotificationBell from '../../components/NotificationBell';
+import Navbar from '../../components/Navbar';
+import GuestModal from '../../components/GuestModal';
 
 export default function CourseDetailPage() {
     const { courseId } = useParams();
@@ -15,6 +16,7 @@ export default function CourseDetailPage() {
     const [reviews, setReviews] = useState([]);
     const [inWishlist, setInWishlist] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [guestModal, setGuestModal] = useState({ open: false, action: '' });
 
     // Review Form State
     const [showReviewForm, setShowReviewForm] = useState(false);
@@ -42,19 +44,14 @@ export default function CourseDetailPage() {
     }, [courseId, isAuthenticated, isStudent]);
 
     const handleEnroll = async () => {
-        if (!user) {
-            navigate('/login');
+        if (!isAuthenticated) {
+            setGuestModal({ open: true, action: `enroll in "${course.courseTitle}"` });
             return;
         }
-
         try {
-            // Initiate Chapa Payment Flow
             const res = await paymentService.initializePayment({ courseId: course._id });
-            
-            // Redirect to the Chapa checkout URL (Mocked redirect for now)
             if (res.data.checkout_url) {
                 alert(res.data.message || 'Redirecting to payment gateway...');
-                // In a real Chapa implementation, window.location.href = res.data.checkout_url;
                 navigate(res.data.checkout_url);
             }
         } catch (err) {
@@ -63,7 +60,10 @@ export default function CourseDetailPage() {
     };
 
     const handleToggleWishlist = async () => {
-        if (!isAuthenticated) return navigate('/login');
+        if (!isAuthenticated) {
+            setGuestModal({ open: true, action: 'save this course to your wishlist' });
+            return;
+        }
         try {
             const res = await wishlistService.toggle(courseId);
             setInWishlist(res.data.added);
@@ -90,23 +90,7 @@ export default function CourseDetailPage() {
 
     return (
         <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: "'Segoe UI', sans-serif" }}>
-            {/* Nav */}
-            <nav style={{ background: colors.bgCard, borderBottom: `1px solid ${colors.border}`, padding: '0 40px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} onClick={() => navigate('/courses')}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#fff', fontSize: '18px' }}>E</div>
-                    <span style={{ color: colors.text, fontWeight: '700', fontSize: '16px' }}>Catalog</span>
-                </div>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    {isAuthenticated ? (
-                        <>
-                            <NotificationBell />
-                            <button onClick={() => navigate(isStudent ? '/student/dashboard' : '/instructor/dashboard')} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.textMuted, borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontSize: '13px' }}>Dashboard</button>
-                        </>
-                    ) : (
-                        <button onClick={() => navigate('/login')} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.textMuted, borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontSize: '13px' }}>Sign In</button>
-                    )}
-                </div>
-            </nav>
+            <Navbar />
 
             {/* Hero Section */}
             <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', padding: '60px 40px', color: '#fff' }}>
@@ -116,40 +100,48 @@ export default function CourseDetailPage() {
                             {course.technicalCategory} &gt; {course.level || 'Beginner'}
                         </div>
                         <h1 style={{ fontSize: '40px', fontWeight: '900', margin: '0 0 16px', lineHeight: 1.2 }}>{course.courseTitle}</h1>
-                        <p style={{ fontSize: '18px', color: '#94a3b8', margin: '0 0 24px', lineHeight: 1.6 }}>{course.subtitle || course.descriptionText.substring(0, 150)}</p>
+                        <p style={{ fontSize: '18px', color: colors.textMuted, margin: '0 0 24px', lineHeight: 1.6 }}>{course.subtitle || course.descriptionText.substring(0, 150)}</p>
                         
                         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '32px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <span style={{ color: '#fbbf24', fontSize: '18px' }}>★</span>
                                 <span style={{ fontWeight: '700', fontSize: '16px' }}>{course.averageRating || 0}</span>
-                                <span style={{ color: '#64748b', fontSize: '14px' }}>({course.totalReviews || 0} reviews)</span>
+                                <span style={{ color: colors.textMuted, fontSize: '14px' }}>({course.totalReviews || 0} reviews)</span>
                             </div>
-                            <div style={{ color: '#94a3b8', fontSize: '14px' }}>👥 {course.totalEnrollments || 0} students</div>
-                            <div style={{ color: '#94a3b8', fontSize: '14px' }}>🗣️ {course.language || 'English'}</div>
+                            <div style={{ color: colors.textMuted, fontSize: '14px' }}>👥 {course.totalEnrollments || 0} students</div>
+                            <div style={{ color: colors.textMuted, fontSize: '14px' }}>🗣️ {course.language || 'English'}</div>
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: colors.border, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
                                 {course.creatorRef?.fullName?.[0]}
                             </div>
                             <div>
-                                <div style={{ fontSize: '12px', color: '#64748b' }}>Created by</div>
-                                <div style={{ fontSize: '15px', fontWeight: '600' }}>{course.creatorRef?.fullName}</div>
+                                <div style={{ fontSize: '12px', color: colors.textMuted }}>Created by</div>
+                                <Link
+                                    to={`/instructors/${course.creatorRef?._id}`}
+                                    style={{ fontSize: '15px', fontWeight: '600', color: '#60a5fa', textDecoration: 'none' }}
+                                >
+                                    {course.creatorRef?.fullName} ↗
+                                </Link>
                             </div>
                         </div>
                     </div>
                     
                     {/* Floating Pricing Card */}
                     <div style={{ width: '360px', background: colors.bgCard, borderRadius: '16px', border: `1px solid ${colors.border}`, padding: '24px', flexShrink: 0, alignSelf: 'flex-start', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
-                        <div style={{ height: '200px', background: course.thumbnailUrl ? `url(${course.thumbnailUrl}) center/cover` : '#334155', borderRadius: '12px', marginBottom: '24px' }}></div>
-                        <div style={{ fontSize: '32px', fontWeight: '900', color: colors.text, marginBottom: '24px' }}>
-                            {course.price === 0 ? 'Free' : `$${course.price}`}
+                        <div style={{ height: '200px', background: course.thumbnailUrl ? `url(${course.thumbnailUrl}) center/cover` : colors.border, borderRadius: '12px', marginBottom: '24px' }}></div>
+                        <div style={{ fontSize: '32px', fontWeight: '900', color: colors.text, marginBottom: '8px' }}>
+                            {course.price === 0 ? '🆓 Free' : `${course.price} ETB`}
                         </div>
-                        <button onClick={handleEnroll} style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: 'pointer', marginBottom: '12px', transition: 'transform 0.1s' }}>
-                            Enroll Now
+                        {!isAuthenticated && (
+                            <p style={{ color: colors.textMuted, fontSize: '12px', margin: '0 0 16px', lineHeight: 1.5 }}>🔐 Login required to enroll and access full content.</p>
+                        )}
+                        <button onClick={handleEnroll} style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: 'pointer', marginBottom: '12px', transition: 'transform 0.1s', boxShadow: '0 8px 20px rgba(59,130,246,0.3)' }}>
+                            {isAuthenticated ? '🚀 Enroll Now' : '🔐 Login to Enroll'}
                         </button>
-                        <button onClick={handleToggleWishlist} style={{ width: '100%', padding: '14px', background: 'transparent', color: colors.text, border: `1px solid ${colors.border}`, borderRadius: '12px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}>
-                            {inWishlist ? '❤️ In Wishlist' : '🤍 Add to Wishlist'}
+                        <button onClick={handleToggleWishlist} style={{ width: '100%', padding: '14px', background: isAuthenticated ? 'transparent' : 'rgba(255,255,255,0.05)', color: colors.text, border: `1px solid ${colors.border}`, borderRadius: '12px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}>
+                            {inWishlist ? '❤️ In Wishlist' : '🤍 Save to Wishlist'}
                         </button>
                         <ul style={{ listStyle: 'none', padding: 0, margin: '24px 0 0', color: colors.textMuted, fontSize: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             <li>⏱️ {course.estimatedDurationHours} hours of on-demand video</li>
@@ -220,10 +212,15 @@ export default function CourseDetailPage() {
                     {/* Reviews */}
                     <section style={{ marginBottom: '48px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                            <h2 style={{ color: colors.text, fontSize: '24px', fontWeight: '800' }}>Student Reviews</h2>
-                            {isStudent && isAuthenticated && (
+                            <h2 style={{ color: colors.text, fontSize: '24px', fontWeight: '800' }}>⭐ Student Reviews ({reviews.length})</h2>
+                            {isAuthenticated ? (
                                 <button onClick={() => setShowReviewForm(!showReviewForm)} style={{ background: 'transparent', border: `1px solid ${colors.primary}`, color: colors.primary, padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
                                     {showReviewForm ? 'Cancel' : 'Write a Review'}
+                                </button>
+                            ) : (
+                                <button style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}
+                                    onClick={() => setGuestModal({ open: true, action: 'write a review for this course' })}>
+                                    🔐 Login to Review
                                 </button>
                             )}
                         </div>
@@ -277,6 +274,13 @@ export default function CourseDetailPage() {
                     </section>
                 </div>
             </div>
+
+            {/* Guest Modal */}
+            <GuestModal
+                isOpen={guestModal.open}
+                onClose={() => setGuestModal({ open: false, action: '' })}
+                action={guestModal.action}
+            />
         </div>
     );
 }

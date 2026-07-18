@@ -199,4 +199,21 @@ export const systemService = {
     clearCache: () => API.post('/system/cache/clear')
 };
 
+// ── Newsletter API (Visitor) ────────────────────────────────
+export const newsletterService = {
+    // Stored locally as no backend endpoint exists yet
+    subscribe: (email) => {
+        const subscribers = JSON.parse(localStorage.getItem('newsletter_subscribers') || '[]');
+        if (!subscribers.includes(email)) subscribers.push(email);
+        localStorage.setItem('newsletter_subscribers', JSON.stringify(subscribers));
+        return Promise.resolve({ success: true, email });
+    }
+};
+
+// ── Public Instructor API (Visitor) ────────────────────────
+export const publicInstructorService = {
+    getAll: () => API.get('/users?role=Instructor').catch(() => ({ data: { data: [] } })),
+    getById: (id) => API.get(`/users/${id}`)
+};
+
 export default API;

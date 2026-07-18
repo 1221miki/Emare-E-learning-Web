@@ -1,13 +1,24 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import Navbar from '../components/Navbar';
+import { useTheme } from '../context/ThemeContext';
 
 export default function PrivacyPage() {
+    const { colors } = useTheme();
+    const s = {
+        page: { minHeight: '100vh', fontFamily: "'Outfit', 'Inter', sans-serif" },
+        container: { padding: '60px 5%', maxWidth: '800px', margin: '0 auto' },
+        card: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '16px', padding: '40px', border: '1px solid rgba(30,41,59,0.5)' },
+        title: { fontSize: '32px', fontWeight: '900', margin: '0 0 8px', color: colors.text },
+        lastUpdated: { color: colors.textMuted, fontSize: '13px', marginBottom: '32px' },
+        content: { color: '#cbd5e1', fontSize: '15px', lineHeight: 1.7 },
+        footer: { padding: '24px', textAlign: 'center', borderTop: '1px solid rgba(30,41,59,0.4)', color: '#475569', fontSize: '13px' }
+    };
+
     return (
-        <div style={s.page}>
-            <nav style={s.nav}>
-                <Link to="/" style={s.logoBox}><div style={s.logo}>E</div><span style={s.logoText}>Emare ICT Hub</span></Link>
-                <Link to="/" style={s.navLink}>Back to Home</Link>
-            </nav>
+        <div style={{ ...s.page, background: colors.bg, color: colors.text }}>
+            <Navbar />
+
 
             <div style={s.container}>
                 <div style={s.card}>
@@ -36,18 +47,3 @@ export default function PrivacyPage() {
         </div>
     );
 }
-
-const s = {
-    page: { minHeight: '100vh', background: '#090d16', fontFamily: "'Outfit', sans-serif", color: '#f1f5f9' },
-    nav: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 5%', background: 'rgba(9,13,22,0.85)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(30,41,59,0.5)', position: 'sticky', top: 0 },
-    logoBox: { display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' },
-    logo: { width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#fff', fontSize: '18px' },
-    logoText: { color: '#f1f5f9', fontWeight: '800', fontSize: '18px' },
-    navLink: { color: '#94a3b8', textDecoration: 'none', fontSize: '14px', fontWeight: '500' },
-    container: { padding: '60px 5%', maxWidth: '800px', margin: '0 auto' },
-    card: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '16px', padding: '40px', border: '1px solid rgba(30,41,59,0.5)' },
-    title: { fontSize: '32px', fontWeight: '900', margin: '0 0 8px', color: '#f1f5f9' },
-    lastUpdated: { color: '#64748b', fontSize: '13px', marginBottom: '32px' },
-    content: { color: '#cbd5e1', fontSize: '15px', lineHeight: 1.7 },
-    footer: { padding: '24px', textAlign: 'center', borderTop: '1px solid rgba(30,41,59,0.4)', color: '#475569', fontSize: '13px' }
-};

@@ -55,7 +55,10 @@ export default function LoginPage() {
                         />
                     </div>
                     <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Password</label>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <label style={styles.label}>Password</label>
+                            <span style={{ cursor: 'pointer', ...styles.link, fontSize: '12px' }} onClick={() => alert('Forgot password flow to be implemented')}>Forgot Password?</span>
+                        </div>
                         <input
                             id="securedPassword"
                             name="securedPassword"
