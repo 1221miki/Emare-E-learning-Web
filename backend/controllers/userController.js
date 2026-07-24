@@ -73,29 +73,74 @@ const getUserById = async (req, res, next) => {
 // ─────────────────────────────────────────────
 const updateUser = async (req, res, next) => {
     try {
-        const { assignedRole, isActive, fullName } = req.body;
-        const updateData = {};
+        const { 
+            assignedRole, isActive, fullName, accountEmail, avatarUrl,
+            firstName, lastName, username, gender, dateOfBirth, country, city, address,
+            biography, occupation, company, website, socialMediaLinks, contactPhone, githubUrl,
+            twoFactorEnabled, preferredLanguage, timeZone, notificationPreferences, isPublicProfile,
+            currentPassword, newPassword
+        } = req.body;
 
-        if (assignedRole && ['Student', 'Instructor', 'Admin'].includes(assignedRole)) {
-            updateData.assignedRole = assignedRole;
-        }
-        if (typeof isActive === 'boolean') {
-            updateData.isActive = isActive;
-        }
-        if (fullName) {
-            updateData.fullName = fullName;
-        }
-
-        const user = await User.findByIdAndUpdate(req.params.id, updateData, {
-            new: true,
-            runValidators: true
-        }).select('-securedPassword');
-
+        const user = await User.findById(req.params.id).select('+securedPassword');
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
 
-        res.status(200).json({ success: true, message: 'User updated successfully.', data: user });
+        // Handle Password Update if requested
+        if (newPassword) {
+            if (currentPassword) {
+                const isMatch = await user.comparePassword(currentPassword);
+                if (!isMatch) {
+                    return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
+                }
+            }
+            if (newPassword.length < 8) {
+                return res.status(400).json({ success: false, message: 'New password must be at least 8 characters long.' });
+            }
+            user.securedPassword = newPassword;
+        }
+
+        // Update fields if provided
+        if (fullName !== undefined) user.fullName = fullName;
+        if (accountEmail !== undefined) user.accountEmail = accountEmail;
+        if (avatarUrl !== undefined) user.avatarUrl = avatarUrl;
+        if (assignedRole && ['Student', 'Instructor', 'Admin'].includes(assignedRole)) user.assignedRole = assignedRole;
+        if (typeof isActive === 'boolean') user.isActive = isActive;
+
+        if (firstName !== undefined) user.firstName = firstName;
+        if (lastName !== undefined) user.lastName = lastName;
+        if (username !== undefined) user.username = username;
+        if (gender !== undefined) user.gender = gender;
+        if (dateOfBirth !== undefined) user.dateOfBirth = dateOfBirth;
+        if (country !== undefined) user.country = country;
+        if (city !== undefined) user.city = city;
+        if (address !== undefined) user.address = address;
+        if (biography !== undefined) user.biography = biography;
+        if (occupation !== undefined) user.occupation = occupation;
+        if (company !== undefined) user.company = company;
+        if (contactPhone !== undefined) user.contactPhone = contactPhone;
+        if (githubUrl !== undefined) user.githubUrl = githubUrl;
+
+        if (socialMediaLinks) {
+            user.socialMediaLinks = { ...user.socialMediaLinks, ...socialMediaLinks };
+            if (website) user.socialMediaLinks.website = website;
+        } else if (website) {
+            user.socialMediaLinks = user.socialMediaLinks || {};
+            user.socialMediaLinks.website = website;
+        }
+
+        if (typeof twoFactorEnabled === 'boolean') user.twoFactorEnabled = twoFactorEnabled;
+        if (preferredLanguage !== undefined) user.preferredLanguage = preferredLanguage;
+        if (timeZone !== undefined) user.timeZone = timeZone;
+        if (notificationPreferences) user.notificationPreferences = { ...user.notificationPreferences, ...notificationPreferences };
+        if (typeof isPublicProfile === 'boolean') user.isPublicProfile = isPublicProfile;
+
+        await user.save();
+
+        const updatedUser = user.toObject();
+        delete updatedUser.securedPassword;
+
+        res.status(200).json({ success: true, message: 'Profile updated successfully.', data: updatedUser });
     } catch (err) {
         next(err);
     }

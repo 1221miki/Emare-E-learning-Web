@@ -78,7 +78,30 @@ const UserSchema = new mongoose.Schema({
     contactPhone: {
         type: String,
         trim: true
-    }
+    },
+    // Extended Personal Information Fields
+    firstName: { type: String, trim: true },
+    lastName: { type: String, trim: true },
+    username: { type: String, trim: true },
+    gender: { type: String, enum: ['Male', 'Female', 'Non-binary', 'Prefer not to say', ''], default: '' },
+    dateOfBirth: { type: Date },
+    country: { type: String, trim: true },
+    city: { type: String, trim: true },
+    address: { type: String, trim: true },
+    occupation: { type: String, trim: true },
+    company: { type: String, trim: true },
+    githubUrl: { type: String, trim: true },
+    
+    // Account Settings & Preferences
+    twoFactorEnabled: { type: Boolean, default: false },
+    preferredLanguage: { type: String, default: 'English' },
+    timeZone: { type: String, default: 'UTC+3 (East Africa Time)' },
+    notificationPreferences: {
+        emailAlerts: { type: Boolean, default: true },
+        courseUpdates: { type: Boolean, default: true },
+        promotions: { type: Boolean, default: false }
+    },
+    isPublicProfile: { type: Boolean, default: true }
 }, {
     timestamps: { createdAt: 'creationTimestamp', updatedAt: 'updatedAt' }
 });

@@ -11,6 +11,12 @@ const {
     updateInstructorProfile
 } = require('../controllers/userController');
 
+// ── User Self Profile Management (Student/Instructor/Admin) ──
+router.patch('/profile', protect, (req, res, next) => {
+    req.params.id = req.user.id;
+    updateUser(req, res, next);
+});
+
 // ── Instructor Profile Management ────────────────────────────
 router.put('/instructor/profile', protect, authorizeRoles('Instructor'), updateInstructorProfile);
 
