@@ -28,11 +28,33 @@ export default function CourseDetailPage() {
             courseService.getById(courseId),
             reviewService.getCourseReviews(courseId)
         ]).then(([resCourse, resReviews]) => {
-            setCourse(resCourse.data.data);
+            const courseData = resCourse.data.data;
+            setCourse(courseData);
             setReviews(resReviews.data.data);
+            
+            // Record in recently viewed list (max 5 items)
+            if (courseData) {
+                try {
+                    let viewed = JSON.parse(localStorage.getItem('recently_viewed_courses') || '[]');
+                    viewed = viewed.filter(item => item._id !== courseData._id);
+                    viewed.unshift({
+                        _id: courseData._id,
+                        courseTitle: courseData.courseTitle,
+                        technicalCategory: courseData.technicalCategory,
+                        descriptionText: courseData.descriptionText,
+                        price: courseData.price,
+                        estimatedDurationHours: courseData.estimatedDurationHours
+                    });
+                    if (viewed.length > 5) viewed = viewed.slice(0, 5);
+                    localStorage.setItem('recently_viewed_courses', JSON.stringify(viewed));
+                } catch (e) {
+                    console.error("Error saving recently viewed course to local storage:", e);
+                }
+            }
+
             if (isAuthenticated && isStudent) {
                 wishlistService.getMyWishlist().then(res => {
-                    const exists = res.data.data.some(w => w.courseRef._id === courseId);
+                    const exists = res.data.data.some(w => w.courseRef?._id === courseId || w.courseRef === courseId);
                     setInWishlist(exists);
                 });
             }
