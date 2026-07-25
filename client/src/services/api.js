@@ -34,7 +34,10 @@ export const authService = {
     register: (data) => API.post('/auth/register', data),
     login: (data) => API.post('/auth/login', data),
     logout: () => API.post('/auth/logout'),
-    getMe: () => API.get('/auth/me')
+    getMe: () => API.get('/auth/me'),
+    socialLogin: (data) => API.post('/auth/social-login', data),
+    forgotPassword: (data) => API.post('/auth/forgot-password', data),
+    resetPassword: (data) => API.post('/auth/reset-password', data)
 };
 
 // ── Course API Calls ───────────────────────────────────────

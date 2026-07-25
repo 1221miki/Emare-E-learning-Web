@@ -101,7 +101,13 @@ const UserSchema = new mongoose.Schema({
         courseUpdates: { type: Boolean, default: true },
         promotions: { type: Boolean, default: false }
     },
-    isPublicProfile: { type: Boolean, default: true }
+    isPublicProfile: { type: Boolean, default: true },
+    
+    // Social Login & Password Recovery Fields
+    socialProvider: { type: String, enum: ['google', 'github', 'microsoft', 'facebook', 'local'], default: 'local' },
+    socialId: { type: String, trim: true },
+    resetPasswordToken: { type: String, select: false },
+    resetPasswordExpire: { type: Date, select: false }
 }, {
     timestamps: { createdAt: 'creationTimestamp', updatedAt: 'updatedAt' }
 });

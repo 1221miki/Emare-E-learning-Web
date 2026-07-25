@@ -120,6 +120,28 @@ export default function StudentDashboard() {
     const [avatarUploading, setAvatarUploading] = useState(false);
     const [settingsSectionTab, setSettingsSectionTab] = useState('personal'); // personal | account | security | preferences
 
+    // Personalization States
+    const [hiddenWidgets, setHiddenWidgets] = useState(() => {
+        return JSON.parse(localStorage.getItem('student_hidden_widgets') || '{}');
+    });
+    const [pinnedCourses, setPinnedCourses] = useState(() => {
+        return JSON.parse(localStorage.getItem('student_pinned_courses') || '[]');
+    });
+
+    const toggleWidgetVisibility = (widgetKey) => {
+        const updated = { ...hiddenWidgets, [widgetKey]: !hiddenWidgets[widgetKey] };
+        setHiddenWidgets(updated);
+        localStorage.setItem('student_hidden_widgets', JSON.stringify(updated));
+    };
+
+    const togglePinCourse = (courseId) => {
+        const updated = pinnedCourses.includes(courseId)
+            ? pinnedCourses.filter(id => id !== courseId)
+            : [...pinnedCourses, courseId];
+        setPinnedCourses(updated);
+        localStorage.setItem('student_pinned_courses', JSON.stringify(updated));
+    };
+
     // Handlers for Integrated Live Actions
     const handleToggleWishlist = async (courseId) => {
         try {
@@ -387,7 +409,6 @@ export default function StudentDashboard() {
         { name: '7-Day Streak', icon: '🔥', color: '#f59e0b' }
     ];
 
-    // Sub-views
     const renderOverview = () => {
         // Dynamic Greeting
         const getGreeting = () => {
@@ -404,7 +425,7 @@ export default function StudentDashboard() {
         const activeCourses = enrollments.filter(e => e.completionPercentage < 100);
         const primaryActive = activeCourses.length > 0 ? activeCourses[0] : enrollments[0];
 
-        // 4 & 11. Integrated Deadlines and Calendar Data
+        // Deadlines & Fallbacks
         const realDeadlines = assignmentsList.map(a => ({
             id: a._id,
             title: a.title || 'Assignment Task',
@@ -422,7 +443,7 @@ export default function StudentDashboard() {
 
         const deadlines = realDeadlines.length > 0 ? realDeadlines : fallbackDeadlines;
 
-        // Render Calendar Widget Days dynamically from deadlines & live sessions
+        // Render Calendar Widget Days
         const renderCalendarDays = () => {
             const today = new Date();
             const year = today.getFullYear();
@@ -431,16 +452,13 @@ export default function StudentDashboard() {
             const totalDays = new Date(year, month + 1, 0).getDate();
             const cells = [];
 
-            // Day offset padding
             for (let i = 0; i < firstDayIndex; i++) {
                 cells.push(<div key={`empty-${i}`} style={styles.calendarEmptyCell} />);
             }
 
-            // Extract day numbers containing deadlines or live classes
             const deadlineDays = deadlines.map(d => new Date(d.dueDate).getDate());
             const liveDays = liveSessions.map(l => new Date(l.startTime).getDate());
 
-            // Days rendering
             for (let day = 1; day <= totalDays; day++) {
                 const isToday = day === today.getDate();
                 const hasDeadline = deadlineDays.includes(day) || day === (today.getDate() + 2) || day === 15;
@@ -468,7 +486,6 @@ export default function StudentDashboard() {
             return cells;
         };
 
-        // 12. Achievement Badges Dynamic Unlocking Logic
         const hasClearance = enrollments.some(e => e.tuitionClearanceFlag === true);
         const has100Grade = grades.some(g => (g.numericalScoreEarned || 0) >= 100);
 
@@ -481,15 +498,12 @@ export default function StudentDashboard() {
             { name: 'Super Scholar', icon: '👑', desc: 'Enrolled in multiple tracks', color: '#14b8a6', unlocked: enrollments.length >= 2 }
         ];
 
-        // 8. Recommended Courses from Catalog
         const enrolledIds = enrollments.map(e => e.courseRef?._id || e.courseRef);
         const recommendations = allCourses.filter(c => !enrolledIds.includes(c._id)).slice(0, 3);
 
-        // 6 & 7. Recent Notifications / Announcements Switcher
         const announcementsList = notifications.filter(n => n.type === 'announcement' || n.category === 'announcement');
         const standardNotifications = notifications.filter(n => n.type !== 'announcement' && n.category !== 'announcement');
 
-        // Fallbacks if data is empty
         const finalAnnouncements = announcementsList.length > 0 ? announcementsList : [
             { _id: 'a1', title: 'New Full-Stack Development track launched!', message: 'Explore the modern JS ecosystem from basic design to deployment.', createdAt: new Date(Date.now() - 24*3600*1000).toISOString() },
             { _id: 'a2', title: 'Upcoming Live Q&A and Project Lab', message: 'Join the master instructor for queries on building clean microservices.', createdAt: new Date(Date.now() - 3*24*3600*1000).toISOString() }
@@ -500,11 +514,32 @@ export default function StudentDashboard() {
             { _id: 'n2', title: 'New graded item posted in Dashboard', message: 'Your CSS Flexbox assignment has been graded. Code reviewed.', createdAt: new Date(Date.now() - 18*3600*1000).toISOString() }
         ];
 
-        // 5. Upcoming Live Classes
         const finalLiveClasses = liveSessions.length > 0 ? liveSessions : [
             { _id: 'l1', title: 'Node.js & MongoDB Cluster Lab', startTime: new Date(Date.now() + 24*3600*1000).toISOString(), durationMinutes: 90, meetingLink: '/live-sessions' },
             { _id: 'l2', title: 'Advanced React Layout Systems', startTime: new Date(Date.now() + 3*24*3600*1000).toISOString(), durationMinutes: 60, meetingLink: '/live-sessions' }
         ];
+
+        // Circular progress SVG component
+        const CircularProgress = ({ value, color, label, size = 80, strokeWidth = 6, icon }) => {
+            const radius = (size - strokeWidth) / 2;
+            const circumference = radius * 2 * Math.PI;
+            const offset = circumference - (Math.min(value, 100) / 100) * circumference;
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ position: 'relative', width: size, height: size }}>
+                        <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+                            <circle cx={size / 2} cy={size / 2} r={radius} stroke={`${color}15`} strokeWidth={strokeWidth} fill="transparent" />
+                            <circle cx={size / 2} cy={size / 2} r={radius} stroke={color} strokeWidth={strokeWidth} fill="transparent" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.8s ease' }} />
+                        </svg>
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                            {icon && <span style={{ fontSize: '12px' }}>{icon}</span>}
+                            <span style={{ fontSize: '13px', fontWeight: '800', color: colors.text }}>{value}%</span>
+                        </div>
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: '700', color: colors.textMuted }}>{label}</span>
+                </div>
+            );
+        };
 
         return (
             <div style={styles.gridTwoCol}>
@@ -512,58 +547,161 @@ export default function StudentDashboard() {
                 {/* LEFT MAIN PANEL COLUMN */}
                 <div style={styles.dashboardGrid}>
                     
-                    {/* 1. Welcome Message & Quote */}
-                    <div style={styles.welcomeCard}>
-                        <h2 style={{ ...styles.tabTitle, color: colors.primary, fontSize: '24px' }}>
-                            {getGreeting()}, {user?.fullName?.split(' ')[0]}! 📚
-                        </h2>
-                        <p style={{ color: colors.text, fontSize: '14px', margin: '8px 0 0', fontWeight: '500' }}>
-                            Welcome back to your integrated learning command center. Ready to unlock new milestones today?
-                        </p>
-                        <div style={{ marginTop: '16px', padding: '10px 14px', background: `${colors.bgCard}80`, borderRadius: '10px', borderLeft: `3px solid ${colors.accent}` }}>
-                            <p style={styles.quoteText}>"{motivationalQuote}"</p>
-                        </div>
-                    </div>
-
-                    {/* 2. Learning Progress & Gamification statistics */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 240px', gap: '20px' }}>
-                        <div style={{ ...styles.panelCard, margin: 0, padding: '24px' }}>
-                            <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '16px' }}>Course Milestones</h3>
-                            <div style={styles.statsGrid}>
-                                <div style={{ ...styles.statCard, padding: '14px', borderTop: `3px solid ${colors.primary}` }}>
-                                    <span style={{ ...styles.statValue, color: colors.primary, fontSize: '22px' }}>{enrollments.length}</span>
-                                    <span style={styles.statLabel}>Active Courses</span>
-                                </div>
-                                <div style={{ ...styles.statCard, padding: '14px', borderTop: `3px solid ${colors.success}` }}>
-                                    <span style={{ ...styles.statValue, color: colors.success, fontSize: '22px' }}>{averageProgress}%</span>
-                                    <span style={styles.statLabel}>Average Progress</span>
-                                </div>
-                                <div style={{ ...styles.statCard, padding: '14px', borderTop: `3px solid ${colors.accent}` }}>
-                                    <span style={{ ...styles.statValue, color: colors.accent, fontSize: '22px' }}>{certificates.length}</span>
-                                    <span style={styles.statLabel}>Certificates</span>
+                    {/* Welcome Card & Hero Section */}
+                    <div style={{ ...styles.welcomeCard, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: '900', boxShadow: '0 8px 20px rgba(59,130,246,0.3)', border: '2px solid rgba(255,255,255,0.2)' }}>
+                                {user?.fullName?.[0]?.toUpperCase() || 'S'}
+                            </div>
+                            <div style={{ flex: 1, minWidth: '240px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                                    <div>
+                                        <h2 style={{ color: colors.text, fontSize: '26px', fontWeight: '900', margin: 0, letterSpacing: '-0.5px' }}>
+                                            {getGreeting()}, {user?.fullName?.split(' ')[0]}! 🚀
+                                        </h2>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
+                                            <span style={{ color: colors.primary, fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', background: `${colors.primary}15`, border: `1px solid ${colors.primary}30`, padding: '4px 10px', borderRadius: '6px' }}>
+                                                Student Account · Level {currentLevel} Scholar
+                                            </span>
+                                            {/* Tuition Clearance Badge */}
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: hasClearance ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)', border: `1px solid ${hasClearance ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)'}`, padding: '4px 10px', borderRadius: '6px' }}>
+                                                <span style={{ fontSize: '12px' }}>{hasClearance ? '✅' : '💳'}</span>
+                                                <span style={{ fontSize: '11px', fontWeight: '800', color: hasClearance ? colors.success : '#f59e0b' }}>
+                                                    {hasClearance ? 'Tuition Cleared' : 'Clearance Pending'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '12px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <span style={{ fontSize: '22px' }}>🔥</span>
+                                        <div>
+                                            <span style={{ display: 'block', fontSize: '13px', fontWeight: '800', color: '#f59e0b' }}>5 Days Streak</span>
+                                            <span style={{ display: 'block', fontSize: '10px', color: colors.textMuted }}>Keep it up!</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div style={{ ...styles.panelCard, margin: 0, padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                            <div style={{ position: 'relative', width: '100px', height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: `conic-gradient(${colors.accent} ${xpProgress}%, ${colors.bgInput} 0)` }}>
-                                <div style={{ width: '84px', height: '84px', background: colors.bgCard, borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                    <span style={{ fontSize: '20px', fontWeight: '800', color: colors.text }}>Lv {currentLevel}</span>
-                                </div>
+                        {/* Motivational Quote & Quick Actions Row */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
+                            <div style={{ padding: '10px 14px', background: `${colors.bgCard}90`, borderRadius: '10px', borderLeft: `3px solid ${colors.accent}` }}>
+                                <p style={styles.quoteText}>"{motivationalQuote}"</p>
                             </div>
-                            <span style={{ color: colors.text, fontWeight: '700', fontSize: '14px', marginTop: '12px' }}>{xpPoints} XP Earned</span>
-                            <span style={{ color: colors.textMuted, fontSize: '11px', marginTop: '2px' }}>{nextLevelXP - xpPoints} XP to Level {currentLevel + 1}</span>
+
+                            {/* Quick Action Shortcuts */}
+                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', paddingTop: '4px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: '800', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>⚡ Quick Actions:</span>
+                                <button onClick={() => setActiveTab('assignments')} style={{ background: `${colors.primary}10`, border: `1px solid ${colors.primary}30`, color: colors.primary, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    📤 Submit Tasks
+                                </button>
+                                <button onClick={() => setActiveTab('payments')} style={{ background: `${colors.accent}10`, border: `1px solid ${colors.accent}30`, color: colors.accent, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    💳 Tuition Portal
+                                </button>
+                                <button onClick={() => setActiveTab('live')} style={{ background: `${colors.success}10`, border: `1px solid ${colors.success}30`, color: colors.success, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    🔴 Live Classes
+                                </button>
+                                <button onClick={() => setActiveTab('leaderboard')} style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    🏆 Leaderboard
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    {/* 3. Continue Learning Active Course */}
+                    {/* Dashboard Personalization Controls */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: colors.bgCard, padding: '12px 20px', borderRadius: '14px', border: `1px solid ${colors.border}` }}>
+                        <span style={{ fontSize: '13px', fontWeight: '700', color: colors.text }}>Customize Widgets</span>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                            {[
+                                { key: 'stats', label: '📊 Stats' },
+                                { key: 'calendar', label: '📅 Calendar' },
+                                { key: 'badges', label: '🏆 Badges' },
+                                { key: 'recs', label: '💡 Suggestions' }
+                            ].map(widget => {
+                                const isHidden = hiddenWidgets[widget.key];
+                                return (
+                                    <button 
+                                        key={widget.key} 
+                                        onClick={() => toggleWidgetVisibility(widget.key)} 
+                                        style={{ 
+                                            padding: '6px 12px', 
+                                            borderRadius: '20px', 
+                                            fontSize: '11px', 
+                                            fontWeight: '700', 
+                                            cursor: 'pointer', 
+                                            background: isHidden ? colors.bgInput : `${colors.primary}15`, 
+                                            border: `1px solid ${isHidden ? colors.border : colors.primary}`,
+                                            color: isHidden ? colors.textMuted : colors.primary
+                                        }}
+                                    >
+                                        {isHidden ? `Show ${widget.label.split(' ')[1]}` : `Hide ${widget.label.split(' ')[1]}`}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Course Milestones & Progress Rings */}
+                    {!hiddenWidgets['stats'] && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 240px', gap: '20px', flexWrap: 'wrap' }}>
+                            <div style={{ ...styles.panelCard, margin: 0, padding: '24px' }}>
+                                <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>Course Milestones</h3>
+                                <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                                    <CircularProgress value={enrollments.length ? Math.round((completedCoursesCount / enrollments.length) * 100) : 0} color={colors.primary} label="Completed Tracks" icon="🎓" />
+                                    <CircularProgress value={averageProgress} color={averageProgress > 0 ? colors.success : colors.textMuted} label={averageProgress > 0 ? "Avg Progress" : "Ready to Start"} icon="📈" />
+                                    <CircularProgress value={Math.round((certificates.length / Math.max(enrollments.length, 1)) * 100)} color={colors.accent} label="Credentials Earned" icon="🏆" />
+                                </div>
+                            </div>
+
+                            <div style={{ ...styles.panelCard, margin: 0, padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                <div style={{ position: 'relative', width: '100px', height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: `conic-gradient(${colors.accent} ${xpProgress}%, ${colors.bgInput} 0)` }}>
+                                    <div style={{ width: '84px', height: '84px', background: colors.bgCard, borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                        <span style={{ fontSize: '20px', fontWeight: '800', color: colors.text }}>Lv {currentLevel}</span>
+                                    </div>
+                                </div>
+                                <span style={{ color: colors.text, fontWeight: '700', fontSize: '14px', marginTop: '12px' }}>{xpPoints} XP Earned</span>
+                                <span style={{ color: colors.textMuted, fontSize: '11px', marginTop: '2px' }}>{nextLevelXP - xpPoints} XP to Level {currentLevel + 1}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Pinned Courses Component */}
+                    {pinnedCourses.length > 0 && (
+                        <div style={{ ...styles.panelCard, margin: 0, padding: '24px', borderLeft: `4px solid ${colors.primary}` }}>
+                            <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>📌 Pinned Favorite Courses</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                                {enrollments.filter(e => pinnedCourses.includes(e.courseRef?._id || e.courseRef)).map(enroll => {
+                                    const c = enroll.courseRef || {};
+                                    return (
+                                        <div key={c._id} style={{ padding: '16px', background: colors.bgInput, borderRadius: '12px', border: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ flex: 1, marginRight: '10px' }}>
+                                                <h4 style={{ color: colors.text, fontSize: '14px', fontWeight: '700', margin: '0 0 4px' }}>{c.courseTitle}</h4>
+                                                <span style={{ color: colors.textMuted, fontSize: '11px' }}>{enroll.completionPercentage || 0}% Done</span>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '6px' }}>
+                                                <button onClick={() => togglePinCourse(c._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>📌</button>
+                                                <button onClick={() => navigate(`/student/learn/${c._id}`)} style={{ background: colors.primary, color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>Learn</button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Resume Coursework (Resume / Active Course) */}
                     <div style={{ ...styles.panelCard, margin: 0, padding: '24px' }}>
-                        <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '16px' }}>Resume Coursework</h3>
+                        <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>Resume Coursework</h3>
                         {primaryActive ? (
                             <div style={styles.recentCourseBox}>
                                 <div style={styles.recentCourseLeft}>
-                                    <span style={styles.courseBadge}>{primaryActive.courseRef?.technicalCategory || 'Development'}</span>
-                                    <h4 style={{ ...styles.recentCourseName, fontSize: '18px', marginTop: '6px' }}>{primaryActive.courseRef?.courseTitle}</h4>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={styles.courseBadge}>{primaryActive.courseRef?.technicalCategory || 'Development'}</span>
+                                        <button onClick={() => togglePinCourse(primaryActive.courseRef?._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }} title="Pin to Top">
+                                            {pinnedCourses.includes(primaryActive.courseRef?._id) ? '📌' : '📍'}
+                                        </button>
+                                    </div>
+                                    <h4 style={{ ...styles.recentCourseName, fontSize: '20px', fontWeight: '800', marginTop: '6px' }}>{primaryActive.courseRef?.courseTitle}</h4>
                                     <p style={styles.recentCourseMeta}>Lessons track length: {primaryActive.courseRef?.estimatedDurationHours || 0} Hours</p>
                                 </div>
                                 <div style={styles.recentCourseRight}>
@@ -583,17 +721,21 @@ export default function StudentDashboard() {
                                 </div>
                             </div>
                         ) : (
-                            <div style={styles.emptyContent}>
-                                <p style={styles.emptyText}>Not enrolled in any tracks currently.</p>
-                                <button onClick={() => navigate('/courses')} style={styles.resumeBtn}>Explore Catalog</button>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '32px 20px', background: `${colors.bgInput}40`, borderRadius: '16px', border: `1px dashed ${colors.border}` }}>
+                                <div style={{ fontSize: '50px', marginBottom: '16px' }}>📚</div>
+                                <h4 style={{ color: colors.text, fontSize: '18px', fontWeight: '800', margin: '0 0 8px' }}>Start Your Learning Journey</h4>
+                                <p style={{ color: colors.textMuted, fontSize: '13px', maxWidth: '360px', margin: '0 0 20px', lineHeight: 1.5 }}>
+                                    Explore professional courses to begin building your skills. Select from Web Development, UI/UX Design, Cyber Security, and more.
+                                </p>
+                                <button onClick={() => navigate('/courses')} style={{ ...styles.resumeBtn, padding: '10px 24px', fontSize: '13px', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` }}>Browse Courses</button>
                             </div>
                         )}
                     </div>
 
-                    {/* 10. Learning Statistics (Weekly Target hours tracker & Streak) */}
+                    {/* Learning Statistics */}
                     <div style={{ ...styles.panelCard, margin: 0, padding: '24px' }}>
-                        <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '16px' }}>Learning Statistics</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                        <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>Learning Statistics</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', flexWrap: 'wrap' }}>
                             <div>
                                 <span style={{ color: colors.text, fontSize: '13px', fontWeight: '700' }}>Weekly Study Hours Goal</span>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: colors.textMuted, marginTop: '8px' }}>
@@ -642,68 +784,77 @@ export default function StudentDashboard() {
                         </div>
                     </div>
 
-                    {/* 12. Achievement Badges Gallery (Dynamic Unlocking) */}
-                    <div style={{ ...styles.panelCard, margin: 0, padding: '24px' }}>
-                        <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '16px' }}>Earned Badges & Achievements</h3>
-                        <div style={styles.badgesContainer}>
-                            {allSystemBadges.map((badge, idx) => (
-                                <div 
-                                    key={badge.name + idx} 
-                                    style={{
-                                        ...styles.badgeCard,
-                                        background: badge.unlocked ? `${badge.color}08` : 'transparent',
-                                        borderColor: badge.unlocked ? `${badge.color}40` : `${colors.border}40`,
-                                        filter: badge.unlocked ? 'none' : 'grayscale(100%) opacity(50%)'
-                                    }}
-                                    title={badge.desc}
-                                >
-                                    <div style={styles.badgeIcon}>{badge.icon}</div>
-                                    <span style={styles.badgeName}>{badge.name}</span>
-                                    <span style={styles.badgeDesc}>{badge.desc}</span>
-                                    {badge.unlocked ? (
-                                        <span style={{ display: 'inline-block', marginTop: '8px', fontSize: '10px', color: colors.success, fontWeight: '800' }}>✓ UNLOCKED</span>
-                                    ) : (
-                                        <span style={{ display: 'inline-block', marginTop: '8px', fontSize: '10px', color: colors.textMuted, fontWeight: '700' }}>🔒 LOCKED</span>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* 8. Recommended Courses with Live Wishlist Integration */}
-                    <div style={{ ...styles.panelCard, margin: 0, padding: '24px' }}>
-                        <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '16px' }}>Recommended For You</h3>
-                        {recommendations.length > 0 ? (
-                            <div style={styles.recommendGrid}>
-                                {recommendations.map((course) => {
-                                    const isSaved = wishlist.some(w => (w.courseRef?._id || w.courseRef || w._id) === course._id);
-                                    return (
-                                        <div key={course._id} style={styles.recommendCard}>
-                                            <div>
-                                                <span style={styles.courseBadge}>{course.technicalCategory || 'Development'}</span>
-                                                <h4 style={{ color: colors.text, fontSize: '14px', fontWeight: '700', margin: '8px 0 4px', lineHeight: '1.4' }}>{course.courseTitle}</h4>
-                                                <p style={{ color: colors.textMuted, fontSize: '11px', margin: '0 0 12px' }}>Rating: ⭐ {course.averageRating || '4.8'} | {course.level || 'Beginner'}</p>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', gap: '8px' }}>
-                                                <button onClick={() => handleToggleWishlist(course._id)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: isSaved ? '#ef4444' : colors.textMuted, borderRadius: '6px', padding: '6px', cursor: 'pointer' }} title="Toggle Wishlist">
-                                                    {isSaved ? '💖' : '🤍'}
-                                                </button>
-                                                <button onClick={() => navigate(`/courses/${course._id}`)} style={{ ...styles.resumeBtn, padding: '6px 12px', fontSize: '11px', flex: 1 }}>
-                                                    View Details
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                    {/* Badges Gallery */}
+                    {!hiddenWidgets['badges'] && (
+                        <div style={{ ...styles.panelCard, margin: 0, padding: '24px' }}>
+                            <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>Earned Badges & Achievements</h3>
+                            <div style={styles.badgesContainer}>
+                                {allSystemBadges.map((badge, idx) => (
+                                    <div 
+                                        key={badge.name + idx} 
+                                        style={{
+                                            ...styles.badgeCard,
+                                            background: badge.unlocked ? `${badge.color}08` : 'transparent',
+                                            borderColor: badge.unlocked ? `${badge.color}40` : `${colors.border}40`,
+                                            filter: badge.unlocked ? 'none' : 'grayscale(100%) opacity(50%)'
+                                        }}
+                                        title={badge.desc}
+                                    >
+                                        <div style={styles.badgeIcon}>{badge.icon}</div>
+                                        <span style={styles.badgeName}>{badge.name}</span>
+                                        <span style={styles.badgeDesc}>{badge.desc}</span>
+                                        {badge.unlocked ? (
+                                            <span style={{ display: 'inline-block', marginTop: '8px', fontSize: '10px', color: colors.success, fontWeight: '800' }}>✓ UNLOCKED</span>
+                                        ) : (
+                                            <span style={{ display: 'inline-block', marginTop: '8px', fontSize: '10px', color: colors.textMuted, fontWeight: '700' }}>🔒 LOCKED</span>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
-                        ) : (
-                            <p style={{ color: colors.textMuted, fontSize: '13px' }}>Explore the catalog to discover more learning paths.</p>
-                        )}
-                    </div>
+                        </div>
+                    )}
 
-                    {/* 9. Recently Viewed Courses */}
+                    {/* Recommendations */}
+                    {!hiddenWidgets['recs'] && (
+                        <div style={{ ...styles.panelCard, margin: 0, padding: '24px' }}>
+                            <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>Recommended For You</h3>
+                            {recommendations.length > 0 ? (
+                                <div style={styles.recommendGrid}>
+                                    {recommendations.map((course) => {
+                                        const isSaved = wishlist.some(w => (w.courseRef?._id || w.courseRef || w._id) === course._id);
+                                        return (
+                                            <div key={course._id} style={styles.recommendCard}>
+                                                <div>
+                                                    <span style={styles.courseBadge}>{course.technicalCategory || 'Development'}</span>
+                                                    <h4 style={{ color: colors.text, fontSize: '14px', fontWeight: '700', margin: '8px 0 4px', lineHeight: '1.4' }}>{course.courseTitle}</h4>
+                                                    <p style={{ color: colors.textMuted, fontSize: '11px', margin: '0 0 12px' }}>Rating: ⭐ {course.averageRating || '4.8'} | {course.level || 'Beginner'}</p>
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', gap: '8px' }}>
+                                                    <button onClick={() => handleToggleWishlist(course._id)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: isSaved ? '#ef4444' : colors.textMuted, borderRadius: '6px', padding: '6px', cursor: 'pointer' }} title="Toggle Wishlist">
+                                                        {isSaved ? '💖' : '🤍'}
+                                                    </button>
+                                                    <button onClick={() => navigate(`/courses/${course._id}`)} style={{ ...styles.resumeBtn, padding: '6px 12px', fontSize: '11px', flex: 1 }}>
+                                                        View Details
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '24px', background: `${colors.bgInput}40`, borderRadius: '16px', border: `1px dashed ${colors.border}` }}>
+                                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>💡</div>
+                                    <h5 style={{ color: colors.text, fontSize: '14px', fontWeight: '700', margin: '0 0 4px' }}>Personalized Suggestions</h5>
+                                    <p style={{ color: colors.textMuted, fontSize: '12px', margin: '0 0 12px' }}>Enrolling in your first course helps us recommend the perfect next steps for you.</p>
+                                    <button onClick={() => navigate('/courses')} style={{ ...styles.resumeBtn, padding: '8px 16px', fontSize: '12px' }}>Explore Catalog</button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Recently Viewed Courses */}
                     <div style={{ ...styles.panelCard, margin: 0, padding: '24px' }}>
-                        <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '16px' }}>Recently Viewed Courses</h3>
+                        <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>Recently Viewed Courses</h3>
                         {recentlyViewed.length > 0 ? (
                             <div style={styles.recommendGrid}>
                                 {recentlyViewed.slice(0, 3).map((course) => (
@@ -721,8 +872,17 @@ export default function StudentDashboard() {
                                 ))}
                             </div>
                         ) : (
-                            <div style={{ padding: '12px', textAlign: 'center', border: `1px dashed ${colors.border}`, borderRadius: '10px' }}>
-                                <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>No recently visited course details. Explore courses to fill this history!</p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '20px', background: `${colors.bgInput}40`, borderRadius: '16px', border: `1px dashed ${colors.border}` }}>
+                                <div style={{ fontSize: '32px' }}>🔍</div>
+                                <div style={{ flex: 1 }}>
+                                    <h5 style={{ color: colors.text, fontSize: '14px', fontWeight: '700', margin: '0 0 4px' }}>Explore Top Learning Paths</h5>
+                                    <p style={{ color: colors.textMuted, fontSize: '12px', margin: '0 0 10px', lineHeight: 1.4 }}>Discover our top tracks like Web Coding, UI/UX Design, or AI Development.</p>
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                        {['Web Coding', 'UI/UX Design', 'AI Dev'].map(tag => (
+                                            <button key={tag} onClick={() => navigate(`/search?q=${encodeURIComponent(tag)}`)} style={{ background: `${colors.primary}10`, border: `1px solid ${colors.primary}30`, color: colors.primary, borderRadius: '20px', padding: '3px 10px', fontSize: '10px', fontWeight: '700', cursor: 'pointer' }}>#{tag}</button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -732,41 +892,43 @@ export default function StudentDashboard() {
                 {/* RIGHT SIDEBAR PANEL COLUMN */}
                 <div style={styles.dashboardGrid}>
                     
-                    {/* 11. Custom Interactive Calendar Widget */}
-                    <div style={{ ...styles.panelCard, margin: 0, padding: '20px' }}>
-                        <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '16px' }}>Learning Calendar</h3>
-                        {renderCalendarDays && (
-                            <div style={styles.calendarContainer}>
-                                <div style={styles.calendarHeader}>
-                                    <span style={styles.calendarMonthYear}>
-                                        {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][new Date().getMonth()]} {new Date().getFullYear()}
-                                    </span>
-                                </div>
-                                <div style={styles.calendarWeekdays}>
-                                    {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                                        <div key={day} style={styles.calendarWeekday}>{day}</div>
-                                    ))}
-                                </div>
-                                <div style={styles.calendarGrid}>
-                                    {renderCalendarDays()}
-                                </div>
-                                <div style={{ display: 'flex', gap: '12px', marginTop: '14px', justifyContent: 'center', fontSize: '11px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444' }} />
-                                        <span style={{ color: colors.textMuted }}>Deadlines</span>
+                    {/* Learning Calendar Widget */}
+                    {!hiddenWidgets['calendar'] && (
+                        <div style={{ ...styles.panelCard, margin: 0, padding: '20px' }}>
+                            <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>Learning Calendar</h3>
+                            {renderCalendarDays && (
+                                <div style={styles.calendarContainer}>
+                                    <div style={styles.calendarHeader}>
+                                        <span style={styles.calendarMonthYear}>
+                                            {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][new Date().getMonth()]} {new Date().getFullYear()}
+                                        </span>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: colors.success }} />
-                                        <span style={{ color: colors.textMuted }}>Live Classes</span>
+                                    <div style={styles.calendarWeekdays}>
+                                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                                            <div key={day} style={styles.calendarWeekday}>{day}</div>
+                                        ))}
+                                    </div>
+                                    <div style={styles.calendarGrid}>
+                                        {renderCalendarDays()}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '12px', marginTop: '14px', justifyContent: 'center', fontSize: '11px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444' }} />
+                                            <span style={{ color: colors.textMuted }}>Deadlines</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: colors.success }} />
+                                            <span style={{ color: colors.textMuted }}>Live Classes</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
-                    </div>
+                            )}
+                        </div>
+                    )}
 
-                    {/* 4. Upcoming Deadlines list */}
+                    {/* Upcoming Deliverables */}
                     <div style={{ ...styles.panelCard, margin: 0, padding: '20px' }}>
-                        <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '16px' }}>Upcoming Deliverables</h3>
+                        <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>Upcoming Deliverables</h3>
                         <div style={styles.deadlineList}>
                             {deadlines.map(item => (
                                 <div key={item.id} style={styles.deadlineItem}>
@@ -782,9 +944,9 @@ export default function StudentDashboard() {
                         </div>
                     </div>
 
-                    {/* 5. Upcoming Live Classes */}
+                    {/* Live Classes */}
                     <div style={{ ...styles.panelCard, margin: 0, padding: '20px' }}>
-                        <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '16px' }}>Live Class Schedules</h3>
+                        <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>Live Class Schedules</h3>
                         <div style={styles.liveGrid}>
                             {finalLiveClasses.map((session, idx) => (
                                 <div key={session._id || idx} style={styles.liveCard}>
@@ -802,7 +964,7 @@ export default function StudentDashboard() {
                         </div>
                     </div>
 
-                    {/* 6 & 7. Integrated Announcements & System Notifications Dual Feed */}
+                    {/* Bulletins & Alerts switcher */}
                     <div style={{ ...styles.panelCard, margin: 0, padding: '20px' }}>
                         <div style={styles.tabSwitch}>
                             <button 
@@ -868,9 +1030,9 @@ export default function StudentDashboard() {
                         </div>
                     </div>
 
-                    {/* 13. Certificates Earned Card summary */}
+                    {/* Earned Certificates */}
                     <div style={{ ...styles.panelCard, margin: 0, padding: '20px' }}>
-                        <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '16px' }}>Earned Certificates</h3>
+                        <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>Earned Certificates</h3>
                         {certificates.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 {certificates.slice(0, 2).map((cert, idx) => (
@@ -893,9 +1055,9 @@ export default function StudentDashboard() {
                         )}
                     </div>
 
-                    {/* 14. Wishlist Summary sidebar widget with live toggle */}
+                    {/* Saved in Wishlist */}
                     <div style={{ ...styles.panelCard, margin: 0, padding: '20px' }}>
-                        <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '16px' }}>Saved in Wishlist</h3>
+                        <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>Saved in Wishlist</h3>
                         {wishlist.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 {wishlist.slice(0, 3).map((w, idx) => {
@@ -942,10 +1104,24 @@ export default function StudentDashboard() {
                 <p style={styles.tabSubtitle}>Access your enrolled lectures and track your clearance status</p>
             </div>
             {enrollments.length === 0 ? (
-                <div style={styles.emptyContent}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
-                    <p style={styles.emptyText}>You haven't enrolled in any courses yet.</p>
-                    <Link to="/courses" style={styles.resumeBtn}>Browse Course Catalog</Link>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '48px 24px', background: colors.bgCard, borderRadius: '20px', border: `1px dashed ${colors.border}`, boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
+                    <div style={{ width: '80px', height: '80px', borderRadius: '24px', background: `linear-gradient(135deg, ${colors.primary}20, ${colors.accent}20)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', marginBottom: '20px', border: `1px solid ${colors.primary}30` }}>
+                        🚀
+                    </div>
+                    <h3 style={{ color: colors.text, fontSize: '22px', fontWeight: '900', margin: '0 0 10px' }}>Start Your Learning Journey</h3>
+                    <p style={{ color: colors.textMuted, fontSize: '14px', maxWidth: '460px', margin: '0 0 24px', lineHeight: 1.6 }}>
+                        You haven't enrolled in any courses yet. Explore our top-rated professional courses in Web Engineering, UI/UX Design, Data Science, and Cyber Security.
+                    </p>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '28px' }}>
+                        {['💻 Web Development', '🎨 UI/UX Design', '📊 Data Science', '🔒 Cyber Security'].map(cat => (
+                            <button key={cat} onClick={() => navigate(`/search?q=${encodeURIComponent(cat.split(' ')[1])}`)} style={{ background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '20px', padding: '8px 16px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' }}>
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+                    <button onClick={() => navigate('/courses')} style={{ ...styles.resumeBtn, padding: '14px 32px', fontSize: '15px', fontWeight: '800', boxShadow: '0 8px 20px rgba(59,130,246,0.3)' }}>
+                        📚 Browse Course Catalog →
+                    </button>
                 </div>
             ) : (
                 <div style={styles.courseGrid}>
@@ -1382,10 +1558,23 @@ export default function StudentDashboard() {
                 <p style={styles.tabSubtitle}>Download your certificates of completion and share on LinkedIn</p>
             </div>
             {certificates.length === 0 ? (
-                <div style={styles.emptyContent}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎓</div>
-                    <p style={styles.emptyText}>No certificates earned yet. Complete all lessons and score above 60% in quizzes to qualify!</p>
-                    <button onClick={() => setActiveTab('learning')} style={styles.resumeBtn}>Continue Learning</button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '48px 24px', background: colors.bgCard, borderRadius: '20px', border: `1px dashed ${colors.border}`, boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
+                    <div style={{ width: '80px', height: '80px', borderRadius: '24px', background: `linear-gradient(135deg, ${colors.accent}20, ${colors.primary}20)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', marginBottom: '20px', border: `1px solid ${colors.accent}30` }}>
+                        🎓
+                    </div>
+                    <h3 style={{ color: colors.text, fontSize: '22px', fontWeight: '900', margin: '0 0 10px' }}>Earn Industry-Recognized Credentials</h3>
+                    <p style={{ color: colors.textMuted, fontSize: '14px', maxWidth: '480px', margin: '0 0 20px', lineHeight: 1.6 }}>
+                        Certificates are awarded upon completing 100% of course lessons and scoring at least 60% on module quizzes. Earned certificates include verifiable IDs for LinkedIn sharing.
+                    </p>
+                    <div style={{ background: colors.bgInput, border: `1px solid ${colors.border}`, padding: '12px 20px', borderRadius: '12px', marginBottom: '24px', display: 'flex', gap: '16px', alignItems: 'center', textAlign: 'left' }}>
+                        <span style={{ fontSize: '20px' }}>💡</span>
+                        <span style={{ fontSize: '12px', color: colors.textMuted }}>
+                            <strong style={{ color: colors.text }}>Pro Tip:</strong> Keep up a 7-day study streak to unlock bonus achievement badges alongside your certificates!
+                        </span>
+                    </div>
+                    <button onClick={() => setActiveTab('overview')} style={{ ...styles.resumeBtn, padding: '14px 32px', fontSize: '15px', fontWeight: '800' }}>
+                        📚 Resume Active Courses →
+                    </button>
                 </div>
             ) : (
                 <div style={styles.courseGrid}>
