@@ -35,7 +35,9 @@ const { protect, authorizeRoles } = require('./middleware/auth');
 const app = express();
 
 // ── Core Middleware ────────────────────────────────────────
-app.use(helmet());                           // Set secure HTTP response headers
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+}));                           // Set secure HTTP response headers
 app.use(cors({
     origin: [process.env.FRONTEND_URL || 'http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3001', 'http://127.0.0.1:3000'],
     credentials: true                        // Allow cookies to be sent cross-origin
@@ -43,6 +45,9 @@ app.use(cors({
 app.use(cookieParser());                     // Parse HTTP-Only cookie tokens
 app.use(express.json());                     // Parse incoming JSON request bodies
 app.use(express.urlencoded({ extended: true }));
+
+// Serve static uploaded files locally
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // ── Connect to MongoDB Atlas ───────────────────────────────
 connectDB();

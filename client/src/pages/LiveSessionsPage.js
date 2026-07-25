@@ -29,22 +29,52 @@ export default function LiveSessionsPage() {
     ];
 
     useEffect(() => {
-        // Fetch courses user is involved in
-        courseService.getAll().then(res => {
-            setCourses(res.data.data);
-            if (res.data.data.length > 0) {
-                handleSelectCourse(res.data.data[0]._id);
+        // Fetch courses user is involved in based on user role
+        const fetchCourses = async () => {
+            try {
+                let courseList = [];
+                if (user?.assignedRole === 'Student') {
+                    const res = await courseService.getStudentEnrollments();
+                    const enrollments = res.data?.data || [];
+                    courseList = enrollments
+                        .map(e => e.courseRef)
+                        .filter(c => c && c._id);
+                } else if (user?.assignedRole === 'Instructor') {
+                    const res = await courseService.getInstructorCourses();
+                    courseList = res.data?.data || [];
+                } else {
+                    const res = await courseService.getAll();
+                    courseList = res.data?.data || [];
+                }
+
+                setCourses(courseList);
+                if (courseList.length > 0) {
+                    handleSelectCourse(courseList[0]._id);
+                } else {
+                    setSelectedCourse(null);
+                    setSessions([]);
+                }
+            } catch (err) {
+                console.error('Failed to fetch courses for live sessions:', err);
+                setCourses([]);
+                setSessions([]);
             }
-        });
-    }, []);
+        };
+
+        if (user) {
+            fetchCourses();
+        }
+    }, [user]);
 
     const handleSelectCourse = async (courseId) => {
+        if (!courseId) return;
         setSelectedCourse(courseId);
         try {
             const res = await liveSessionService.getCourseSessions(courseId);
-            setSessions(res.data.data);
+            setSessions(res.data?.data || []);
         } catch (err) {
-            console.error(err);
+            console.error('Failed to get course live sessions:', err);
+            setSessions([]);
         }
     };
 

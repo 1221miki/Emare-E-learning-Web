@@ -47,6 +47,27 @@ export const AuthProvider = ({ children }) => {
         return data.data;
     }, []);
 
+    const socialAuth = useCallback(async (providerData) => {
+        const { data } = await authService.socialLogin(providerData);
+        localStorage.setItem('elms_token', data.token);
+        localStorage.setItem('elms_user', JSON.stringify(data.data));
+        setUser(data.data);
+        return data.data;
+    }, []);
+
+    const requestPasswordReset = useCallback(async (accountEmail) => {
+        const { data } = await authService.forgotPassword({ accountEmail });
+        return data;
+    }, []);
+
+    const resetPassword = useCallback(async (resetToken, newPassword) => {
+        const { data } = await authService.resetPassword({ resetToken, newPassword });
+        localStorage.setItem('elms_token', data.token);
+        localStorage.setItem('elms_user', JSON.stringify(data.data));
+        setUser(data.data);
+        return data.data;
+    }, []);
+
     const logout = useCallback(async () => {
         try { await authService.logout(); } catch {}
         localStorage.removeItem('elms_token');
@@ -59,6 +80,9 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         register,
+        socialAuth,
+        requestPasswordReset,
+        resetPassword,
         logout,
         isAuthenticated: !!user,
         isAdmin: user?.assignedRole === 'Admin',

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect, authorizeRoles } = require('../middleware/auth');
+const { protect, authorizeRoles, optionalProtect } = require('../middleware/auth');
 const {
     getAllUsers,
     getUserById,
@@ -20,14 +20,14 @@ router.patch('/profile', protect, (req, res, next) => {
 // ── Instructor Profile Management ────────────────────────────
 router.put('/instructor/profile', protect, authorizeRoles('Instructor'), updateInstructorProfile);
 
-// All routes below require Admin role
-router.use(protect, authorizeRoles('Admin'));
+// ── Public / Authenticated User Listing ───────────────────────
+router.get('/', optionalProtect, getAllUsers);
 
 // ── Admin User Management ──────────────────────────────────
-router.get('/', getAllUsers);
-router.get('/:id', getUserById);
-router.patch('/:id', updateUser);
-router.patch('/:id/reset-password', resetUserPassword);
-router.delete('/:id', deleteUser);
+router.get('/:id', protect, authorizeRoles('Admin'), getUserById);
+router.patch('/:id', protect, authorizeRoles('Admin'), updateUser);
+router.patch('/:id/reset-password', protect, authorizeRoles('Admin'), resetUserPassword);
+router.delete('/:id', protect, authorizeRoles('Admin'), deleteUser);
 
 module.exports = router;
+

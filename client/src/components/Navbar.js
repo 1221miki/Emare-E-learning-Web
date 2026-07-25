@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -9,8 +9,32 @@ export default function Navbar() {
     const navigate = useNavigate();
 
     const [showAnnouncement, setShowAnnouncement] = useState(true);
-    const [language, setLanguage] = useState('EN');
+    const [currentLang, setCurrentLang] = useState('en');
     const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    const languages = [
+        { code: 'en', name: 'English' },
+        { code: 'am', name: 'አማርኛ' },
+        { code: 'om', name: 'Afaan Oromoo' },
+        { code: 'ti', name: 'ትግርኛ' },
+        { code: 'so', name: 'Soomaali' },
+        { code: 'aa', name: 'Qafaraf' },
+        { code: 'sid', name: 'Sidaamu Afoo' },
+        { code: 'wal', name: 'Wolaytta Doonaa' }
+    ];
+
+    const currentLanguageName = languages.find(l => l.code === currentLang)?.name || 'Language';
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsLangDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const handleLogout = async () => {
         await logout();
@@ -26,9 +50,16 @@ export default function Navbar() {
         }
     };
 
-    const handleLanguageChange = (lang) => {
-        setLanguage(lang);
+    const handleLanguageChange = (langCode) => {
+        setCurrentLang(langCode);
         setIsLangDropdownOpen(false);
+        
+        // Trigger Google Translate dropdown
+        const select = document.querySelector('.goog-te-combo');
+        if (select) {
+            select.value = langCode;
+            select.dispatchEvent(new Event('change'));
+        }
     };
 
     const s = {
@@ -82,9 +113,11 @@ export default function Navbar() {
         logoutBtn: { background: `${colors.danger}15`, border: `1px solid ${colors.danger}30`, color: colors.danger, borderRadius: '8px', padding: '10px 16px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', transition: 'background 0.2s' },
         
         langDropdownContainer: { position: 'relative' },
-        langBtn: { background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' },
-        langDropdown: { position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', overflow: 'hidden', display: isLangDropdownOpen ? 'block' : 'none' },
-        langOption: { padding: '10px 20px', fontSize: '13px', color: colors.text, cursor: 'pointer', borderBottom: `1px solid ${colors.border}`, background: 'transparent', width: '100%', textAlign: 'left', borderLeft: 'none', borderRight: 'none', borderTop: 'none' }
+        langBtn: { background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', padding: '8px 14px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s' },
+        langDropdown: { position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', overflow: 'hidden', display: isLangDropdownOpen ? 'flex' : 'none', flexDirection: 'column', width: '200px', zIndex: 105 },
+        langOption: { padding: '12px 16px', fontSize: '14px', color: colors.text, cursor: 'pointer', borderBottom: `1px solid ${colors.border}`, background: 'transparent', textAlign: 'left', borderLeft: 'none', borderRight: 'none', borderTop: 'none', display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s' },
+        langOptionLast: { borderBottom: 'none' },
+        checkMark: { width: '16px', fontWeight: '800', color: colors.primary }
     };
 
     return (
@@ -105,24 +138,36 @@ export default function Navbar() {
                 </div>
                 
                 <div style={s.navCenter}>
-                    <Link to="/" style={{ ...s.navLink }}>Home</Link>
-                    <Link to="/courses" style={{ ...s.navLink }}>Courses</Link>
-                    <Link to="/categories" style={{ ...s.navLink }}>Categories</Link>
-                    <Link to="/search" style={{ ...s.navLink }}>Search</Link>
-                    <Link to="/live" style={{ ...s.navLink }}>Live Classes</Link>
-                    <Link to="/community" style={{ ...s.navLink }}>Community</Link>
+                    <Link to="/" style={s.navLink}>Home</Link>
+                    <Link to="/courses" style={s.navLink}>Courses</Link>
+                    <Link to="/categories" style={s.navLink}>Categories</Link>
+                    <Link to="/search" style={s.navLink}>Search</Link>
+                    <Link to="/live-sessions" style={s.navLink}>Live Classes</Link>
+                    <Link to="/leaderboard" style={s.navLink}>Community</Link>
                 </div>
 
                 <div style={s.navRight}>
                     {/* Language Switcher */}
-                    <div style={s.langDropdownContainer}>
+                    <div style={s.langDropdownContainer} ref={dropdownRef}>
                         <button onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)} style={s.langBtn}>
-                            🌐 {language} ▼
+                            🌐 {currentLanguageName}
                         </button>
                         <div style={s.langDropdown}>
-                            <button onClick={() => handleLanguageChange('EN')} style={s.langOption}>English</button>
-                            <button onClick={() => handleLanguageChange('AM')} style={s.langOption}>Amharic</button>
-                            <button onClick={() => handleLanguageChange('OR')} style={s.langOption}>Oromo</button>
+                            {languages.map((lang, index) => {
+                                const isActive = currentLang === lang.code;
+                                return (
+                                    <button 
+                                        key={lang.code}
+                                        onClick={() => handleLanguageChange(lang.code)} 
+                                        style={{...s.langOption, ...(index === languages.length - 1 ? s.langOptionLast : {}), fontWeight: isActive ? '700' : '400'}}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = `${colors.primary}15`}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                        <span style={s.checkMark}>{isActive ? '✓' : ''}</span>
+                                        {lang.name}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 
