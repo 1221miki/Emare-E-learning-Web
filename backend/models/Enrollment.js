@@ -21,6 +21,20 @@ const EnrollmentSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    paymentMethod: {
+        type: String,
+        enum: ['cbe', 'telebirr', 'chapa', 'dashen', 'other'],
+        default: 'cbe'
+    },
+    paymentReference: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    paymentAmount: {
+        type: Number,
+        default: 0
+    },
     paymentStatus: {
         type: String,
         enum: ['Unpaid', 'Pending Verification', 'Cleared'],

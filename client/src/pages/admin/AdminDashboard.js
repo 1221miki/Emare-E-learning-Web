@@ -117,6 +117,26 @@ export default function AdminDashboard() {
         }
     };
 
+    const handleApprovePayment = async (enrollmentId) => {
+        try {
+            const response = await enrollmentService.approvePayment(enrollmentId);
+            setEnrollments(prev => prev.map(e => e._id === enrollmentId ? { ...e, paymentStatus: response.data.data.paymentStatus, tuitionClearanceFlag: response.data.data.tuitionClearanceFlag } : e));
+            showNotification('Payment approved and tuition cleared.');
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to approve payment.');
+        }
+    };
+
+    const handleRejectPayment = async (enrollmentId) => {
+        try {
+            const response = await enrollmentService.rejectPayment(enrollmentId);
+            setEnrollments(prev => prev.map(e => e._id === enrollmentId ? { ...e, paymentStatus: response.data.data.paymentStatus, tuitionClearanceFlag: response.data.data.tuitionClearanceFlag } : e));
+            showNotification('Payment rejected and student notified.');
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to reject payment.');
+        }
+    };
+
     // ── System Management ──────────────────────────────────────
 
     const handleUpdateSettings = async (e) => {
@@ -441,6 +461,7 @@ export default function AdminDashboard() {
                                 <th style={s.th}>Course</th>
                                 <th style={s.th}>Amount</th>
                                 <th style={s.th}>Status</th>
+                                <th style={s.th}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -450,9 +471,23 @@ export default function AdminDashboard() {
                                     <td style={s.td}>{e.courseRef?.courseTitle}</td>
                                     <td style={s.td}>ETB {e.courseRef?.price}</td>
                                     <td style={s.td}>
-                                        <span style={{...s.badge, background: e.paymentStatus === 'Cleared' ? `${colors.success}15` : `${colors.warning}15`, color: e.paymentStatus === 'Cleared' ? colors.success : colors.warning}}>
+                                        <span style={{...s.badge, background: e.paymentStatus === 'Cleared' ? `${colors.success}15` : e.paymentStatus === 'Pending Verification' ? `${colors.warning}15` : `${colors.danger}15`, color: e.paymentStatus === 'Cleared' ? colors.success : e.paymentStatus === 'Pending Verification' ? colors.warning : colors.danger}}>
                                             {e.paymentStatus}
                                         </span>
+                                    </td>
+                                    <td style={s.td}>
+                                        {e.paymentStatus === 'Pending Verification' ? (
+                                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                <button onClick={() => handleApprovePayment(e._id)} style={{ ...s.actionBtn, color: colors.success, borderColor: colors.success }}>
+                                                    Approve
+                                                </button>
+                                                <button onClick={() => handleRejectPayment(e._id)} style={{ ...s.actionBtn, color: colors.danger, borderColor: colors.danger }}>
+                                                    Reject
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <span style={{ color: colors.textMuted, fontSize: '13px' }}>No action</span>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
