@@ -87,7 +87,9 @@ export const enrollmentService = {
     uploadPaymentSlip: (enrollmentId, formData) => API.post(`/enrollments/${enrollmentId}/payment-slip`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
     }),
-    getMyStatus: () => API.get('/enrollments/my-status')
+    getMyStatus: () => API.get('/enrollments/my-status'),
+    approvePayment: (enrollmentId) => API.patch(`/enrollments/${enrollmentId}/approve`),
+    rejectPayment: (enrollmentId) => API.patch(`/enrollments/${enrollmentId}/reject`)
 };
 
 // ── Gradebook & Submissions API Calls ──────────────────────
