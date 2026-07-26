@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import API, { enrollmentService, notificationService } from '../../services/api';
-import QRCode from 'qrcode.react';
+import QRCode from 'react-qr-code';
 import Sidebar from '../../components/Sidebar';
 
 const paymentMethods = [
