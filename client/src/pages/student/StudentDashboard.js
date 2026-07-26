@@ -39,6 +39,7 @@ export default function StudentDashboard() {
 
     // Dashboard Extra States
     const [allCourses, setAllCourses] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
     const [notifications, setNotifications] = useState([]);
     const [liveSessions, setLiveSessions] = useState([]);
     const [assignmentsList, setAssignmentsList] = useState([]);
@@ -1104,24 +1105,110 @@ export default function StudentDashboard() {
                 <p style={styles.tabSubtitle}>Access your enrolled lectures and track your clearance status</p>
             </div>
             {enrollments.length === 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '48px 24px', background: colors.bgCard, borderRadius: '20px', border: `1px dashed ${colors.border}`, boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
-                    <div style={{ width: '80px', height: '80px', borderRadius: '24px', background: `linear-gradient(135deg, ${colors.primary}20, ${colors.accent}20)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', marginBottom: '20px', border: `1px solid ${colors.primary}30` }}>
-                        🚀
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    <div style={{ ...styles.panelCard, display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, alignItems: 'center' }}>
+                        <div>
+                            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                                <div style={{ width: 84, height: 84, borderRadius: 18, background: `linear-gradient(135deg, ${colors.primary}20, ${colors.accent}20)`, display: 'grid', placeItems: 'center', fontSize: 40 }}>🚀</div>
+                                <div>
+                                    <h3 style={{ margin: 0, color: colors.text, fontSize: 22, fontWeight: 900 }}>Start Your Learning Journey</h3>
+                                    <p style={{ margin: '8px 0 0', color: colors.textMuted, maxWidth: 560 }}>You haven't enrolled in any courses yet. Explore featured courses, curated learning paths, and start a career-focused learning track.</p>
+                                </div>
+                            </div>
+
+                            <div style={{ marginTop: 18, display: 'flex', gap: 12 }}>
+                                <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search courses, e.g. React, Python" style={{ ...styles.input, flex: 1 }} />
+                                <button onClick={() => navigate(`/search?q=${encodeURIComponent(searchQuery)}`)} style={styles.resumeBtn}>Search</button>
+                            </div>
+
+                            <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
+                                <div style={styles.statCard}><span style={styles.statValue}>{allCourses.length || '—'}</span><span style={styles.statLabel}>Available Courses</span></div>
+                                <div style={styles.statCard}><span style={styles.statValue}>{Array.from(new Set(allCourses.map(c => c.creatorRef?._id))).length || '—'}</span><span style={styles.statLabel}>Professional Instructors</span></div>
+                                <div style={styles.statCard}><span style={styles.statValue}>{(allCourses.reduce((s, c) => s + (c.enrolledCount || 0), 0)) || '4,500+'}</span><span style={styles.statLabel}>Students Enrolled</span></div>
+                                <div style={styles.statCard}><span style={styles.statValue}>{certificates.length || '—'}</span><span style={styles.statLabel}>Certificates</span></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 style={{ margin: 0, color: colors.text, fontSize: 16, fontWeight: 800 }}>Featured Courses</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 12 }}>
+                                {(allCourses.slice(0,3)).map(course => (
+                                    <div key={course._id} style={{ display: 'flex', gap: 12, alignItems: 'center', background: colors.bgInput, padding: 12, borderRadius: 10, border: `1px solid ${colors.border}` }}>
+                                        <div style={{ width: 72, height: 48, background: `linear-gradient(135deg, ${colors.primary}10, ${colors.accent}10)`, borderRadius: 8 }} />
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ color: colors.text, fontWeight: 800 }}>{course.courseTitle}</div>
+                                            <div style={{ color: colors.textMuted, fontSize: 12 }}>{course.estimatedDurationHours || 0}h · {course.technicalCategory || 'Development'}</div>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ color: colors.textMuted, fontSize: 12 }}>ETB {course.price || '—'}</div>
+                                            <button onClick={() => navigate(`/courses/${course._id}`)} style={{ marginTop: 8, ...styles.secondaryBtn }}>Enroll</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
-                    <h3 style={{ color: colors.text, fontSize: '22px', fontWeight: '900', margin: '0 0 10px' }}>Start Your Learning Journey</h3>
-                    <p style={{ color: colors.textMuted, fontSize: '14px', maxWidth: '460px', margin: '0 0 24px', lineHeight: 1.6 }}>
-                        You haven't enrolled in any courses yet. Explore our top-rated professional courses in Web Engineering, UI/UX Design, Data Science, and Cyber Security.
-                    </p>
-                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '28px' }}>
-                        {['💻 Web Development', '🎨 UI/UX Design', '📊 Data Science', '🔒 Cyber Security'].map(cat => (
-                            <button key={cat} onClick={() => navigate(`/search?q=${encodeURIComponent(cat.split(' ')[1])}`)} style={{ background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '20px', padding: '8px 16px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' }}>
-                                {cat}
-                            </button>
-                        ))}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
+                        <div>
+                            <div style={{ ...styles.panelCard }}>
+                                <h4 style={styles.panelCardTitle}>Career Paths</h4>
+                                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                                    {['Frontend Developer','Backend Developer','Full Stack Developer','UI/UX Designer','Data Scientist','Cyber Security Analyst'].map(p => (
+                                        <div key={p} style={{ padding: 12, borderRadius: 12, background: colors.bgInput, border: `1px solid ${colors.border}`, minWidth: 180 }}>
+                                            <div style={{ fontWeight: 800, color: colors.text }}>{p}</div>
+                                            <div style={{ color: colors.textMuted, fontSize: 12, marginTop: 8 }}>Complete learning path with projects and certificates.</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div style={{ ...styles.panelCard, marginTop: 16 }}>
+                                <h4 style={styles.panelCardTitle}>Why Learn With Emare ELMS?</h4>
+                                <ul style={{ margin: 0, paddingLeft: 18, color: colors.textMuted }}>
+                                    <li>Industry Projects</li>
+                                    <li>Certificates</li>
+                                    <li>Expert Instructors</li>
+                                    <li>Lifetime Access</li>
+                                    <li>Community Support</li>
+                                    <li>Live Sessions</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div style={{ ...styles.panelCard }}>
+                                <h4 style={styles.panelCardTitle}>Trending This Week</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    {(allCourses.slice(0,5).map(c => (
+                                        <div key={c._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ color: colors.text }}>{c.courseTitle}</div>
+                                            <div style={{ color: colors.textMuted, fontSize: 12 }}>ETB {c.price || '—'}</div>
+                                        </div>
+                                    )))}
+                                </div>
+                            </div>
+
+                            <div style={{ ...styles.panelCard, marginTop: 12 }}>
+                                <h4 style={styles.panelCardTitle}>Top Instructors</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    {Array.from(new Map(allCourses.map(c => [c.creatorRef?._id, c.creatorRef])).values()).slice(0,4).map(inst => (
+                                        <div key={inst?._id} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                            <div style={{ width: 44, height: 44, borderRadius: 8, background: `linear-gradient(135deg, ${colors.primary}10, ${colors.accent}10)` }} />
+                                            <div>
+                                                <div style={{ color: colors.text, fontWeight: 800 }}>{inst?.fullName || 'Instructor'}</div>
+                                                <div style={{ color: colors.textMuted, fontSize: 12 }}>Top Mentor</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <button onClick={() => navigate('/courses')} style={{ ...styles.resumeBtn, padding: '14px 32px', fontSize: '15px', fontWeight: '800', boxShadow: '0 8px 20px rgba(59,130,246,0.3)' }}>
-                        📚 Browse Course Catalog →
-                    </button>
+
+                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
+                        <button onClick={() => navigate('/courses')} style={{ ...styles.resumeBtn, padding: '12px 28px' }}>Browse Course Catalog</button>
+                    </div>
                 </div>
             ) : (
                 <div style={styles.courseGrid}>
