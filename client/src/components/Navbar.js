@@ -140,7 +140,7 @@ export default function Navbar() {
                 <div style={s.navCenter}>
                     <Link to="/" style={s.navLink}>Home</Link>
                     <Link to="/courses" style={s.navLink}>Courses</Link>
-                    <Link to="/categories" style={s.navLink}>Categories</Link>
+                    <Link to="/career-tracks" style={s.navLink}>Career Tracks</Link>
                     <Link to="/search" style={s.navLink}>Search</Link>
                     <Link to="/live-sessions" style={s.navLink}>Live Classes</Link>
                     <Link to="/leaderboard" style={s.navLink}>Community</Link>

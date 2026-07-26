@@ -32,6 +32,7 @@ import LiveSessionsPage from './pages/LiveSessionsPage';
 
 // NEW: Visitor Public Pages
 import CategoriesPage from './pages/CategoriesPage';
+import CareerTracksPage from './pages/CareerTracksPage';
 import SearchPage from './pages/SearchPage';
 import InstructorProfilePage from './pages/InstructorProfilePage';
 
@@ -64,7 +65,8 @@ function AppRoutes() {
             {/* Search */}
             <Route path="/search" element={<SearchPage />} />
 
-            {/* Categories */}
+            {/* Career Tracks & Categories */}
+            <Route path="/career-tracks" element={<CareerTracksPage />} />
             <Route path="/categories" element={<CategoriesPage />} />
 
             {/* Instructors */}
