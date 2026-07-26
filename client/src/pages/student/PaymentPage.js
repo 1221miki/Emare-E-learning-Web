@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { enrollmentService } from '../../services/api';
+import API, { enrollmentService, notificationService } from '../../services/api';
+import QRCode from 'qrcode.react';
 import Sidebar from '../../components/Sidebar';
 
 const paymentMethods = [
@@ -53,10 +54,13 @@ export default function PaymentPage() {
     const [enrollments, setEnrollments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
+    const [uploadingProgress, setUploadingProgress] = useState(0);
     const [selectedEnrollmentId, setSelectedEnrollmentId] = useState('');
     const [file, setFile] = useState(null);
     const [selectedMethod, setSelectedMethod] = useState('cbe');
     const [paymentReference, setPaymentReference] = useState('');
+    const [previewUrl, setPreviewUrl] = useState('');
+    const [notifications, setNotifications] = useState([]);
     const [copyMessage, setCopyMessage] = useState('');
 
     useEffect(() => {
@@ -93,6 +97,17 @@ export default function PaymentPage() {
         }
     }, [selectedEnrollment]);
 
+    useEffect(() => {
+        // fetch recent notifications for student
+        let mounted = true;
+        notificationService.getAll()
+            .then(res => {
+                if (mounted) setNotifications(res.data.data || []);
+            })
+            .catch(() => {});
+        return () => { mounted = false; };
+    }, []);
+
     const selectedCourse = selectedEnrollment?.courseRef || null;
     const paymentMethod = paymentMethods.find(method => method.id === selectedMethod) || paymentMethods[0];
     const coursePrice = selectedCourse?.price || 0;
@@ -102,6 +117,16 @@ export default function PaymentPage() {
 
     const handleFileChange = (inputFile) => {
         if (inputFile) setFile(inputFile);
+        if (inputFile) {
+            try {
+                const url = URL.createObjectURL(inputFile);
+                setPreviewUrl(url);
+            } catch (err) {
+                setPreviewUrl('');
+            }
+        } else {
+            if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(''); }
+        }
     };
 
     const handleDrop = (e) => {
@@ -122,17 +147,26 @@ export default function PaymentPage() {
         formData.append('paymentMethod', selectedMethod);
         formData.append('paymentReference', paymentReference);
         formData.append('paymentAmount', totalAmount);
-
         setUploading(true);
+        setUploadingProgress(0);
         try {
-            await enrollmentService.uploadPaymentSlip(selectedEnrollmentId, formData);
+            await API.post(`/enrollments/${selectedEnrollmentId}/payment-slip`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (progressEvent) => {
+                    if (!progressEvent.total) return;
+                    const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    setUploadingProgress(pct);
+                }
+            });
             alert('Receipt uploaded successfully. Your payment is now under review.');
             setFile(null);
+            if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(''); }
             fetchStatus();
         } catch (err) {
             alert(err.response?.data?.message || 'Upload failed.');
         } finally {
             setUploading(false);
+            setUploadingProgress(0);
         }
     };
 
@@ -161,6 +195,33 @@ export default function PaymentPage() {
                 <td>{status}</td>
             </tr>
         );
+    };
+
+    const formatDate = (d) => {
+        try { return new Date(d).toLocaleString(); } catch (e) { return '-'; }
+    };
+
+    const downloadReceipt = (url) => {
+        if (!url) return alert('No receipt available.');
+        window.open(url, '_blank');
+    };
+
+    const printInvoice = (enrollment) => {
+        const win = window.open('', '_blank');
+        const html = `
+        <html><head><title>Invoice</title></head><body>
+        <h2>Invoice - ${enrollment.courseRef?.courseTitle}</h2>
+        <p><strong>Student:</strong> ${enrollment.studentRef?.fullName || 'You'}</p>
+        <p><strong>Course:</strong> ${enrollment.courseRef?.courseTitle}</p>
+        <p><strong>Amount:</strong> ETB ${enrollment.paymentAmount || enrollment.courseRef?.price || 0}</p>
+        <p><strong>Reference:</strong> ${enrollment.paymentReference || '-'}</p>
+        <p><strong>Payment Status:</strong> ${enrollment.paymentStatus}</p>
+        <hr />
+        <p>Thank you for your payment.</p>
+        </body></html>`;
+        win.document.write(html);
+        win.document.close();
+        win.print();
     };
 
     return (
@@ -497,3 +558,24 @@ styles.historyRow = {
     ...styles.historyRow
 };
 styles.historyTable.thead = styles.historyTable.thead;
+
+const statusColorMap = {
+    'Unpaid': '#f59e0b',
+    'Pending Verification': '#f97316',
+    'Cleared': '#10b981'
+};
+
+// add a few new style tokens used above
+styles.selectedBadge = { background: 'linear-gradient(90deg,#7c3aed,#6366f1)', color: '#fff', padding: '6px 10px', borderRadius: 12, fontWeight: 700, fontSize: 12 };
+styles.selectBadge = { border: '1px solid rgba(148,163,184,0.12)', padding: '6px 10px', borderRadius: 12, color: '#94a3b8', fontSize: 12 };
+styles.progressWrap = { width: 180, height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 8, marginTop: 8, overflow: 'hidden' };
+styles.progressBar = { height: '100%', background: 'linear-gradient(90deg,#6366f1,#ec4899)' };
+styles.notificationList = { listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 12 };
+styles.notificationItem = { padding: 12, borderRadius: 10, background: 'rgba(255,255,255,0.02)' };
+styles.helpCard = { padding: 12 };
+styles.secondaryBtn = { background: 'transparent', border: '1px solid rgba(148,163,184,0.12)', color: '#f8fafc', padding: '8px 12px', borderRadius: 12, textDecoration: 'none' };
+styles.secondaryLink = { color: '#7c3aed', textDecoration: 'none', fontWeight: 700 };
+styles.invoiceBtns = { display: 'flex', gap: 8 };
+styles.summaryMetaGrid = { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginTop: 12 };
+styles.instructionTitle = { fontSize: 16, fontWeight: 800, color: '#f8fafc' };
+styles.instructionText = { color: '#94a3b8', marginTop: 8 };
