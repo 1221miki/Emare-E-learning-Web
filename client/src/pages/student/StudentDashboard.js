@@ -20,6 +20,8 @@ import {
 } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import AiAssistant from '../../components/AiAssistant';
+import FeaturedCarousel from '../../components/dashboard/FeaturedCarousel';
+import MyCoursesHub from '../../components/dashboard/MyCoursesHub';
 
 export default function StudentDashboard() {
     const { user, logout } = useAuth();
@@ -1131,20 +1133,8 @@ export default function StudentDashboard() {
 
                         <div>
                             <h4 style={{ margin: 0, color: colors.text, fontSize: 16, fontWeight: 800 }}>Featured Courses</h4>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 12 }}>
-                                {(allCourses.slice(0,3)).map(course => (
-                                    <div key={course._id} style={{ display: 'flex', gap: 12, alignItems: 'center', background: colors.bgInput, padding: 12, borderRadius: 10, border: `1px solid ${colors.border}` }}>
-                                        <div style={{ width: 72, height: 48, background: `linear-gradient(135deg, ${colors.primary}10, ${colors.accent}10)`, borderRadius: 8 }} />
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ color: colors.text, fontWeight: 800 }}>{course.courseTitle}</div>
-                                            <div style={{ color: colors.textMuted, fontSize: 12 }}>{course.estimatedDurationHours || 0}h · {course.technicalCategory || 'Development'}</div>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{ color: colors.textMuted, fontSize: 12 }}>ETB {course.price || '—'}</div>
-                                            <button onClick={() => navigate(`/courses/${course._id}`)} style={{ marginTop: 8, ...styles.secondaryBtn }}>Enroll</button>
-                                        </div>
-                                    </div>
-                                ))}
+                            <div style={{ marginTop: 12 }}>
+                                <FeaturedCarousel courses={allCourses.slice(0,6)} />
                             </div>
                         </div>
                     </div>
@@ -2667,8 +2657,17 @@ export default function StudentDashboard() {
                     <div style={styles.loadingBox}>Loading Dashboard...</div>
                 ) : (
                     <div>
-                        {activeTab === 'overview' && renderOverview()}
-                        {activeTab === 'learning' && renderMyLearning()}
+                        {(activeTab === 'overview' || activeTab === 'learning') && (
+                            <MyCoursesHub 
+                                enrollments={enrollments}
+                                allCourses={allCourses}
+                                wishlist={wishlist}
+                                recentlyViewed={recentlyViewed}
+                                setActiveTab={setActiveTab}
+                                togglePinCourse={togglePinCourse}
+                                pinnedCourses={pinnedCourses}
+                            />
+                        )}
                         {activeTab === 'wishlist' && renderWishlist()}
                         {activeTab === 'assignments' && renderAssignments()}
                         {activeTab === 'quizzes' && renderQuizzes()}
