@@ -8,7 +8,7 @@ import GuestModal from '../../components/GuestModal';
 
 export default function CourseDetailPage() {
     const { courseId } = useParams();
-    const { isAuthenticated, isStudent } = useAuth();
+    const { isAuthenticated, isStudent, isSuspended } = useAuth();
     const { colors, theme } = useTheme();
     const navigate = useNavigate();
 
@@ -66,6 +66,10 @@ export default function CourseDetailPage() {
     }, [courseId, isAuthenticated, isStudent]);
 
     const handleEnroll = async () => {
+        if (isSuspended) {
+            alert('Your account is suspended. Enrollment is disabled.');
+            return;
+        }
         if (!isAuthenticated) {
             setGuestModal({ open: true, action: `enroll in "${course.courseTitle}"` });
             return;
@@ -82,6 +86,10 @@ export default function CourseDetailPage() {
     };
 
     const handleToggleWishlist = async () => {
+        if (isSuspended) {
+            alert('Your account is suspended. Wishlist updates are disabled.');
+            return;
+        }
         if (!isAuthenticated) {
             setGuestModal({ open: true, action: 'save this course to your wishlist' });
             return;

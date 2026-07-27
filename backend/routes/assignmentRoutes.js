@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { protect, authorizeRoles } = require('../middleware/auth');
+const { protect, authorizeRoles, denySuspendedActions } = require('../middleware/auth');
 const {
     createAssignment, getCourseAssignments, submitAssignment,
     getSubmissions, gradeSubmission, getMySubmissions
@@ -9,12 +9,12 @@ router.use(protect);
 
 // Student routes
 router.get('/my-submissions', authorizeRoles('Student'), getMySubmissions);
-router.post('/:id/submit', authorizeRoles('Student'), submitAssignment);
+router.post('/:id/submit', denySuspendedActions, authorizeRoles('Student'), submitAssignment);
 
 // Instructor routes
-router.post('/', authorizeRoles('Instructor'), createAssignment);
+router.post('/', denySuspendedActions, authorizeRoles('Instructor'), createAssignment);
 router.get('/:id/submissions', authorizeRoles('Instructor', 'Admin'), getSubmissions);
-router.patch('/submissions/:submissionId/grade', authorizeRoles('Instructor'), gradeSubmission);
+router.patch('/submissions/:submissionId/grade', denySuspendedActions, authorizeRoles('Instructor'), gradeSubmission);
 
 // Shared
 router.get('/course/:courseId', getCourseAssignments);

@@ -38,6 +38,19 @@ The platform is built using a decoupled, three-tier MERN architecture:
 
 ---
 
+## Security & RBAC
+The system enforces strict Role-Based Access Control across frontend and backend layers. Admins can manage user roles, assign permissions, and control access at the API, module, page, and action levels.
+
+Key security features:
+- Role-Based Access Control (RBAC) middleware protects all sensitive routes.
+- Admin user management supports assigning and updating roles for Student, Instructor, and Admin accounts.
+- Login restrictions prevent suspended or deactivated users from performing protected actions.
+- JWTs are stored in HTTP-only cookies to protect against XSS, and password hashes are generated with bcrypt.
+- Permission enforcement covers API endpoints, UI modules, page navigation, and action buttons.
+- Audit and security controls are surfaced to administrators from the admin dashboard.
+
+---
+
 ## System Architecture
 The codebase follows a strict **Controller-Service-Repository** abstraction model:
 - **Routes:** Capture endpoint strings and delegate parameters.
@@ -98,7 +111,42 @@ PORT=5000
 MONGODB_URI=your_mongodb_atlas_connection_string
 JWT_SECRET=your_jwt_secret_key
 JWT_EXPIRE=120m
+FRONTEND_URL=http://localhost:3000
+
+# ── Email Configuration (Password Reset & Notifications) ──
+# For Development (Console Logging)
+NODE_ENV=development
+# For Production (Gmail)
+# NODE_ENV=production
+# EMAIL_USER=your_gmail@gmail.com
+# EMAIL_PASSWORD=your_app_specific_password
+
+# For Custom SMTP (Gmail, SendGrid, etc.)
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_SECURE=false
+MAIL_USER=your_email@gmail.com
+MAIL_PASS=your_app_specific_password
+EMAIL_FROM=noreply@emare.com
 ```
+
+#### 📧 Email Setup Instructions
+
+
+
+**Option 1: Development (Console Logging)**
+- By default, emails are logged to console in development mode
+- Perfect for testing without a real email service
+
+**Option 2: Gmail SMTP**
+1. Enable 2-factor authentication on your Gmail account
+2. Create an [App Password](https://myaccount.google.com/apppasswords)
+3. Use the app password in `MAIL_PASS`
+4. Set `MAIL_HOST=smtp.gmail.com` and `MAIL_PORT=587`
+
+**Option 3: SendGrid / Other SMTP**
+1. Get your SMTP credentials from your email service
+2. Update `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, and `MAIL_PASS`
 
 > 💡 **Note:** If no MongoDB URI is provided, the app automatically falls back to an in-memory database — no extra setup needed for development!
 

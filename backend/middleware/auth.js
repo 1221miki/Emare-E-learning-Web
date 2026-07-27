@@ -36,6 +36,16 @@ const protect = async (req, res, next) => {
             return res.status(401).json({ success: false, message: 'Your account has been deactivated. Contact admin.' });
         }
 
+        // Allow suspended users to log in but flag them in request
+        if (req.user.isSuspended) {
+            req.user.suspendedStatus = {
+                isSuspended: true,
+                reason: req.user.suspensionReason,
+                suspensionDate: req.user.suspensionDate,
+                suspensionEndDate: req.user.suspensionEndDate
+            };
+        }
+
         // Validate that token matches the latest login session
         if (decoded.lastLogin && req.user.lastLoginTimestamp) {
             const tokenTime = new Date(decoded.lastLogin).getTime();
@@ -68,6 +78,16 @@ const authorizeRoles = (...allowedRoles) => {
     };
 };
 
+const denySuspendedActions = (req, res, next) => {
+    if (req.user?.isSuspended) {
+        return res.status(403).json({
+            success: false,
+            message: 'Your account is suspended. You can browse the site, but cannot perform this action.'
+        });
+    }
+    next();
+};
+
 /**
  * optionalProtect - Optionally verifies JWT and hydrates req.user if token is present
  */
@@ -93,4 +113,4 @@ const optionalProtect = async (req, res, next) => {
     }
 };
 
-module.exports = { protect, authorizeRoles, optionalProtect };
+module.exports = { protect, authorizeRoles, denySuspendedActions, optionalProtect };

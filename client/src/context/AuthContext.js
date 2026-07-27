@@ -88,6 +88,9 @@ export const AuthProvider = ({ children }) => {
         isAdmin: user?.assignedRole === 'Admin',
         isInstructor: user?.assignedRole === 'Instructor',
         isStudent: user?.assignedRole === 'Student',
+        isSuspended: user?.isSuspended || false,
+        suspensionReason: user?.suspensionReason || '',
+        suspensionEndDate: user?.suspensionEndDate || null,
     };
 
     return (

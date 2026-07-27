@@ -1,5 +1,6 @@
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
+const User = require('../models/User');
 
 // ─────────────────────────────────────────────
 // @desc    Create a new course (Draft state)
@@ -28,14 +29,33 @@ const createCourse = async (req, res, next) => {
 };
 
 // ─────────────────────────────────────────────
-// @desc    Get all publicly Active courses (Student catalog)
+// @desc    Get all publicly published courses (Student catalog)
 // @route   GET /api/courses
 // @access  Public
 // ─────────────────────────────────────────────
 const getPublishedCourses = async (req, res, next) => {
     try {
-        const courses = await Course.find({ publicationState: 'Active' })
+        const courses = await Course.find({ publicationState: { $in: ['Published', 'Active'] } })
             .populate('creatorRef', 'fullName accountEmail')
+            .sort({ creationTimestamp: -1 })
+            .lean();
+
+        res.status(200).json({ success: true, count: courses.length, data: courses });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Get all courses for platform-wide admin management
+// @route   GET /api/courses/admin/all
+// @access  Private (Admin only)
+// ─────────────────────────────────────────────
+const getAllCourses = async (req, res, next) => {
+    try {
+        const courses = await Course.find({})
+            .populate('creatorRef', 'fullName accountEmail')
+            .populate('assignedInstructorRef', 'fullName accountEmail')
             .sort({ creationTimestamp: -1 })
             .lean();
 
@@ -116,7 +136,7 @@ const updateCourse = async (req, res, next) => {
         }
 
         // Only allow editing Draft courses
-        if (['Active', 'Archived'].includes(course.publicationState)) {
+        if (['Published', 'Active', 'Archived'].includes(course.publicationState)) {
             return res.status(400).json({ success: false, message: `Cannot edit a course that is currently ${course.publicationState}.` });
         }
 
@@ -139,9 +159,11 @@ const submitCourseForReview = async (req, res, next) => {
 
         if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
         if (course.creatorRef.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Access denied.' });
-        if (course.publicationState !== 'Draft') return res.status(400).json({ success: false, message: `Course is already in '${course.publicationState}' state.` });
+        if (!['Draft', 'Revision Needed'].includes(course.publicationState)) {
+            return res.status(400).json({ success: false, message: `Course is already in '${course.publicationState}' state.` });
+        }
 
-        course.publicationState = 'Pending Audit';
+        course.publicationState = 'Pending Review';
         await course.save();
 
         res.status(200).json({ success: true, message: 'Course submitted for administrator review.', data: course });
@@ -160,12 +182,250 @@ const approveCourse = async (req, res, next) => {
         const course = await Course.findById(req.params.id);
 
         if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
-        if (course.publicationState !== 'Pending Audit') return res.status(400).json({ success: false, message: `Course must be in 'Pending Audit' state to approve.` });
+        if (course.publicationState !== 'Pending Review') return res.status(400).json({ success: false, message: `Course must be in 'Pending Review' state to publish.` });
 
-        course.publicationState = 'Active';
+        course.publicationState = 'Published';
         await course.save();
 
         res.status(200).json({ success: true, message: 'Course approved and is now live in the catalog.', data: course });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Request revisions for a course under review
+// @route   PATCH /api/courses/:id/request-revision
+// @access  Private (Admin only)
+// ─────────────────────────────────────────────
+const requestCourseRevision = async (req, res, next) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        const { message } = req.body;
+
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+        if (!['Pending Review'].includes(course.publicationState)) {
+            return res.status(400).json({ success: false, message: 'Course must be pending review to request revisions.' });
+        }
+
+        course.publicationState = 'Revision Needed';
+        if (message) {
+            course.adminFeedback.push({
+                adminRef: req.user.id,
+                message,
+                action: 'Revision Requested'
+            });
+        }
+
+        await course.save();
+
+        res.status(200).json({ success: true, message: 'Revision requested. The course has been sent back to the instructor for updates.', data: course });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Reject a course to Draft for another round of authoring
+// @route   PATCH /api/courses/:id/reject
+// @access  Private (Admin only)
+// ─────────────────────────────────────────────
+const rejectCourse = async (req, res, next) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        const { message } = req.body;
+
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+        if (!['Pending Review', 'Revision Needed', 'Published'].includes(course.publicationState)) {
+            return res.status(400).json({ success: false, message: 'Course must be pending review, revision needed, or published to reject it.' });
+        }
+
+        course.publicationState = 'Draft';
+        if (message) {
+            course.adminFeedback.push({
+                adminRef: req.user.id,
+                message,
+                action: 'Rejected'
+            });
+        }
+
+        await course.save();
+
+        res.status(200).json({ success: true, message: 'Course rejected and reverted back to Draft.', data: course });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Publish a course directly from admin review
+// @route   PATCH /api/courses/:id/publish
+// @access  Private (Admin only)
+// ─────────────────────────────────────────────
+const publishCourse = async (req, res, next) => {
+    try {
+        const course = await Course.findById(req.params.id);
+
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+        if (course.publicationState !== 'Pending Review') {
+            return res.status(400).json({ success: false, message: 'Course must be pending review to publish.' });
+        }
+
+        course.publicationState = 'Published';
+        await course.save();
+
+        res.status(200).json({ success: true, message: 'Course published and visible to learners.', data: course });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Restore an archived course back to Draft
+// @route   PATCH /api/courses/:id/restore
+// @access  Private (Admin only)
+// ─────────────────────────────────────────────
+const restoreCourse = async (req, res, next) => {
+    try {
+        const course = await Course.findById(req.params.id);
+
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+        if (course.publicationState !== 'Archived') {
+            return res.status(400).json({ success: false, message: 'Only archived courses can be restored.' });
+        }
+
+        course.publicationState = 'Draft';
+        await course.save();
+
+        res.status(200).json({ success: true, message: 'Course restored to Draft state.', data: course });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Toggle course featured status
+// @route   PATCH /api/courses/:id/feature
+// @access  Private (Admin only)
+// ─────────────────────────────────────────────
+const featureCourse = async (req, res, next) => {
+    try {
+        const course = await Course.findById(req.params.id);
+
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+
+        if (typeof req.body.isFeatured === 'boolean') {
+            course.isFeatured = req.body.isFeatured;
+        } else {
+            course.isFeatured = !course.isFeatured;
+        }
+
+        await course.save();
+
+        res.status(200).json({ success: true, message: `Course ${course.isFeatured ? 'marked as featured' : 'unmarked as featured'}.`, data: course });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Send feedback on a course without changing workflow state
+const sendCourseFeedback = async (req, res, next) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        const { message } = req.body;
+
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+        if (!message || !message.trim()) {
+            return res.status(400).json({ success: false, message: 'Feedback message is required.' });
+        }
+
+        course.adminFeedback.push({
+            adminRef: req.user.id,
+            message: message.trim(),
+            action: 'Feedback'
+        });
+
+        await course.save();
+
+        res.status(200).json({ success: true, message: 'Feedback sent to the instructor.', data: course });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Assign an instructor to a course
+// @route   PATCH /api/courses/:id/assign-instructor
+// @access  Private (Admin only)
+// ─────────────────────────────────────────────
+const assignInstructor = async (req, res, next) => {
+    try {
+        const { instructorId } = req.body;
+
+        if (!instructorId) {
+            return res.status(400).json({ success: false, message: 'Instructor ID is required.' });
+        }
+
+        const [course, instructor] = await Promise.all([
+            Course.findById(req.params.id),
+            User.findById(instructorId)
+        ]);
+
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+        if (!instructor || instructor.assignedRole !== 'Instructor') {
+            return res.status(400).json({ success: false, message: 'Valid instructor not found.' });
+        }
+
+        course.assignedInstructorRef = instructor._id;
+        await course.save();
+
+        res.status(200).json({ success: true, message: `Instructor ${instructor.fullName} has been assigned to the course.`, data: course });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Remove instructor assignment from a course
+// @route   PATCH /api/courses/:id/remove-instructor
+// @access  Private (Admin only)
+// ─────────────────────────────────────────────
+const removeInstructor = async (req, res, next) => {
+    try {
+        const course = await Course.findById(req.params.id);
+
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+
+        course.assignedInstructorRef = null;
+        await course.save();
+
+        res.status(200).json({ success: true, message: 'Instructor assignment removed from the course.', data: course });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Change a course category
+// @route   PATCH /api/courses/:id/change-category
+// @access  Private (Admin only)
+// ─────────────────────────────────────────────
+const changeCourseCategory = async (req, res, next) => {
+    try {
+        const { technicalCategory } = req.body;
+
+        if (!technicalCategory) {
+            return res.status(400).json({ success: false, message: 'Category is required.' });
+        }
+
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+
+        course.technicalCategory = technicalCategory;
+        await course.save();
+
+        res.status(200).json({ success: true, message: 'Course category updated successfully.', data: course });
     } catch (err) {
         next(err);
     }
@@ -181,7 +441,7 @@ const enrollInCourse = async (req, res, next) => {
         const course = await Course.findById(req.params.id);
 
         if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
-        if (course.publicationState !== 'Active') return res.status(400).json({ success: false, message: 'This course is not available for enrollment.' });
+        if (!['Published', 'Active'].includes(course.publicationState)) return res.status(400).json({ success: false, message: 'This course is not available for enrollment.' });
 
         // Prevent duplicate enrollments
         const existing = await Enrollment.findOne({ studentRef: req.user.id, courseRef: course._id });
@@ -346,7 +606,7 @@ const deleteCourse = async (req, res, next) => {
         const course = await Course.findById(req.params.id);
         if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
         if (course.creatorRef.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Access denied.' });
-        if (course.publicationState === 'Active') return res.status(400).json({ success: false, message: 'Cannot delete an active course. Archive it first.' });
+        if (['Published', 'Active'].includes(course.publicationState)) return res.status(400).json({ success: false, message: 'Cannot delete a published course. Archive it first.' });
 
         await Course.findByIdAndDelete(req.params.id);
         res.status(200).json({ success: true, message: 'Course deleted permanently.' });
@@ -364,7 +624,9 @@ const archiveCourse = async (req, res, next) => {
     try {
         const course = await Course.findById(req.params.id);
         if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
-        if (course.creatorRef.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Access denied.' });
+        if (req.user.assignedRole !== 'Admin' && course.creatorRef.toString() !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Access denied.' });
+        }
 
         course.publicationState = 'Archived';
         await course.save();
@@ -377,13 +639,15 @@ const archiveCourse = async (req, res, next) => {
 // ─────────────────────────────────────────────
 // @desc    Unpublish a course (set back to Draft)
 // @route   PATCH /api/courses/:id/unpublish
-// @access  Private (Instructor - must be owner)
+// @access  Private (Instructor or Admin)
 // ─────────────────────────────────────────────
 const unpublishCourse = async (req, res, next) => {
     try {
         const course = await Course.findById(req.params.id);
         if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
-        if (course.creatorRef.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Access denied.' });
+        if (req.user.assignedRole !== 'Admin' && course.creatorRef.toString() !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Access denied.' });
+        }
 
         course.publicationState = 'Draft';
         await course.save();
@@ -452,7 +716,7 @@ const getInstructorAnalytics = async (req, res, next) => {
             success: true,
             data: {
                 totalCourses: courses.length,
-                activeCourses: courses.filter(c => c.publicationState === 'Active').length,
+                publishedCourses: courses.filter(c => ['Published', 'Active'].includes(c.publicationState)).length,
                 draftCourses: courses.filter(c => c.publicationState === 'Draft').length,
                 totalStudents,
                 clearedStudents,
@@ -470,10 +734,20 @@ const getInstructorAnalytics = async (req, res, next) => {
 module.exports = {
     createCourse,
     getPublishedCourses,
+    getAllCourses,
     getCourseById,
     updateCourse,
     submitCourseForReview,
     approveCourse,
+    requestCourseRevision,
+    rejectCourse,
+    publishCourse,
+    restoreCourse,
+    featureCourse,
+    sendCourseFeedback,
+    assignInstructor,
+    removeInstructor,
+    changeCourseCategory,
     enrollInCourse,
     getInstructorCourses,
     getStudentEnrollments,
