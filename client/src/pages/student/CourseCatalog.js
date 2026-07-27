@@ -24,7 +24,7 @@ const EMOJI_MAP = { 'Web Coding': '🌐', 'Creative Media': '🎨', 'Robotics Ha
 const EMOJIS = ['🎓', '💻', '📊', '🔬', '🎨', '🚀', '🧠', '⚙️', '📱', '🌐'];
 
 export default function CourseCatalog() {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, isSuspended } = useAuth();
     const { colors, theme } = useTheme();
     const navigate = useNavigate();
     const urlParams = useQuery();
@@ -218,8 +218,12 @@ export default function CourseCatalog() {
                     {isList && course.descriptionText && <p style={{ color: colors.textMuted, fontSize: '11px', margin: '0 0 6px', lineHeight: 1.4 }}>{course.descriptionText.substring(0, 130)}...</p>}
                     <div style={s.cFoot}>
                         <span style={s.price}>{course.price === 0 ? '🆓 Free' : `${course.price?.toLocaleString()} ETB`}</span>
-                        <button style={s.enrollBtn} onClick={e => { e.stopPropagation(); if (!isAuthenticated) setGuestModal({ open: true, action: `enroll in "${course.courseTitle}"` }); else navigate(`/courses/${course._id}`); }}>
-                            {isAuthenticated ? 'View →' : '🔐 Login'}
+                        <button style={{ ...s.enrollBtn, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} onClick={e => {
+                            e.stopPropagation();
+                            if (isSuspended) return;
+                            if (!isAuthenticated) setGuestModal({ open: true, action: `enroll in "${course.courseTitle}"` }); else navigate(`/courses/${course._id}`);
+                        }}>
+                            {isSuspended ? 'Account Suspended' : (isAuthenticated ? 'View →' : '🔐 Login')}
                         </button>
                     </div>
                 </div>

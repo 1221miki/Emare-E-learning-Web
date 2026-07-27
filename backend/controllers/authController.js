@@ -1,6 +1,12 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { 
+    sendPasswordResetEmail, 
+    sendPasswordResetConfirmationEmail,
+    sendAdminPasswordResetEmail,
+    sendAccountCreatedEmail
+} = require('../services/emailService');
 
 // Helper: Generate JWT and set as HTTP-Only cookie
 const sendTokenResponse = (user, statusCode, res) => {
@@ -232,22 +238,31 @@ const forgotPassword = async (req, res, next) => {
         const user = await User.findOne({ accountEmail: accountEmail.toLowerCase() });
 
         if (!user) {
-            return res.status(404).json({ success: false, message: 'No account found with that email address.' });
+            // Don't reveal if email exists for security
+            return res.status(200).json({ 
+                success: true, 
+                message: 'If an account with that email exists, password reset instructions have been sent.' 
+            });
         }
 
-        // Generate reset token
-        const resetToken = crypto.randomBytes(20).toString('hex');
-        
-        // Hash and store in user model
-        user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-        user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 mins expiry
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
+        user.resetPasswordToken = hashedToken;
+        user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
         await user.save({ validateBeforeSave: false });
+
+        // Send reset email
+        const emailResult = await sendPasswordResetEmail(user, resetToken);
+
+        if (!emailResult.success) {
+            console.warn('⚠️ Email failed to send, but token was created in DB');
+            // Still return success but log the email failure
+        }
 
         res.status(200).json({
             success: true,
-            message: 'Password reset code generated.',
-            resetToken // Sent in response for seamless local development
+            message: 'If an account with that email exists, password reset instructions have been sent. Please check your email.'
         });
     } catch (err) {
         next(err);
@@ -271,8 +286,8 @@ const resetPassword = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long.' });
         }
 
-        // Hash incoming token to compare with DB
-        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+        const trimmedToken = resetToken.trim();
+        const hashedToken = crypto.createHash('sha256').update(trimmedToken).digest('hex');
 
         const user = await User.findOne({
             resetPasswordToken: hashedToken,
@@ -283,15 +298,37 @@ const resetPassword = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Invalid or expired password reset token.' });
         }
 
-        // Update password and clear reset token
         user.securedPassword = newPassword;
         user.resetPasswordToken = undefined;
         user.resetPasswordExpire = undefined;
         user.lastLoginTimestamp = Date.now();
 
-        await user.save();
+        await user.save({ validateBeforeSave: false });
 
-        sendTokenResponse(user, 200, res);
+        // Send confirmation email with new password
+        const emailResult = await sendPasswordResetConfirmationEmail(user, newPassword);
+
+        if (!emailResult.success) {
+            console.warn('⚠️ Confirmation email failed to send');
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Password reset successfully! You are now signed in. A confirmation email has been sent.',
+            data: {
+                id: user._id,
+                fullName: user.fullName,
+                accountEmail: user.accountEmail,
+                assignedRole: user.assignedRole,
+                isActive: user.isActive,
+                socialProvider: user.socialProvider
+            },
+            token: jwt.sign(
+                { id: user._id, lastLogin: user.lastLoginTimestamp ? user.lastLoginTimestamp.getTime() : null },
+                process.env.JWT_SECRET,
+                { expiresIn: process.env.JWT_EXPIRE || '120m' }
+            )
+        });
     } catch (err) {
         next(err);
     }

@@ -7,6 +7,7 @@ const connectDB = async () => {
         // First, try connecting to the configured MongoDB URI
         const conn = await mongoose.connect(configuredUri);
         console.log(`MongoDB Connected: ${conn.connection.host}`);
+        await seedDefaultData();
     } catch (err) {
         console.warn(`⚠️  Could not connect to configured MongoDB (${err.message})`);
         console.log('🔄 Starting In-Memory MongoDB for development...');

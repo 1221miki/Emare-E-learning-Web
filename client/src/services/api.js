@@ -6,13 +6,10 @@ const API = axios.create({
     headers: { 'Content-Type': 'application/json' }
 });
 
-// Attach JWT token from localStorage to every outgoing request
+// The app relies on HTTP-only auth cookie for authentication.
+// Keep withCredentials enabled so the backend can validate the current session.
 API.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('elms_token');
-        if (token) config.headers.Authorization = `Bearer ${token}`;
-        return config;
-    },
+    (config) => config,
     (error) => Promise.reject(error)
 );
 
@@ -43,12 +40,22 @@ export const authService = {
 // ── Course API Calls ───────────────────────────────────────
 export const courseService = {
     getAll: () => API.get('/courses'),
+    getAdminAll: () => API.get('/courses/admin/all'),
     getById: (id) => API.get(`/courses/${id}`),
     create: (data) => API.post('/courses', data),
     update: (id, data) => API.put(`/courses/${id}`, data),
     delete: (id) => API.delete(`/courses/${id}`),
     submitForReview: (id) => API.patch(`/courses/${id}/submit`),
     approve: (id) => API.patch(`/courses/${id}/approve`),
+    publishCourse: (id) => API.patch(`/courses/${id}/publish`),
+    requestRevision: (id, message) => API.patch(`/courses/${id}/request-revision`, { message }),
+    reject: (id, message) => API.patch(`/courses/${id}/reject`, { message }),
+    restore: (id) => API.patch(`/courses/${id}/restore`),
+    feature: (id, data) => API.patch(`/courses/${id}/feature`, data),
+    sendFeedback: (id, message) => API.patch(`/courses/${id}/feedback`, { message }),
+    assignInstructor: (id, instructorId) => API.patch(`/courses/${id}/assign-instructor`, { instructorId }),
+    removeInstructor: (id) => API.patch(`/courses/${id}/remove-instructor`),
+    changeCategory: (id, technicalCategory) => API.patch(`/courses/${id}/change-category`, { technicalCategory }),
     archive: (id) => API.patch(`/courses/${id}/archive`),
     unpublish: (id) => API.patch(`/courses/${id}/unpublish`),
     duplicate: (id) => API.post(`/courses/${id}/duplicate`),

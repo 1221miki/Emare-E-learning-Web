@@ -91,10 +91,15 @@ const CourseSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    assignedInstructorRef: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+    },
     curriculumTree: [ChapterSchema],
     publicationState: {
         type: String,
-        enum: ['Draft', 'Pending Audit', 'Active', 'Archived'],
+        enum: ['Draft', 'Pending Review', 'Revision Needed', 'Published', 'Active', 'Archived'],
         default: 'Draft'
     },
     estimatedDurationHours: {
@@ -107,6 +112,10 @@ const CourseSchema = new mongoose.Schema({
     },
     thumbnailUrl: String,
     previewVideoUrl: String,
+    isFeatured: {
+        type: Boolean,
+        default: false
+    },
     totalEnrollments: {
         type: Number,
         default: 0
@@ -120,7 +129,26 @@ const CourseSchema = new mongoose.Schema({
     totalReviews: {
         type: Number,
         default: 0
-    }
+    },
+    adminFeedback: [{
+        adminRef: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        message: {
+            type: String,
+            trim: true
+        },
+        action: {
+            type: String,
+            enum: ['Feedback', 'Revision Requested', 'Rejected', 'Approved'],
+            default: 'Feedback'
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        }
+    }]
 }, {
     timestamps: { createdAt: 'creationTimestamp', updatedAt: 'updatedAt' }
 });

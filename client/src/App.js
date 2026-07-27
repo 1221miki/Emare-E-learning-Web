@@ -7,6 +7,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
 import HelpPage from './pages/HelpPage';
@@ -35,6 +36,7 @@ import CategoriesPage from './pages/CategoriesPage';
 import CareerTracksPage from './pages/CareerTracksPage';
 import SearchPage from './pages/SearchPage';
 import InstructorProfilePage from './pages/InstructorProfilePage';
+import AdminUserProfilePage from './pages/admin/AdminUserProfilePage';
 
 // ── Route Guard: Redirect unauthenticated users to login ──
 const PrivateRoute = ({ children, allowedRoles }) => {
@@ -51,6 +53,7 @@ function AppRoutes() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/help" element={<HelpPage />} />
@@ -94,6 +97,7 @@ function AppRoutes() {
 
             {/* ── Admin Routes ────────────────────────────────── */}
             <Route path="/admin/dashboard" element={<PrivateRoute allowedRoles={['Admin']}><AdminDashboard /></PrivateRoute>} />
+            <Route path="/admin/users/:id" element={<PrivateRoute allowedRoles={['Admin']}><AdminUserProfilePage /></PrivateRoute>} />
 
             {/* ── Fallback ─────────────────────────────────────── */}
             <Route path="/unauthorized" element={

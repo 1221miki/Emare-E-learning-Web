@@ -12,7 +12,7 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 
 export default function InstructorDashboard() {
-    const { user, logout } = useAuth();
+    const { user, logout, isSuspended } = useAuth();
     const { theme, toggleTheme, colors } = useTheme();
     const s = {
         // Layout
@@ -236,7 +236,7 @@ export default function InstructorDashboard() {
     const handleSubmitForReview = async (id) => {
         try {
             await courseService.submitForReview(id);
-            setCourses(prev => prev.map(c => c._id === id ? { ...c, publicationState: 'Pending Audit' } : c));
+            setCourses(prev => prev.map(c => c._id === id ? { ...c, publicationState: 'Pending Review' } : c));
         } catch (err) { alert(err.response?.data?.message || 'Submission failed'); }
     };
 
@@ -447,7 +447,7 @@ export default function InstructorDashboard() {
                     <h2 style={s.tabTitle}>Course Management</h2>
                     <p style={s.tabSubtitle}>Create, edit, and manage your course catalog</p>
                 </div>
-                <button onClick={() => { setCourseForm({ courseTitle: '', subtitle: '', descriptionText: '', technicalCategory: 'Web Coding', estimatedDurationHours: 1, level: 'Beginner', language: 'English', price: 0, learningObjectives: '', requirements: '', tags: '' }); setIsCourseModalOpen(true); }} style={s.primaryBtn}>+ New Course</button>
+                <button onClick={() => { if (isSuspended) return; setCourseForm({ courseTitle: '', subtitle: '', descriptionText: '', technicalCategory: 'Web Coding', estimatedDurationHours: 1, level: 'Beginner', language: 'English', price: 0, learningObjectives: '', requirements: '', tags: '' }); setIsCourseModalOpen(true); }} style={{ ...s.primaryBtn, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} disabled={isSuspended}>+ New Course</button>
             </div>
 
             {/* Stats Row */}
@@ -475,7 +475,7 @@ export default function InstructorDashboard() {
                         <div key={c._id} style={s.courseRow}>
                             <div style={{ flex: 1 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                                    <span style={{ ...s.badge, background: c.publicationState === 'Active' ? 'rgba(16,185,129,0.15)' : c.publicationState === 'Draft' ? 'rgba(245,158,11,0.15)' : c.publicationState === 'Pending Audit' ? 'rgba(59,130,246,0.15)' : 'rgba(100,116,139,0.15)', color: c.publicationState === 'Active' ? '#10b981' : c.publicationState === 'Draft' ? '#f59e0b' : c.publicationState === 'Pending Audit' ? '#60a5fa' : colors.textMuted }}>{c.publicationState}</span>
+                                    <span style={{ ...s.badge, background: c.publicationState === 'Active' ? 'rgba(16,185,129,0.15)' : c.publicationState === 'Draft' ? 'rgba(245,158,11,0.15)' : c.publicationState === 'Pending Review' ? 'rgba(59,130,246,0.15)' : 'rgba(100,116,139,0.15)', color: c.publicationState === 'Active' ? '#10b981' : c.publicationState === 'Draft' ? '#f59e0b' : c.publicationState === 'Pending Review' ? '#60a5fa' : colors.textMuted }}>{c.publicationState}</span>
                                     <h3 style={{ margin: 0, color: colors.text, fontSize: '16px', fontWeight: '700' }}>{c.courseTitle}</h3>
                                 </div>
                                 <p style={{ color: colors.textMuted, fontSize: '13px', margin: '0 0 8px' }}>{c.technicalCategory} · {c.estimatedDurationHours}h · {c.level} · ⭐ {c.averageRating || 0} ({c.totalReviews || 0} reviews)</p>
@@ -484,20 +484,20 @@ export default function InstructorDashboard() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '160px' }}>
                                 {c.publicationState === 'Draft' && (
                                     <>
-                                        <button onClick={() => handleSubmitForReview(c._id)} style={s.actionBtn}>📤 Submit for Review</button>
-                                        <button onClick={() => { setSelectedCourse(c); setCourseForm({ courseTitle: c.courseTitle, subtitle: c.subtitle || '', descriptionText: c.descriptionText, technicalCategory: c.technicalCategory, estimatedDurationHours: c.estimatedDurationHours, level: c.level || 'Beginner', language: c.language || 'English', price: c.price || 0, learningObjectives: (c.learningObjectives || []).join('\n'), requirements: (c.requirements || []).join('\n'), tags: (c.tags || []).join(', ') }); setIsEditCourseModal(true); }} style={s.actionBtnAlt}>✏️ Edit</button>
+                                        <button onClick={() => handleSubmitForReview(c._id)} style={{ ...s.actionBtn, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} disabled={isSuspended}>📤 Submit for Review</button>
+                                        <button onClick={() => { if (isSuspended) return; setSelectedCourse(c); setCourseForm({ courseTitle: c.courseTitle, subtitle: c.subtitle || '', descriptionText: c.descriptionText, technicalCategory: c.technicalCategory, estimatedDurationHours: c.estimatedDurationHours, level: c.level || 'Beginner', language: c.language || 'English', price: c.price || 0, learningObjectives: (c.learningObjectives || []).join('\n'), requirements: (c.requirements || []).join('\n'), tags: (c.tags || []).join(', ') }); setIsEditCourseModal(true); }} style={{ ...s.actionBtnAlt, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} disabled={isSuspended}>✏️ Edit</button>
                                     </>
                                 )}
                                 {c.publicationState === 'Active' && (
                                     <>
-                                        <button onClick={() => handleArchiveCourse(c._id)} style={s.actionBtnAlt}>📦 Archive</button>
-                                        <button onClick={() => handleUnpublishCourse(c._id)} style={s.actionBtnAlt}>⏸ Unpublish</button>
+                                        <button onClick={() => handleArchiveCourse(c._id)} style={{ ...s.actionBtnAlt, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} disabled={isSuspended}>📦 Archive</button>
+                                        <button onClick={() => handleUnpublishCourse(c._id)} style={{ ...s.actionBtnAlt, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} disabled={isSuspended}>⏸ Unpublish</button>
                                     </>
                                 )}
-                                <button onClick={() => handleDuplicateCourse(c._id)} style={s.actionBtnAlt}>📋 Duplicate</button>
-                                <button onClick={() => { setSelectedCourse(c); setIsQuizModalOpen(true); }} style={s.actionBtnAlt}>📝 Add Quiz</button>
+                                <button onClick={() => handleDuplicateCourse(c._id)} style={{ ...s.actionBtnAlt, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} disabled={isSuspended}>📋 Duplicate</button>
+                                <button onClick={() => { if (isSuspended) return; setSelectedCourse(c); setIsQuizModalOpen(true); }} style={{ ...s.actionBtnAlt, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} disabled={isSuspended}>📝 Add Quiz</button>
                                 {c.publicationState !== 'Active' && (
-                                    <button onClick={() => handleDeleteCourse(c._id)} style={s.dangerBtn}>🗑 Delete</button>
+                                    <button onClick={() => handleDeleteCourse(c._id)} style={{ ...s.dangerBtn, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} disabled={isSuspended}>🗑 Delete</button>
                                 )}
                             </div>
                         </div>

@@ -87,29 +87,16 @@ export default function LoginPage() {
         e.preventDefault();
         setForgotError('');
         setForgotSuccess('');
+        if (!forgotEmail.trim()) {
+            setForgotError('Please enter your email address.');
+            return;
+        }
         try {
-            const res = await requestPasswordReset(forgotEmail);
-            setForgotSuccess('Reset code generated! Use the code below to set your new password.');
-            if (res.resetToken) setResetCode(res.resetToken);
+            await requestPasswordReset(forgotEmail.trim().toLowerCase());
+            setForgotSuccess('✅ Check your email for password reset instructions. The link expires in 15 minutes.');
             setForgotStep(2);
         } catch (err) {
             setForgotError(err.response?.data?.message || 'Failed to request password reset.');
-        }
-    };
-
-    const handleResetSubmit = async (e) => {
-        e.preventDefault();
-        setForgotError('');
-        setForgotSuccess('');
-        try {
-            const user = await resetPassword(resetCode, newPassword);
-            setForgotSuccess('Password reset successfully! Redirecting...');
-            setTimeout(() => {
-                setShowForgotModal(false);
-                handleRedirect(user);
-            }, 1200);
-        } catch (err) {
-            setForgotError(err.response?.data?.message || 'Failed to reset password. Please verify code.');
         }
     };
 
@@ -338,49 +325,32 @@ export default function LoginPage() {
                                 </button>
                             </form>
                         ) : (
-                            <form onSubmit={handleResetSubmit} style={styles.form}>
-                                <div style={styles.fieldGroup}>
-                                    <label style={styles.label}>Reset Code</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="Enter authorization token code"
-                                        value={resetCode}
-                                        onChange={(e) => setResetCode(e.target.value)}
-                                        style={styles.input}
-                                    />
-                                </div>
-                                <div style={styles.fieldGroup}>
-                                    <label style={styles.label}>New Password</label>
-                                    <div style={styles.passwordWrapper}>
-                                        <input
-                                            type={showNewPassword ? "text" : "password"}
-                                            required
-                                            placeholder="Minimum 8 characters"
-                                            value={newPassword}
-                                            onChange={(e) => setNewPassword(e.target.value)}
-                                            style={{ ...styles.input, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }}
-                                        />
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setShowNewPassword(!showNewPassword)}
-                                            style={styles.eyeIcon}
-                                        >
-                                            {showNewPassword ? <FaEyeSlash /> : <FaEye />}
-                                        </button>
-                                    </div>
-                                </div>
-                                <button type="submit" style={styles.btn}>
-                                    Confirm New Password & Log In
+                            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                                {forgotSuccess && <div style={styles.successBox}>{forgotSuccess}</div>}
+                                <p style={{ color: '#cbd5e1', fontSize: '14px', lineHeight: '1.6', marginBottom: '20px' }}>
+                                    A password reset link has been sent to <strong style={{ color: '#f1f5f9' }}>{forgotEmail}</strong>
+                                </p>
+                                <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '20px' }}>
+                                    📧 Check your inbox and click the link to reset your password. The link expires in 15 minutes.
+                                </p>
+                                <p style={{ color: '#64748b', fontSize: '12px', marginBottom: '20px' }}>
+                                    💡 Can't find the email? Check your spam or junk folder.
+                                </p>
+                                <button 
+                                    type="button" 
+                                    onClick={() => { setForgotStep(1); setForgotEmail(''); setForgotSuccess(''); }} 
+                                    style={{ ...styles.link, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', marginBottom: '12px' }}
+                                >
+                                    Try Another Email
                                 </button>
                                 <button 
                                     type="button" 
-                                    onClick={() => setForgotStep(1)} 
-                                    style={{ ...styles.link, background: 'none', border: 'none', fontSize: '13px', marginTop: '8px', cursor: 'pointer', textAlign: 'center' }}
+                                    onClick={() => setShowForgotModal(false)} 
+                                    style={{ ...styles.link, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer' }}
                                 >
-                                    ← Back to Email Request
+                                    Close
                                 </button>
-                            </form>
+                            </div>
                         )}
                     </div>
                 </div>
