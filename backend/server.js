@@ -28,6 +28,10 @@ const aiRoutes = require('./routes/aiRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const systemRoutes = require('./routes/systemRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const contentRoutes = require('./routes/contentRoutes');
+const auditRoutes = require('./routes/auditRoutes');
+const calendarRoutes = require('./routes/calendarRoutes');
 const { getAnalytics } = require('./controllers/userController');
 const { protect, authorizeRoles } = require('./middleware/auth');
 
@@ -74,6 +78,10 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/system', systemRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/content', contentRoutes);
+app.use('/api/audit-logs', auditRoutes);
+app.use('/api/calendar', calendarRoutes);
 app.use('/api/analytics/overview', protect, authorizeRoles('Admin'), getAnalytics);
 
 // ── Health Check ───────────────────────────────────────────

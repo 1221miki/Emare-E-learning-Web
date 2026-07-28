@@ -43,7 +43,8 @@ export default function LoginPage() {
         setError('');
         setLoading(true);
         try {
-            const user = await login(form.accountEmail, form.securedPassword);
+            const normalizedEmail = form.accountEmail.trim().toLowerCase();
+            const user = await login(normalizedEmail, form.securedPassword);
             handleRedirect(user);
         } catch (err) {
             setError(err.response?.data?.message || 'Login failed. Please try again.');

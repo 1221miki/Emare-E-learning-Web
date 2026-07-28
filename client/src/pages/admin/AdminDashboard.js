@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { courseService, quizService, assignmentService, userService, enrollmentService, analyticsService, systemService, notificationService, authService } from '../../services/api';
+import { courseService, quizService, assignmentService, userService, enrollmentService, analyticsService, systemService, notificationService, authService, reportService, certificateService, contentService, uploadService, auditService, calendarService } from '../../services/api';
 import Sidebar from '../../components/Sidebar';
 import StatCard from '../../components/StatCard';
 import Modal from '../../components/Modal';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function AdminDashboard() {
@@ -20,8 +20,12 @@ export default function AdminDashboard() {
     const [enrollments, setEnrollments] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [settings, setSettings] = useState({
-        websiteName: 'Emare E-Learning', maintenanceMode: false, allowRegistration: true, 
-        currency: 'ETB', contactEmail: '', paymentGatewayActive: true, cloudinaryActive: true
+        websiteName: 'Emare E-Learning', siteLogo: '', favicon: '', theme: 'light', timezone: 'Africa/Addis_Ababa', language: 'en',
+        maintenanceMode: false, allowRegistration: true, currency: 'ETB', contactEmail: '', emailFromName: 'Emare E-Learning', emailFromAddress: 'support@emareicthub.com',
+        smtpHost: '', smtpPort: 587, smtpUsername: '', smtpPassword: '', smtpSecure: true,
+        maxUploadSizeMB: 25, allowedUploadTypes: 'jpg,jpeg,png,pdf,doc,docx,ppt,pptx,zip', maxVideoSizeMB: 500, videoFormat: 'mp4', videoTranscodingEnabled: true,
+        storageProvider: 'cloudinary', storageBucket: '', backupEnabled: true, backupFrequency: 'daily', backupRetentionDays: 30, backupLocation: 'local',
+        paymentGatewayActive: true, cloudinaryActive: true, requireEmailVerification: false
     });
 
     // Modal & action states
@@ -42,21 +46,131 @@ export default function AdminDashboard() {
     const [reviewQuizzes, setReviewQuizzes] = useState([]);
     const [reviewAssignments, setReviewAssignments] = useState([]);
     const [isLoadingReviewDetails, setIsLoadingReviewDetails] = useState(false);
+    const [certificateTemplates, setCertificateTemplates] = useState([]);
+    const [selectedReportType, setSelectedReportType] = useState('student');
+    const [selectedReportFormat, setSelectedReportFormat] = useState('pdf');
+    const [isExportingReport, setIsExportingReport] = useState(false);
+    const [certificateRecords, setCertificateRecords] = useState([]);
+    const [certificateForm, setCertificateForm] = useState({ studentId: '', courseId: '', templateId: 'standard' });
+    const [notificationForm, setNotificationForm] = useState({ audience: 'all', title: '', message: '', type: 'announcement', link: '', scheduleAt: '', reminder: false });
+    const [notificationSummary, setNotificationSummary] = useState({ total: 0, unread: 0, recent: [] });
+    const [isNotificationSubmitting, setIsNotificationSubmitting] = useState(false);
+    const [isUploadingAsset, setIsUploadingAsset] = useState(false);
+    const [contentPages, setContentPages] = useState([]);
+    const [selectedContentPage, setSelectedContentPage] = useState('home');
+    const [contentForm, setContentForm] = useState({ title: '', content: '' });
+    const [isContentSaving, setIsContentSaving] = useState(false);
+    const [dbMetrics, setDbMetrics] = useState({ databaseName: 'unknown', collections: [], dataSizeBytes: 0, indexSizeBytes: 0, storageSizeBytes: 0, objects: 0 });
+    const [dbActionLoading, setDbActionLoading] = useState({ backup: false, restore: false, optimize: false });
+    const [auditLogs, setAuditLogs] = useState([]);
+    const [auditFilter, setAuditFilter] = useState('all');
+    const [auditSearch, setAuditSearch] = useState('');
+    const [isAuditLoading, setIsAuditLoading] = useState(false);
+    const [calendarEvents, setCalendarEvents] = useState([]);
+    const [calendarForm, setCalendarForm] = useState({ title: '', category: 'academic', description: '', startDate: '', endDate: '', location: '', isAllDay: false, color: '#2563eb' });
+    const [calendarEditingId, setCalendarEditingId] = useState(null);
+    const [isCalendarSaving, setIsCalendarSaving] = useState(false);
+    const [certificateVerificationNumber, setCertificateVerificationNumber] = useState('');
+    const [certificateVerificationResult, setCertificateVerificationResult] = useState(null);
+    const [isCertificateActionLoading, setIsCertificateActionLoading] = useState(false);
+    const [activeTemplateId, setActiveTemplateId] = useState('standard');
+    const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+    const [newTemplateData, setNewTemplateData] = useState({ name: '', description: '', layoutStyle: 'Classic', signature: 'Course Director', colorScheme: 'Blue' });
+
+    useEffect(() => {
+        const savedTemplates = window.localStorage.getItem('certificateTemplates');
+        if (savedTemplates) {
+            const parsed = JSON.parse(savedTemplates);
+            setCertificateTemplates(parsed);
+            setActiveTemplateId(parsed[0]?.id || 'standard');
+        } else {
+            setCertificateTemplates([
+                {
+                    id: 'standard',
+                    name: 'Standard Template',
+                    description: 'Classic certificate layout with institutional branding and formal finish.',
+                    layoutStyle: 'Classic',
+                    colorScheme: 'Blue',
+                    signature: 'Registrar'
+                }
+            ]);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (certificateTemplates.length) {
+            window.localStorage.setItem('certificateTemplates', JSON.stringify(certificateTemplates));
+        }
+    }, [certificateTemplates]);
 
     useEffect(() => {
         fetchData();
     }, []);
 
+    const fetchCertificates = async () => {
+        try {
+            const response = await certificateService.getAllAdmin();
+            setCertificateRecords(response.data?.data || []);
+        } catch (error) {
+            console.error('Error fetching certificates:', error);
+        }
+    };
+
+    const fetchNotificationSummary = async () => {
+        try {
+            const response = await notificationService.getAdminSummary();
+            setNotificationSummary(response.data?.data || { total: 0, unread: 0, recent: [] });
+        } catch (error) {
+            console.error('Error fetching notification summary:', error);
+        }
+    };
+
+    const fetchContentPages = async () => {
+        try {
+            const response = await contentService.getAll();
+            const pages = response.data?.data || [];
+            setContentPages(pages);
+            if (!pages.find((page) => page.pageKey === selectedContentPage)) {
+                setSelectedContentPage('home');
+            }
+        } catch (error) {
+            console.error('Error fetching content pages:', error);
+        }
+    };
+
+    const fetchAuditLogs = async (category = 'all', search = '') => {
+        try {
+            setIsAuditLoading(true);
+            const response = await auditService.getLogs({ category: category === 'all' ? '' : category, search });
+            setAuditLogs(response.data?.data || []);
+        } catch (error) {
+            console.error('Error fetching audit logs:', error);
+        } finally {
+            setIsAuditLoading(false);
+        }
+    };
+
+    const fetchCalendarEvents = async () => {
+        try {
+            const response = await calendarService.getEvents({ from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), to: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() });
+            setCalendarEvents(response.data?.data || []);
+        } catch (error) {
+            console.error('Error fetching calendar events:', error);
+        }
+    };
+
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [analyticsRes, usersRes, coursesRes, enrollmentsRes, settingsRes, notificationsRes] = await Promise.all([
+            const [analyticsRes, usersRes, coursesRes, enrollmentsRes, settingsRes, notificationsRes, collectionsRes, storageRes] = await Promise.all([
                 analyticsService.getOverview().catch(() => ({ data: { data: {} } })),
                 userService.getAll({ limit: 100 }).catch(() => ({ data: { data: [] } })),
                 courseService.getAdminAll().catch(() => ({ data: { data: [] } })),
                 enrollmentService.getAll().catch(() => ({ data: { data: [] } })),
                 systemService.getSettings().catch(() => ({ data: { data: {} } })),
-                notificationService.getAll().catch(() => ({ data: { data: [] } }))
+                notificationService.getAll().catch(() => ({ data: { data: [] } })),
+                systemService.getDatabaseCollections().catch(() => ({ data: { data: { collections: [] } } })),
+                systemService.getDatabaseStorage().catch(() => ({ data: { data: { storageSizeBytes: 0 } } }))
             ]);
 
             setAnalytics(analyticsRes.data.data);
@@ -65,16 +179,279 @@ export default function AdminDashboard() {
             setEnrollments(enrollmentsRes.data.data);
             setNotifications(notificationsRes.data.data || []);
             if(settingsRes.data?.data) setSettings(settingsRes.data.data);
+            const dbData = collectionsRes.data?.data || storageRes.data?.data || {};
+            setDbMetrics({
+                databaseName: dbData.databaseName || 'unknown',
+                collections: dbData.collections || [],
+                dataSizeBytes: dbData.dataSizeBytes || 0,
+                indexSizeBytes: dbData.indexSizeBytes || 0,
+                storageSizeBytes: dbData.storageSizeBytes || 0,
+                objects: dbData.objects || 0
+            });
         } catch (error) {
             console.error("Error fetching admin data:", error);
         } finally {
             setLoading(false);
+            fetchCertificates();
+            fetchNotificationSummary();
+            fetchContentPages();
+            fetchAuditLogs();
+            fetchCalendarEvents();
         }
     };
 
     const showNotification = (msg) => {
         setNotificationMsg(msg);
         setTimeout(() => setNotificationMsg(''), 3000);
+    };
+
+    const formatBytes = (bytes = 0) => {
+        if (!bytes) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let size = bytes;
+        let unit = 0;
+        while (size >= 1024 && unit < units.length - 1) {
+            size /= 1024;
+            unit += 1;
+        }
+        return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+    };
+
+    const reportOptions = [
+        { value: 'student', label: 'Student Report' },
+        { value: 'instructor', label: 'Instructor Report' },
+        { value: 'course', label: 'Course Report' },
+        { value: 'quiz', label: 'Quiz Report' },
+        { value: 'assignment', label: 'Assignment Report' },
+        { value: 'enrollment', label: 'Enrollment Report' },
+        { value: 'completion', label: 'Completion Report' },
+        { value: 'performance', label: 'Performance Report' },
+        { value: 'attendance', label: 'Attendance Report' },
+        { value: 'system', label: 'System Report' }
+    ];
+
+    const formatOptions = [
+        { value: 'pdf', label: 'PDF' },
+        { value: 'xlsx', label: 'Excel' },
+        { value: 'csv', label: 'CSV' }
+    ];
+
+    const handleExportReport = async () => {
+        try {
+            setIsExportingReport(true);
+            const response = await reportService.export({ reportType: selectedReportType, format: selectedReportFormat });
+            const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/octet-stream' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${selectedReportType}-report.${selectedReportFormat === 'xlsx' ? 'xlsx' : selectedReportFormat}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            const reportLabel = reportOptions.find((option) => option.value === selectedReportType)?.label || 'Report';
+            const formatLabel = formatOptions.find((option) => option.value === selectedReportFormat)?.label || selectedReportFormat;
+            showNotification(`${reportLabel} exported as ${formatLabel}.`);
+        } catch (error) {
+            console.error('Error exporting report:', error);
+            alert(error.response?.data?.message || 'Failed to export report.');
+        } finally {
+            setIsExportingReport(false);
+        }
+    };
+
+    const handleGenerateCertificate = async (e) => {
+        e.preventDefault();
+        if (!certificateForm.studentId || !certificateForm.courseId) {
+            alert('Please select a student and course.');
+            return;
+        }
+
+        try {
+            setIsCertificateActionLoading(true);
+            const response = await certificateService.generateForAdmin(certificateForm);
+            showNotification(response.data?.message || 'Certificate generated successfully.');
+            setCertificateForm({ studentId: '', courseId: '', templateId: 'standard' });
+            fetchCertificates();
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to generate certificate.');
+        } finally {
+            setIsCertificateActionLoading(false);
+        }
+    };
+
+    const handleVerifyCertificate = async (e) => {
+        e.preventDefault();
+        if (!certificateVerificationNumber.trim()) {
+            alert('Enter a certificate number.');
+            return;
+        }
+
+        try {
+            setIsCertificateActionLoading(true);
+            const response = await certificateService.verify(certificateVerificationNumber.trim());
+            setCertificateVerificationResult(response.data?.data || null);
+            showNotification('Certificate verified successfully.');
+        } catch (error) {
+            setCertificateVerificationResult(null);
+            alert(error.response?.data?.message || 'Certificate could not be verified.');
+        } finally {
+            setIsCertificateActionLoading(false);
+        }
+    };
+
+    const handleReissueCertificate = async (id) => {
+        try {
+            setIsCertificateActionLoading(true);
+            const response = await certificateService.reissue(id, { templateId: 'standard' });
+            showNotification(response.data?.message || 'Certificate reissued.');
+            fetchCertificates();
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to reissue certificate.');
+        } finally {
+            setIsCertificateActionLoading(false);
+        }
+    };
+
+    const handleRevokeCertificate = async (id) => {
+        const reason = window.prompt('Enter revocation reason:');
+        if (reason === null) return;
+
+        try {
+            setIsCertificateActionLoading(true);
+            const response = await certificateService.revoke(id, reason || 'Revoked by administrator');
+            showNotification(response.data?.message || 'Certificate revoked.');
+            fetchCertificates();
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to revoke certificate.');
+        } finally {
+            setIsCertificateActionLoading(false);
+        }
+    };
+
+    const handleDownloadCertificate = async (id) => {
+        try {
+            setIsCertificateActionLoading(true);
+            const response = await certificateService.download(id);
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `certificate-${id}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            showNotification('Certificate downloaded.');
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to download certificate.');
+        } finally {
+            setIsCertificateActionLoading(false);
+        }
+    };
+
+    const handleSendNotification = async (e) => {
+        e.preventDefault();
+        if (!notificationForm.title.trim() || !notificationForm.message.trim()) {
+            alert('Please provide a title and message.');
+            return;
+        }
+
+        try {
+            setIsNotificationSubmitting(true);
+            const response = await notificationService.sendAdmin(notificationForm);
+            showNotification(response.data?.message || 'Notification sent successfully.');
+            setNotificationForm({ audience: 'all', title: '', message: '', type: 'announcement', link: '', scheduleAt: '', reminder: false });
+            fetchNotificationSummary();
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to send notification.');
+        } finally {
+            setIsNotificationSubmitting(false);
+        }
+    };
+
+    const handleContentPageChange = async (pageKey) => {
+        setSelectedContentPage(pageKey);
+        try {
+            const response = await contentService.getPage(pageKey);
+            const page = response.data?.data || { title: '', content: {} };
+            setContentForm({
+                title: page.title || '',
+                content: typeof page.content === 'string' ? page.content : JSON.stringify(page.content, null, 2)
+            });
+        } catch (error) {
+            console.error('Error loading content page:', error);
+        }
+    };
+
+    const handleSaveContent = async (e) => {
+        e.preventDefault();
+        try {
+            setIsContentSaving(true);
+            const parsedContent = (() => {
+                try {
+                    return JSON.parse(contentForm.content);
+                } catch {
+                    return contentForm.content;
+                }
+            })();
+
+            await contentService.savePage(selectedContentPage, {
+                title: contentForm.title,
+                content: parsedContent
+            });
+            showNotification('Content saved successfully.');
+            fetchContentPages();
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to save content.');
+        } finally {
+            setIsContentSaving(false);
+        }
+    };
+
+    const handleOpenTemplateModal = () => {
+        setNewTemplateData({ name: '', description: '', layoutStyle: 'Classic', signature: 'Course Director', colorScheme: 'Blue' });
+        setIsTemplateModalOpen(true);
+    };
+
+    const handleCreateTemplate = (e) => {
+        e.preventDefault();
+        if (!newTemplateData.name.trim()) {
+            alert('Template name is required.');
+            return;
+        }
+
+        const newTemplate = {
+            id: `template-${Date.now()}`,
+            name: newTemplateData.name.trim(),
+            description: newTemplateData.description.trim() || 'Custom certificate template created by admin.',
+            layoutStyle: newTemplateData.layoutStyle || 'Classic',
+            signature: newTemplateData.signature.trim() || 'Course Director',
+            colorScheme: newTemplateData.colorScheme || 'Blue'
+        };
+
+        setCertificateTemplates(prev => [...prev, newTemplate]);
+        setActiveTemplateId(newTemplate.id);
+        setIsTemplateModalOpen(false);
+        showNotification('Certificate template created successfully.');
+    };
+
+    const handleSelectTemplate = (templateId) => {
+        setActiveTemplateId(templateId);
+    };
+
+    const handleDeleteTemplate = (templateId) => {
+        if (templateId === 'standard') {
+            alert('Standard template cannot be deleted.');
+            return;
+        }
+
+        const remaining = certificateTemplates.filter(t => t.id !== templateId);
+        setCertificateTemplates(remaining);
+        if (activeTemplateId === templateId) {
+            setActiveTemplateId(remaining[0]?.id || 'standard');
+        }
+        showNotification('Certificate template removed.');
     };
 
     // ── User Management ────────────────────────────────────────
@@ -351,22 +728,69 @@ export default function AdminDashboard() {
 
     // ── System Management ──────────────────────────────────────
 
+    const handleAssetUpload = async (fieldName, file) => {
+        if (!file) return;
+        try {
+            setIsUploadingAsset(true);
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await uploadService.uploadFile(formData);
+            const uploadedUrl = response.data?.data?.url;
+            if (!uploadedUrl) throw new Error('Upload failed');
+            setSettings(prev => ({ ...prev, [fieldName]: uploadedUrl }));
+            showNotification(`${fieldName === 'siteLogo' ? 'Logo' : 'Favicon'} uploaded successfully.`);
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to upload asset.');
+        } finally {
+            setIsUploadingAsset(false);
+        }
+    };
+
     const handleUpdateSettings = async (e) => {
         e.preventDefault();
         try {
             await systemService.updateSettings(settings);
             showNotification('System settings updated successfully');
         } catch (err) {
-            alert('Failed to update settings');
+            alert(err.response?.data?.message || 'Failed to update settings');
         }
     };
 
     const handleBackup = async () => {
         try {
+            setDbActionLoading(prev => ({ ...prev, backup: true }));
             const res = await systemService.createBackup();
             showNotification(res.data.message);
+            setDbMetrics(prev => ({ ...prev, ...(res.data?.data || {}) }));
         } catch (err) {
-            alert('Backup failed');
+            alert(err.response?.data?.message || 'Backup failed');
+        } finally {
+            setDbActionLoading(prev => ({ ...prev, backup: false }));
+        }
+    };
+
+    const handleRestoreDatabase = async () => {
+        try {
+            setDbActionLoading(prev => ({ ...prev, restore: true }));
+            const res = await systemService.restoreDatabase({ restoreFromLatest: true });
+            showNotification(res.data.message);
+        } catch (err) {
+            alert(err.response?.data?.message || 'Restore failed');
+        } finally {
+            setDbActionLoading(prev => ({ ...prev, restore: false }));
+        }
+    };
+
+    const handleOptimizeDatabase = async () => {
+        try {
+            setDbActionLoading(prev => ({ ...prev, optimize: true }));
+            const res = await systemService.optimizeDatabase();
+            showNotification(res.data.message);
+            setDbMetrics(prev => ({ ...prev, ...(res.data?.data?.metrics || {}) }));
+        } catch (err) {
+            alert(err.response?.data?.message || 'Optimization failed');
+        } finally {
+            setDbActionLoading(prev => ({ ...prev, optimize: false }));
         }
     };
 
@@ -376,6 +800,73 @@ export default function AdminDashboard() {
             showNotification(res.data.message);
         } catch (err) {
             alert('Cache clear failed');
+        }
+    };
+
+    const handleAuditFilterChange = (category) => {
+        setAuditFilter(category);
+        fetchAuditLogs(category, auditSearch);
+    };
+
+    const handleAuditSearch = (e) => {
+        const value = e.target.value;
+        setAuditSearch(value);
+        fetchAuditLogs(auditFilter, value);
+    };
+
+    const resetCalendarForm = () => {
+        setCalendarForm({ title: '', category: 'academic', description: '', startDate: '', endDate: '', location: '', isAllDay: false, color: '#2563eb' });
+        setCalendarEditingId(null);
+    };
+
+    const handleSaveCalendarEvent = async (e) => {
+        e.preventDefault();
+        try {
+            setIsCalendarSaving(true);
+            const payload = {
+                ...calendarForm,
+                startDate: new Date(calendarForm.startDate).toISOString(),
+                endDate: calendarForm.endDate ? new Date(calendarForm.endDate).toISOString() : null,
+                isAllDay: Boolean(calendarForm.isAllDay)
+            };
+            if (calendarEditingId) {
+                await calendarService.updateEvent(calendarEditingId, payload);
+                showNotification('Calendar event updated.');
+            } else {
+                await calendarService.createEvent(payload);
+                showNotification('Calendar event created.');
+            }
+            resetCalendarForm();
+            fetchCalendarEvents();
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to save calendar event.');
+        } finally {
+            setIsCalendarSaving(false);
+        }
+    };
+
+    const handleEditCalendarEvent = (event) => {
+        setCalendarEditingId(event._id);
+        setCalendarForm({
+            title: event.title || '',
+            category: event.category || 'academic',
+            description: event.description || '',
+            startDate: event.startDate ? new Date(event.startDate).toISOString().slice(0, 16) : '',
+            endDate: event.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : '',
+            location: event.location || '',
+            isAllDay: Boolean(event.isAllDay),
+            color: event.color || '#2563eb'
+        });
+    };
+
+    const handleDeleteCalendarEvent = async (id) => {
+        if (!window.confirm('Delete this calendar event?')) return;
+        try {
+            await calendarService.deleteEvent(id);
+            showNotification('Calendar event deleted.');
+            fetchCalendarEvents();
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to delete calendar event.');
         }
     };
 
@@ -750,123 +1241,175 @@ export default function AdminDashboard() {
         </div>
     );
 
-    const renderProgress = () => (
+    const renderAnalytics = () => (
         <div style={s.tabContent}>
             <div style={s.sectionHeader}>
-                <h2 style={s.sectionTitle}>Student Progress Monitoring</h2>
-                <p style={s.sectionSub}>Track learning progress, completion, assessments, attendance, certificates, and performance trends.</p>
+                <h2 style={s.sectionTitle}>Institutional Analytics Dashboard</h2>
+                <p style={s.sectionSub}>Interactive charts and reports for student, instructor, and course performance.</p>
             </div>
 
             <div style={s.statsGrid}>
-                <StatCard label="Active students" value={analytics?.totalStudents || 0} color={colors.primary} icon="👥" />
-                <StatCard label="Completion rate" value={`${analytics?.completionRate || 0}%`} color={colors.success} icon="📈" />
-                <StatCard label="Attendance rate" value={`${analytics?.attendanceRate || 0}%`} color={colors.accent} icon="🕒" />
-                <StatCard label="Top performers" value={(analytics?.topPerformers || []).length} color={colors.warning} icon="🏅" />
-                <StatCard label="Failed assessments" value={analytics?.failedAssessments || 0} color={colors.danger} icon="❌" />
-                <StatCard label="Certificates issued" value={analytics?.certificatesIssued || 0} color={colors.success} icon="🎓" />
+                <StatCard label="Total students" value={analytics?.totalStudents || 0} color={colors.primary} icon="👥" />
+                <StatCard label="Total instructors" value={analytics?.totalInstructors || 0} color={colors.accent} icon="👩‍🏫" />
+                <StatCard label="Total courses" value={analytics?.totalCourses || 0} color={colors.warning} icon="📚" />
+                <StatCard label="Completion rate" value={`${analytics?.completionRate || 0}%`} color={colors.success} icon="✅" />
+                <StatCard label="Monthly enrollments" value={analytics?.monthlyEnrollments || 0} color={colors.primary} icon="📈" />
+                <StatCard label="Certificates" value={analytics?.certificatesIssued || 0} color={colors.success} icon="🎓" />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '24px', marginTop: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '24px' }}>
                 <div style={s.card}>
-                    <h3 style={s.cardTitle}>Assessment Summary</h3>
-                    <div style={{ display: 'grid', gap: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: colors.textMuted }}>Total quiz attempts</span>
-                            <strong style={{ color: colors.text }}>{analytics?.totalQuizAttempts || 0}</strong>
+                    <h3 style={s.cardTitle}>Enrollment Trends</h3>
+                    {analytics?.enrollmentTrend?.length ? (
+                        <div style={{ width: '100%', height: '260px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={analytics.enrollmentTrend} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+                                    <CartesianGrid stroke={colors.border} strokeDasharray="3 3" />
+                                    <XAxis dataKey="date" stroke={colors.textMuted} tick={{ fill: colors.textMuted }} />
+                                    <YAxis stroke={colors.textMuted} tick={{ fill: colors.textMuted }} />
+                                    <Tooltip contentStyle={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', color: colors.text }} />
+                                    <Legend wrapperStyle={{ color: colors.text }} />
+                                    <Line type="monotone" dataKey="enrollments" stroke={colors.primary} strokeWidth={3} dot={{ r: 4 }} />
+                                </LineChart>
+                            </ResponsiveContainer>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: colors.textMuted }}>Average quiz score</span>
-                            <strong style={{ color: colors.text }}>{analytics?.averageAssessmentScore || 0}%</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: colors.textMuted }}>Graded assignments</span>
-                            <strong style={{ color: colors.text }}>{analytics?.gradedAssignments || 0}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: colors.textMuted }}>Average assignment score</span>
-                            <strong style={{ color: colors.text }}>{analytics?.averageAssignmentScore || 0}%</strong>
-                        </div>
-                    </div>
+                    ) : (
+                        <div style={s.emptyState}>No enrollment trend data available.</div>
+                    )}
                 </div>
 
                 <div style={s.card}>
-                    <h3 style={s.cardTitle}>Performance and Risk</h3>
-                    <div style={{ display: 'grid', gap: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: colors.textMuted }}>Students at risk</span>
-                            <strong style={{ color: colors.danger }}>{analytics?.studentsAtRisk || 0}</strong>
+                    <h3 style={s.cardTitle}>Course Popularity</h3>
+                    {analytics?.coursePopularity?.length ? (
+                        <div style={{ width: '100%', height: '260px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={analytics.coursePopularity} margin={{ top: 20, right: 10, left: 0, bottom: 20 }}>
+                                    <CartesianGrid stroke={colors.border} strokeDasharray="3 3" />
+                                    <XAxis dataKey="courseTitle" stroke={colors.textMuted} tick={{ fill: colors.textMuted, fontSize: 12 }} interval={0} angle={-30} textAnchor="end" height={70} />
+                                    <YAxis stroke={colors.textMuted} tick={{ fill: colors.textMuted }} />
+                                    <Tooltip contentStyle={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', color: colors.text }} />
+                                    <Bar dataKey="enrollments" fill={colors.accent} radius={[8, 8, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: colors.textMuted }}>Learning history records</span>
-                            <strong style={{ color: colors.text }}>{(analytics?.learningHistory?.recentEnrollments?.length || 0) + (analytics?.learningHistory?.recentAssessments?.length || 0)}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: colors.textMuted }}>Recent enrollments</span>
-                            <strong style={{ color: colors.text }}>{analytics?.learningHistory?.recentEnrollments?.length || 0}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: colors.textMuted }}>Recent graded assessments</span>
-                            <strong style={{ color: colors.text }}>{analytics?.learningHistory?.recentAssessments?.length || 0}</strong>
-                        </div>
-                    </div>
+                    ) : (
+                        <div style={s.emptyState}>No course popularity data available.</div>
+                    )}
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', marginTop: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '24px' }}>
                 <div style={s.card}>
-                    <h3 style={s.cardTitle}>Top performers</h3>
-                    {analytics?.topPerformers?.length ? (
-                        <div style={{ display: 'grid', gap: '12px' }}>
-                            {analytics.topPerformers.map((student, index) => (
-                                <div key={index} style={{ padding: '14px', background: colors.bgInput, borderRadius: '12px', border: `1px solid ${colors.border}` }}>
-                                    <div style={{ color: colors.text, fontWeight: '700' }}>{student.studentName}</div>
-                                    <div style={{ color: colors.textMuted, fontSize: '13px' }}>{student.avgScore}% avg • {student.totalAttempts} attempts</div>
+                    <h3 style={s.cardTitle}>Daily Activity</h3>
+                    {analytics?.dailyActivity?.length ? (
+                        <div style={{ width: '100%', height: '260px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={analytics.dailyActivity} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="dailyActivityGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor={colors.accent} stopOpacity={0.8} />
+                                            <stop offset="95%" stopColor={colors.accent} stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid stroke={colors.border} strokeDasharray="3 3" />
+                                    <XAxis dataKey="date" stroke={colors.textMuted} tick={{ fill: colors.textMuted }} />
+                                    <YAxis stroke={colors.textMuted} tick={{ fill: colors.textMuted }} />
+                                    <Tooltip contentStyle={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', color: colors.text }} />
+                                    <Area type="monotone" dataKey="enrollments" stroke={colors.accent} fillOpacity={1} fill="url(#dailyActivityGradient)" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : (
+                        <div style={s.emptyState}>No daily activity data available.</div>
+                    )}
+                </div>
+
+                <div style={s.card}>
+                    <h3 style={s.cardTitle}>Monthly & Yearly Reports</h3>
+                    {analytics?.monthlyReports?.length ? (
+                        <div style={{ width: '100%', height: '260px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={analytics.monthlyReports} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+                                    <CartesianGrid stroke={colors.border} strokeDasharray="3 3" />
+                                    <XAxis dataKey="month" stroke={colors.textMuted} tick={{ fill: colors.textMuted }} />
+                                    <YAxis stroke={colors.textMuted} tick={{ fill: colors.textMuted }} />
+                                    <Tooltip contentStyle={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', color: colors.text }} />
+                                    <Legend wrapperStyle={{ color: colors.text }} />
+                                    <Line type="monotone" dataKey="enrollments" stroke={colors.primary} strokeWidth={3} dot={{ r: 4 }} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : (
+                        <div style={s.emptyState}>No monthly report data available.</div>
+                    )}
+                </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '24px' }}>
+                <div style={s.card}>
+                    <h3 style={s.cardTitle}>Grade Distribution</h3>
+                    {analytics?.gradeDistribution?.length ? (
+                        <div style={{ width: '100%', height: '260px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={analytics.gradeDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} fill={colors.primary} label={{ fill: colors.text, fontSize: 11 }}>
+                                        {analytics.gradeDistribution.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={[colors.primary, colors.accent, colors.success, colors.warning, colors.danger][index % 5]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip contentStyle={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', color: colors.text }} />
+                                    <Legend wrapperStyle={{ color: colors.text }} layout="vertical" verticalAlign="middle" align="right" />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : (
+                        <div style={s.emptyState}>No grade distribution data available.</div>
+                    )}
+                </div>
+
+                <div style={s.card}>
+                    <h3 style={s.cardTitle}>Instructor Statistics</h3>
+                    <div style={{ display: 'grid', gap: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: colors.textMuted }}>Active instructors</span>
+                            <strong style={{ color: colors.text }}>{analytics?.activeInstructors || 0}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: colors.textMuted }}>Published courses</span>
+                            <strong style={{ color: colors.text }}>{analytics?.activeCourses || 0}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: colors.textMuted }}>Instructor course leaders</span>
+                            <strong style={{ color: colors.text }}>{analytics?.instructorCourseCounts?.length || 0}</strong>
+                        </div>
+                    </div>
+                    {analytics?.instructorCourseCounts?.length ? (
+                        <div style={{ marginTop: '18px', display: 'grid', gap: '10px' }}>
+                            {analytics.instructorCourseCounts.map((inst, idx) => (
+                                <div key={idx} style={{ padding: '12px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
+                                    <div style={{ color: colors.text, fontWeight: '700' }}>{inst.instructorName}</div>
+                                    <div style={{ color: colors.textMuted, fontSize: '13px' }}>{inst.courseCount} published course(s)</div>
                                 </div>
                             ))}
                         </div>
-                    ) : (
-                        <div style={s.emptyState}>No top performer data available.</div>
-                    )}
-                </div>
-
-                <div style={s.card}>
-                    <h3 style={s.cardTitle}>Latest certificates</h3>
-                    {analytics?.certificatesIssued ? (
-                        <div style={{ display: 'grid', gap: '12px' }}>
-                            <div style={{ padding: '14px', background: colors.bgInput, borderRadius: '12px', border: `1px solid ${colors.border}` }}>
-                                <div style={{ color: colors.text, fontWeight: '700' }}>Certificates issued</div>
-                                <div style={{ color: colors.textMuted, fontSize: '13px' }}>{analytics.certificatesIssued} certificates have been granted to learners.</div>
-                            </div>
-                            <div style={{ padding: '14px', background: colors.bgInput, borderRadius: '12px', border: `1px solid ${colors.border}` }}>
-                                <div style={{ color: colors.text, fontWeight: '700' }}>Earned credential coverage</div>
-                                <div style={{ color: colors.textMuted, fontSize: '13px' }}>Track how many enrolled learners complete their course awards.</div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div style={s.emptyState}>No certificate activity yet.</div>
-                    )}
+                    ) : null}
                 </div>
             </div>
 
             <div style={{ display: 'grid', gap: '18px', marginTop: '24px' }}>
                 <div style={s.card}>
-                    <h3 style={s.cardTitle}>Recent learning history</h3>
-                    {analytics?.learningHistory?.recentEnrollments?.length || analytics?.learningHistory?.recentAssessments?.length ? (
+                    <h3 style={s.cardTitle}>Top Performers</h3>
+                    {analytics?.topPerformers?.length ? (
                         <div style={{ display: 'grid', gap: '12px' }}>
-                            {analytics.learningHistory?.recentEnrollments?.map((item, idx) => (
-                                <div key={`enroll-${idx}`} style={{ padding: '12px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
-                                    <strong style={{ color: colors.text }}>{item.studentName}</strong> enrolled in <strong>{item.courseTitle}</strong>
-                                    <div style={{ color: colors.textMuted, fontSize: '13px' }}>{item.completionPercentage}% complete</div>
-                                </div>
-                            ))}
-                            {analytics.learningHistory?.recentAssessments?.map((item, idx) => (
-                                <div key={`assess-${idx}`} style={{ padding: '12px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
-                                    <strong style={{ color: colors.text }}>{item.studentName}</strong> scored <strong>{item.score}%</strong> on {item.assessmentTitle}
+                            {analytics.topPerformers.map((student, index) => (
+                                <div key={index} style={{ padding: '14px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
+                                    <div style={{ color: colors.text, fontWeight: '700' }}>{student.studentName}</div>
+                                    <div style={{ color: colors.textMuted, fontSize: '13px' }}>{student.avgScore}% avg score • {student.totalAttempts} attempts</div>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <div style={s.emptyState}>No recent learning history available.</div>
+                        <div style={s.emptyState}>No top performer data available.</div>
                     )}
                 </div>
             </div>
@@ -1043,11 +1586,196 @@ export default function AdminDashboard() {
                 <h2 style={s.sectionTitle}>Assessments & Certificates</h2>
                 <p style={s.sectionSub}>Oversee quizzes, assignments, and manage certificate templates.</p>
             </div>
-            <div style={s.card}>
-                <h3 style={s.cardTitle}>Certificate Templates</h3>
-                <div style={{ display: 'flex', gap: '20px' }}>
-                    <div style={{ width: '200px', height: '140px', background: `linear-gradient(135deg, ${colors.bgInput}, ${colors.bgCard})`, border: `2px solid ${colors.primary}`, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.primary, fontWeight: 'bold' }}>Standard Template</div>
-                    <div style={{ width: '200px', height: '140px', background: colors.bgInput, border: `2px dashed ${colors.border}`, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.textMuted, cursor: 'pointer' }}>+ New Template</div>
+
+            <div style={{ display: 'grid', gap: '24px' }}>
+                <div style={s.card}>
+                    <h3 style={s.cardTitle}>Certificate Management</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                        <form onSubmit={handleGenerateCertificate} style={{ display: 'grid', gap: '12px' }}>
+                            <label style={s.label}>Student</label>
+                            <select value={certificateForm.studentId} onChange={(e) => setCertificateForm({ ...certificateForm, studentId: e.target.value })} style={s.select}>
+                                <option value="">Select student</option>
+                                {users.filter((u) => u.assignedRole === 'Student').map((user) => (
+                                    <option key={user._id} value={user._id}>{user.fullName}</option>
+                                ))}
+                            </select>
+                            <label style={s.label}>Course</label>
+                            <select value={certificateForm.courseId} onChange={(e) => setCertificateForm({ ...certificateForm, courseId: e.target.value })} style={s.select}>
+                                <option value="">Select course</option>
+                                {allCourses.map((course) => (
+                                    <option key={course._id} value={course._id}>{course.courseTitle}</option>
+                                ))}
+                            </select>
+                            <label style={s.label}>Template</label>
+                            <select value={certificateForm.templateId} onChange={(e) => setCertificateForm({ ...certificateForm, templateId: e.target.value })} style={s.select}>
+                                {certificateTemplates.map((template) => (
+                                    <option key={template.id} value={template.id}>{template.name}</option>
+                                ))}
+                            </select>
+                            <button type="submit" disabled={isCertificateActionLoading} style={{ ...s.primaryBtn, opacity: isCertificateActionLoading ? 0.7 : 1 }}>
+                                {isCertificateActionLoading ? 'Processing…' : 'Generate Certificate'}
+                            </button>
+                        </form>
+
+                        <form onSubmit={handleVerifyCertificate} style={{ display: 'grid', gap: '12px' }}>
+                            <label style={s.label}>Verify Certificate Number</label>
+                            <input value={certificateVerificationNumber} onChange={(e) => setCertificateVerificationNumber(e.target.value)} placeholder="EMARE-..." style={s.input} />
+                            <button type="submit" disabled={isCertificateActionLoading} style={{ ...s.primaryBtn, opacity: isCertificateActionLoading ? 0.7 : 1 }}>
+                                {isCertificateActionLoading ? 'Checking…' : 'Verify Certificate'}
+                            </button>
+                            {certificateVerificationResult && (
+                                <div style={{ padding: '12px', borderRadius: '12px', background: colors.bgInput, color: colors.text }}>
+                                    <div><strong>Student:</strong> {certificateVerificationResult.studentRef?.fullName || 'Unknown'}</div>
+                                    <div><strong>Course:</strong> {certificateVerificationResult.courseRef?.courseTitle || 'Unknown'}</div>
+                                    <div><strong>Status:</strong> {certificateVerificationResult.status || 'Issued'}</div>
+                                </div>
+                            )}
+                        </form>
+                    </div>
+                </div>
+
+                <div style={s.card}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <h3 style={s.cardTitle}>Issued Certificates</h3>
+                        <span style={{ ...s.badge, background: `${colors.primary}15`, color: colors.primary }}>{certificateRecords.length}</span>
+                    </div>
+                    <div style={{ display: 'grid', gap: '12px' }}>
+                        {certificateRecords.map((certificate) => (
+                            <div key={certificate._id} style={{ border: `1px solid ${colors.border}`, borderRadius: '16px', padding: '14px', background: colors.bgInput }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                                    <div>
+                                        <div style={{ fontWeight: '700', color: colors.text }}>{certificate.studentRef?.fullName || 'Student'}</div>
+                                        <div style={{ color: colors.textMuted, fontSize: '13px' }}>{certificate.courseRef?.courseTitle || 'Course'}</div>
+                                        <div style={{ color: colors.textMuted, fontSize: '12px', marginTop: '4px' }}>{certificate.certificateNumber}</div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                        <span style={{ ...s.badge, background: certificate.status === 'Revoked' ? `${colors.danger}15` : certificate.status === 'Reissued' ? `${colors.warning}15` : `${colors.success}15`, color: certificate.status === 'Revoked' ? colors.danger : certificate.status === 'Reissued' ? colors.warning : colors.success }}>{certificate.status || 'Issued'}</span>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+                                    <button onClick={() => handleDownloadCertificate(certificate._id)} style={{ ...s.actionBtn, color: colors.primary, borderColor: colors.primary }}>Download</button>
+                                    <button onClick={() => handleReissueCertificate(certificate._id)} style={{ ...s.actionBtn, color: colors.warning, borderColor: colors.warning }}>Reissue</button>
+                                    <button onClick={() => handleRevokeCertificate(certificate._id)} style={{ ...s.actionBtn, color: colors.danger, borderColor: colors.danger }}>Revoke</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div style={s.card}>
+                    <h3 style={s.cardTitle}>Certificate Templates</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '24px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '18px' }}>
+                            {certificateTemplates.map((template) => (
+                                <div
+                                    key={template.id}
+                                    onClick={() => handleSelectTemplate(template.id)}
+                                    style={{
+                                        minHeight: '160px',
+                                        padding: '20px',
+                                        background: activeTemplateId === template.id ? colors.bgCard : colors.bgInput,
+                                        border: `2px solid ${activeTemplateId === template.id ? colors.primary : colors.border}`,
+                                        borderRadius: '20px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'space-between',
+                                        cursor: 'pointer',
+                                        boxShadow: activeTemplateId === template.id ? '0 14px 30px rgba(56, 189, 248, 0.12)' : 'none'
+                                    }}
+                                >
+                                    <div>
+                                        <div style={{ fontWeight: '800', fontSize: '16px', color: colors.text }}>{template.name}</div>
+                                        <div style={{ marginTop: '10px', color: colors.textMuted, fontSize: '13px', lineHeight: 1.7 }}>{template.description}</div>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ color: colors.textMuted, fontSize: '12px' }}>{template.layoutStyle}</span>
+                                        {template.id !== 'standard' && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(template.id); }}
+                                                style={{
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    color: colors.danger,
+                                                    cursor: 'pointer',
+                                                    fontSize: '13px'
+                                                }}
+                                            >
+                                                Delete
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                            <div
+                                onClick={handleOpenTemplateModal}
+                                style={{
+                                    minHeight: '160px',
+                                    padding: '20px',
+                                    background: colors.bgInput,
+                                    border: `2px dashed ${colors.border}`,
+                                    borderRadius: '20px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: colors.textMuted,
+                                    cursor: 'pointer',
+                                    fontWeight: '700'
+                                }}
+                            >
+                                + New Template
+                            </div>
+                        </div>
+
+                        <div style={{ padding: '24px', borderRadius: '24px', background: colors.bgCard, border: `1px solid ${colors.border}` }}>
+                            <div style={{ display: 'grid', gap: '16px' }}>
+                                <h4 style={{ margin: 0, fontSize: '18px', color: colors.text }}>Template Preview</h4>
+                                <div style={{ width: '100%', minHeight: '280px', borderRadius: '24px', overflow: 'hidden', background: '#f8fbff', boxShadow: '0 18px 50px rgba(15, 23, 42, 0.08)' }}>
+                                    {(() => {
+                                        const selectedTemplate = certificateTemplates.find((t) => t.id === activeTemplateId) || certificateTemplates[0] || { name: 'Standard Template', layoutStyle: 'Classic', signature: 'Registrar', colorScheme: 'Blue' };
+                                        const bgColor = selectedTemplate.colorScheme === 'Gold'
+                                            ? 'linear-gradient(180deg, #fff7ed 0%, #fffbf0 100%)'
+                                            : selectedTemplate.colorScheme === 'Emerald'
+                                                ? 'linear-gradient(180deg, #ecfdf5 0%, #f7fdf7 100%)'
+                                                : 'linear-gradient(180deg, #eff6ff 0%, #ffffff 100%)';
+
+                                        return (
+                                            <div style={{ padding: '22px', height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr auto', background: bgColor }}>
+                                                <div>
+                                                    <div style={{ color: '#2563eb', fontWeight: '800', fontSize: '13px', letterSpacing: '1px', textTransform: 'uppercase' }}>Emare Learning Institute</div>
+                                                    <div style={{ marginTop: '12px', color: '#0f172a', fontSize: '24px', fontWeight: '800' }}>Certificate of Completion</div>
+                                                </div>
+                                                <div style={{ display: 'grid', gap: '10px', alignContent: 'center' }}>
+                                                    <div style={{ color: '#475569', fontSize: '14px', lineHeight: 1.8 }}>This is to certify that</div>
+                                                    <div style={{ color: '#0f172a', fontSize: '26px', fontWeight: '900' }}>{selectedTemplate.name}</div>
+                                                    <div style={{ color: '#475569', fontSize: '14px', lineHeight: 1.8 }}>has successfully completed the training program and demonstrated competency in the required curriculum.</div>
+                                                    <div style={{ marginTop: '18px', padding: '18px', borderRadius: '18px', background: '#ffffff', border: '1px dashed rgba(15, 23, 42, 0.08)' }}>
+                                                        <div style={{ color: '#8b95a1', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>Certificate Style</div>
+                                                        <div style={{ marginTop: '8px', color: '#0f172a', fontWeight: '700' }}>{selectedTemplate.layoutStyle}</div>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'center' }}>
+                                                    <div>
+                                                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>Issued on</div>
+                                                        <div style={{ marginTop: '6px', color: '#0f172a', fontWeight: '700', fontSize: '13px' }}>{new Date().toLocaleDateString()}</div>
+                                                    </div>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '6px' }}>Signature</div>
+                                                        <div style={{ borderTop: '1px solid rgba(15, 23, 42, 0.15)', paddingTop: '10px', color: '#0f172a', fontWeight: '700', fontSize: '15px' }}>{selectedTemplate.signature}</div>
+                                                        <div style={{ color: '#475569', fontSize: '12px', marginTop: '6px' }}>{selectedTemplate.colorScheme} Scheme</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: '18px', color: colors.textMuted, fontSize: '14px' }}>
+                        {certificateTemplates.find((t) => t.id === activeTemplateId)?.name ? `Selected template: ${certificateTemplates.find((t) => t.id === activeTemplateId).name}` : 'No template selected.'}
+                    </div>
                 </div>
             </div>
         </div>
@@ -1115,18 +1843,84 @@ export default function AdminDashboard() {
         <div style={s.tabContent}>
             <div style={s.sectionHeader}>
                 <h2 style={s.sectionTitle}>CMS & Communications</h2>
-                <p style={s.sectionSub}>Send announcements, manage homepage content, and email broadcasts.</p>
+                <p style={s.sectionSub}>Manage homepage content, about page, FAQ, contact info, policies, banners, testimonials, news, and blogs.</p>
             </div>
-            <div style={s.cardGrid}>
+            <div style={{ display: 'grid', gap: '24px' }}>
                 <div style={s.card}>
-                    <h3 style={s.cardTitle}>System Announcement</h3>
-                    <textarea placeholder="Write a broadcast message to all users..." rows="4" style={s.input}></textarea>
-                    <button style={{...s.primaryBtn, marginTop: '12px'}}>Send Broadcast</button>
+                    <h3 style={s.cardTitle}>Notification Management</h3>
+                    <form onSubmit={handleSendNotification} style={{ display: 'grid', gap: '12px' }}>
+                        <label style={s.label}>Audience</label>
+                        <select value={notificationForm.audience} onChange={(e) => setNotificationForm({ ...notificationForm, audience: e.target.value })} style={s.select}>
+                            <option value="all">All Users</option>
+                            <option value="students">Students</option>
+                            <option value="instructors">Instructors</option>
+                        </select>
+                        <label style={s.label}>Title</label>
+                        <input value={notificationForm.title} onChange={(e) => setNotificationForm({ ...notificationForm, title: e.target.value })} placeholder="Enter a notification title" style={s.input} />
+                        <label style={s.label}>Message</label>
+                        <textarea value={notificationForm.message} onChange={(e) => setNotificationForm({ ...notificationForm, message: e.target.value })} placeholder="Write the announcement or reminder" rows="4" style={s.input}></textarea>
+                        <label style={s.label}>Type</label>
+                        <select value={notificationForm.type} onChange={(e) => setNotificationForm({ ...notificationForm, type: e.target.value })} style={s.select}>
+                            <option value="announcement">Announcement</option>
+                            <option value="system">System</option>
+                            <option value="assignment">Assignment</option>
+                            <option value="certificate">Certificate</option>
+                        </select>
+                        <label style={s.label}>Link (optional)</label>
+                        <input value={notificationForm.link} onChange={(e) => setNotificationForm({ ...notificationForm, link: e.target.value })} placeholder="/student/courses" style={s.input} />
+                        <label style={s.label}>Schedule for later</label>
+                        <input type="datetime-local" value={notificationForm.scheduleAt} onChange={(e) => setNotificationForm({ ...notificationForm, scheduleAt: e.target.value })} style={s.input} />
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: colors.textMuted, cursor: 'pointer' }}>
+                            <input type="checkbox" checked={notificationForm.reminder} onChange={(e) => setNotificationForm({ ...notificationForm, reminder: e.target.checked })} />
+                            Mark as reminder message
+                        </label>
+                        <button type="submit" disabled={isNotificationSubmitting} style={{ ...s.primaryBtn, opacity: isNotificationSubmitting ? 0.7 : 1 }}>
+                            {isNotificationSubmitting ? 'Sending…' : 'Send Notification'}
+                        </button>
+                    </form>
                 </div>
+
                 <div style={s.card}>
-                    <h3 style={s.cardTitle}>Homepage Banners</h3>
-                    <div style={s.emptyState}>No custom banners configured.</div>
-                    <button style={{...s.secondaryBtn, marginTop: '12px'}}>Upload Banner</button>
+                    <h3 style={s.cardTitle}>Broadcast Overview</h3>
+                    <div style={{ display: 'grid', gap: '10px' }}>
+                        <div style={{ padding: '12px', borderRadius: '12px', background: colors.bgInput }}>
+                            <strong>Total Notifications:</strong> {notificationSummary.total}
+                        </div>
+                        <div style={{ padding: '12px', borderRadius: '12px', background: colors.bgInput }}>
+                            <strong>Unread:</strong> {notificationSummary.unread}
+                        </div>
+                        <div style={{ padding: '12px', borderRadius: '12px', background: colors.bgInput }}>
+                            <strong>Recent:</strong> {notificationSummary.recent?.length ? notificationSummary.recent.map((item) => item.title).join(', ') : 'No recent broadcasts.'}
+                        </div>
+                    </div>
+                    <button style={{...s.secondaryBtn, marginTop: '12px'}} onClick={fetchNotificationSummary}>Refresh Summary</button>
+                </div>
+
+                <div style={s.card}>
+                    <h3 style={s.cardTitle}>Content Management</h3>
+                    <div style={{ display: 'grid', gap: '16px' }}>
+                        <select value={selectedContentPage} onChange={(e) => handleContentPageChange(e.target.value)} style={s.select}>
+                            <option value="home">Homepage Content</option>
+                            <option value="about">About Page</option>
+                            <option value="faq">FAQ</option>
+                            <option value="contact">Contact Page</option>
+                            <option value="privacy">Privacy Policy</option>
+                            <option value="terms">Terms and Conditions</option>
+                            <option value="banners">Banner Management</option>
+                            <option value="testimonials">Testimonials</option>
+                            <option value="news">News</option>
+                            <option value="blogs">Blogs</option>
+                        </select>
+                        <form onSubmit={handleSaveContent} style={{ display: 'grid', gap: '12px' }}>
+                            <label style={s.label}>Page Title</label>
+                            <input value={contentForm.title} onChange={(e) => setContentForm({ ...contentForm, title: e.target.value })} style={s.input} />
+                            <label style={s.label}>Content JSON / Text</label>
+                            <textarea value={contentForm.content} onChange={(e) => setContentForm({ ...contentForm, content: e.target.value })} rows="10" style={{ ...s.input, minHeight: '220px', fontFamily: 'monospace' }} />
+                            <button type="submit" disabled={isContentSaving} style={{ ...s.primaryBtn, opacity: isContentSaving ? 0.7 : 1 }}>
+                                {isContentSaving ? 'Saving…' : 'Save Content'}
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1136,12 +1930,142 @@ export default function AdminDashboard() {
         <div style={s.tabContent}>
             <div style={s.sectionHeader}>
                 <h2 style={s.sectionTitle}>Reports & Exports</h2>
-                <p style={s.sectionSub}>Generate and export PDF/CSV reports for platform analytics.</p>
+                <p style={s.sectionSub}>Generate and export institutional performance reports for students, instructors, courses, quizzes, assignments, enrollments, completions, performance, attendance, and system metrics in PDF, Excel, or CSV format.</p>
             </div>
-            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                <button style={s.reportBtn}>📄 Export User Report (CSV)</button>
-                <button style={s.reportBtn}>📄 Export Revenue Report (CSV)</button>
-                <button style={s.reportBtn}>📄 Export Course Completion (PDF)</button>
+            <div style={{ display: 'grid', gap: '16px', maxWidth: '760px' }}>
+                <div style={{ ...s.card, padding: '20px' }}>
+                    <h3 style={s.cardTitle}>Institutional Report Export</h3>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <select value={selectedReportType} onChange={(e) => setSelectedReportType(e.target.value)} style={s.select}>
+                            {reportOptions.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                        </select>
+                        <select value={selectedReportFormat} onChange={(e) => setSelectedReportFormat(e.target.value)} style={s.select}>
+                            {formatOptions.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                        </select>
+                        <button onClick={handleExportReport} disabled={isExportingReport} style={{ ...s.primaryBtn, opacity: isExportingReport ? 0.7 : 1 }}>
+                            {isExportingReport ? 'Exporting…' : 'Export Report'}
+                        </button>
+                    </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {reportOptions.map((option) => (
+                        <span key={option.value} style={{ ...s.badge, background: selectedReportType === option.value ? `${colors.primary}20` : `${colors.textMuted}10`, color: selectedReportType === option.value ? colors.primary : colors.textMuted, border: `1px solid ${selectedReportType === option.value ? colors.primary : colors.border}` }}>
+                            {option.label}
+                        </span>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderAuditLogs = () => (
+        <div style={s.tabContent}>
+            <div style={s.sectionHeader}>
+                <h2 style={s.sectionTitle}>Audit Logs</h2>
+                <p style={s.sectionSub}>Review user activity, login events, course approvals, enrollment actions, system events, errors, and admin operations.</p>
+            </div>
+
+            <div style={s.card}>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                    <select value={auditFilter} onChange={(e) => handleAuditFilterChange(e.target.value)} style={s.select}>
+                        <option value="all">All Logs</option>
+                        <option value="login">Login Logs</option>
+                        <option value="user">User Activity</option>
+                        <option value="course">Course Approval Logs</option>
+                        <option value="enrollment">Enrollment Logs</option>
+                        <option value="system">System Logs</option>
+                        <option value="error">Error Logs</option>
+                        <option value="admin">Admin Action Logs</option>
+                    </select>
+                    <input value={auditSearch} onChange={handleAuditSearch} placeholder="Search audit logs" style={s.input} />
+                </div>
+
+                {isAuditLoading ? (
+                    <div style={{ color: colors.textMuted }}>Loading audit entries...</div>
+                ) : (
+                    <div style={{ display: 'grid', gap: '10px' }}>
+                        {auditLogs.length ? auditLogs.map((log) => (
+                            <div key={log._id} style={{ padding: '14px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                                    <strong>{log.action}</strong>
+                                    <span style={{ color: colors.textMuted, fontSize: '13px' }}>{new Date(log.timestamp).toLocaleString()}</span>
+                                </div>
+                                <div style={{ color: colors.textMuted, fontSize: '14px', marginBottom: '6px' }}>{log.description || 'No description provided.'}</div>
+                                <div style={{ fontSize: '13px', color: colors.textMuted }}>
+                                    User: {log.userRef?.fullName || 'System'} · Role: {log.userRef?.assignedRole || 'N/A'} · IP: {log.ipAddress || 'N/A'}
+                                </div>
+                            </div>
+                        )) : <div style={{ color: colors.textMuted }}>No audit logs found for the selected filter.</div>}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    const renderCalendar = () => (
+        <div style={s.tabContent}>
+            <div style={s.sectionHeader}>
+                <h2 style={s.sectionTitle}>Calendar Management</h2>
+                <p style={s.sectionSub}>Plan academic dates, exams, assignments, holidays, training sessions, and events from one administrative calendar.</p>
+            </div>
+
+            <div style={{ display: 'grid', gap: '24px' }}>
+                <div style={s.card}>
+                    <h3 style={s.cardTitle}>{calendarEditingId ? 'Edit Event' : 'Create Event'}</h3>
+                    <form onSubmit={handleSaveCalendarEvent} style={{ display: 'grid', gap: '12px' }}>
+                        <input value={calendarForm.title} onChange={(e) => setCalendarForm({ ...calendarForm, title: e.target.value })} placeholder="Event title" style={s.input} required />
+                        <select value={calendarForm.category} onChange={(e) => setCalendarForm({ ...calendarForm, category: e.target.value })} style={s.select}>
+                            <option value="academic">Academic</option>
+                            <option value="exam">Exam</option>
+                            <option value="assignment">Assignment</option>
+                            <option value="holiday">Holiday</option>
+                            <option value="training">Training</option>
+                            <option value="event">Event</option>
+                        </select>
+                        <textarea value={calendarForm.description} onChange={(e) => setCalendarForm({ ...calendarForm, description: e.target.value })} placeholder="Description" rows="3" style={s.input}></textarea>
+                        <input type="datetime-local" value={calendarForm.startDate} onChange={(e) => setCalendarForm({ ...calendarForm, startDate: e.target.value })} style={s.input} required />
+                        <input type="datetime-local" value={calendarForm.endDate} onChange={(e) => setCalendarForm({ ...calendarForm, endDate: e.target.value })} style={s.input} />
+                        <input value={calendarForm.location} onChange={(e) => setCalendarForm({ ...calendarForm, location: e.target.value })} placeholder="Location" style={s.input} />
+                        <input type="color" value={calendarForm.color} onChange={(e) => setCalendarForm({ ...calendarForm, color: e.target.value })} style={{ width: '100%', height: '44px', border: 'none', background: 'transparent', cursor: 'pointer' }} />
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: colors.textMuted, cursor: 'pointer' }}>
+                            <input type="checkbox" checked={calendarForm.isAllDay} onChange={(e) => setCalendarForm({ ...calendarForm, isAllDay: e.target.checked })} />
+                            All day event
+                        </label>
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                            <button type="submit" disabled={isCalendarSaving} style={{ ...s.primaryBtn, opacity: isCalendarSaving ? 0.7 : 1 }}>
+                                {isCalendarSaving ? 'Saving...' : calendarEditingId ? 'Update Event' : 'Create Event'}
+                            </button>
+                            <button type="button" onClick={resetCalendarForm} style={s.secondaryBtn}>Clear</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div style={s.card}>
+                    <h3 style={s.cardTitle}>Upcoming Events</h3>
+                    <div style={{ display: 'grid', gap: '10px' }}>
+                        {calendarEvents.length ? calendarEvents.map((event) => (
+                            <div key={event._id} style={{ padding: '14px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                                    <strong>{event.title}</strong>
+                                    <span style={{ color: colors.primary, fontSize: '13px', textTransform: 'capitalize' }}>{event.category}</span>
+                                </div>
+                                <div style={{ color: colors.textMuted, fontSize: '14px', marginBottom: '6px' }}>{event.description || 'No description provided.'}</div>
+                                <div style={{ fontSize: '13px', color: colors.textMuted }}>
+                                    {new Date(event.startDate).toLocaleString()} {event.endDate ? `→ ${new Date(event.endDate).toLocaleString()}` : ''}
+                                    {event.location ? ` · ${event.location}` : ''}
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                    <button type="button" onClick={() => handleEditCalendarEvent(event)} style={s.secondaryBtn}>Edit</button>
+                                    <button type="button" onClick={() => handleDeleteCalendarEvent(event._id)} style={{ ...s.secondaryBtn, borderColor: colors.danger, color: colors.danger }}>Delete</button>
+                                </div>
+                            </div>
+                        )) : <div style={{ color: colors.textMuted }}>No calendar events created yet.</div>}
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -1150,49 +2074,210 @@ export default function AdminDashboard() {
         <div style={s.tabContent}>
             <div style={s.sectionHeader}>
                 <h2 style={s.sectionTitle}>System Settings</h2>
-                <p style={s.sectionSub}>Global configuration, integrations, API keys, and backups.</p>
+                <p style={s.sectionSub}>Manage branding, localization, email delivery, upload limits, video settings, storage, and backups.</p>
             </div>
-            
+
             <form onSubmit={handleUpdateSettings} style={s.cardGrid}>
                 <div style={s.card}>
-                    <h3 style={s.cardTitle}>General Settings</h3>
+                    <h3 style={s.cardTitle}>Branding & Localization</h3>
                     <div style={{ marginBottom: '16px' }}>
-                        <label style={s.label}>Website Name</label>
-                        <input type="text" value={settings.websiteName} onChange={e => setSettings({...settings, websiteName: e.target.value})} style={s.input} />
+                        <label style={s.label}>Site Name</label>
+                        <input type="text" value={settings.websiteName || ''} onChange={e => setSettings({ ...settings, websiteName: e.target.value })} style={s.input} />
                     </div>
                     <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>Theme</label>
+                        <select value={settings.theme || 'light'} onChange={e => setSettings({ ...settings, theme: e.target.value })} style={s.select}>
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                            <option value="system">System Default</option>
+                        </select>
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>Time Zone</label>
+                        <select value={settings.timezone || 'Africa/Addis_Ababa'} onChange={e => setSettings({ ...settings, timezone: e.target.value })} style={s.select}>
+                            <option value="Africa/Addis_Ababa">Africa/Addis_Ababa</option>
+                            <option value="UTC">UTC</option>
+                            <option value="America/New_York">America/New_York</option>
+                            <option value="Europe/London">Europe/London</option>
+                        </select>
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>Language</label>
+                        <select value={settings.language || 'en'} onChange={e => setSettings({ ...settings, language: e.target.value })} style={s.select}>
+                            <option value="en">English</option>
+                            <option value="am">Amharic</option>
+                            <option value="om">Oromo</option>
+                        </select>
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>Site Logo</label>
+                        <input type="file" accept="image/*" onChange={(e) => handleAssetUpload('siteLogo', e.target.files?.[0])} style={s.input} />
+                        {settings.siteLogo ? <img src={settings.siteLogo} alt="site logo" style={{ width: '96px', marginTop: '8px', borderRadius: '10px', objectFit: 'contain' }} /> : null}
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>Favicon</label>
+                        <input type="file" accept="image/*" onChange={(e) => handleAssetUpload('favicon', e.target.files?.[0])} style={s.input} />
+                        {settings.favicon ? <img src={settings.favicon} alt="favicon" style={{ width: '48px', marginTop: '8px', borderRadius: '8px', objectFit: 'contain' }} /> : null}
+                    </div>
+                </div>
+
+                <div style={s.card}>
+                    <h3 style={s.cardTitle}>Email & Contact</h3>
+                    <div style={{ marginBottom: '16px' }}>
                         <label style={s.label}>Contact Email</label>
-                        <input type="email" value={settings.contactEmail} onChange={e => setSettings({...settings, contactEmail: e.target.value})} style={s.input} />
+                        <input type="email" value={settings.contactEmail || ''} onChange={e => setSettings({ ...settings, contactEmail: e.target.value })} style={s.input} />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>Email From Name</label>
+                        <input type="text" value={settings.emailFromName || ''} onChange={e => setSettings({ ...settings, emailFromName: e.target.value })} style={s.input} />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>Email From Address</label>
+                        <input type="email" value={settings.emailFromAddress || ''} onChange={e => setSettings({ ...settings, emailFromAddress: e.target.value })} style={s.input} />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>SMTP Host</label>
+                        <input type="text" value={settings.smtpHost || ''} onChange={e => setSettings({ ...settings, smtpHost: e.target.value })} style={s.input} />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>SMTP Port</label>
+                        <input type="number" value={settings.smtpPort || 587} onChange={e => setSettings({ ...settings, smtpPort: Number(e.target.value) })} style={s.input} />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>SMTP Username</label>
+                        <input type="text" value={settings.smtpUsername || ''} onChange={e => setSettings({ ...settings, smtpUsername: e.target.value })} style={s.input} />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>SMTP Password</label>
+                        <input type="password" value={settings.smtpPassword || ''} onChange={e => setSettings({ ...settings, smtpPassword: e.target.value })} style={s.input} />
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: colors.textMuted, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={Boolean(settings.smtpSecure)} onChange={e => setSettings({ ...settings, smtpSecure: e.target.checked })} style={{ width: '18px', height: '18px' }} />
+                        Use Secure SMTP
+                    </label>
+                </div>
+
+                <div style={s.card}>
+                    <h3 style={s.cardTitle}>Upload & Video Limits</h3>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>Max File Upload Size (MB)</label>
+                        <input type="number" value={settings.maxUploadSizeMB || 25} onChange={e => setSettings({ ...settings, maxUploadSizeMB: Number(e.target.value) })} style={s.input} />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>Allowed Upload Types</label>
+                        <input type="text" value={settings.allowedUploadTypes || ''} onChange={e => setSettings({ ...settings, allowedUploadTypes: e.target.value })} style={s.input} />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>Max Video Size (MB)</label>
+                        <input type="number" value={settings.maxVideoSizeMB || 500} onChange={e => setSettings({ ...settings, maxVideoSizeMB: Number(e.target.value) })} style={s.input} />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>Video Format</label>
+                        <select value={settings.videoFormat || 'mp4'} onChange={e => setSettings({ ...settings, videoFormat: e.target.value })} style={s.select}>
+                            <option value="mp4">MP4</option>
+                            <option value="webm">WebM</option>
+                            <option value="mov">MOV</option>
+                        </select>
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: colors.textMuted, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={Boolean(settings.videoTranscodingEnabled)} onChange={e => setSettings({ ...settings, videoTranscodingEnabled: e.target.checked })} style={{ width: '18px', height: '18px' }} />
+                        Enable Video Transcoding
+                    </label>
+                </div>
+
+                <div style={s.card}>
+                    <h3 style={s.cardTitle}>Storage & Backup</h3>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>Storage Provider</label>
+                        <select value={settings.storageProvider || 'cloudinary'} onChange={e => setSettings({ ...settings, storageProvider: e.target.value })} style={s.select}>
+                            <option value="cloudinary">Cloudinary</option>
+                            <option value="local">Local Disk</option>
+                            <option value="s3">S3 Compatible</option>
+                        </select>
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>Storage Bucket / Folder</label>
+                        <input type="text" value={settings.storageBucket || ''} onChange={e => setSettings({ ...settings, storageBucket: e.target.value })} style={s.input} />
                     </div>
                     <div style={{ marginBottom: '16px' }}>
                         <label style={s.label}>Currency</label>
-                        <select value={settings.currency} onChange={e => setSettings({...settings, currency: e.target.value})} style={s.select}>
+                        <select value={settings.currency || 'ETB'} onChange={e => setSettings({ ...settings, currency: e.target.value })} style={s.select}>
                             <option value="ETB">ETB (Ethiopian Birr)</option>
                             <option value="USD">USD (US Dollar)</option>
                         </select>
                     </div>
-                </div>
-
-                <div style={s.card}>
-                    <h3 style={s.cardTitle}>System Toggles</h3>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>Backup Frequency</label>
+                        <select value={settings.backupFrequency || 'daily'} onChange={e => setSettings({ ...settings, backupFrequency: e.target.value })} style={s.select}>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>Backup Retention (Days)</label>
+                        <input type="number" value={settings.backupRetentionDays || 30} onChange={e => setSettings({ ...settings, backupRetentionDays: Number(e.target.value) })} style={s.input} />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={s.label}>Backup Location</label>
+                        <input type="text" value={settings.backupLocation || ''} onChange={e => setSettings({ ...settings, backupLocation: e.target.value })} style={s.input} />
+                    </div>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: colors.textMuted, cursor: 'pointer' }}>
-                        <input type="checkbox" checked={settings.maintenanceMode} onChange={e => setSettings({...settings, maintenanceMode: e.target.checked})} style={{ width: '18px', height: '18px' }} />
+                        <input type="checkbox" checked={Boolean(settings.backupEnabled)} onChange={e => setSettings({ ...settings, backupEnabled: e.target.checked })} style={{ width: '18px', height: '18px' }} />
+                        Enable Automatic Backups
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: colors.textMuted, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={Boolean(settings.maintenanceMode)} onChange={e => setSettings({ ...settings, maintenanceMode: e.target.checked })} style={{ width: '18px', height: '18px' }} />
                         Enable Maintenance Mode
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: colors.textMuted, cursor: 'pointer' }}>
-                        <input type="checkbox" checked={settings.allowRegistration} onChange={e => setSettings({...settings, allowRegistration: e.target.checked})} style={{ width: '18px', height: '18px' }} />
+                        <input type="checkbox" checked={Boolean(settings.allowRegistration)} onChange={e => setSettings({ ...settings, allowRegistration: e.target.checked })} style={{ width: '18px', height: '18px' }} />
                         Allow New User Registration
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: colors.textMuted, cursor: 'pointer' }}>
-                        <input type="checkbox" checked={settings.requireEmailVerification} onChange={e => setSettings({...settings, requireEmailVerification: e.target.checked})} style={{ width: '18px', height: '18px' }} />
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: colors.textMuted, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={Boolean(settings.requireEmailVerification)} onChange={e => setSettings({ ...settings, requireEmailVerification: e.target.checked })} style={{ width: '18px', height: '18px' }} />
                         Require Email Verification
                     </label>
                 </div>
 
-                <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '16px' }}>
-                    <button type="submit" style={s.primaryBtn}>Save Configuration</button>
-                    <button type="button" onClick={handleBackup} style={{...s.secondaryBtn, borderColor: colors.success, color: colors.success}}>Trigger DB Backup</button>
-                    <button type="button" onClick={handleClearCache} style={{...s.secondaryBtn, borderColor: colors.danger, color: colors.danger}}>Clear System Cache</button>
+                <div style={{ gridColumn: '1 / -1', display: 'grid', gap: '16px' }}>
+                    <div style={s.card}>
+                        <h3 style={s.cardTitle}>Database Management</h3>
+                        <p style={{ ...s.sectionSub, marginBottom: '16px' }}>Back up, restore, optimize, and monitor your MongoDB collections and storage usage.</p>
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                            <button type="button" onClick={handleBackup} disabled={dbActionLoading.backup} style={{ ...s.secondaryBtn, borderColor: colors.success, color: colors.success, opacity: dbActionLoading.backup ? 0.7 : 1 }}>
+                                {dbActionLoading.backup ? 'Backing Up...' : 'Backup Database'}
+                            </button>
+                            <button type="button" onClick={handleRestoreDatabase} disabled={dbActionLoading.restore} style={{ ...s.secondaryBtn, borderColor: colors.primary, color: colors.primary, opacity: dbActionLoading.restore ? 0.7 : 1 }}>
+                                {dbActionLoading.restore ? 'Restoring...' : 'Restore Database'}
+                            </button>
+                            <button type="button" onClick={handleOptimizeDatabase} disabled={dbActionLoading.optimize} style={{ ...s.secondaryBtn, borderColor: colors.warning, color: colors.warning, opacity: dbActionLoading.optimize ? 0.7 : 1 }}>
+                                {dbActionLoading.optimize ? 'Optimizing...' : 'Optimize Database'}
+                            </button>
+                        </div>
+                        <div style={{ display: 'grid', gap: '12px' }}>
+                            <div style={{ padding: '12px', borderRadius: '12px', background: colors.bgInput }}>
+                                <strong>Database:</strong> {dbMetrics.databaseName}
+                            </div>
+                            <div style={{ padding: '12px', borderRadius: '12px', background: colors.bgInput }}>
+                                <strong>Storage:</strong> {formatBytes(dbMetrics.storageSizeBytes)} · <strong>Objects:</strong> {dbMetrics.objects}
+                            </div>
+                            <div style={{ padding: '12px', borderRadius: '12px', background: colors.bgInput }}>
+                                <strong>Collections:</strong>
+                                <div style={{ marginTop: '8px', display: 'grid', gap: '6px' }}>
+                                    {dbMetrics.collections.slice(0, 8).map((collection) => (
+                                        <div key={collection.name} style={{ color: colors.textMuted, fontSize: '14px' }}>
+                                            • {collection.name} — {collection.documentCount} docs · {formatBytes(collection.storageSizeBytes)}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                        <button type="submit" style={s.primaryBtn}>{isUploadingAsset ? 'Uploading...' : 'Save Configuration'}</button>
+                        <button type="button" onClick={handleClearCache} style={{...s.secondaryBtn, borderColor: colors.danger, color: colors.danger}}>Clear System Cache</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -1203,12 +2288,14 @@ export default function AdminDashboard() {
         { key: 'users', label: '👥 User Management' },
         { key: 'security', label: '🛡️ Security & Roles' },
         { key: 'courses', label: '📚 Course Management' },
-        { key: 'progress', label: '📊 Student Progress' },
+        { key: 'analytics', label: '📊 Analytics Dashboard' },
         { key: 'content', label: '💬 Content & Moderation' },
         { key: 'assessments', label: '📝 Assessments & Certs' },
         { key: 'finances', label: '💰 Finances & Revenue' },
         { key: 'cms', label: '📢 CMS & Comms' },
         { key: 'reports', label: '📊 Reports & Exports' },
+        { key: 'audit', label: '🧾 Audit Logs' },
+        { key: 'calendar', label: '🗓️ Calendar Management' },
         { key: 'system', label: '⚙️ System Settings' }
     ];
 
@@ -1231,16 +2318,18 @@ export default function AdminDashboard() {
                     <div style={{padding:'40px', color:colors.textMuted}}>Loading system data...</div>
                 ) : (
                     <>
-                        {activeTab === 'overview' && renderOverview()}
+                                {activeTab === 'overview' && renderOverview()}
                         {activeTab === 'users' && renderUsers()}
                         {activeTab === 'security' && renderSecurity()}
                         {activeTab === 'courses' && renderCourses()}
-                        {activeTab === 'progress' && renderProgress()}
+                        {activeTab === 'analytics' && renderAnalytics()}
                         {activeTab === 'content' && renderContent()}
                         {activeTab === 'assessments' && renderAssessments()}
                         {activeTab === 'finances' && renderFinances()}
                         {activeTab === 'cms' && renderCMS()}
                         {activeTab === 'reports' && renderReports()}
+                        {activeTab === 'audit' && renderAuditLogs()}
+                        {activeTab === 'calendar' && renderCalendar()}
                         {activeTab === 'system' && renderSystem()}
                     </>
                 )}
@@ -1452,6 +2541,68 @@ export default function AdminDashboard() {
                     </form>
                     <p style={{fontSize:'12px', color:'#d32f2f', marginTop:'8px'}}>⚠️ Direct reset: User account is immediately changed. A confirmation email will be sent.</p>
                 </div>
+            </Modal>
+            <Modal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)} title="Create Certificate Template">
+                <form onSubmit={handleCreateTemplate} style={{display:'flex', flexDirection:'column', gap:'16px'}}>
+                    <div>
+                        <label style={s.label}>Template Name</label>
+                        <input
+                            type="text"
+                            value={newTemplateData.name}
+                            onChange={(e) => setNewTemplateData({ ...newTemplateData, name: e.target.value })}
+                            placeholder="Enter template name"
+                            style={s.input}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label style={s.label}>Description</label>
+                        <textarea
+                            value={newTemplateData.description}
+                            onChange={(e) => setNewTemplateData({ ...newTemplateData, description: e.target.value })}
+                            placeholder="Brief description of this certificate look"
+                            rows={3}
+                            style={{ ...s.input, resize: 'vertical' }}
+                        />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        <div>
+                            <label style={s.label}>Layout Style</label>
+                            <select
+                                value={newTemplateData.layoutStyle}
+                                onChange={(e) => setNewTemplateData({ ...newTemplateData, layoutStyle: e.target.value })}
+                                style={s.select}
+                            >
+                                <option value="Classic">Classic</option>
+                                <option value="Modern">Modern</option>
+                                <option value="Elegant">Elegant</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style={s.label}>Color Scheme</label>
+                            <select
+                                value={newTemplateData.colorScheme}
+                                onChange={(e) => setNewTemplateData({ ...newTemplateData, colorScheme: e.target.value })}
+                                style={s.select}
+                            >
+                                <option value="Blue">Blue</option>
+                                <option value="Gold">Gold</option>
+                                <option value="Emerald">Emerald</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label style={s.label}>Signature</label>
+                        <input
+                            type="text"
+                            value={newTemplateData.signature}
+                            onChange={(e) => setNewTemplateData({ ...newTemplateData, signature: e.target.value })}
+                            placeholder="E.g. Course Director"
+                            style={s.input}
+                        />
+                    </div>
+                    <button type="submit" style={s.primaryBtn}>Save Template</button>
+                </form>
             </Modal>
         </div>
     );

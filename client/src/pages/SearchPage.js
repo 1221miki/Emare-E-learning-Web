@@ -18,6 +18,14 @@ function useQuery() {
     return new URLSearchParams(useLocation().search);
 }
 
+const normalizeSearchText = (value) => {
+    if (value == null) return '';
+    if (Array.isArray(value)) return value.filter(Boolean).join(' ');
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    return '';
+};
+
 export default function SearchPage() {
     const { colors, theme } = useTheme();
     const navigate = useNavigate();
@@ -63,10 +71,10 @@ export default function SearchPage() {
     const filteredCourses = courses
         .filter(c => {
             const matchSearch = !q ||
-                c.courseTitle?.toLowerCase().includes(q) ||
-                c.descriptionText?.toLowerCase().includes(q) ||
-                c.technicalCategory?.toLowerCase().includes(q) ||
-                c.creatorRef?.fullName?.toLowerCase().includes(q);
+                normalizeSearchText(c.courseTitle).toLowerCase().includes(q) ||
+                normalizeSearchText(c.descriptionText).toLowerCase().includes(q) ||
+                normalizeSearchText(c.technicalCategory).toLowerCase().includes(q) ||
+                normalizeSearchText(c.creatorRef?.fullName).toLowerCase().includes(q);
             const matchLevel = filterLevel === 'All' || c.level === filterLevel;
             const matchLang = filterLanguage === 'All' || c.language === filterLanguage;
             const matchCat = filterCategory === 'All' || c.technicalCategory === filterCategory;
@@ -84,13 +92,13 @@ export default function SearchPage() {
         });
 
     const filteredInstructors = instructors.filter(u =>
-        !q || u.fullName?.toLowerCase().includes(q) ||
-        u.biography?.toLowerCase().includes(q) ||
-        u.qualifications?.toLowerCase().includes(q)
+        !q || normalizeSearchText(u.fullName).toLowerCase().includes(q) ||
+        normalizeSearchText(u.biography).toLowerCase().includes(q) ||
+        normalizeSearchText(u.qualifications).toLowerCase().includes(q)
     );
 
     const filteredCategories = categories.filter(c =>
-        !q || c.name?.toLowerCase().includes(q)
+        !q || normalizeSearchText(c.name).toLowerCase().includes(q)
     );
 
     const handleSearch = (e) => {

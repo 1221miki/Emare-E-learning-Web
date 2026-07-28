@@ -29,13 +29,31 @@ const LiveSessionSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    platform: {
+        type: String,
+        enum: ['Zoom', 'Google Meet', 'Jitsi Meet', 'Custom'],
+        default: 'Zoom'
+    },
     meetingLink: {
         type: String,
-        required: true
+        default: ''
     },
     meetingPassword: {
         type: String
-    }
+    },
+    attendance: [{
+        userRef: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        fullName: {
+            type: String
+        },
+        checkedInAt: {
+            type: Date,
+            default: Date.now
+        }
+    }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('LiveSession', LiveSessionSchema);

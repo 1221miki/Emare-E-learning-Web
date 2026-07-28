@@ -77,7 +77,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange }) {
             </div>
 
             {/* Home & Logout */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto', paddingBottom: '12px' }}>
                 <button onClick={() => navigate('/')} style={{ ...styles.homeBtn }}>🏠 Home Page</button>
                 <button onClick={handleLogout} style={styles.logoutBtn}>↩ Sign Out</button>
             </div>
@@ -90,12 +90,12 @@ const styles = {
         width: '260px',
         display: 'flex',
         flexDirection: 'column',
-        padding: '24px 16px',
+        padding: '24px 16px 32px',
         position: 'fixed',
         left: 0,
         top: 0,
         height: '100vh',
-        zIndex: 10,
+        zIndex: 20,
         transition: 'background 0.3s, border-color 0.3s'
     },
     headerBox: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' },
@@ -129,13 +129,28 @@ const styles = {
     userName: { fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
     userRole: { fontSize: '11px' },
     logoutBtn: {
-        background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-        color: '#ef4444', borderRadius: '10px', padding: '10px',
-        cursor: 'pointer', fontSize: '14px', fontWeight: '600', transition: 'background 0.2s'
+        background: '#ffffff',
+        border: '1px solid rgba(239,68,68,0.45)',
+        color: '#b91c1c',
+        boxShadow: '0 4px 10px rgba(239,68,68,0.15)',
+        borderRadius: '10px',
+        padding: '12px 14px',
+        cursor: 'pointer',
+        fontSize: '14px',
+        fontWeight: '700',
+        transition: 'transform 0.2s, box-shadow 0.2s',
+        textAlign: 'center'
     },
     homeBtn: {
-        background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)',
-        color: '#60a5fa', borderRadius: '10px', padding: '10px',
-        cursor: 'pointer', fontSize: '14px', fontWeight: '600', transition: 'background 0.2s'
+        background: 'rgba(59,130,246,0.12)',
+        border: '1px solid rgba(59,130,246,0.4)',
+        color: '#2563eb',
+        borderRadius: '10px',
+        padding: '12px 14px',
+        cursor: 'pointer',
+        fontSize: '14px',
+        fontWeight: '700',
+        transition: 'transform 0.2s, background 0.2s',
+        textAlign: 'center'
     }
 };
