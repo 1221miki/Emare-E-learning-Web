@@ -52,8 +52,13 @@ async function seedDefaultData() {
             console.log('👤 Default admin created: admin@emare.com / admin12345');
         } else {
             existingAdmin.securedPassword = 'admin12345';
+            existingAdmin.isActive = true;
+            existingAdmin.isSuspended = false;
+            existingAdmin.suspensionReason = '';
+            existingAdmin.suspensionDate = null;
+            existingAdmin.suspensionEndDate = null;
             await existingAdmin.save();
-            console.log('🔒 Default admin password enforced: admin@emare.com / admin12345');
+            console.log('🔒 Default admin password and active status enforced: admin@emare.com / admin12345');
         }
 
         // Create or enforce default student user credentials
@@ -68,8 +73,13 @@ async function seedDefaultData() {
             console.log('👤 Default student created: student@emare.com / student12345');
         } else {
             existingStudent.securedPassword = 'student12345';
+            existingStudent.isActive = true;
+            existingStudent.isSuspended = false;
+            existingStudent.suspensionReason = '';
+            existingStudent.suspensionDate = null;
+            existingStudent.suspensionEndDate = null;
             await existingStudent.save();
-            console.log('🔒 Default student password enforced: student@emare.com / student12345');
+            console.log('🔒 Default student password and active status enforced: student@emare.com / student12345');
         }
 
         // Create or enforce default instructor user credentials
@@ -84,8 +94,13 @@ async function seedDefaultData() {
             console.log('👤 Default instructor created: instructor@emare.com / instructor12345');
         } else {
             existingInstructor.securedPassword = 'instructor12345';
+            existingInstructor.isActive = true;
+            existingInstructor.isSuspended = false;
+            existingInstructor.suspensionReason = '';
+            existingInstructor.suspensionDate = null;
+            existingInstructor.suspensionEndDate = null;
             await existingInstructor.save();
-            console.log('🔒 Default instructor password enforced: instructor@emare.com / instructor12345');
+            console.log('🔒 Default instructor password and active status enforced: instructor@emare.com / instructor12345');
         }
 
         console.log('✅ Default data seeded successfully.');

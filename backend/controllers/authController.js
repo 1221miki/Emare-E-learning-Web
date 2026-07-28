@@ -81,7 +81,8 @@ const register = async (req, res, next) => {
 // ─────────────────────────────────────────────
 const login = async (req, res, next) => {
     try {
-        const { accountEmail, securedPassword } = req.body;
+        let { accountEmail, securedPassword } = req.body;
+        accountEmail = accountEmail?.trim().toLowerCase();
 
         if (!accountEmail || !securedPassword) {
             return res.status(400).json({ success: false, message: 'Please provide both email and password.' });
