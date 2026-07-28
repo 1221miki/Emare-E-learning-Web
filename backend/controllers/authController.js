@@ -46,15 +46,17 @@ const sendTokenResponse = (user, statusCode, res) => {
 // ─────────────────────────────────────────────
 const register = async (req, res, next) => {
     try {
-        const { fullName, accountEmail, securedPassword, assignedRole } = req.body;
+        const { fullName, accountEmail, email, securedPassword, password, assignedRole } = req.body;
+        const normalizedEmail = (accountEmail || email || '').trim().toLowerCase();
+        const newPassword = securedPassword || password;
 
         // Validate required fields
-        if (!fullName || !accountEmail || !securedPassword) {
+        if (!fullName || !normalizedEmail || !newPassword) {
             return res.status(400).json({ success: false, message: 'Please provide full name, email, and password.' });
         }
 
         // Check for existing user
-        const existingUser = await User.findOne({ accountEmail });
+        const existingUser = await User.findOne({ accountEmail: normalizedEmail });
         if (existingUser) {
             return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
         }
@@ -62,8 +64,8 @@ const register = async (req, res, next) => {
                 // Create new user - password is hashed via pre-save hook in User model
         const user = await User.create({
             fullName,
-            accountEmail,
-            securedPassword,
+            accountEmail: normalizedEmail,
+            securedPassword: newPassword,
             assignedRole: assignedRole || 'Student',
             lastLoginTimestamp: Date.now()
         });
@@ -81,15 +83,16 @@ const register = async (req, res, next) => {
 // ─────────────────────────────────────────────
 const login = async (req, res, next) => {
     try {
-        let { accountEmail, securedPassword } = req.body;
-        accountEmail = accountEmail?.trim().toLowerCase();
+        let { accountEmail, email, securedPassword, password } = req.body;
+        const normalizedEmail = (accountEmail || email || '').trim().toLowerCase();
+        const loginPassword = securedPassword || password;
 
-        if (!accountEmail || !securedPassword) {
+        if (!normalizedEmail || !loginPassword) {
             return res.status(400).json({ success: false, message: 'Please provide both email and password.' });
         }
 
         // Find user and include password field (excluded by default via 'select: false')
-        const user = await User.findOne({ accountEmail }).select('+securedPassword');
+        const user = await User.findOne({ accountEmail: normalizedEmail }).select('+securedPassword');
 
         if (!user) {
             return res.status(401).json({ success: false, message: 'Invalid credentials.' });
@@ -100,7 +103,7 @@ const login = async (req, res, next) => {
         }
 
         // Validate password using bcrypt instance method
-        const isMatch = await user.comparePassword(securedPassword);
+        const isMatch = await user.comparePassword(loginPassword);
         if (!isMatch) {
             return res.status(401).json({ success: false, message: 'Invalid credentials.' });
         }
@@ -154,13 +157,15 @@ const getMe = async (req, res, next) => {
 const socialLogin = async (req, res, next) => {
     try {
         const { 
-            provider, email, name, socialId, role,
+            provider, email, accountEmail, name, socialId, role,
             firstName: reqFirstName, lastName: reqLastName, username: reqUsername,
             country, city, address, educationLevel, institution, fieldOfStudy,
             learningInterests, preferredLanguage, professionalTitle, biography, skills
         } = req.body;
 
-        if (!provider || !email) {
+        const normalizedEmail = (accountEmail || email || '').trim().toLowerCase();
+
+        if (!provider || !normalizedEmail) {
             return res.status(400).json({ success: false, message: 'Provider and email are required for social login.' });
         }
 
@@ -171,8 +176,8 @@ const socialLogin = async (req, res, next) => {
         // Check if user exists by email or socialId
         let user = await User.findOne({ 
             $or: [
-                { accountEmail: email.toLowerCase() },
-                { socialId: socialId || `sim_${validProvider}_${email}` }
+                { accountEmail: normalizedEmail },
+                { socialId: socialId || `sim_${validProvider}_${normalizedEmail}` }
             ]
         });
 
@@ -188,7 +193,7 @@ const socialLogin = async (req, res, next) => {
         } else {
             // Create user for social login
             const tempPassword = `Soc@${crypto.randomBytes(8).toString('hex')}!`;
-            const nameParts = (name || email.split('@')[0]).trim().split(' ');
+            const nameParts = (name || normalizedEmail.split('@')[0]).trim().split(' ');
             const firstName = reqFirstName || nameParts[0] || 'Social';
             const lastName = reqLastName || nameParts.slice(1).join(' ') || 'User';
 

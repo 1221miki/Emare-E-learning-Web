@@ -265,10 +265,18 @@ const getAnalytics = async (req, res, next) => {
             gradedAssignments,
             averageAssignmentScoreAgg,
             recentActiveStudents,
+            activeInstructors,
             studentsAtRiskAgg,
             topPerformersAgg,
             recentEnrollments,
-            recentAssessments
+            recentAssessments,
+            enrollmentTrend,
+            dailyActivity,
+            monthlyReports,
+            yearlyReports,
+            coursePopularity,
+            instructorCourseCounts,
+            gradeDistribution
         ] = await Promise.all([
             User.countDocuments(),
             User.countDocuments({ assignedRole: 'Student' }),
@@ -307,6 +315,7 @@ const getAnalytics = async (req, res, next) => {
                 { $group: { _id: null, averageGrade: { $avg: '$grade' } } }
             ]),
             User.countDocuments({ assignedRole: 'Student', lastLoginTimestamp: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } }),
+            User.countDocuments({ assignedRole: 'Instructor', isActive: true }),
             Enrollment.aggregate([
                 { $group: { _id: '$studentRef', avgCompletion: { $avg: '$completionPercentage' } } },
                 { $match: { avgCompletion: { $lt: 60 } } },
@@ -331,7 +340,45 @@ const getAnalytics = async (req, res, next) => {
                 .limit(5)
                 .populate('studentRef', 'fullName')
                 .populate('assessmentRef', 'quizTitle title')
-                .lean()
+                .lean(),
+            Enrollment.aggregate([
+                { $match: { enrollmentTimestamp: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } } },
+                { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$enrollmentTimestamp' } }, count: { $sum: 1 } } },
+                { $sort: { _id: 1 } }
+            ]),
+            Enrollment.aggregate([
+                { $match: { enrollmentTimestamp: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } },
+                { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$enrollmentTimestamp' } }, enrollments: { $sum: 1 } } },
+                { $sort: { _id: 1 } }
+            ]),
+            Enrollment.aggregate([
+                { $match: { enrollmentTimestamp: { $gte: new Date(new Date().getFullYear(), 0, 1) } } },
+                { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$enrollmentTimestamp' } }, count: { $sum: 1 } } },
+                { $sort: { _id: 1 } }
+            ]),
+            Enrollment.aggregate([
+                { $group: { _id: { $dateToString: { format: '%Y', date: '$enrollmentTimestamp' } }, count: { $sum: 1 } } },
+                { $sort: { _id: 1 } }
+            ]),
+            Enrollment.aggregate([
+                { $lookup: { from: 'courses', localField: 'courseRef', foreignField: '_id', as: 'course' } },
+                { $unwind: '$course' },
+                { $group: { _id: '$course._id', title: { $first: '$course.courseTitle' }, count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 5 }
+            ]),
+            Course.aggregate([
+                { $match: { publicationState: { $in: ['Published', 'Active'] } } },
+                { $group: { _id: '$creatorRef', courseCount: { $sum: 1 } } },
+                { $sort: { courseCount: -1 } },
+                { $limit: 5 },
+                { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'instructor' } },
+                { $unwind: '$instructor' },
+                { $project: { _id: 0, instructorName: '$instructor.fullName', courseCount: 1 } }
+            ]),
+            GradeBook.aggregate([
+                { $bucket: { groupBy: '$numericalScoreEarned', boundaries: [0, 60, 70, 80, 90, 101], default: 'Other', output: { count: { $sum: 1 } } } }
+            ])
         ]);
 
         const completionRate = totalEnrollments > 0
@@ -347,6 +394,13 @@ const getAnalytics = async (req, res, next) => {
             ? Math.round((recentActiveStudents / totalStudents) * 100)
             : 0;
 
+        const enrollmentTrendData = enrollmentTrend.map((row) => ({ date: row._id, enrollments: row.count }));
+        const dailyActivityData = dailyActivity.map((row) => ({ date: row._id, enrollments: row.enrollments }));
+        const monthlyReportsData = monthlyReports.map((row) => ({ month: row._id, enrollments: row.count }));
+        const yearlyReportsData = yearlyReports.map((row) => ({ year: row._id, enrollments: row.count }));
+        const coursePopularityData = coursePopularity.map((row) => ({ courseTitle: row.title, enrollments: row.count }));
+        const gradeDistributionData = gradeDistribution.map((row) => ({ name: row._id === 'Other' ? '90-100' : `${row._id}`, value: row.count }));
+
         res.status(200).json({
             success: true,
             data: {
@@ -354,6 +408,7 @@ const getAnalytics = async (req, res, next) => {
                 totalStudents,
                 totalInstructors,
                 totalAdmins,
+                activeInstructors,
                 totalCourses,
                 activeCourses,
                 pendingCourses,
@@ -380,6 +435,13 @@ const getAnalytics = async (req, res, next) => {
                 attendanceRate,
                 studentsAtRisk,
                 topPerformers: topPerformersAgg,
+                instructorCourseCounts,
+                enrollmentTrend: enrollmentTrendData,
+                dailyActivity: dailyActivityData,
+                monthlyReports: monthlyReportsData,
+                yearlyReports: yearlyReportsData,
+                coursePopularity: coursePopularityData,
+                gradeDistribution: gradeDistributionData,
                 learningHistory: {
                     recentEnrollments: recentEnrollments.map(item => ({
                         studentName: item.studentRef?.fullName || 'Unknown',

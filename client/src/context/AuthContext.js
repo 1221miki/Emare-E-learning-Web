@@ -32,7 +32,8 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = useCallback(async (accountEmail, securedPassword) => {
-        const { data } = await authService.login({ accountEmail, securedPassword });
+        const normalizedEmail = accountEmail?.trim().toLowerCase();
+        const { data } = await authService.login({ accountEmail: normalizedEmail, securedPassword });
         localStorage.setItem('elms_token', data.token);
         localStorage.setItem('elms_user', JSON.stringify(data.data));
         setUser(data.data);

@@ -1,4 +1,5 @@
 const Notification = require('../models/Notification');
+const User = require('../models/User');
 
 // @desc    Get notifications for the logged-in user
 // @route   GET /api/notifications
@@ -51,6 +52,71 @@ exports.deleteNotification = async (req, res) => {
     try {
         await Notification.findOneAndDelete({ _id: req.params.id, recipientRef: req.user.id });
         res.status(200).json({ success: true, message: 'Notification deleted' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+exports.sendAdminNotification = async (req, res) => {
+    try {
+        const { audience, title, message, type, link, scheduleAt, reminder } = req.body;
+
+        if (!title || !message) {
+            return res.status(400).json({ success: false, message: 'Title and message are required.' });
+        }
+
+        const query = {};
+        if (audience === 'students') query.assignedRole = 'Student';
+        else if (audience === 'instructors') query.assignedRole = 'Instructor';
+        else if (audience === 'all') {
+            query.assignedRole = { $in: ['Student', 'Instructor', 'Admin'] };
+        }
+
+        const recipients = await User.find(query).select('_id').lean();
+        const recipientIds = recipients.map((user) => user._id);
+
+        if (!recipientIds.length) {
+            return res.status(404).json({ success: false, message: 'No matching recipients found.' });
+        }
+
+        const notificationPayloads = recipientIds.map((recipientRef) => ({
+            recipientRef,
+            type: type || 'announcement',
+            title,
+            message,
+            link: link || '',
+            metadata: { source: 'admin', reminder: Boolean(reminder), scheduled: Boolean(scheduleAt) }
+        }));
+
+        if (scheduleAt) {
+            const scheduledAt = new Date(scheduleAt);
+            if (Number.isNaN(scheduledAt.getTime())) {
+                return res.status(400).json({ success: false, message: 'Invalid schedule date.' });
+            }
+            const scheduledNotifications = notificationPayloads.map((payload) => ({
+                ...payload,
+                metadata: { ...payload.metadata, scheduledAt: scheduledAt.toISOString() }
+            }));
+            await Notification.insertMany(scheduledNotifications);
+            return res.status(201).json({ success: true, message: 'Announcement scheduled successfully.', data: { scheduledAt, recipientCount: recipientIds.length } });
+        }
+
+        await Notification.insertMany(notificationPayloads);
+        res.status(201).json({ success: true, message: 'Notification sent successfully.', data: { recipientCount: recipientIds.length } });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+exports.getAdminNotificationSummary = async (req, res) => {
+    try {
+        const [total, unread, latest] = await Promise.all([
+            Notification.countDocuments(),
+            Notification.countDocuments({ isRead: false }),
+            Notification.find().sort('-createdAt').limit(5).lean()
+        ]);
+
+        res.status(200).json({ success: true, data: { total, unread, recent: latest } });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }

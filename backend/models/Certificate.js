@@ -25,12 +25,40 @@ const CertificateSchema = new mongoose.Schema({
         type: String,
         enum: ['Distinction', 'Merit', 'Pass'],
         default: 'Pass'
+    },
+    status: {
+        type: String,
+        enum: ['Issued', 'Reissued', 'Revoked'],
+        default: 'Issued'
+    },
+    templateId: {
+        type: String,
+        default: 'standard'
+    },
+    issuedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    revokedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    revokedAt: {
+        type: Date
+    },
+    revocationReason: {
+        type: String
+    },
+    reissuedFrom: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Certificate'
+    },
+    downloadCount: {
+        type: Number,
+        default: 0
     }
 }, {
     timestamps: true
 });
-
-// A student gets only one certificate per course
-CertificateSchema.index({ studentRef: 1, courseRef: 1 }, { unique: true });
 
 module.exports = mongoose.model('Certificate', CertificateSchema);
