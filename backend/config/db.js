@@ -40,8 +40,8 @@ async function seedDefaultData() {
     try {
         const User = require('../models/User');
 
-        // Create default admin user
-        const existingAdmin = await User.findOne({ accountEmail: 'admin@emare.com' });
+        // Create or enforce default admin user credentials
+        const existingAdmin = await User.findOne({ accountEmail: 'admin@emare.com' }).select('+securedPassword');
         if (!existingAdmin) {
             await User.create({
                 fullName: 'Admin User',
@@ -50,10 +50,14 @@ async function seedDefaultData() {
                 assignedRole: 'Admin',
             });
             console.log('👤 Default admin created: admin@emare.com / admin12345');
+        } else {
+            existingAdmin.securedPassword = 'admin12345';
+            await existingAdmin.save();
+            console.log('🔒 Default admin password enforced: admin@emare.com / admin12345');
         }
 
-        // Create default student user
-        const existingStudent = await User.findOne({ accountEmail: 'student@emare.com' });
+        // Create or enforce default student user credentials
+        const existingStudent = await User.findOne({ accountEmail: 'student@emare.com' }).select('+securedPassword');
         if (!existingStudent) {
             await User.create({
                 fullName: 'Demo Student',
@@ -62,10 +66,14 @@ async function seedDefaultData() {
                 assignedRole: 'Student',
             });
             console.log('👤 Default student created: student@emare.com / student12345');
+        } else {
+            existingStudent.securedPassword = 'student12345';
+            await existingStudent.save();
+            console.log('🔒 Default student password enforced: student@emare.com / student12345');
         }
 
-        // Create default instructor user
-        const existingInstructor = await User.findOne({ accountEmail: 'instructor@emare.com' });
+        // Create or enforce default instructor user credentials
+        const existingInstructor = await User.findOne({ accountEmail: 'instructor@emare.com' }).select('+securedPassword');
         if (!existingInstructor) {
             await User.create({
                 fullName: 'Demo Instructor',
@@ -74,6 +82,10 @@ async function seedDefaultData() {
                 assignedRole: 'Instructor',
             });
             console.log('👤 Default instructor created: instructor@emare.com / instructor12345');
+        } else {
+            existingInstructor.securedPassword = 'instructor12345';
+            await existingInstructor.save();
+            console.log('🔒 Default instructor password enforced: instructor@emare.com / instructor12345');
         }
 
         console.log('✅ Default data seeded successfully.');
