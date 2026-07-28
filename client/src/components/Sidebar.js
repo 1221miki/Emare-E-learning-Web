@@ -92,8 +92,10 @@ const styles = {
         flexDirection: 'column',
         padding: '24px 16px',
         position: 'fixed',
+        left: 0,
+        top: 0,
         height: '100vh',
-        zIndex: 50,
+        zIndex: 10,
         transition: 'background 0.3s, border-color 0.3s'
     },
     headerBox: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' },
