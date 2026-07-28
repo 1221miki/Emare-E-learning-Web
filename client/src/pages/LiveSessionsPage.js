@@ -18,6 +18,7 @@ export default function LiveSessionsPage() {
         description: '',
         startTime: '',
         durationMinutes: 60,
+        platform: 'Zoom',
         meetingLink: '',
         meetingPassword: ''
     });
@@ -78,12 +79,25 @@ export default function LiveSessionsPage() {
         }
     };
 
+    const getDefaultMeetingLink = (platform, title) => {
+        const slug = (title || 'emare-live-session').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 24) || 'emare-live-session';
+        if (platform === 'Google Meet') return `https://meet.google.com/${slug.replace(/-/g, '')}`;
+        if (platform === 'Jitsi Meet') return `https://meet.jit.si/${slug}`;
+        if (platform === 'Custom') return `https://meet.emarehub.com/${slug}`;
+        return `https://zoom.us/j/1234567890?pwd=${slug.toUpperCase().replace(/-/g, '').slice(0, 8)}`;
+    };
+
     const handleCreate = async (e) => {
         e.preventDefault();
         try {
-            await liveSessionService.createSession({ ...formData, courseRef: selectedCourse });
+            const payload = {
+                ...formData,
+                courseRef: selectedCourse,
+                meetingLink: formData.meetingLink || getDefaultMeetingLink(formData.platform, formData.title)
+            };
+            await liveSessionService.createSession(payload);
             setShowForm(false);
-            setFormData({ title: '', description: '', startTime: '', durationMinutes: 60, meetingLink: '', meetingPassword: '' });
+            setFormData({ title: '', description: '', startTime: '', durationMinutes: 60, platform: 'Zoom', meetingLink: '', meetingPassword: '' });
             handleSelectCourse(selectedCourse); // refresh
         } catch (err) {
             alert(err.response?.data?.message || 'Failed to schedule session');
@@ -97,6 +111,19 @@ export default function LiveSessionsPage() {
             setSessions(prev => prev.filter(s => s._id !== id));
         } catch (err) {
             alert('Failed to delete session');
+        }
+    };
+
+    const handleMarkAttendance = async (id) => {
+        try {
+            const res = await liveSessionService.markAttendance(id);
+            const updatedSession = res.data?.data;
+            if (updatedSession) {
+                setSessions(prev => prev.map(s => s._id === id ? { ...s, attendance: updatedSession.attendance || s.attendance } : s));
+            }
+            alert('Attendance recorded successfully.');
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to record attendance');
         }
     };
 
@@ -140,8 +167,51 @@ export default function LiveSessionsPage() {
                             <input type="number" required value={formData.durationMinutes} onChange={e => setFormData({...formData, durationMinutes: Number(e.target.value)})} style={{ width: '100%', padding: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', outline: 'none' }} />
                         </div>
                         <div>
-                            <label style={{ display: 'block', color: colors.text, marginBottom: '8px', fontWeight: '600' }}>Zoom/Meet Link</label>
-                            <input type="url" required value={formData.meetingLink} onChange={e => setFormData({...formData, meetingLink: e.target.value})} style={{ width: '100%', padding: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', outline: 'none' }} />
+                            <label style={{ display: 'block', color: colors.text, marginBottom: '8px', fontWeight: '600' }}>Platform</label>
+                            <select value={formData.platform} onChange={e => setFormData({...formData, platform: e.target.value})} style={{ width: '100%', padding: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', outline: 'none' }}>
+                                <option value="Zoom">Zoom</option>
+                                <option value="Google Meet">Google Meet</option>
+                                <option value="Jitsi Meet">Jitsi Meet</option>
+                                <option value="Custom">Custom</option>
+                            </select>
+                        </div>
+                        {formData.platform === 'Google Meet' && (
+                            <div style={{ gridColumn: '1 / -1' }}>
+                                <label style={{ display: 'block', color: colors.text, marginBottom: '8px', fontWeight: '600' }}>Invitees (comma separated emails)</label>
+                                <input type="text" value={formData.attendees || ''} onChange={e => setFormData({...formData, attendees: e.target.value})} placeholder="e.g. student1@example.com,student2@example.com" style={{ width: '100%', padding: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', outline: 'none' }} />
+                                <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+                                    <button type="button" onClick={async () => {
+                                        if (!formData.title || !formData.startTime) return alert('Please fill title and start time first');
+                                        try {
+                                            const payload = {
+                                                title: formData.title,
+                                                description: formData.description,
+                                                startTime: formData.startTime,
+                                                durationMinutes: formData.durationMinutes,
+                                                attendees: (formData.attendees || '').split(',').map(s => s.trim()).filter(Boolean)
+                                            };
+                                            const res = await liveSessionService.createGoogleMeet(payload);
+                                            if (res.data?.data?.meetLink) {
+                                                setFormData(prev => ({ ...prev, meetingLink: res.data.data.meetLink }));
+                                                alert('Google Meet link created and set to Meeting Link field');
+                                            } else {
+                                                alert(res.data?.message || 'Google Meet created but no link returned');
+                                            }
+                                        } catch (err) {
+                                            if (err.response?.status === 501) {
+                                                alert('Google Meet integration is not configured on the server. Falling back to auto-generated link.');
+                                                setFormData(prev => ({ ...prev, meetingLink: getDefaultMeetingLink('Google Meet', prev.title) }));
+                                            } else {
+                                                alert(err.response?.data?.message || 'Failed to create Google Meet link');
+                                            }
+                                        }
+                                    }} style={{ padding: '10px 14px', background: colors.success, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Create Google Meet Link</button>
+                                </div>
+                            </div>
+                        )}
+                        <div>
+                            <label style={{ display: 'block', color: colors.text, marginBottom: '8px', fontWeight: '600' }}>Meeting Link</label>
+                            <input type="url" value={formData.meetingLink} onChange={e => setFormData({...formData, meetingLink: e.target.value})} placeholder="Leave blank to auto-generate a starter link" style={{ width: '100%', padding: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', outline: 'none' }} />
                         </div>
                         <div>
                             <label style={{ display: 'block', color: colors.text, marginBottom: '8px', fontWeight: '600' }}>Meeting Password (Optional)</label>
@@ -180,6 +250,12 @@ export default function LiveSessionsPage() {
                                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', color: colors.textMuted, fontSize: '14px' }}>
                                             <span>👨‍🏫</span> Instructor: {s.instructorRef?.fullName || 'TBD'}
                                         </div>
+                                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', color: colors.textMuted, fontSize: '14px' }}>
+                                            <span>📡</span> Platform: <span style={{ color: colors.text, fontWeight: '700' }}>{s.platform || 'Zoom'}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', color: colors.textMuted, fontSize: '14px' }}>
+                                            <span>✅</span> Attendance: <span style={{ color: colors.text, fontWeight: '700' }}>{s.attendance?.length || 0}</span>
+                                        </div>
                                         {s.meetingPassword && (
                                             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', color: colors.textMuted, fontSize: '14px' }}>
                                                 <span>🔒</span> Pwd: <span style={{ fontFamily: 'monospace', color: colors.text, background: colors.bgInput, padding: '2px 6px', borderRadius: '4px' }}>{s.meetingPassword}</span>
@@ -187,10 +263,15 @@ export default function LiveSessionsPage() {
                                         )}
                                     </div>
 
-                                    <div style={{ display: 'flex', gap: '12px' }}>
-                                        <a href={s.meetingLink} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textDecoration: 'none', background: colors.primary, color: '#fff', padding: '12px', borderRadius: '8px', textAlign: 'center', fontWeight: '700', fontSize: '14px' }}>
-                                            Join Meeting
+                                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                        <a href={s.meetingLink || getDefaultMeetingLink(s.platform || 'Zoom', s.title)} target="_blank" rel="noopener noreferrer" style={{ flex: 1, minWidth: '140px', textDecoration: 'none', background: colors.primary, color: '#fff', padding: '12px', borderRadius: '8px', textAlign: 'center', fontWeight: '700', fontSize: '14px' }}>
+                                            Open Meeting
                                         </a>
+                                        {user?.assignedRole === 'Student' && (
+                                            <button onClick={() => handleMarkAttendance(s._id)} style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a', border: 'none', padding: '0 14px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' }}>
+                                                Mark Attendance
+                                            </button>
+                                        )}
                                         {(user?.assignedRole === 'Instructor' || user?.assignedRole === 'Admin') && (
                                             <button onClick={() => handleDelete(s._id)} style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: 'none', padding: '0 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' }}>
                                                 Delete

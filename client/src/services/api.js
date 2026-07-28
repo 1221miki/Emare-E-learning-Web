@@ -112,6 +112,11 @@ export const analyticsService = {
     getOverview: () => API.get('/analytics/overview')
 };
 
+// ── Reports & Exports API Calls (Admin) ───────────────────
+export const reportService = {
+    export: (params) => API.get('/reports/export', { params, responseType: 'blob' })
+};
+
 // ── Wishlist API Calls ─────────────────────────────────────
 export const wishlistService = {
     getMyWishlist: () => API.get('/wishlist'),
@@ -129,6 +134,8 @@ export const categoryService = {
 // ── Notification API Calls ─────────────────────────────────
 export const notificationService = {
     getAll: () => API.get('/notifications'),
+    getAdminSummary: () => API.get('/notifications/admin/summary'),
+    sendAdmin: (data) => API.post('/notifications/admin/send', data),
     markAsRead: (id) => API.patch(`/notifications/${id}/read`),
     markAllAsRead: () => API.patch('/notifications/read-all'),
     delete: (id) => API.delete(`/notifications/${id}`)
@@ -146,7 +153,12 @@ export const reviewService = {
 export const certificateService = {
     generate: (courseId) => API.post('/certificates/generate', { courseId }),
     getMine: () => API.get('/certificates/mine'),
-    verify: (certNumber) => API.get(`/certificates/verify/${certNumber}`)
+    verify: (certNumber) => API.get(`/certificates/verify/${certNumber}`),
+    getAllAdmin: () => API.get('/certificates/admin/all'),
+    generateForAdmin: (data) => API.post('/certificates/admin/generate', data),
+    reissue: (id, data) => API.post(`/certificates/${id}/reissue`, data),
+    revoke: (id, reason) => API.patch(`/certificates/${id}/revoke`, { reason }),
+    download: (id) => API.get(`/certificates/${id}/download`, { responseType: 'blob' })
 };
 
 // ── Discussion API Calls ───────────────────────────────────
@@ -184,6 +196,8 @@ export const messageService = {
 export const liveSessionService = {
     getCourseSessions: (courseId) => API.get(`/live-sessions/course/${courseId}`),
     createSession: (data) => API.post('/live-sessions', data),
+    markAttendance: (id) => API.put(`/live-sessions/${id}/attendance`),
+    createGoogleMeet: (data) => API.post('/live-sessions/google/create', data),
     deleteSession: (id) => API.delete(`/live-sessions/${id}`)
 };
 
@@ -210,7 +224,31 @@ export const systemService = {
     getSettings: () => API.get('/system/settings'),
     updateSettings: (data) => API.put('/system/settings', data),
     createBackup: () => API.post('/system/backup'),
+    restoreDatabase: (data) => API.post('/system/database/restore', data),
+    optimizeDatabase: () => API.post('/system/database/optimize'),
+    getDatabaseCollections: () => API.get('/system/database/collections'),
+    getDatabaseStorage: () => API.get('/system/database/storage'),
     clearCache: () => API.post('/system/cache/clear')
+};
+
+// ── Content Management API Calls (Admin) ──────────────────
+export const contentService = {
+    getPage: (page) => API.get(`/content/${page}`),
+    savePage: (page, data) => API.put(`/content/${page}`, data),
+    getAll: () => API.get('/content')
+};
+
+// ── Audit Logs API Calls (Admin) ──────────────────────────
+export const auditService = {
+    getLogs: (params) => API.get('/audit-logs', { params })
+};
+
+// ── Calendar API Calls (Admin) ────────────────────────────
+export const calendarService = {
+    getEvents: (params) => API.get('/calendar', { params }),
+    createEvent: (data) => API.post('/calendar', data),
+    updateEvent: (id, data) => API.put(`/calendar/${id}`, data),
+    deleteEvent: (id) => API.delete(`/calendar/${id}`)
 };
 
 // ── Newsletter API (Visitor) ────────────────────────────────
