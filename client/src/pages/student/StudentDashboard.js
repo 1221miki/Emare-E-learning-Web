@@ -22,6 +22,20 @@ import { useTheme } from '../../context/ThemeContext';
 import AiAssistant from '../../components/AiAssistant';
 import FeaturedCarousel from '../../components/dashboard/FeaturedCarousel';
 import MyCoursesHub from '../../components/dashboard/MyCoursesHub';
+import CourseDiscoveryChecklist from '../../components/dashboard/CourseDiscoveryChecklist';
+import PromptLibrary from '../../components/PromptLibrary';
+import AccountProfileChecklist from '../../components/dashboard/AccountProfileChecklist';
+import ProgressOverview from '../../components/dashboard/ProgressOverview';
+import LearningHistory from '../../components/dashboard/LearningHistory';
+import LearningGoals from '../../components/dashboard/LearningGoals';
+import AchievementsPanel from '../../components/dashboard/AchievementsPanel';
+import Inbox from '../../components/comm/Inbox';
+import ConversationView from '../../components/comm/ConversationView';
+import NotificationsPanel from '../../components/comm/NotificationsPanel';
+import Checkout from '../../components/payments/Checkout';
+import PaymentHistory from '../../components/payments/PaymentHistory';
+import CertificateList from '../../components/certificates/CertificateList';
+import MyReviews from '../../components/reviews/MyReviews';
 
 export default function StudentDashboard() {
     const { user, logout } = useAuth();
@@ -45,6 +59,8 @@ export default function StudentDashboard() {
     const [notifications, setNotifications] = useState([]);
     const [liveSessions, setLiveSessions] = useState([]);
     const [assignmentsList, setAssignmentsList] = useState([]);
+    const [projectsList, setProjectsList] = useState([]);
+    const [recentPurchases, setRecentPurchases] = useState([]);
     const [recentlyViewed, setRecentlyViewed] = useState([]);
     const [studyTargetHours, setStudyTargetHours] = useState(() => {
         return Number(localStorage.getItem('student_study_target')) || 10;
@@ -89,6 +105,7 @@ export default function StudentDashboard() {
     const [messageInput, setMessageInput] = useState('');
     const [messageSending, setMessageSending] = useState(false);
     const messagesEndRef = useRef(null);
+    const [selectedConversation, setSelectedConversation] = useState(null);
 
     // Full Profile & Personal Information States
     const [firstName, setFirstName] = useState(user?.firstName || user?.fullName?.split(' ')[0] || '');
@@ -130,6 +147,7 @@ export default function StudentDashboard() {
     const [pinnedCourses, setPinnedCourses] = useState(() => {
         return JSON.parse(localStorage.getItem('student_pinned_courses') || '[]');
     });
+    const [assistantPrompt, setAssistantPrompt] = useState({ prompt: '', id: null });
 
     const toggleWidgetVisibility = (widgetKey) => {
         const updated = { ...hiddenWidgets, [widgetKey]: !hiddenWidgets[widgetKey] };
@@ -143,6 +161,14 @@ export default function StudentDashboard() {
             : [...pinnedCourses, courseId];
         setPinnedCourses(updated);
         localStorage.setItem('student_pinned_courses', JSON.stringify(updated));
+    };
+
+    const triggerAssistantPrompt = (prompt) => {
+        setAssistantPrompt({ prompt, id: Date.now() });
+        setActiveTab('overview');
+        window.setTimeout(() => {
+            document.querySelector('#ai-assistant-root')?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }, 150);
     };
 
     // Handlers for Integrated Live Actions
@@ -224,6 +250,31 @@ export default function StudentDashboard() {
                     const payRes = await enrollmentService.getMyStatus();
                     setPaymentStatusList(payRes.data.data || []);
                 }
+
+                // Fetch assignments for student
+                try {
+                    const aRes = await assignmentService.getMyAssignments();
+                    setAssignmentsList(aRes.data.data || []);
+                } catch (err) {
+                    console.error('Failed fetching assignments', err);
+                }
+
+                try {
+                    const sRes = await assignmentService.getMySubmissions();
+                    setMySubmissions(sRes.data.data || []);
+                } catch (err) {
+                    console.error('Failed fetching my submissions', err);
+                }
+
+                try {
+                    const pRes = await projectService.getMyProjects();
+                    setProjectsList(pRes.data.data || []);
+                } catch (err) { console.error('Failed fetching projects', err); }
+
+                try {
+                    const payRes = await paymentService.history();
+                    setRecentPurchases(payRes.data.data || []);
+                } catch (err) { console.error('Failed fetching payments', err); }
 
                 // Fetch all courses for recommendations
                 const coursesRes = await courseService.getAll();
@@ -308,6 +359,13 @@ export default function StudentDashboard() {
             fetchDashboardData();
         }
     }, [user]);
+
+    const assignmentCount = assignmentsList.length;
+    const quizCount = quizzesList.length;
+    const liveSessionCount = liveSessions?.length || 0;
+    const unreadMessagesCount = conversations.length;
+    const notificationBadgeCount = notifications.filter(n => !n?.isRead).length;
+    const activeEnrollmentCount = enrollments.filter(e => (e.completionPercentage || 0) < 100).length;
 
     const handleLogout = async () => {
         await logout();
@@ -405,6 +463,23 @@ export default function StudentDashboard() {
     const currentLevel = user?.level || 5;
     const nextLevelXP = 2000;
     const xpProgress = Math.min((xpPoints / nextLevelXP) * 100, 100);
+
+    const currentCourseContext = enrollments[0]?.courseRef?.courseTitle || user?.fullName?.split(' ')[0] || 'General Study';
+    const activeCourses = enrollments.filter(e => (e.completionPercentage || 0) < 100);
+    const primaryActiveCourse = activeCourses.length > 0 ? activeCourses[0] : enrollments[0] || {};
+    const currentCourseTitle = primaryActiveCourse?.courseRef?.courseTitle || currentCourseContext;
+    const currentLessonTitle = primaryActiveCourse?.courseRef?.currentLessonTitle || assignmentsList[0]?.title || quizzesList[0]?.title || 'Your latest lesson';
+    const currentProgress = Math.round(primaryActiveCourse?.completionPercentage || 0);
+    const quizAverage = grades.length ? Math.round(grades.reduce((sum, grade) => sum + (grade.numericalScoreEarned || 0), 0) / grades.length) : 0;
+    const upcomingAssignmentsCount = assignmentsList.filter(a => new Date(a.dueDate || Date.now()) >= new Date()).length;
+    const courseAwareness = {
+        courseName: currentCourseTitle,
+        currentLessonTitle,
+        courseProgress: currentProgress,
+        quizAverage,
+        upcomingAssignmentsCount,
+        summary: `You are currently ${currentProgress}% through ${currentCourseTitle}.`
+    };
 
     const badges = user?.earnedBadges?.length ? user.earnedBadges : [
         { name: 'Fast Learner', icon: '🚀', color: '#3b82f6' },
@@ -641,6 +716,48 @@ export default function StudentDashboard() {
                                     </button>
                                 );
                             })}
+                        </div>
+                    </div>
+
+                    {/* AI Study Assistant */}
+                    <div style={{ ...styles.panelCard, margin: 0, padding: '24px', borderLeft: `4px solid ${colors.accent}` }}>
+                        <div style={styles.aiWidgetHeader}>
+                            <div>
+                                <h3 style={{ ...styles.panelCardTitle, marginBottom: '8px', fontSize: '17px' }}>🧠 AI Study Assistant</h3>
+                                <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Your AI coach knows your current course, progress, upcoming work, and quiz readiness.</p>
+                            </div>
+                            <button onClick={() => triggerAssistantPrompt('What should I work on next in this course?')} style={styles.aiActionBtn}>
+                                Open Chat
+                            </button>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginTop: '18px' }}>
+                            <div style={{ ...styles.analyticsCard, borderRadius: '16px', padding: '16px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
+                                <span style={{ display: 'block', fontSize: '12px', color: colors.textMuted, marginBottom: '10px' }}>Current Course</span>
+                                <strong style={{ fontSize: '15px', color: colors.text, fontWeight: '800' }}>{currentCourseTitle}</strong>
+                                <p style={{ color: colors.textMuted, fontSize: '12px', margin: '10px 0 0' }}>Lesson: {currentLessonTitle}</p>
+                            </div>
+                            <div style={{ ...styles.analyticsCard, borderRadius: '16px', padding: '16px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
+                                <span style={{ display: 'block', fontSize: '12px', color: colors.textMuted, marginBottom: '10px' }}>Progress</span>
+                                <strong style={{ fontSize: '22px', color: colors.primary, fontWeight: '800' }}>{currentProgress}%</strong>
+                                <p style={{ color: colors.textMuted, fontSize: '12px', margin: '10px 0 0' }}>Quiz Avg: {quizAverage}% · Assignments: {upcomingAssignmentsCount}</p>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '18px' }}>
+                            {[
+                                `Continue ${currentCourseTitle} (${currentProgress}% complete)`,
+                                upcomingAssignmentsCount > 0 ? 'Assignment due tomorrow' : 'Discover a practice exercise',
+                                'Practice React Hooks',
+                                `Summarize ${currentLessonTitle}`,
+                                'Debug my code'
+                            ].map((prompt) => (
+                                <button key={prompt} type="button" style={styles.aiPromptTag} onClick={() => triggerAssistantPrompt(prompt)}>
+                                    {prompt}
+                                </button>
+                            ))}
+                        </div>
+                        <div style={{ color: colors.textMuted, fontSize: '12px', marginTop: '12px' }}>
+                            {upcomingAssignmentsCount > 0 ? `You have ${upcomingAssignmentsCount} upcoming assignment${upcomingAssignmentsCount > 1 ? 's' : ''}. Ask the AI for a quick study plan.` : 'No assignments pending; the AI can still help you practice or summarize lessons.'}
                         </div>
                     </div>
 
@@ -1337,9 +1454,41 @@ export default function StudentDashboard() {
                 )}
 
                 {assignmentsList.length === 0 ? (
-                    <div style={styles.emptyContent}>
-                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
-                        <p style={styles.emptyText}>No assignments posted for your enrolled courses yet.</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '24px', alignItems: 'start' }}>
+                        <div style={{ ...styles.panelCard, padding: '32px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+                            <h3 style={{ color: colors.text, fontSize: '20px', fontWeight: '800', marginBottom: '12px' }}>No assignments yet</h3>
+                            <p style={{ color: colors.textMuted, fontSize: '13px', marginBottom: '24px', lineHeight: '1.6' }}>
+                                Your enrolled courses do not currently have assignment tasks posted. Keep learning, and the system will notify you when new work is available.
+                            </p>
+                            <button type="button" onClick={() => triggerAssistantPrompt('Generate a practice assignment')} style={styles.resumeBtn}>
+                                Generate a practice assignment
+                            </button>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <div style={{ ...styles.panelCard, padding: '20px' }}>
+                                <h4 style={{ ...styles.panelCardTitle, fontSize: '15px', marginBottom: '10px' }}>Recommended Practice</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {['Build a responsive landing page', 'Create a JavaScript quiz app', 'Write a component library', 'Review a Git workflow'].map((item) => (
+                                        <div key={item} style={{ padding: '12px 14px', background: colors.bgInput, borderRadius: '12px', border: `1px solid ${colors.border}`, color: colors.text }}>
+                                            {item}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div style={{ ...styles.panelCard, padding: '20px', background: `${colors.primary}08`, border: `1px solid ${colors.primary}20` }}>
+                                <h4 style={{ ...styles.panelCardTitle, fontSize: '15px', marginBottom: '10px' }}>Recent Announcements</h4>
+                                {(notifications.slice(0, 2).length > 0 ? notifications.slice(0, 2) : [
+                                    { _id: 'demo1', title: 'Live review session coming soon', message: 'Join the live lab for React hooks next week.' },
+                                    { _id: 'demo2', title: 'Certificate pathway unlocked', message: 'Complete 3 courses to earn the Professional badge.' }
+                                ]).map((note) => (
+                                    <div key={note._id} style={{ marginBottom: '10px' }}>
+                                        <strong style={{ display: 'block', color: colors.text }}>{note.title}</strong>
+                                        <span style={{ color: colors.textMuted, fontSize: '12px' }}>{note.message}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -2496,7 +2645,13 @@ export default function StudentDashboard() {
         logo: { width: '36px', height: '36px', borderRadius: '10px', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#fff', fontSize: '18px' },
         logoText: { color: colors.text, fontWeight: '700', fontSize: '16px' },
         nav: { display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 },
-        navItem: { textAlign: 'left', background: 'transparent', border: 'none', color: colors.textMuted, padding: '12px 14px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', outline: 'none' },
+        navItem: { textAlign: 'left', background: 'transparent', border: 'none', color: colors.textMuted, padding: '12px 14px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', outline: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', borderLeft: '3px solid transparent' },
+        navBadge: { background: colors.primary, color: '#fff', borderRadius: '999px', padding: '2px 10px', fontSize: '11px', fontWeight: '700', minWidth: '24px', textAlign: 'center', lineHeight: 1 },
+        sidebarUserCard: { display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 14px', marginTop: '24px', borderRadius: '16px', background: colors.bgInput, border: `1px solid ${colors.border}` },
+        sidebarAvatar: { width: '44px', height: '44px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '16px' },
+        sidebarUserMeta: { display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+        sidebarUserName: { color: colors.text, fontSize: '14px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+        sidebarUserEmail: { color: colors.textMuted, fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
         catalogBtn: { background: `${colors.primary}15`, border: `1px solid ${colors.primary}30`, color: colors.primary, borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' },
         logoutBtn: { background: `${colors.danger}15`, border: `1px solid ${colors.danger}30`, color: colors.danger, borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' },
         main: { marginLeft: '260px', flex: 1, padding: '40px', overflowY: 'auto' },
@@ -2587,13 +2742,17 @@ export default function StudentDashboard() {
         badgeCard: { padding: '16px', borderRadius: '12px', border: `1px solid ${colors.border}`, textAlign: 'center', transition: 'transform 0.2s', position: 'relative' },
         badgeIcon: { fontSize: '32px', marginBottom: '8px' },
         badgeName: { fontSize: '12px', fontWeight: '700', color: colors.text, display: 'block' },
-        badgeDesc: { fontSize: '10px', color: colors.textMuted, marginTop: '4px', display: 'block' }
+        badgeDesc: { fontSize: '10px', color: colors.textMuted, marginTop: '4px', display: 'block' },
+        aiWidgetHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' },
+        aiActionBtn: { background: colors.accent, color: '#fff', border: 'none', borderRadius: '12px', padding: '10px 16px', fontWeight: '700', cursor: 'pointer', fontSize: '12px' },
+        aiPromptTag: { background: colors.bgInput, border: `1px solid ${colors.border}`, borderRadius: '999px', padding: '10px 14px', color: colors.text, fontSize: '12px', fontWeight: '700', cursor: 'pointer' },
+        analyticsCard: { background: colors.bgInput, borderRadius: '16px', padding: '16px', minHeight: '100px' }
     };
 
     return (
         <div style={{ ...styles.page, background: colors.bg, color: colors.text }}>
             {/* Ai Assistant Mock */}
-            <AiAssistant context={{ courseName: 'Your Dashboard' }} />
+            <AiAssistant context={courseAwareness} initialPrompt={assistantPrompt} />
 
             {/* Sidebar Tab Navigation */}
             <aside style={styles.sidebar}>
@@ -2606,13 +2765,13 @@ export default function StudentDashboard() {
                         { key: 'overview', label: '🏠 Overview' },
                         { key: 'learning', label: '🎓 My Learning' },
                         { key: 'wishlist', label: '💖 Wishlist' },
-                        { key: 'assignments', label: '📝 Assignments' },
-                        { key: 'quizzes', label: '🧠 Quizzes' },
+                        { key: 'assignments', label: '📝 Assignments', badge: assignmentCount > 0 ? `${assignmentCount}` : null },
+                        { key: 'quizzes', label: '🧠 Quizzes', badge: quizCount > 0 ? `${quizCount}` : null },
                         { key: 'grades', label: '📊 Grades' },
-                        { key: 'live', label: '📡 Live Sessions' },
+                        { key: 'live', label: '📡 Live Sessions', badge: liveSessionCount > 0 ? `${liveSessionCount}` : null },
                         { key: 'discussions', label: '💬 Discussions' },
                         { key: 'leaderboard', label: '🏆 Leaderboard' },
-                        { key: 'messages', label: '✉️ Messages' },
+                        { key: 'messages', label: '✉️ Messages', badge: unreadMessagesCount > 0 ? `${unreadMessagesCount}` : null },
                         { key: 'certificates', label: '🎓 Certificates' },
                         { key: 'payments', label: '💳 Payments' },
                         { key: 'settings', label: '⚙️ Settings' }
@@ -2627,10 +2786,18 @@ export default function StudentDashboard() {
                                 borderLeft: activeTab === tab.key ? `3px solid ${colors.primary}` : '3px solid transparent'
                             }}
                         >
-                            {tab.label}
+                            <span>{tab.label}</span>
+                            {tab.badge ? <span style={styles.navBadge}>{tab.badge}</span> : null}
                         </button>
                     ))}
                 </nav>
+                <div style={styles.sidebarUserCard}>
+                    <div style={styles.sidebarAvatar}>{user?.fullName?.[0]?.toUpperCase() || 'S'}</div>
+                    <div style={styles.sidebarUserMeta}>
+                        <span style={styles.sidebarUserName}>{user?.fullName || 'Student User'}</span>
+                        <span style={styles.sidebarUserEmail}>{user?.accountEmail || 'student@example.com'}</span>
+                    </div>
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <button onClick={toggleTheme} style={styles.catalogBtn}>
                         {theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode'}
@@ -2658,15 +2825,122 @@ export default function StudentDashboard() {
                 ) : (
                     <div>
                         {(activeTab === 'overview' || activeTab === 'learning') && (
-                            <MyCoursesHub 
-                                enrollments={enrollments}
-                                allCourses={allCourses}
-                                wishlist={wishlist}
-                                recentlyViewed={recentlyViewed}
-                                setActiveTab={setActiveTab}
-                                togglePinCourse={togglePinCourse}
-                                pinnedCourses={pinnedCourses}
-                            />
+                            <>
+                                <MyCoursesHub 
+                                    enrollments={enrollments}
+                                    allCourses={allCourses}
+                                    wishlist={wishlist}
+                                    recentlyViewed={recentlyViewed}
+                                    setActiveTab={setActiveTab}
+                                    togglePinCourse={togglePinCourse}
+                                    pinnedCourses={pinnedCourses}
+                                />
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginTop: 20 }}>
+                                    <ProgressOverview enrollments={enrollments} certificates={certificates} grades={grades} />
+                                    <AchievementsPanel certificates={certificates} badges={[]} />
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20, marginTop: 20 }}>
+                                    <LearningHistory recentlyViewed={recentlyViewed} enrollments={enrollments} />
+                                    <LearningGoals />
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, marginTop: 20 }}>
+                                    <div style={{ background: colors.bgCard, padding: 12, borderRadius: 10, border: `1px solid ${colors.border}` }}>
+                                        <h4 style={{ margin: '0 0 8px 0', color: colors.text }}>Upcoming Assignments</h4>
+                                        {assignmentsList.length === 0 ? (
+                                            <div style={{ color: colors.textMuted }}>No upcoming assignments.</div>
+                                        ) : (
+                                            assignmentsList.slice(0,5).map(a => {
+                                                const due = a.dueDate ? new Date(a.dueDate) : null;
+                                                const remaining = due ? Math.max(0, Math.floor((due.getTime() - Date.now()) / (1000*60*60*24))) : null;
+                                                const submitted = mySubmissions.find(s => s.assignmentRef?._id === a._id || (s.assignmentRef === a._id));
+                                                return (
+                                                    <div key={a._id} style={{ display: 'flex', justifyContent: 'space-between', padding: 8, borderRadius: 8, background: colors.bgInput, border: `1px solid ${colors.border}`, marginBottom: 8 }}>
+                                                        <div>
+                                                            <div style={{ fontWeight: 800, color: colors.text }}>{a.title}</div>
+                                                            <div style={{ fontSize: 12, color: colors.textMuted }}>{a.courseRef?.courseTitle || 'Course'}</div>
+                                                        </div>
+                                                        <div style={{ textAlign: 'right' }}>
+                                                            <div style={{ fontSize: 12, color: colors.textMuted }}>{due ? due.toLocaleString() : 'No due date'}</div>
+                                                            <div style={{ fontWeight: 800, color: submitted ? colors.success : colors.primary }}>{submitted ? 'Submitted' : (due ? (remaining <= 0 ? 'Due' : `${remaining}d left`) : 'Open')}</div>
+                                                            <div style={{ marginTop: 6 }}><a href={`/student/assignments/${a._id}`} style={{ color: colors.primary, fontWeight: 800 }}>Open</a></div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+
+                                    <div style={{ background: colors.bgCard, padding: 12, borderRadius: 10, border: `1px solid ${colors.border}` }}>
+                                        <h4 style={{ margin: '0 0 8px 0', color: colors.text }}>Pending Submissions</h4>
+                                        {mySubmissions.filter(s=>s.status!=='Graded').length === 0 ? (
+                                            <div style={{ color: colors.textMuted }}>No pending submissions.</div>
+                                        ) : (
+                                            mySubmissions.filter(s=>s.status!=='Graded').slice(0,5).map(s => (
+                                                <div key={s._id} style={{ padding: 8, borderRadius: 8, background: colors.bgInput, border: `1px solid ${colors.border}`, marginBottom: 8 }}>
+                                                    <div style={{ fontWeight: 800, color: colors.text }}>{s.assignmentRef?.title || 'Assignment'}</div>
+                                                    <div style={{ fontSize: 12, color: colors.textMuted }}>{new Date(s.submittedAt).toLocaleString()}</div>
+                                                    <div style={{ marginTop: 6 }}><a href={`/student/submissions/${s._id}`} style={{ color: colors.primary, fontWeight: 800 }}>View</a></div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, marginTop: 20 }}>
+                                    <div>
+                                        <PaymentHistory />
+                                        <div style={{ marginTop: 16 }}>
+                                            <CertificateList />
+                                        </div>
+                                        <div style={{ marginTop: 16 }}>
+                                            <MyReviews />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <Checkout course={allCourses[0] || { title: 'Sample Course', price: 299 }} />
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, marginTop: 20 }}>
+                                    <div style={{ background: colors.bgCard, padding: 12, borderRadius: 10, border: `1px solid ${colors.border}` }}>
+                                        <h4 style={{ margin: '0 0 8px 0', color: colors.text }}>Active Projects</h4>
+                                        {projectsList.length === 0 ? (
+                                            <div style={{ color: colors.textMuted }}>No active projects.</div>
+                                        ) : (
+                                            projectsList.slice(0,5).map(p => (
+                                                <div key={p._id} style={{ display: 'flex', justifyContent: 'space-between', padding: 8, borderRadius: 8, background: colors.bgInput, border: `1px solid ${colors.border}`, marginBottom: 8 }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 800, color: colors.text }}>{p.title}</div>
+                                                        <div style={{ fontSize: 12, color: colors.textMuted }}>{p.difficulty} • {p.dueDate ? new Date(p.dueDate).toLocaleDateString() : 'No due date'}</div>
+                                                    </div>
+                                                    <div><a href={`/student/projects/${p._id}`} style={{ color: colors.primary, fontWeight: 800 }}>Open</a></div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    <div style={{ background: colors.bgCard, padding: 12, borderRadius: 10, border: `1px solid ${colors.border}` }}>
+                                        <h4 style={{ margin: '0 0 8px 0', color: colors.text }}>Team Projects</h4>
+                                        <div style={{ color: colors.textMuted }}>Manage or join teams from project pages.</div>
+                                    </div>
+                                </div>
+                                <CourseDiscoveryChecklist enrolledCount={enrollments.length} wishlistCount={wishlist.length} />
+                                <AccountProfileChecklist setActiveTab={setActiveTab} />
+                                <PromptLibrary onSelectPrompt={(promptText) => {
+                                    setActiveTab('overview');
+                                    setAssistantPrompt({ prompt: promptText, id: Date.now() });
+                                }} />
+                                <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr 320px', gap: 20, marginTop: 20 }}>
+                                    <Inbox onSelectConversation={(c)=>{ setActiveTab('messages'); setSelectedConversation(c); }} />
+                                    <div style={{ minHeight: 240, borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.bgCard }}>
+                                        {selectedConversation ? <ConversationView conversation={selectedConversation} /> : <div style={{ padding: 16, color: colors.textMuted }}>Select a conversation to view messages.</div>}
+                                    </div>
+                                    <NotificationsPanel />
+                                </div>
+                            </>
                         )}
                         {activeTab === 'wishlist' && renderWishlist()}
                         {activeTab === 'assignments' && renderAssignments()}

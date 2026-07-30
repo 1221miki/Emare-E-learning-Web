@@ -242,7 +242,7 @@ export default function ProfessionalCourseCard({ enrollment, course }) {
                         navigate(isEnrolled ? `/student/learn/${courseData._id}` : `/courses/${courseData._id}`);
                     }}
                 >
-                    {isCompleted ? 'Review Course ✅' : (isEnrolled ? 'Continue Learning ➔' : 'View Course')}
+                    {isCompleted ? 'Review Course ✅' : (isEnrolled ? (progress === 0 ? 'Start First Lesson ➔' : 'Continue Learning ➔') : 'View Course')}
                 </button>
             </div>
         </div>

@@ -1,10 +1,15 @@
 const router = require('express').Router();
 const { protect, authorizeRoles } = require('../middleware/auth');
-const { createReview, getCourseReviews, replyToReview, deleteReview } = require('../controllers/reviewController');
+const reviewController = require('../controllers/reviewController');
 
-router.get('/course/:courseId', getCourseReviews);
-router.post('/', protect, authorizeRoles('Student'), createReview);
-router.patch('/:id/reply', protect, authorizeRoles('Instructor'), replyToReview);
-router.delete('/:id', protect, deleteReview);
+router.post('/:courseId', protect, reviewController.createOrUpdateReview);
+router.get('/course/:courseId', reviewController.getCourseReviews);
+router.post('/like/:reviewId', protect, reviewController.toggleLike);
+router.post('/report/:reviewId', protect, reviewController.reportReview);
+router.post('/moderate/:reviewId', protect, authorizeRoles('Admin'), reviewController.moderateReview);
+router.get('/my', protect, reviewController.getMyReviews);
+router.post('/', protect, authorizeRoles('Student'), reviewController.createReview);
+router.patch('/:id/reply', protect, authorizeRoles('Instructor'), reviewController.replyToReview);
+router.delete('/:id', protect, reviewController.deleteReview);
 
 module.exports = router;

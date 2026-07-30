@@ -1,25 +1,14 @@
 const mongoose = require('mongoose');
 
 const QuestionSchema = new mongoose.Schema({
-    questionText: {
-        type: String,
-        required: true
-    },
-    options: {
-        type: [String],
-        required: true,
-        validate: {
-            validator: function (v) {
-                return v.length >= 2 && v.length <= 6;
-            },
-            message: 'Options must be between 2 and 6'
-        }
-    },
-    correctAnswerIndex: {
-        type: Number,
-        required: true,
-        min: 0
-    }
+    questionText: { type: String, required: true },
+    type: { type: String, enum: ['mcq','tf','short','multi','matching','fill'], default: 'mcq' },
+    options: { type: [String], default: [] }, // for mcq, multi, matching (left/right stored in paired way)
+    correctAnswerIndex: { type: Number }, // for single-choice
+    correctAnswers: { type: [String], default: [] }, // for multi-select or text answers
+    matchingPairs: { type: [{ left: String, right: String }], default: [] },
+    points: { type: Number, default: 1 },
+    explanation: { type: String, default: '' }
 });
 
 const QuizSchema = new mongoose.Schema({
@@ -46,10 +35,9 @@ const QuizSchema = new mongoose.Schema({
         max: 100
     },
     questionArray: [QuestionSchema],
-    submissionDeadline: {
-        type: Date,
-        required: true
-    },
+    submissionDeadline: { type: Date },
+    attemptLimit: { type: Number, default: 1 },
+    allowReview: { type: Boolean, default: true },
     isActive: {
         type: Boolean,
         default: true

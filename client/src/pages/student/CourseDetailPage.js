@@ -5,6 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { courseService, reviewService, wishlistService, paymentService } from '../../services/api';
 import Navbar from '../../components/Navbar';
 import GuestModal from '../../components/GuestModal';
+import LearningContentAccessChecklist from '../../components/dashboard/LearningContentAccessChecklist';
 
 export default function CourseDetailPage() {
     const { courseId } = useParams();
@@ -186,7 +187,17 @@ export default function CourseDetailPage() {
             {/* Main Details */}
             <div style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 40px', display: 'flex', gap: '40px' }}>
                 <div style={{ flex: 1, paddingRight: '400px' }}> {/* Margin for floating card */}
-                    
+                    <LearningContentAccessChecklist
+                        courseId={course._id}
+                        lessonCount={course.curriculumTree?.reduce((sum, chapter) => sum + (chapter.lessons?.length || 0), 0) || 0}
+                        taskCount={course.taskCount || 5}
+                        hasCertificate={course.hasCertificate !== false}
+                        liveSessionsCount={course.liveSessionCount ?? null}
+                        onViewLessons={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        onContinueLearning={() => navigate(`/student/learn/${course._id}`)}
+                        onOpenDiscussions={() => navigate(`/student/discussions/${course._id}`)}
+                    />
+
                     <section style={{ marginBottom: '48px' }}>
                         <h2 style={{ color: colors.text, fontSize: '24px', fontWeight: '800', marginBottom: '16px' }}>About This Course</h2>
                         <p style={{ color: colors.textMuted, fontSize: '16px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>

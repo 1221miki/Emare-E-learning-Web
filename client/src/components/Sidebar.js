@@ -34,35 +34,39 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange }) {
             <nav style={styles.nav}>
                 {navItems.map((item) => {
                     const isActive = activeTab === item.key;
+                    const itemStyles = {
+                        ...styles.navItem,
+                        color: isActive ? colors.primary : colors.textMuted,
+                        background: isActive ? (theme === 'dark' ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)') : 'transparent',
+                        fontWeight: isActive ? '600' : '500',
+                        borderLeft: isActive ? `4px solid ${colors.primary}` : '4px solid transparent'
+                    };
+                    const labelContent = (
+                        <span style={styles.navItemContent}>
+                            <span>{item.label}</span>
+                            {item.badge ? <span style={{ ...styles.navBadge, background: colors.primary }}>{item.badge}</span> : null}
+                        </span>
+                    );
+
                     if (item.path) {
                         return (
                             <Link
                                 key={item.key || item.label}
                                 to={item.path}
-                                style={{
-                                    ...styles.navItem,
-                                    color: isActive ? colors.primary : colors.textMuted,
-                                    background: isActive ? (theme === 'dark' ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)') : 'transparent',
-                                    fontWeight: isActive ? '600' : '500'
-                                }}
+                                style={itemStyles}
                             >
-                                {item.label}
+                                {labelContent}
                             </Link>
                         );
                     }
                     return (
-                        <span
+                        <button
                             key={item.key || item.label}
                             onClick={() => onTabChange && onTabChange(item.key)}
-                            style={{
-                                ...styles.navItem,
-                                color: isActive ? colors.primary : colors.textMuted,
-                                background: isActive ? (theme === 'dark' ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)') : 'transparent',
-                                fontWeight: isActive ? '600' : '500'
-                            }}
+                            style={itemStyles}
                         >
-                            {item.label}
-                        </span>
+                            {labelContent}
+                        </button>
                     );
                 })}
             </nav>
@@ -111,9 +115,32 @@ const styles = {
     iconBtn: { background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px' },
     nav: { display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflowY: 'auto' },
     navItem: {
-        textDecoration: 'none', padding: '10px 14px',
-        borderRadius: '10px', fontSize: '14px',
-        cursor: 'pointer', transition: 'all 0.2s', display: 'block'
+        textDecoration: 'none',
+        padding: '10px 14px',
+        borderRadius: '10px',
+        fontSize: '14px',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '10px',
+        borderLeft: '4px solid transparent'
+    },
+    navItemContent: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '10px'
+    },
+    navBadge: {
+        color: '#fff',
+        borderRadius: '999px',
+        padding: '4px 10px',
+        fontSize: '11px',
+        fontWeight: '700',
+        minWidth: '26px',
+        textAlign: 'center',
+        lineHeight: 1
     },
     userInfo: {
         display: 'flex', alignItems: 'center', gap: '10px',

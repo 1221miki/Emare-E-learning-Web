@@ -18,6 +18,8 @@ export default function MyCoursesHub({
     const activeCourses = enrollments.filter(e => (e.completionPercentage || 0) < 100);
     const completedCourses = enrollments.filter(e => (e.completionPercentage || 0) >= 100);
     const primaryActive = activeCourses.length > 0 ? activeCourses[0] : null;
+    const resumeLabel = primaryActive?.completionPercentage === 0 ? 'Start First Lesson' : 'Continue Learning';
+    const resumeButtonText = primaryActive?.completionPercentage === 0 ? '▶ Start Lesson' : '▶ Resume Course';
 
     // Determine recommendations
     const enrolledIds = enrollments.map(e => e.courseRef?._id || e.courseRef);
@@ -140,7 +142,7 @@ export default function MyCoursesHub({
                     </div>
                     <div style={s.resumeContent}>
                         <span style={{ fontSize: '12px', fontWeight: '800', color: colors.primary, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', display: 'block' }}>
-                            Continue Learning
+                            {resumeLabel}
                         </span>
                         <h3 style={s.resumeTitle}>{primaryActive.courseRef?.courseTitle}</h3>
                         <div style={s.resumeProgress}>
@@ -153,7 +155,7 @@ export default function MyCoursesHub({
                             style={s.resumeBtn}
                             onClick={() => navigate(`/student/learn/${primaryActive.courseRef?._id}`)}
                         >
-                            ▶ Resume Course
+                            {resumeButtonText}
                         </button>
                     </div>
                 </div>
