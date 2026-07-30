@@ -1,9 +1,12 @@
 const Certificate = require('../models/Certificate');
+const CertificateTemplate = require('../models/CertificateTemplate');
+const CertificateVerification = require('../models/CertificateVerification');
 const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
 const Course = require('../models/Course');
 const PDFDocument = require('pdfkit');
 const { createNotification } = require('./notificationController');
+const { generateCertificatePdf, generateCertificateId } = require('../services/certificateService');
 
 const buildCertificatePdfBuffer = async (certificate, student, course) => {
     const doc = new PDFDocument({ size: 'A4', margin: 54 });
@@ -19,7 +22,7 @@ const buildCertificatePdfBuffer = async (certificate, student, course) => {
         doc.moveDown(1.5);
         doc.fontSize(12).text('Emare Learning Institute', { align: 'center' });
         doc.moveDown(1);
-        doc.fontSize(16).text(`This certificate is awarded to`, { align: 'center' });
+        doc.fontSize(16).text('This certificate is awarded to', { align: 'center' });
         doc.moveDown(0.4);
         doc.fontSize(22).text(student?.fullName || 'Student Name', { align: 'center' });
         doc.moveDown(0.6);
@@ -34,9 +37,127 @@ const buildCertificatePdfBuffer = async (certificate, student, course) => {
     });
 };
 
-// @desc    Generate certificate when course is 100% complete
-// @route   POST /api/certificates/generate
-// @access  Private (Student)
+exports.checkEligibility = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const studentId = req.user._id;
+        const enrollment = await Enrollment.findOne({ studentRef: studentId, courseRef: courseId });
+        if (!enrollment) return res.status(404).json({ success: false, message: 'Enrollment not found' });
+
+        const eligible = enrollment.tuitionClearanceFlag && (enrollment.completionPercentage || 0) >= 90;
+        res.json({ success: true, data: { eligible, completionPercentage: enrollment.completionPercentage } });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+exports.issueCertificate = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const student = req.user;
+        const enrollment = await Enrollment.findOne({ studentRef: student._id, courseRef: courseId });
+        if (!enrollment) return res.status(404).json({ success: false, message: 'Enrollment not found' });
+
+        if (!(enrollment.tuitionClearanceFlag && (enrollment.completionPercentage || 0) >= 90)) {
+            return res.status(400).json({ success: false, message: 'Not eligible for certificate' });
+        }
+
+        const existing = await Certificate.findOne({ studentRef: student._id, courseRef: courseId, status: 'Issued' });
+        if (existing) return res.json({ success: true, data: existing });
+
+        const course = await Course.findById(courseId);
+        const template = await CertificateTemplate.findOne({ active: true }) || {};
+
+        const certificateId = generateCertificateId();
+        const pdfResult = await generateCertificatePdf({
+            studentName: student.fullName || student.username || student.email,
+            courseName: course ? (course.courseTitle || course.title) : 'Course',
+            issuerName: template && template.createdBy ? 'Instructor' : 'Emare ELMS',
+            issueDate: new Date(),
+            certificateId,
+            logoUrl: template.logoUrl,
+            signatureImage: template.signatureImage,
+            template
+        });
+
+        const cert = await Certificate.create({
+            certificateId,
+            studentRef: student._id,
+            courseRef: courseId,
+            templateRef: template._id,
+            pdfPath: `/certificates/${pdfResult.filename}`,
+            qrCodeData: pdfResult.verifyUrl
+        });
+
+        res.status(201).json({ success: true, data: cert });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+exports.downloadCertificate = async (req, res) => {
+    try {
+        const cert = await Certificate.findOne({ certificateId: req.params.certificateId }).populate('studentRef courseRef');
+        if (!cert) return res.status(404).json({ success: false });
+        const filePath = require('path').join(__dirname, '..', 'public', cert.pdfPath || '');
+        return res.download(filePath);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false });
+    }
+};
+
+exports.verify = async (req, res) => {
+    try {
+        const { certificateId } = req.params;
+        const cert = await Certificate.findOne({ certificateId }).populate('studentRef courseRef templateRef');
+        if (!cert) {
+            return res.status(404).json({ success: false, message: 'Certificate not found' });
+        }
+
+        const result = cert.status === 'Issued' ? 'Valid' : 'Revoked';
+        await CertificateVerification.create({ certificateRef: cert._id, verifierIp: req.ip, result, rawPayload: { certificateId } });
+
+        res.json({ success: true, data: {
+            certificateId: cert.certificateId,
+            studentName: cert.studentRef && (cert.studentRef.fullName || cert.studentRef.username || ''),
+            course: cert.courseRef && (cert.courseRef.courseTitle || cert.courseRef.title || ''),
+            issuer: cert.issuerName,
+            issueDate: cert.issueDate,
+            status: cert.status
+        }});
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false });
+    }
+};
+
+exports.getMyCertificates = async (req, res) => {
+    try {
+        const certs = await Certificate.find({ studentRef: req.user._id }).sort({ issueDate: -1 }).populate('courseRef');
+        res.json({ success: true, data: certs });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false });
+    }
+};
+
+exports.revokeCertificate = async (req, res) => {
+    try {
+        const { certificateId } = req.params;
+        const cert = await Certificate.findOne({ certificateId });
+        if (!cert) return res.status(404).json({ success: false });
+        cert.status = 'Revoked';
+        await cert.save();
+        res.json({ success: true, data: cert });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false });
+    }
+};
+
 exports.generateCertificate = async (req, res) => {
     try {
         const { courseId } = req.body;
@@ -77,17 +198,6 @@ exports.generateCertificate = async (req, res) => {
         });
 
         res.status(201).json({ success: true, data: certificate });
-    } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
-    }
-};
-
-exports.getMyCertificates = async (req, res) => {
-    try {
-        const certificates = await Certificate.find({ studentRef: req.user.id })
-            .populate('courseRef', 'courseTitle technicalCategory estimatedDurationHours')
-            .sort('-completionDate');
-        res.status(200).json({ success: true, data: certificates });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
@@ -162,25 +272,6 @@ exports.reissueCertificate = async (req, res) => {
         });
 
         res.status(201).json({ success: true, message: 'Certificate reissued successfully.', data: reissued });
-    } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
-    }
-};
-
-exports.revokeCertificate = async (req, res) => {
-    try {
-        const certificate = await Certificate.findById(req.params.id);
-        if (!certificate) {
-            return res.status(404).json({ success: false, message: 'Certificate not found.' });
-        }
-
-        certificate.status = 'Revoked';
-        certificate.revokedBy = req.user.id;
-        certificate.revokedAt = new Date();
-        certificate.revocationReason = req.body.reason || 'Revoked by administrator';
-        await certificate.save();
-
-        res.status(200).json({ success: true, message: 'Certificate revoked successfully.', data: certificate });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }

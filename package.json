@@ -4,15 +4,27 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node backend/server.js",
+    "dev": "concurrently \"npm --prefix backend run dev\" \"npm --prefix client start\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "concurrently \"npm --prefix backend run dev\" \"npm --prefix client start\"",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:client": "npm --prefix client start",
+    "build:client": "npm --prefix client run build"
+  },
   "dependencies": {
     "cloudinary": "^2.10.0",
     "exceljs": "^4.4.0",
     "pdfkit": "^0.19.1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.1"
   }
 }

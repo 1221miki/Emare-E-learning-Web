@@ -5,6 +5,7 @@ import { courseService, categoryService, wishlistService } from '../../services/
 import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import GuestModal from '../../components/GuestModal';
+import CourseDiscoveryChecklist from '../../components/dashboard/CourseDiscoveryChecklist';
 
 function useQuery() {
     return new URLSearchParams(useLocation().search);
@@ -399,6 +400,8 @@ export default function CourseCatalog() {
                             </div>
                         </div>
                     </div>
+
+                    <CourseDiscoveryChecklist wishlistCount={wishlistIds.length} />
 
                     {/* Course Grid */}
                     {loading ? (

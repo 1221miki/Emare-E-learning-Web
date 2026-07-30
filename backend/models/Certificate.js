@@ -2,6 +2,16 @@ const mongoose = require('mongoose');
 const crypto = require('crypto');
 
 const CertificateSchema = new mongoose.Schema({
+    certificateId: {
+        type: String,
+        unique: true,
+        default: () => `EMARE-${crypto.randomBytes(4).toString('hex').toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
+    },
+    certificateNumber: {
+        type: String,
+        unique: true,
+        default: () => `EMARE-${crypto.randomBytes(4).toString('hex').toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
+    },
     studentRef: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -12,28 +22,43 @@ const CertificateSchema = new mongoose.Schema({
         ref: 'Course',
         required: true
     },
-    certificateNumber: {
+    templateRef: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'CertificateTemplate'
+    },
+    templateId: {
         type: String,
-        unique: true,
-        default: () => `EMARE-${crypto.randomBytes(4).toString('hex').toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
+        default: 'standard'
+    },
+    issueDate: {
+        type: Date,
+        default: Date.now
     },
     completionDate: {
         type: Date,
         default: Date.now
-    },
-    grade: {
-        type: String,
-        enum: ['Distinction', 'Merit', 'Pass'],
-        default: 'Pass'
     },
     status: {
         type: String,
         enum: ['Issued', 'Reissued', 'Revoked'],
         default: 'Issued'
     },
-    templateId: {
+    grade: {
         type: String,
-        default: 'standard'
+        enum: ['Distinction', 'Merit', 'Pass'],
+        default: 'Pass'
+    },
+    pdfPath: {
+        type: String,
+        default: ''
+    },
+    qrCodeData: {
+        type: String,
+        default: ''
+    },
+    issuerName: {
+        type: String,
+        default: 'Emare ELMS'
     },
     issuedBy: {
         type: mongoose.Schema.Types.ObjectId,
@@ -56,6 +81,10 @@ const CertificateSchema = new mongoose.Schema({
     downloadCount: {
         type: Number,
         default: 0
+    },
+    metadata: {
+        type: Object,
+        default: {}
     }
 }, {
     timestamps: true

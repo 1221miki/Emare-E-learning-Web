@@ -4,6 +4,7 @@ import { courseService } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import AiAssistant from '../../components/AiAssistant';
+import LearningContentAccessChecklist from '../../components/dashboard/LearningContentAccessChecklist';
 
 export default function LearningWorkspace() {
     const { logout } = useAuth();
@@ -74,6 +75,9 @@ export default function LearningWorkspace() {
     const activeChapter = course.curriculumTree?.[activeChapterIndex];
     const activeLesson = activeChapter?.lessons?.[activeLessonIndex];
 
+    const lessonCount = course.curriculumTree?.reduce((sum, chapter) => sum + (chapter.lessons?.length || 0), 0) || 0;
+    const taskCount = course.taskCount || course.tasks?.length || 5;
+
     const styles = {
         container: { display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: colors.bg },
         navbar: { height: '60px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: colors.bgCard, borderBottom: `1px solid ${colors.border}` },
@@ -126,6 +130,18 @@ export default function LearningWorkspace() {
             <div style={styles.mainLayout}>
                 {/* Left Panel: Video & Content */}
                 <div style={styles.contentArea}>
+                    <LearningContentAccessChecklist
+                        courseId={course._id}
+                        lessonCount={lessonCount}
+                        taskCount={taskCount}
+                        hasCertificate={course.hasCertificate !== false}
+                        liveSessionsCount={course.liveSessions?.length ?? null}
+                        onViewLessons={() => setActiveChapterIndex(0) || setActiveLessonIndex(0)}
+                        onOpenResources={() => navigate(`/courses/${course._id}`)}
+                        onContinueLearning={() => navigate(`/student/learn/${course._id}`)}
+                        onViewLiveSessions={() => navigate('/live-sessions')}
+                        onOpenDiscussions={() => navigate(`/student/discussions/${course._id}`)}
+                    />
                     <div style={styles.videoPlayerContainer}>
                         {videoLoading ? (
                             <div style={styles.videoOverlay}>

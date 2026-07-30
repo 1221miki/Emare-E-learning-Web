@@ -4,8 +4,11 @@ const NotificationSchema = new mongoose.Schema({
     recipientRef: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
         index: true
+    },
+    userRef: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     },
     type: {
         type: String,
@@ -14,16 +17,20 @@ const NotificationSchema = new mongoose.Schema({
             'announcement', 'certificate', 'badge',
             'review', 'assignment', 'system'
         ],
-        required: true
+        default: 'system'
     },
     title: {
         type: String,
-        required: true,
-        trim: true
+        trim: true,
+        required: true
     },
     message: {
         type: String,
         required: true
+    },
+    body: {
+        type: String,
+        default: ''
     },
     link: {
         type: String,
@@ -33,15 +40,22 @@ const NotificationSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    read: {
+        type: Boolean,
+        default: false
+    },
     metadata: {
         type: mongoose.Schema.Types.Mixed,
+        default: {}
+    },
+    meta: {
+        type: Object,
         default: {}
     }
 }, {
     timestamps: { createdAt: 'createdAt' }
 });
 
-// Index for fast unread queries
 NotificationSchema.index({ recipientRef: 1, isRead: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Notification', NotificationSchema);

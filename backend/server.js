@@ -21,10 +21,13 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
 const discussionRoutes = require('./routes/discussionRoutes');
 const assignmentRoutes = require('./routes/assignmentRoutes');
+const projectRoutes = require('./routes/projectRoutes');
 const leaderboardRoutes = require('./routes/leaderboardRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const liveSessionRoutes = require('./routes/liveSessionRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const aiHistoryRoutes = require('./routes/aiHistoryRoutes');
+const learningProgressRoutes = require('./routes/learningProgressRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const systemRoutes = require('./routes/systemRoutes');
@@ -32,6 +35,7 @@ const reportRoutes = require('./routes/reportRoutes');
 const contentRoutes = require('./routes/contentRoutes');
 const auditRoutes = require('./routes/auditRoutes');
 const calendarRoutes = require('./routes/calendarRoutes');
+const communicationRoutes = require('./routes/communicationRoutes');
 const { getAnalytics } = require('./controllers/userController');
 const { protect, authorizeRoles } = require('./middleware/auth');
 
@@ -42,16 +46,33 @@ const app = express();
 app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" }
 }));                           // Set secure HTTP response headers
+const allowedOrigins = [
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+    'http://127.0.0.1:3002'
+];
+
 app.use(cors({
-    origin: [process.env.FRONTEND_URL || 'http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3001', 'http://127.0.0.1:3000'],
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        callback(new Error(`CORS policy blocked origin: ${origin}`));
+    },
     credentials: true                        // Allow cookies to be sent cross-origin
 }));
 app.use(cookieParser());                     // Parse HTTP-Only cookie tokens
-app.use(express.json());                     // Parse incoming JSON request bodies
-app.use(express.urlencoded({ extended: true }));
+// Preserve raw body for webhook signature verification
+app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
+app.use(express.urlencoded({ extended: true, verify: (req, res, buf) => { req.rawBody = buf; } }));
 
 // Serve static uploaded files locally
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+app.use('/certificates', express.static(path.join(__dirname, 'public/certificates')));
 
 // ── Connect to MongoDB Atlas ───────────────────────────────
 connectDB();
@@ -71,17 +92,21 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/discussions', discussionRoutes);
 app.use('/api/assignments', assignmentRoutes);
+app.use('/api/projects', projectRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/payments', paymentRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/live-sessions', liveSessionRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/ai/history', aiHistoryRoutes);
+app.use('/api/learning-progress', learningProgressRoutes);
 app.use('/api/upload', uploadRoutes);
-app.use('/api/payments', paymentRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/audit-logs', auditRoutes);
 app.use('/api/calendar', calendarRoutes);
+app.use('/api/comm', communicationRoutes);
 app.use('/api/analytics/overview', protect, authorizeRoles('Admin'), getAnalytics);
 
 // ── Health Check ───────────────────────────────────────────

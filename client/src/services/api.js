@@ -141,24 +141,64 @@ export const notificationService = {
     delete: (id) => API.delete(`/notifications/${id}`)
 };
 
+// Internal and external messaging APIs (merged)
+export const messageService = {
+    // comm-based conversation APIs (used by the in-app chat)
+    createConversation: (data) => API.post('/comm/conversations', data),
+    getMyConversations: () => API.get('/comm/conversations/my'),
+    sendMessage: (conversationId, data) => API.post(`/comm/conversations/${conversationId}/messages`, data),
+    getMessages: (conversationId) => API.get(`/comm/conversations/${conversationId}/messages`),
+    // raw messages endpoints (alternate API surface)
+    getConversations: () => API.get('/messages/conversations'),
+    getMessagesRaw: (conversationId) => API.get(`/messages/conversations/${conversationId}`),
+    sendMessageDirect: (data) => API.post('/messages', data),
+    // announcements & notifications
+    getAnnouncements: () => API.get('/comm/announcements'),
+    createAnnouncement: (data) => API.post('/comm/announcements', data),
+    getMyNotifications: () => API.get('/comm/notifications/my'),
+    markNotificationRead: (id) => API.patch(`/comm/notifications/${id}/read`)
+};
+
 // ── Review API Calls ───────────────────────────────────────
 export const reviewService = {
     getCourseReviews: (courseId) => API.get(`/reviews/course/${courseId}`),
-    create: (data) => API.post('/reviews', data),
-    reply: (id, reply) => API.patch(`/reviews/${id}/reply`, { reply }),
-    delete: (id) => API.delete(`/reviews/${id}`)
+    submit: (courseId, data) => API.post(`/reviews/${courseId}`, data),
+    toggleLike: (reviewId) => API.post(`/reviews/like/${reviewId}`),
+    report: (reviewId, data) => API.post(`/reviews/report/${reviewId}`, data),
+    moderate: (reviewId, action) => API.post(`/reviews/moderate/${reviewId}`, { action }),
+    myReviews: () => API.get('/reviews/my')
+};
+
+export const feedbackService = {
+    submit: (courseId, data) => API.post(`/feedback/${courseId || ''}`, data),
+    myFeedback: () => API.get('/feedback/my'),
+    instructorFeedback: () => API.get('/feedback/instructor'),
+    respond: (feedbackId, response) => API.post(`/feedback/respond/${feedbackId}`, { response })
+};
+
+export const issueService = {
+    report: (courseId, data) => API.post(`/issues/${courseId || ''}`, data),
+    myIssues: () => API.get('/issues/my'),
+    update: (issueId, data) => API.post(`/issues/update/${issueId}`, data)
 };
 
 // ── Certificate API Calls ──────────────────────────────────
 export const certificateService = {
+    // issuance & admin
     generate: (courseId) => API.post('/certificates/generate', { courseId }),
-    getMine: () => API.get('/certificates/mine'),
-    verify: (certNumber) => API.get(`/certificates/verify/${certNumber}`),
-    getAllAdmin: () => API.get('/certificates/admin/all'),
     generateForAdmin: (data) => API.post('/certificates/admin/generate', data),
     reissue: (id, data) => API.post(`/certificates/${id}/reissue`, data),
     revoke: (id, reason) => API.patch(`/certificates/${id}/revoke`, { reason }),
-    download: (id) => API.get(`/certificates/${id}/download`, { responseType: 'blob' })
+    getAllAdmin: () => API.get('/certificates/admin/all'),
+    // student-facing
+    getMine: () => API.get('/certificates/mine'),
+    myCertificates: () => API.get('/certificates/my'),
+    issue: (courseId) => API.post(`/certificates/issue/${courseId}`),
+    checkEligibility: (courseId) => API.get(`/certificates/check/${courseId}`),
+    // verification & download
+    verify: (certNumber) => API.get(`/certificates/verify/${certNumber}`),
+    verifyPublic: (certificateId) => API.get(`/certificates/verify/${certificateId}`),
+    download: (id, opts = { responseType: 'blob' }) => API.get(`/certificates/${id}/download`, opts)
 };
 
 // ── Discussion API Calls ───────────────────────────────────
@@ -177,7 +217,23 @@ export const assignmentService = {
     submit: (id, data) => API.post(`/assignments/${id}/submit`, data),
     getSubmissions: (id) => API.get(`/assignments/${id}/submissions`),
     gradeSubmission: (submissionId, data) => API.patch(`/assignments/submissions/${submissionId}/grade`, data),
-    getMySubmissions: () => API.get('/assignments/my-submissions')
+    getMySubmissions: () => API.get('/assignments/submissions/my'),
+    getMyAssignments: () => API.get('/assignments/my')
+};
+
+// ── Project API Calls ───────────────────────────────────
+export const projectService = {
+    create: (data) => API.post('/projects', data),
+    update: (id, data) => API.put(`/projects/${id}`, data),
+    getByCourse: (courseId) => API.get(`/projects/course/${courseId}`),
+    getMyProjects: () => API.get('/projects/my'),
+    getById: (id) => API.get(`/projects/${id}`),
+    submitMultipart: (id, formData) => API.post(`/projects/${id}/submit-multipart`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    createTeam: (data) => API.post('/projects/teams', data),
+    joinTeam: (data) => API.post('/projects/teams/join', data),
+    getSubmissionsForProject: (id) => API.get(`/projects/${id}/submissions`),
+    getMySubmissions: () => API.get('/projects/submissions/my'),
+    gradeSubmission: (submissionId, data) => API.patch(`/projects/submissions/${submissionId}/grade`, data)
 };
 
 // ── Leaderboard API Calls ──────────────────────────────────
@@ -185,12 +241,7 @@ export const leaderboardService = {
     getTop: () => API.get('/leaderboard')
 };
 
-// ── Messaging API Calls ────────────────────────────────────
-export const messageService = {
-    getConversations: () => API.get('/messages/conversations'),
-    getMessages: (conversationId) => API.get(`/messages/conversations/${conversationId}`),
-    sendMessage: (data) => API.post('/messages', data)
-};
+// Messaging APIs are defined above (merged messageService)
 
 // ── Live Sessions API Calls ────────────────────────────────
 export const liveSessionService = {
@@ -201,9 +252,24 @@ export const liveSessionService = {
     deleteSession: (id) => API.delete(`/live-sessions/${id}`)
 };
 
+// ── Learning Progress & Content Tracking API Calls ────────────────────────────
+export const learningProgressService = {
+    getCourseProgress: (courseId) => API.get(`/learning-progress/course/${courseId}`),
+    getResumeProgress: () => API.get('/learning-progress/resume'),
+    saveLessonProgress: (courseId, lessonId, payload) => API.post(`/learning-progress/course/${courseId}/lesson/${lessonId}/progress`, payload),
+    markDocumentViewed: (courseId, lessonId) => API.post(`/learning-progress/course/${courseId}/lesson/${lessonId}/document`, {}),
+    trackResourceDownload: (courseId, lessonId, payload) => API.post(`/learning-progress/course/${courseId}/lesson/${lessonId}/resource`, payload)
+};
+
 // ── AI Tutor API Calls ─────────────────────────────────────
 export const aiService = {
-    askQuestion: (data) => API.post('/ai/ask', data)
+    askQuestion: (data) => API.post('/ai/ask', data),
+    getHistory: () => API.get('/ai/history'),
+    clearHistory: () => API.delete('/ai/history/clear'),
+    generateLearningPath: (data) => API.post('/ai/learning-path', data),
+    recommendCourses: (data) => API.post('/ai/recommend-courses', data),
+    generateQuiz: (data) => API.post('/ai/generate-quiz', data),
+    assignmentAssistant: (data) => API.post('/ai/assignment-assistant', data)
 };
 
 // ── Upload & Media API Calls (Phase 6) ─────────────────────
@@ -215,9 +281,15 @@ export const uploadService = {
 
 // ── Payment Gateway API Calls (Phase 6) ────────────────────
 export const paymentService = {
-    initializePayment: (data) => API.post('/payments/initialize', data),
-    verifyPayment: (tx_ref) => API.get(`/payments/verify/${tx_ref}`)
+    initiate: (data) => API.post('/payments/initiate', data),
+    verify: (data) => API.post('/payments/verify', data),
+    history: () => API.get('/payments/history'),
+    invoice: (id) => API.get(`/payments/invoice/${id}`),
+    requestRefund: (data) => API.post('/payments/refund', data),
+    applyCoupon: (data) => API.post('/payments/coupon', data)
 };
+
+// Certificate API is defined above (merged `certificateService`).
 
 // ── System API Calls (Admin) ─────────────────────────────────
 export const systemService = {

@@ -157,6 +157,11 @@ MAIL_SECURE=false
 MAIL_USER=your_email@gmail.com
 MAIL_PASS=your_app_specific_password
 EMAIL_FROM=noreply@emare.com
+
+# AI Tutor Integration
+AI_PROVIDER=mock
+AI_API_KEY=your_openai_api_key
+AI_MODEL=gpt-4o-mini
 ```
 
 #### 📧 Email Setup Instructions
@@ -234,3 +239,77 @@ Comprehensive documentation including Use Case diagrams, Class diagrams, Entity 
 - Asamnew Agiz
 
 *Department of Information System | Debre Birhan University*
+
+---
+
+## **Local Development (One-command)**
+
+Quick professional start (runs backend + frontend together):
+
+1. From the project root run:
+
+```powershell
+npm install
+npm run dev
+```
+
+- Backend: http://localhost:5000
+- Frontend: http://localhost:3000 (or 3001 if 3000 is occupied)
+
+This uses the root `dev` script which runs the backend and client concurrently. You can also run each separately:
+
+```powershell
+# backend only
+npm run dev:backend
+
+# frontend only
+npm run dev:client
+```
+
+## **Health Checks & Quick Verification**
+
+- Backend health endpoint:
+	- http://localhost:5000/api/health  (expect HTTP 200)
+- Frontend: open http://localhost:3000 (or http://localhost:3001)
+
+If a port is already in use, stop the process (example for PowerShell):
+
+```powershell
+# show process using port 5000
+Get-NetTCPConnection -LocalPort 5000 | Format-List
+
+# stop that PID safely (replace <PID> with the number shown)
+Stop-Process -Id <PID> -Force
+```
+
+If multiple node processes are stuck (use with care):
+
+```powershell
+taskkill /F /IM node.exe
+```
+
+## **Troubleshooting Common Issues**
+
+- Blank page / UI not rendering:
+	- Open browser DevTools (F12) → Console and Network. Fix any red errors.
+	- Verify `REACT_APP_API_URL` in `client/.env` points to `http://localhost:5000/api`.
+- Backend crashes with EADDRINUSE:
+	- A different process is already listening on the configured port. Kill it or set `PORT` in `backend/.env` to a different number.
+- Mongoose duplicate-index warnings:
+	- Some models declared the same index twice (`index: true` and `schema.index(...)`). Search models and remove the duplicate. (I removed the duplicate index in `backend/models/Message.js`.)
+- Dev server chooses another port (React):
+	- If port 3000 is busy, CRA will prompt to use 3001. Open the port shown in the terminal.
+
+## **Files I updated for a smoother workflow**
+- `package.json` (project root): added `dev`, `dev:backend`, `dev:client`, and `build:client` scripts to run both services with one command.
+- `backend/models/Message.js`: removed duplicate `MessageSchema.index({ conversationRef: 1 });` to silence duplicate-index warning.
+
+## **Next steps / Recommendations**
+
+- Run `npm audit fix` to fix non-breaking vulnerabilities. Use `npm audit fix --force` only after reviewing breaking changes.
+- Upgrade `react-scripts` and other dev tooling carefully to reduce deprecation warnings.
+- Add a README health-check badge or a short startup script if you deploy to a CI/CD environment.
+
+If you want, I can now:
+- Open the frontend in your browser, or
+- Tail backend logs and the browser console to resolve any remaining runtime errors.
