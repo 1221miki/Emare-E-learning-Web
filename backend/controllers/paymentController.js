@@ -2,49 +2,147 @@ const axios = require('axios');
 const crypto = require('crypto');
 
 const Transaction = require('../models/Transaction');
+const Payment = require('../models/Payment');
 const Coupon = require('../models/Coupon');
 const RefundRequest = require('../models/RefundRequest');
 const Enrollment = require('../models/Enrollment');
 const Course = require('../models/Course');
+const User = require('../models/User');
+const emailService = require('../services/emailService');
 
-const chapa = require('../services/chapaAdapter');
+const chapa = require('../services/chapaService');
 const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY || '';
+const CHAPA_WEBHOOK_SECRET = process.env.CHAPA_WEBHOOK_SECRET || CHAPA_SECRET_KEY || '';
 
 // Initiate payment (creates a pending transaction and returns a provider redirect/url)
 exports.initiatePayment = async (req, res) => {
     try {
         const { courseId, amount, currency = 'ETB', provider = 'chapa', coupon } = req.body;
 
-        const tx = await Transaction.create({ studentRef: req.user._id, courseRef: courseId, amount, currency, provider, status: 'Pending', metadata: { coupon } });
+        // Check if student is already enrolled in this course
+        const existingEnrollment = await Enrollment.findOne({
+            studentRef: req.user._id,
+            courseRef: courseId,
+            paymentStatus: 'Cleared'
+        });
+        if (existingEnrollment) {
+            return res.status(400).json({ success: false, message: 'You are already enrolled in this course.' });
+        }
+
+        const course = await Course.findById(courseId);
+        if (!course) {
+            return res.status(404).json({ success: false, message: 'Course not found.' });
+        }
+
+        const finalAmount = course.price || 0;
+        if (amount && amount !== finalAmount) {
+            console.warn(`Payment amount mismatch for course ${courseId}. Enforcing course price ${finalAmount}.`);
+        }
+
+        if (finalAmount <= 0) {
+            // Free course — enroll directly without payment
+            await Enrollment.findOneAndUpdate(
+                { studentRef: req.user._id, courseRef: courseId },
+                {
+                    $set: {
+                        tuitionClearanceFlag: true,
+                        paymentStatus: 'Cleared',
+                        paymentAmount: 0,
+                        paymentMethod: provider,
+                        paymentReference: 'FREE-Course'
+                    },
+                    $setOnInsert: { enrollmentTimestamp: new Date() }
+                },
+                { upsert: true, new: true }
+            );
+            return res.status(201).json({ success: true, data: { free: true, message: 'Enrolled successfully (free course).' } });
+        }
+
+        let tx = await Transaction.findOne({
+            studentRef: req.user._id,
+            courseRef: courseId,
+            provider: provider,
+            status: 'Pending'
+        });
+
+        if (tx) {
+            tx.amount = finalAmount;
+            tx.currency = currency;
+            tx.metadata = { ...tx.metadata, coupon };
+        } else {
+            tx = new Transaction({ studentRef: req.user._id, courseRef: courseId, amount: finalAmount, currency, provider, status: 'Pending', metadata: { coupon } });
+        }
 
         if (provider === 'chapa') {
-            // create a provider tx reference
+            // create a provider tx reference before writing enrollment metadata
             const tx_ref = `EMARE-TX-${tx._id.toString().slice(-8)}-${Date.now()}`;
             tx.metadata = { ...tx.metadata, tx_ref };
-            await tx.save();
+        }
+        await tx.save();
+
+        // Create a pending enrollment record (idempotent upsert so we don't duplicate on retries)
+        await Enrollment.findOneAndUpdate(
+            { studentRef: req.user._id, courseRef: courseId },
+            {
+                $set: {
+                    paymentStatus: 'Pending Verification',
+                    paymentAmount: finalAmount,
+                    paymentMethod: provider,
+                    paymentReference: tx.metadata?.tx_ref || ''
+                }
+            },
+            { upsert: true, new: true }
+        );
+
+        if (provider === 'chapa') {
+            const tx_ref = tx.metadata.tx_ref;
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const backendUrl = process.env.APP_BASE_URL || 'http://localhost:5000';
+
+            const paymentRecord = await Payment.findOneAndUpdate(
+                { studentRef: req.user._id, courseRef: courseId, tx_ref },
+                {
+                    $set: {
+                        transactionRef: tx._id,
+                        amount: finalAmount,
+                        currency,
+                        paymentMethod: provider,
+                        status: 'Pending',
+                        metadata: { ...tx.metadata, coupon }
+                    }
+                },
+                { upsert: true, new: true }
+            );
 
             // Build payload for Chapa
-            const course = await Course.findById(courseId);
+            const callbackUrl = `${frontendUrl}/payment/callback?tx_ref=${tx_ref}`;
+            const webhookUrl = `${backendUrl}/api/payments/chapa/webhook`;
+
             const payload = {
-                amount: amount || (course && course.price) || 0,
+                amount: finalAmount,
                 currency,
-                email: req.user.accountEmail || req.user.email,
-                first_name: (req.user.fullName || '').split(' ')[0] || '',
-                last_name: (req.user.fullName || '').split(' ')[1] || '',
+                customer_email: req.user.accountEmail || req.user.email,
+                customer_first_name: (req.user.fullName || '').split(' ')[0] || '',
+                customer_last_name: (req.user.fullName || '').split(' ')[1] || '',
                 tx_ref,
-                callback_url: `${process.env.APP_BASE_URL || 'http://localhost:5000'}/api/payments/chapa/webhook`,
-                return_url: req.body.returnUrl || (process.env.APP_BASE_URL || 'http://localhost:3000'),
-                customization: { title: 'Emare ELMS', description: `Payment for ${course ? course.courseTitle || course.title : 'course'}` }
+                callback_url: callbackUrl,
+                return_url: callbackUrl,
+                webhook_url: webhookUrl,
+                customization: { title: 'Emare ICT Hub', description: `Payment for ${course.courseTitle || 'course'}` }
             };
 
             // Call Chapa
             try {
                 const chapaRes = await chapa.initialize(payload);
-                const checkoutUrl = chapaRes && chapaRes.data && chapaRes.data.checkout_url;
-                return res.status(201).json({ success: true, data: { transactionId: tx._id, paymentUrl: checkoutUrl, raw: chapaRes.data } });
+                const checkoutUrl = chapaRes?.data?.data?.checkout_url || chapaRes?.data?.checkout_url;
+                if (!checkoutUrl) {
+                    console.error('Chapa response missing checkout_url:', JSON.stringify(chapaRes?.data));
+                    return res.status(500).json({ success: false, message: 'Chapa did not return a checkout URL.' });
+                }
+                return res.status(201).json({ success: true, data: { transactionId: tx._id, paymentId: paymentRecord._id, paymentUrl: checkoutUrl, tx_ref } });
             } catch (err) {
                 console.error('Chapa init error', err.response ? err.response.data : err.message);
-                return res.status(500).json({ success: false, message: 'Chapa initialization failed' });
+                return res.status(500).json({ success: false, message: 'Chapa initialization failed. Please try again.' });
             }
         }
 
@@ -84,15 +182,15 @@ exports.chapaWebhook = async (req, res) => {
 
         const signature = (req.get('x-chapa-signature') || req.get('x-signature') || req.get('signature') || '').trim();
 
-        if (CHAPA_SECRET_KEY && signature) {
-            const expectedHex = crypto.createHmac('sha256', CHAPA_SECRET_KEY).update(rawStr).digest('hex');
-            const expectedB64 = crypto.createHmac('sha256', CHAPA_SECRET_KEY).update(rawStr).digest('base64');
+        if (CHAPA_WEBHOOK_SECRET && signature) {
+            const expectedHex = crypto.createHmac('sha256', CHAPA_WEBHOOK_SECRET).update(rawStr).digest('hex');
+            const expectedB64 = crypto.createHmac('sha256', CHAPA_WEBHOOK_SECRET).update(rawStr).digest('base64');
             if (signature !== expectedHex && signature !== expectedB64) {
                 console.warn('Chapa webhook signature mismatch', { received: signature, expectedHex, expectedB64 });
                 return res.status(403).json({ success: false, message: 'Invalid signature' });
             }
-        } else if (CHAPA_SECRET_KEY && !signature) {
-            console.warn('CHAPA_SECRET_KEY present but no signature header');
+        } else if (CHAPA_WEBHOOK_SECRET && !signature) {
+            console.warn('CHAPA_WEBHOOK_SECRET present but no signature header');
             return res.status(400).json({ success: false, message: 'Missing signature header' });
         }
 
@@ -120,18 +218,43 @@ exports.chapaWebhook = async (req, res) => {
             tx.providerTransactionId = data.id || (data.transaction && data.transaction.id) || tx.providerTransactionId;
             await tx.save();
 
-            // Idempotent enrollment creation: update existing or create if missing
+            await Payment.findOneAndUpdate(
+                { tx_ref },
+                {
+                    $set: {
+                        status: 'Completed',
+                        providerTransactionId: tx.providerTransactionId,
+                        currency: tx.currency,
+                        paymentMethod: tx.provider
+                    }
+                },
+                { upsert: true, new: true }
+            );
+
+            // Idempotent enrollment creation or update
             await Enrollment.findOneAndUpdate(
                 { studentRef: tx.studentRef, courseRef: tx.courseRef },
                 { $set: { tuitionClearanceFlag: true, paymentStatus: 'Cleared', paymentAmount: tx.amount }, $setOnInsert: { enrollmentTimestamp: new Date() } },
                 { upsert: true, new: true }
             );
+
+            // Send confirmation email asynchronously
+            try {
+                const user = await User.findById(tx.studentRef);
+                const course = await Course.findById(tx.courseRef);
+                if (user && course && emailService.sendCourseEnrollmentEmail) {
+                    emailService.sendCourseEnrollmentEmail(user, course, tx_ref);
+                }
+            } catch (err) {
+                console.error('Failed to send enrollment email from webhook:', err);
+            }
         } else if (status === 'failed' || status === 'error') {
             tx.status = 'Failed';
             await tx.save();
+            await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Failed', providerTransactionId: tx.providerTransactionId } });
         } else {
-            // For other statuses (pending/cancelled) just save updated processedWebhookIds
             await tx.save();
+            await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Pending' } });
         }
 
         res.json({ success: true });
@@ -152,17 +275,71 @@ exports.verifyChapa = async (req, res) => {
         if (!tx) return res.status(404).json({ success: false, message: 'Transaction not found' });
 
         if (status === 'success' || status === 'completed') {
+            const providerAmount = (chapaRes.data && chapaRes.data.amount) || (chapaRes.data?.data && chapaRes.data.data.amount) || null;
+            if (providerAmount && providerAmount !== tx.amount) {
+                console.warn('Chapa verification amount mismatch', { expected: tx.amount, received: providerAmount, tx_ref });
+                tx.status = 'Failed';
+                await tx.save();
+                await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Failed' } });
+                return res.status(400).json({ success: false, message: 'Payment verification amount mismatch' });
+            }
+
             tx.status = 'Completed';
             await tx.save();
-            await Enrollment.create({ studentRef: tx.studentRef, courseRef: tx.courseRef, tuitionClearanceFlag: true, paymentStatus: 'Cleared', paymentAmount: tx.amount });
+            await Payment.findOneAndUpdate(
+                { tx_ref },
+                {
+                    $set: {
+                        status: 'Completed',
+                        providerTransactionId: tx.providerTransactionId || chapaRes.data?.data?.id || chapaRes.data?.id,
+                        paymentMethod: tx.provider || 'chapa'
+                    }
+                },
+                { upsert: true, new: true }
+            );
+
+            await Enrollment.findOneAndUpdate(
+                { studentRef: tx.studentRef, courseRef: tx.courseRef },
+                {
+                    $set: {
+                        tuitionClearanceFlag: true,
+                        paymentStatus: 'Cleared',
+                        paymentAmount: tx.amount,
+                        paymentReference: tx_ref,
+                        paymentMethod: tx.provider || 'chapa'
+                    },
+                    $setOnInsert: { enrollmentTimestamp: new Date() }
+                },
+                { upsert: true, new: true }
+            );
+
+            // Send confirmation email (avoid sending multiple times if webhook already processed, but okay for now)
+            try {
+                const user = await User.findById(tx.studentRef);
+                const course = await Course.findById(tx.courseRef);
+                if (user && course && emailService.sendCourseEnrollmentEmail) {
+                    emailService.sendCourseEnrollmentEmail(user, course, tx_ref);
+                }
+            } catch (err) {
+                console.error('Failed to send enrollment email from verify:', err);
+            }
         }
 
-        res.json({ success: true, raw: chapaRes.data });
-    } catch (err) { console.error(err); res.status(500).json({ success: false }); }
+        res.json({ success: true, courseId: tx.courseRef, raw: chapaRes.data });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false });
+    }
 };
 
 exports.getMyTransactions = async (req, res) => {
-    try { const tx = await Transaction.find({ studentRef: req.user._id }).sort({ createdAt: -1 }); res.json({ success: true, data: tx }); } catch (err) { console.error(err); res.status(500).json({ success: false }); }
+    try {
+        const tx = await Transaction.find({ studentRef: req.user._id }).sort({ createdAt: -1 });
+        res.json({ success: true, data: tx });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false });
+    }
 };
 
 exports.getInvoiceData = async (req, res) => {

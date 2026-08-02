@@ -4,20 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node backend/server.js",
-    "dev": "concurrently \"npm --prefix backend run dev\" \"npm --prefix client start\"",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "scripts": {
-    "start": "node backend/server.js",
-    "dev": "concurrently \"npm --prefix backend run dev\" \"npm --prefix client start\"",
+    "open:edge": "cmd /d /c \"ping -n 6 127.0.0.1>nul && start microsoft-edge:http://localhost:5173\"",
+    "start": "concurrently \"npm --prefix backend run dev\" \"npm --prefix client start\" \"npm run open:edge\"",
+    "dev": "concurrently \"npm --prefix backend run dev\" \"npm --prefix client run dev\"",
     "dev:backend": "npm --prefix backend run dev",
-    "dev:client": "npm --prefix client start",
-    "build:client": "npm --prefix client run build"
+    "dev:client": "npm --prefix client run dev",
+    "build:client": "npm --prefix client run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "cloudinary": "^2.10.0",

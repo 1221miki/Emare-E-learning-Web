@@ -21,12 +21,12 @@ From the repository root:
 
 `powershell
 npm install
-npm run dev
+npm start
 `
 
 This starts:
 - Backend: http://localhost:5000
-- Frontend: http://localhost:3000
+- Frontend: http://localhost:5173
 
 ### Run backend only
 
@@ -41,7 +41,7 @@ npm run dev
 `powershell
 cd client
 npm install
-npm run dev
+npm start
 `
 
 ## Environment Variables
@@ -131,7 +131,7 @@ The backend seeds default accounts during development. Use these credentials for
 
 `powershell
 # Full stack
-npm run dev
+npm start
 
 # Backend only
 cd backend
@@ -139,7 +139,7 @@ npm run dev
 
 # Frontend only
 cd client
-npm run dev
+npm start
 `
 
 ## Authors
@@ -150,17 +150,114 @@ npm run dev
 
 ## Instructor Responsibilities
 
-Instructors have a central role in creating and maintaining course content. The primary responsibilities include:
+Instructors play a central role in creating and maintaining course content. Their primary responsibilities include:
 
-1. Course Management
+### 1. Curriculum Design
 
-- Create new courses.
-- Edit and update course information.
-- Delete draft courses.
-- Organize course curriculum.
-- Create chapters and lessons.
-- Arrange lesson order.
+The instructor is responsible for:
+
+- Designing course structure.
+- Creating chapters.
+- Creating lessons.
+- Organizing learning flow.
+- Defining course duration.
+- Selecting course category.
+- Writing course descriptions.
 - Submit completed courses for administrator approval.
-- Revise rejected courses based on admin feedback.
+- Revise rejected courses based on administrator feedback.
 - Archive completed courses.
 
+### 2. Learning Content Management
+
+The instructor can:
+
+- Upload video lectures.
+- Upload PDF notes.
+- Upload programming source code.
+- Upload downloadable resources.
+- Add markdown/text notes.
+- Attach learning materials to chapters.
+- Manage multimedia content.
+
+### 3. Assignment Management
+
+The instructor can:
+
+- Create assignments.
+- Publish assignments.
+- Define assignment instructions.
+- Set submission deadlines.
+- Receive student submissions.
+- View uploaded files.
+- Review GitHub/repository links.
+
+### 3. Quiz & Assessment Management
+
+The instructor can:
+
+- Create quizzes.
+- Add multiple-choice questions.
+- Set correct answers.
+- Assign quiz scores.
+- Configure timers.
+- Set passing scores.
+- Publish quizzes.
+- Manage assessments.
+
+### 4. Interface Status
+
+The current instructor dashboard UI supports the following course authoring workflows:
+
+- creating, editing, and saving draft courses
+- organizing course metadata, learning objectives, and prerequisites
+- submitting drafts for administrator review
+- archiving and duplicating courses
+- grading, student management, announcements, reviews, analytics, and earnings
+
+The user interface does not yet include a dedicated content-management section for:
+
+- direct video, PDF, source-code, or resource upload controls
+- inline markdown/text note creation
+- attaching learning materials directly to chapters or lessons
+- a multimedia asset manager for course content
+
+### 4. Proposed Missing UI Sections
+
+To align the product with the instructor responsibilities, add a dedicated instructor content workflow with these screens/components:
+
+- **Course Library / Content Hub**
+  - course cards with status, stats, and quick actions
+  - filter by draft/active/pending review
+  - button to open course content manager
+
+- **Course Editor + Curriculum Builder**
+  - course metadata fields (title, description, category, objectives)
+  - chapter list with drag-and-drop ordering
+  - add/edit/delete chapter buttons
+  - lesson list per chapter with inline reorder controls
+
+- **Lesson Content Panel**
+  - lesson title, description, duration, and media preview
+  - upload controls for:
+    - video lectures
+    - PDF notes
+    - downloadable resources (ZIP, code files)
+    - source code attachments
+  - markdown/text editor for lesson notes and summaries
+  - save as draft / publish lesson controls
+
+- **Material Attachment Area**
+  - attach uploaded files directly to chapters or lessons
+  - show associated resources, documents, and videos per lesson
+  - allow removing or replacing attachments
+
+- **Multimedia Resource Manager**
+  - gallery of uploaded assets with thumbnails and file type badges
+  - search/filter by video, PDF, code, or other resource types
+  - bulk upload and delete actions
+
+- **Review & Publish Workflow**
+  - submit course or lesson updates for administrator approval
+  - display approval status, rejection reason, and revision requests
+
+This draft can be used as the basis for implementation and for updating the README/UI documentation to match the actual current interface.
