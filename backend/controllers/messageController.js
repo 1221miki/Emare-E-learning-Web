@@ -8,7 +8,7 @@ const User = require('../models/User');
 exports.getConversations = async (req, res) => {
     try {
         const conversations = await Conversation.find({ participants: req.user.id })
-            .populate('participants', 'fullName avatarUrl assignedRole')
+            .populate('participants.userRef', 'fullName avatarUrl assignedRole')
             .sort('-lastMessageAt');
         res.status(200).json({ success: true, data: conversations });
     } catch (err) {

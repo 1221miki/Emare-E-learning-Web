@@ -7,7 +7,7 @@ const User = require('../models/User');
 router.get('/', async (req, res) => {
     try {
         const leaders = await User.find({ assignedRole: 'Student', isActive: true })
-            .select('fullName avatarUrl gamificationPoints earnedBadges')
+            .select('fullName avatarUrl gamificationPoints level earnedBadges')
             .sort('-gamificationPoints')
             .limit(50);
         res.status(200).json({ success: true, data: leaders });
