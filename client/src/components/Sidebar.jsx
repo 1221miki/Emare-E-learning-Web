@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -8,11 +8,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
     const { user, logout } = useAuth();
     const { theme, toggleTheme, colors } = useTheme();
     const navigate = useNavigate();
-
-    const handleLogout = async () => {
-        await logout();
-        navigate('/');
-    };
+    const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
 
     return (
         <aside style={{ ...styles.sidebar, background: colors.bgCard, borderRight: `1px solid ${colors.border}` }}>
@@ -74,20 +70,67 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                 })}
             </nav>
 
-            {/* User Info */}
-            <div style={{ ...styles.userInfo, borderTop: `1px solid ${colors.border}` }}>
-                <div style={styles.userAvatar}>{user?.fullName?.[0]?.toUpperCase()}</div>
-                <div style={styles.userMeta}>
-                    <span style={{ ...styles.userName, color: colors.text }}>{user?.fullName}</span>
-                    <span style={{ ...styles.userRole, color: colors.textMuted }}>{user?.assignedRole}</span>
+            {/* User Info - Account Dropdown */}
+            <div style={{ position: 'relative' }}>
+                <div 
+                    style={{ 
+                        ...styles.userInfo, 
+                        borderTop: `1px solid ${colors.border}`,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                    }}
+                    onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
+                    title="Click to open account menu"
+                >
+                    <div style={styles.userAvatar}>{user?.fullName?.[0]?.toUpperCase()}</div>
+                    <div style={styles.userMeta}>
+                        <span style={{ ...styles.userName, color: colors.text }}>{user?.fullName}</span>
+                        <span style={{ ...styles.userRole, color: colors.textMuted }}>{user?.assignedRole}</span>
+                    </div>
+                    <span style={{ marginLeft: 'auto', fontSize: '12px', transition: 'transform 0.2s', transform: accountDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
                 </div>
-            </div>
 
-            {/* Home & Logout */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto', paddingBottom: '12px' }}>
-                {extraBottomButtons}
-                <button onClick={() => navigate('/')} style={{ ...styles.homeBtn }}>🏠 Home Page</button>
-                <button onClick={handleLogout} style={styles.logoutBtn}>↩ Sign Out</button>
+                {/* Dropdown Menu */}
+                {accountDropdownOpen && (
+                    <div 
+                        style={{
+                            ...styles.accountDropdown,
+                            background: colors.bgCard,
+                            border: `1px solid ${colors.border}`,
+                            boxShadow: theme === 'dark' ? '0 8px 32px rgba(0,0,0,0.4)' : '0 8px 32px rgba(0,0,0,0.1)'
+                        }}
+                    >
+                        {/* Header in dropdown */}
+                        <div style={{ ...styles.dropdownHeader, borderBottom: `1px solid ${colors.border}` }}>
+                            <span style={{ color: colors.text, fontWeight: '600', fontSize: '13px' }}>{user?.fullName}</span>
+                            <span style={{ color: colors.textMuted, fontSize: '11px' }}>{user?.assignedRole}</span>
+                        </div>
+
+                        {/* Menu Items */}
+                        <button 
+                            onClick={() => { navigate('/catalog'); setAccountDropdownOpen(false); }}
+                            style={{ ...styles.dropdownItem, color: colors.text, borderBottom: `1px solid ${colors.border}` }}
+                        >
+                            📚 Course Catalog
+                        </button>
+                        <button 
+                            onClick={() => { navigate('/'); setAccountDropdownOpen(false); }}
+                            style={{ ...styles.dropdownItem, color: colors.text, borderBottom: `1px solid ${colors.border}` }}
+                        >
+                            🏠 Home Page
+                        </button>
+                        <button 
+                            onClick={async () => { 
+                                await logout(); 
+                                setAccountDropdownOpen(false);
+                                navigate('/'); 
+                            }}
+                            style={{ ...styles.dropdownItem, color: '#dc2626' }}
+                        >
+                            ↩ Sign Out
+                        </button>
+                    </div>
+                )}
             </div>
         </aside>
     );
@@ -148,7 +191,37 @@ const styles = {
     },
     userInfo: {
         display: 'flex', alignItems: 'center', gap: '10px',
-        padding: '12px 0', marginBottom: '12px', paddingTop: '16px'
+        padding: '12px 10px', marginBottom: '12px', paddingTop: '16px',
+        borderRadius: '10px',
+        position: 'relative'
+    },
+    accountDropdown: {
+        position: 'absolute',
+        bottom: 'calc(100% + 8px)',
+        left: '-4px',
+        right: '-4px',
+        borderRadius: '10px',
+        overflow: 'hidden',
+        zIndex: 1000,
+        minWidth: '220px',
+        animation: 'slideUp 0.2s ease-out'
+    },
+    dropdownHeader: {
+        padding: '12px 14px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px'
+    },
+    dropdownItem: {
+        background: 'transparent',
+        border: 'none',
+        padding: '12px 14px',
+        textAlign: 'left',
+        cursor: 'pointer',
+        fontSize: '14px',
+        fontWeight: '500',
+        transition: 'all 0.2s',
+        width: '100%'
     },
     userAvatar: {
         width: '36px', height: '36px', borderRadius: '50%',
@@ -158,30 +231,5 @@ const styles = {
     },
     userMeta: { display: 'flex', flexDirection: 'column', overflow: 'hidden' },
     userName: { fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-    userRole: { fontSize: '11px' },
-    logoutBtn: {
-        background: '#ffffff',
-        border: '1px solid rgba(239,68,68,0.45)',
-        color: '#b91c1c',
-        boxShadow: '0 4px 10px rgba(239,68,68,0.15)',
-        borderRadius: '10px',
-        padding: '12px 14px',
-        cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: '700',
-        transition: 'transform 0.2s, box-shadow 0.2s',
-        textAlign: 'center'
-    },
-    homeBtn: {
-        background: 'rgba(59,130,246,0.12)',
-        border: '1px solid rgba(59,130,246,0.4)',
-        color: '#2563eb',
-        borderRadius: '10px',
-        padding: '12px 14px',
-        cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: '700',
-        transition: 'transform 0.2s, background 0.2s',
-        textAlign: 'center'
-    }
+    userRole: { fontSize: '11px' }
 };

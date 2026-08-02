@@ -118,6 +118,12 @@ exports.initiatePayment = async (req, res) => {
             const callbackUrl = `${frontendUrl}/payment/callback?tx_ref=${tx_ref}`;
             const webhookUrl = `${backendUrl}/api/payments/chapa/webhook`;
 
+            // Sanitize description for Chapa: max 50 chars, only letters/numbers/hyphens/underscores/spaces/dots
+            const courseTitle = (course.courseTitle || 'course')
+                .replace(/[^a-zA-Z0-9\s\-_\.]/g, '') // Remove invalid characters
+                .slice(0, 35); // Leave room for "Payment for " prefix
+            const sanitizedDescription = `Payment for ${courseTitle}`.slice(0, 50);
+
             const payload = {
                 amount: finalAmount,
                 currency,
@@ -128,7 +134,7 @@ exports.initiatePayment = async (req, res) => {
                 callback_url: callbackUrl,
                 return_url: callbackUrl,
                 webhook_url: webhookUrl,
-                customization: { title: 'Emare ICT Hub', description: `Payment for ${course.courseTitle || 'course'}` }
+                customization: { title: 'Emare ICT Hub', description: sanitizedDescription }
             };
 
             // Call Chapa
