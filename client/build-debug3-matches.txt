@@ -1,0 +1,9 @@
+    'vite:react-babel',
+    'vite:react-refresh',
+    'vite:build-html',
+          name: 'vite:react-babel',
+          name: 'vite:react-refresh',
+          name: 'vite:build-html',
+[31m?[39m Build failed in 916ms
+[31merror during build:
+[31msrc/context/LanguageContext.js (27:8): Expression expected[31m
