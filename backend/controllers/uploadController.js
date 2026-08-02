@@ -2,6 +2,18 @@ const fs = require('fs');
 const path = require('path');
 const cloudinary = require('../config/cloudinary');
 const streamifier = require('streamifier');
+const pdfParse = require('pdf-parse');
+
+// Helper: Extract text from PDF buffer
+const extractPdfText = async (buffer) => {
+    try {
+        const data = await pdfParse(buffer);
+        return (data.text || '').trim().slice(0, 18000);
+    } catch (err) {
+        console.warn('PDF parse failed:', err.message);
+        return '';
+    }
+};
 
 // Helper: Local File Storage Fallback
 const saveLocalFallback = (file, req) => {
@@ -55,6 +67,11 @@ exports.uploadFile = async (req, res) => {
         if (req.file.mimetype.startsWith('video/')) resourceType = 'video';
         else if (req.file.mimetype === 'application/pdf') resourceType = 'raw';
 
+        let pdfText = '';
+        if (req.file.mimetype === 'application/pdf') {
+            pdfText = await extractPdfText(req.file.buffer);
+        }
+
         let uploadFinished = false;
 
         // Set timeout for Cloudinary response (5 seconds)
@@ -85,7 +102,8 @@ exports.uploadFile = async (req, res) => {
                     url: result.secure_url,
                     public_id: result.public_id,
                     format: result.format,
-                    resource_type: result.resource_type
+                    resource_type: result.resource_type,
+                    pdfText
                 }
             });
         } catch (cloudErr) {
@@ -93,7 +111,10 @@ exports.uploadFile = async (req, res) => {
             const localData = saveLocalFallback(req.file, req);
             return res.status(200).json({
                 success: true,
-                data: localData
+                data: {
+                    ...localData,
+                    pdfText
+                }
             });
         }
 

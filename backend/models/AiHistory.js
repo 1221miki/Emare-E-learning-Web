@@ -7,6 +7,15 @@ const AiHistorySchema = new mongoose.Schema({
         required: true,
         index: true
     },
+    conversationId: {
+        type: String,
+        required: true,
+        index: true
+    },
+    type: {
+        type: String,
+        default: 'chat'
+    },
     question: {
         type: String,
         required: true
@@ -18,6 +27,10 @@ const AiHistorySchema = new mongoose.Schema({
     courseContext: {
         type: Object,
         default: {}
+    },
+    conversationTitle: {
+        type: String,
+        default: ''
     }
 }, { timestamps: true });
 

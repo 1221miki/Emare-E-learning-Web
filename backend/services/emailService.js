@@ -406,9 +406,84 @@ const sendAccountCreatedEmail = async (user, temporaryPassword) => {
     }
 };
 
+/**
+ * Send Course Enrollment Confirmation Email
+ */
+const sendCourseEnrollmentEmail = async (user, course, txRef) => {
+    const transporter = createTransporter();
+    const amount = typeof course.price !== 'undefined' ? `${course.price} ETB` : 'N/A';
+    const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
+    const courseUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/student/learn/${course._id}`;
+
+    const htmlTemplate = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; padding: 30px 20px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #ffffff; padding: 30px 20px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 10px 10px; }
+          .button { display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 20px; }
+          .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #64748b; }
+          .receipt { background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px dashed #cbd5e1; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Enrollment Confirmed! 🎉</h1>
+        </div>
+        <div class="content">
+          <p>Hi ${user.fullName},</p>
+          <p>Great news! Your payment was successful and you are now enrolled in <strong>${course.courseTitle || course.title}</strong>.</p>
+          
+          <div class="receipt">
+            <h3 style="margin-top:0">Receipt Summary</h3>
+            <p><strong>Course:</strong> ${course.courseTitle || course.title}</p>
+            <p><strong>Amount Paid:</strong> ${amount}</p>
+            <p><strong>Transaction Ref:</strong> ${txRef}</p>
+            <p><strong>Status:</strong> Completed</p>
+          </div>
+
+          <p>You can start learning right away. Dive into the course materials, watch the lectures, and take quizzes at your own pace.</p>
+          
+          <div style="text-align: center;">
+            <a href="${courseUrl}" class="button">Start Learning Now</a>
+          </div>
+          
+          <p style="margin-top: 30px;">
+            Happy learning!<br>
+            <strong>The Emare ELMS Team</strong>
+          </p>
+        </div>
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} Emare ICT Hub. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+    `;
+
+    try {
+        const info = await transporter.sendMail({
+            from: process.env.EMAIL_FROM || 'noreply@emare.com',
+            to: user.accountEmail,
+            subject: `🎉 Enrollment Confirmed: ${course.courseTitle || course.title}`,
+            html: htmlTemplate,
+            text: `Hi ${user.fullName},\n\nYour payment for ${course.courseTitle || course.title} was successful (Ref: ${txRef}).\nYou can start learning now: ${courseUrl}\n\nBest regards,\nThe Emare ELMS Team`
+        });
+
+        console.log(`✅ Enrollment email sent to ${user.accountEmail} (Message ID: ${info.messageId})`);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
+        console.error(`❌ Failed to send enrollment email to ${user.accountEmail}:`, error.message);
+        return { success: false, error: error.message };
+    }
+};
+
 module.exports = {
     sendPasswordResetEmail,
     sendPasswordResetConfirmationEmail,
     sendAdminPasswordResetEmail,
-    sendAccountCreatedEmail
+    sendAccountCreatedEmail,
+    sendCourseEnrollmentEmail
 };

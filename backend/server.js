@@ -1,4 +1,6 @@
-require('dotenv').config({ path: '../.env' });
+require('dotenv').config({ path: '../.env', override: true });
+// Ensure critical runtime files exist to prevent startup crashes from accidental deletions
+try { require('./utils/ensureFiles'); } catch (err) { console.warn('ensureFiles initialization failed:', err && err.message); }
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
@@ -53,12 +55,16 @@ const allowedOrigins = [
     'http://localhost:3002',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001',
-    'http://127.0.0.1:3002'
+    'http://127.0.0.1:3002',
+    'http://localhost:5176',
+    'http://localhost:5177',
+    'http://127.0.0.1:5176',
+    'http://127.0.0.1:5177'
 ];
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
             return callback(null, true);
         }
         callback(new Error(`CORS policy blocked origin: ${origin}`));
@@ -141,5 +147,20 @@ app.use(errorHandler);
 // ── Start Server ───────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`✅ Server running in [${process.env.NODE_ENV || 'development'}] mode on port ${PORT}`);
+    const ENV = (process.env.NODE_ENV || 'development').toUpperCase();
+    console.log(`
+╔═══════════════════════════════════════════════════════════╗
+║                                                           ║
+║          🎓  Emare E-Learning LMS BACKEND 🎓             ║
+║                                                           ║
+║   Environment: ${ENV}                                      ║
+║   Server running on: http://localhost:${PORT}              ║
+║   API Base: http://localhost:${PORT}/api                   ║
+║   Socket.IO: ✅ ENABLED                                     ║
+║                                                           ║
+║   Status: ✅ READY                                         ║
+║                                                           ║
+╚═══════════════════════════════════════════════════════════╝
+`);
 });
+// trigger restart

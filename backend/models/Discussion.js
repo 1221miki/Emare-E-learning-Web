@@ -27,6 +27,11 @@ const DiscussionSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    category: {
+        type: String,
+        enum: ['Question', 'Help', 'Announcement', 'Idea', 'General'],
+        default: 'Question'
+    },
     title: {
         type: String,
         required: [true, 'Discussion title is required'],
@@ -38,7 +43,18 @@ const DiscussionSchema = new mongoose.Schema({
         required: [true, 'Discussion body is required'],
         trim: true
     },
+    tags: {
+        type: [String],
+        default: []
+    },
+    attachments: {
+        type: [Object],
+        default: []
+    },
     replies: [ReplySchema],
+    bestReplyId: {
+        type: mongoose.Schema.Types.ObjectId
+    },
     isPinned: {
         type: Boolean,
         default: false
@@ -50,7 +66,11 @@ const DiscussionSchema = new mongoose.Schema({
     upvotes: {
         type: Number,
         default: 0
-    }
+    },
+    upvotedBy: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }]
 }, {
     timestamps: true
 });

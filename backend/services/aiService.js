@@ -20,10 +20,10 @@ class AIService {
      * @param {Object} context - Optional context (e.g., current course, user progress)
      * @returns {Promise<string>}
      */
-    async generateChatResponse(prompt, context = {}) {
+    async generateChatResponse(prompt, context = {}, conversationHistory = []) {
         if (this.provider === 'openai' && this.apiKey) {
             try {
-                return await this._callOpenAI(prompt, context);
+                return await this._callOpenAI(prompt, context, conversationHistory);
             } catch (error) {
                 console.error('AIProvider error:', error.message || error);
                 return `${this._getMockResponse(prompt, context)}\n\n(Note: This response is a fallback because the external AI service was unavailable.)`;
@@ -69,46 +69,17 @@ class AIService {
         return {};
     }
 
-    async _callOpenAI(prompt, context, instruction = null) {
-        const courseName = context?.courseName || 'this course';
-        const progressText = context?.courseProgress ? `The student is ${context.courseProgress}% through ${courseName}.` : '';
-        const lessonText = context?.currentLessonTitle ? `The student is currently studying ${context.currentLessonTitle}.` : '';
-        const defaultInstruction = `You are Emare AI Tutor, an expert learning assistant.
-
-Your responsibilities:
-- Answer student questions clearly.
-- Explain difficult concepts step-by-step.
-- Summarize lessons.
-- Provide practical examples.
-- Explain coding concepts and errors.
-- Recommend learning resources.
-- Adapt explanations to beginner, intermediate, or advanced students.
-- Encourage critical thinking rather than giving direct answers.
-
-When explaining:
-1. Start with a simple explanation.
-2. Give a real-world example.
-3. Provide a practice task.
-4. Ask if the student needs more help.
-
-Always be friendly, professional, and educational.`;
-        const systemInstruction = instruction || defaultInstruction;
-        const contextSummary = [progressText, lessonText].filter(Boolean).join(' ');
-
-        const messages = [
-            { role: 'system', content: systemInstruction },
-            { role: 'system', content: `Context: ${contextSummary}` },
-            { role: 'user', content: prompt }
-        ];
+    async _callOpenAI(prompt, context, conversationHistory = [], instruction = null) {
+        const messages = this._buildConversationMessages(prompt, context, conversationHistory, instruction);
 
         const response = await axios.post('https://api.openai.com/v1/chat/completions', {
             model: this.model,
             messages,
-            temperature: 0.5,
+            temperature: 0.45,
             max_tokens: 900,
             top_p: 0.95,
             frequency_penalty: 0.0,
-            presence_penalty: 0.0,
+            presence_penalty: 0.0
         }, {
             headers: {
                 Authorization: `Bearer ${this.apiKey}`,
@@ -122,6 +93,180 @@ Always be friendly, professional, and educational.`;
         }
 
         return answer.trim();
+    }
+
+    _buildConversationMessages(prompt, context, conversationHistory = [], instruction = null) {
+        const defaultInstruction = `You are Emare AI Tutor.
+You are the official AI learning assistant for the Emare ICT Hub E-Learning Platform.
+You are an expert university professor, software engineer, course coach, study mentor, and assignment helper.
+Your mission is to help students learn effectively, complete courses successfully, and achieve their learning goals.
+
+You are not a generic chatbot.
+You are a personalized tutor and course assistant.
+
+Always:
+- Provide a clear simple explanation first.
+- Follow with a detailed technical explanation.
+- Give practical examples.
+- Give real-world examples.
+- Use Markdown formatting.
+- Organize content with headings and bullet points.
+- Use tables when useful.
+- Provide code blocks when needed.
+- Highlight important notes.
+- If the answer is long, divide it into sections.
+- Mention common mistakes and best practices when relevant.
+- Encourage curiosity and critical thinking.
+- Be encouraging, patient, and professional.
+- Do not criticize the student.
+- Do not invent facts.
+- If you are uncertain, state that you are unsure.
+
+Response structure should include when appropriate:
+1. Simple explanation
+2. Detailed explanation
+3. Real-life example
+4. Key points
+5. Quick summary
+6. Practice question
+7. Suggested next topic
+
+Platform Context:
+You are integrated into the Emare ICT Hub E-Learning Management System.
+Use available student and course data to personalize answers while respecting privacy and only using information made available for the current student.
+
+If lessons are unfinished, remind the student politely about their progress.
+If the user asks for exam prep, quizzes, notes, flashcards, or course guidance, provide supportive learning guidance.
+`;
+
+        const contextSummary = this._summarizeContext(context);
+        const requiredContext = `Required context fields:
+- Course Name
+- Lesson Name
+- Module Name
+- Assignment
+- Quiz
+- Student Level
+- Language
+- Current Page
+- Course Progress
+- Student Name
+- Previous Messages
+- Conversation History
+- Selected Text
+- Uploaded PDF
+- Uploaded Notes
+
+Use these details when they are available.`;
+
+        const technicalNotes = this._buildTechnicalSpecializationNotes(prompt);
+        const courseLabels = [];
+        if (context?.courseName) courseLabels.push(`Course: ${context.courseName}`);
+        if (context?.lessonName) courseLabels.push(`Lesson: ${context.lessonName}`);
+        if (context?.moduleName) courseLabels.push(`Module: ${context.moduleName}`);
+        if (context?.assignment) courseLabels.push(`Assignment: ${context.assignment}`);
+        if (context?.quiz) courseLabels.push(`Quiz: ${context.quiz}`);
+        if (context?.studentLevel) courseLabels.push(`Student Level: ${context.studentLevel}`);
+        if (context?.language) courseLabels.push(`Language: ${context.language}`);
+        if (context?.currentPage) courseLabels.push(`Current Page: ${context.currentPage}`);
+        if (typeof context?.courseProgress === 'number') courseLabels.push(`Course Progress: ${context.courseProgress}%`);
+        if (context?.studentName) courseLabels.push(`Student Name: ${context.studentName}`);
+
+        const systemContext = courseLabels.length ? `Context: ${courseLabels.join('; ')}.` : 'Context: no course-specific context was provided.';
+        const courseContextNote = context?.courseName ? `Use the course name "${context.courseName}" and the lesson details to relate your explanation to the student's enrolled course.` : '';
+
+        const messages = [
+            { role: 'system', content: instruction || defaultInstruction },
+            { role: 'system', content: requiredContext },
+            { role: 'system', content: systemContext },
+            { role: 'system', content: contextSummary }
+        ];
+
+        if (technicalNotes) {
+            messages.push({ role: 'system', content: technicalNotes });
+        }
+
+        if (courseContextNote) {
+            messages.push({ role: 'system', content: courseContextNote });
+        }
+
+        const historyMessages = Array.isArray(conversationHistory)
+            ? conversationHistory.slice(-6).flatMap((entry) => [
+                { role: 'user', content: entry.question },
+                { role: 'assistant', content: entry.answer }
+            ])
+            : [];
+
+        const previousMessages = Array.isArray(context.previousMessages)
+            ? context.previousMessages.slice(-6).map((message) => ({
+                role: message.role === 'assistant' ? 'assistant' : 'user',
+                content: message.text || message.content || ''
+            }))
+            : [];
+
+        const extraContextMessages = [];
+        if (typeof context.selectedText === 'string' && context.selectedText.trim()) {
+            extraContextMessages.push({ role: 'system', content: `Selected Text: ${context.selectedText.trim()}` });
+        }
+        if (typeof context.uploadedNotes === 'string' && context.uploadedNotes.trim()) {
+            extraContextMessages.push({ role: 'system', content: `Uploaded Notes: ${context.uploadedNotes.trim().slice(0, 1200)}${context.uploadedNotes.length > 1200 ? '... (truncated)' : ''}` });
+        }
+        if (typeof context.pdfText === 'string' && context.pdfText.trim()) {
+            extraContextMessages.push({ role: 'system', content: `Uploaded PDF content: ${context.pdfText.trim().slice(0, 1200)}${context.pdfText.length > 1200 ? '... (truncated)' : ''}` });
+        }
+
+        return [...messages, ...extraContextMessages, ...historyMessages, ...previousMessages, { role: 'user', content: prompt }];
+    }
+
+    _summarizeContext(context = {}) {
+        const summaryFields = [
+            ['Course Name', context.courseName],
+            ['Lesson Name', context.lessonName],
+            ['Module Name', context.moduleName],
+            ['Assignment', context.assignment],
+            ['Quiz', context.quiz],
+            ['Student Level', context.studentLevel],
+            ['Language', context.language],
+            ['Current Page', context.currentPage],
+            ['Course Progress', typeof context.courseProgress === 'number' ? `${context.courseProgress}%` : context.courseProgress],
+            ['Student Name', context.studentName]
+        ];
+
+        const lines = summaryFields
+            .filter(([, value]) => value !== undefined && value !== null && value !== '')
+            .map(([label, value]) => `${label}: ${value}`);
+
+        if (!lines.length) {
+            return 'No additional course metadata was provided.';
+        }
+
+        return `Course metadata available:\n- ${lines.join('\n- ')}`;
+    }
+
+    _buildTechnicalSpecializationNotes(prompt) {
+        const text = prompt.toLowerCase();
+        const notes = [];
+
+        if (/mern|mongodb.*express|express.*mongodb|react.*node|node.*react|mern stack/i.test(text)) {
+            notes.push(`The question is about the MERN stack. Answer as a senior MERN instructor with architecture, data flow, and best practices.`);
+        }
+        if (/\breact\b/i.test(text) && !/mern/i.test(text)) {
+            notes.push(`The question is about React. Explain components, hooks, state, props, lifecycle, performance, routing, and examples.`);
+        }
+        if (/\b(node|node\.js)\b/i.test(text)) {
+            notes.push(`The question is about Node.js. Explain backend architecture, request handling, server structure, and scaling considerations.`);
+        }
+        if (/\bmongo(db)?\b/i.test(text)) {
+            notes.push(`The question is about MongoDB. Explain schema design, collections, relationships, and indexes.`);
+        }
+        if (/\bexpress\b/i.test(text)) {
+            notes.push(`The question is about Express. Explain routes, middleware, controllers, authentication, and request lifecycle.`);
+        }
+        if (/\b(html|css)\b/i.test(text)) {
+            notes.push(`The question is about HTML/CSS. Explain the visual structure, layout behavior, and how styles affect presentation.`);
+        }
+
+        return notes.join(' ');
     }
 
     async generatePersonalizedLearningPath(studentContext = {}) {
