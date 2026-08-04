@@ -229,7 +229,7 @@ export default function RegisterPage() {
                         </div>
                     </div>
                     {/* Profile Picture */}
-                    <div style={styles.fieldGroup}>
+                    <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
                         <label style={styles.label}>Profile Picture (Optional)</label>
                         <input name="profilePicture" type="file" accept="image/*" onChange={handleChange} style={styles.input} />
                     </div>
@@ -259,7 +259,7 @@ export default function RegisterPage() {
                         <label style={styles.label}>City</label>
                         <input name="city" type="text" placeholder="City" value={form.city} onChange={handleChange} style={styles.input} />
                     </div>
-                    <div style={styles.fieldGroup}>
+                    <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
                         <label style={styles.label}>Address (Optional)</label>
                         <input name="address" type="text" placeholder="Street address" value={form.address} onChange={handleChange} style={styles.input} />
                     </div>
@@ -302,7 +302,7 @@ export default function RegisterPage() {
                                 <label style={styles.label}>Professional Title</label>
                                 <input name="professionalTitle" type="text" required placeholder="Senior Lecturer" value={form.professionalTitle} onChange={handleChange} style={styles.input} />
                             </div>
-                            <div style={styles.fieldGroup}>
+                            <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
                                 <label style={styles.label}>Biography</label>
                                 <textarea name="biography" rows={3} placeholder="Tell us about yourself" value={form.biography} onChange={handleChange} style={styles.textarea} />
                             </div>
@@ -318,7 +318,7 @@ export default function RegisterPage() {
                                 <label style={styles.label}>Highest Qualification</label>
                                 <input name="highestQualification" type="text" placeholder="Ph.D. in Computer Science" value={form.highestQualification} onChange={handleChange} style={styles.input} />
                             </div>
-                            <div style={styles.fieldGroup}>
+                            <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
                                 <label style={styles.label}>CV / Resume (Optional)</label>
                                 <input name="cvResume" type="file" accept="application/pdf" onChange={handleChange} style={styles.input} />
                             </div>
@@ -330,7 +330,7 @@ export default function RegisterPage() {
                                 <label style={styles.label}>LinkedIn Profile</label>
                                 <input name="linkedIn" type="url" placeholder="https://linkedin.com/in/username" value={form.linkedIn} onChange={handleChange} style={styles.input} />
                             </div>
-                            <div style={styles.fieldGroup}>
+                            <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
                                 <label style={styles.label}>Certificates Upload (Optional)</label>
                                 <input name="certificates" type="file" multiple onChange={handleChange} style={styles.input} />
                             </div>
@@ -340,12 +340,12 @@ export default function RegisterPage() {
                             </div>
                         </>
                     )}
-                    <button type="submit" style={loading ? { ...styles.btn, opacity: 0.7 } : styles.btn} disabled={loading}>
+                    <button type="submit" style={loading ? { ...styles.btn, opacity: 0.7, gridColumn: '1 / -1' } : { ...styles.btn, gridColumn: '1 / -1' }} disabled={loading}>
                         {loading ? 'Creating Account...' : 'Create Account'}
                     </button>
                 </form>
                 {/* Social Registration */}
-                <div style={styles.socialContainer}>
+                <div style={{ ...styles.socialContainer, gridColumn: '1 / -1' }}>
                     <p style={styles.socialText}>Or continue with</p>
                     <div style={styles.socialButtons}>
                         <button type="button" onClick={() => openSocialModal('Google')} style={styles.socialBtn} title="Register with Google"><FaGoogle style={{ color: '#ea4335' }} /></button>
@@ -354,7 +354,7 @@ export default function RegisterPage() {
                         <button type="button" onClick={() => openSocialModal('Facebook')} style={styles.socialBtn} title="Register with Facebook"><FaFacebook style={{ color: '#1877f2' }} /></button>
                     </div>
                 </div>
-                <p style={styles.footerText}>
+                <p style={{ ...styles.footerText, gridColumn: '1 / -1' }}>
                     Already have an account? <Link to="/login" style={styles.link}>Sign in</Link>
                 </p>
             </div>
@@ -428,13 +428,13 @@ export default function RegisterPage() {
 const styles = {
     page: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)', padding: '20px', position: 'relative' },
     backButton: { position: 'absolute', top: '24px', left: '24px', display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', textDecoration: 'none', fontSize: '14px', fontWeight: '600', transition: 'color 0.2s', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' },
-    card: { background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '48px 40px', width: '100%', maxWidth: '560px', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' },
+    card: { background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '40px', width: '100%', maxWidth: '920px', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' },
     header: { textAlign: 'center', marginBottom: '32px' },
     logo: { width: '60px', height: '60px', borderRadius: '16px', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: '900', color: '#fff', marginBottom: '16px' },
     title: { color: '#fff', fontSize: '26px', fontWeight: '800', margin: '0 0 6px' },
     subtitle: { color: '#94a3b8', fontSize: '14px', margin: 0 },
     errorBox: { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', padding: '12px 16px', borderRadius: '10px', fontSize: '14px', marginBottom: '20px' },
-    form: { display: 'flex', flexDirection: 'column', gap: '14px' },
+    form: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px' },
     fieldGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
     label: { color: '#cbd5e1', fontSize: '13px', fontWeight: '600', letterSpacing: '0.5px' },
     input: { background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: '#fff', fontSize: '15px', padding: '12px 16px', outline: 'none', transition: 'border-color 0.2s' },
