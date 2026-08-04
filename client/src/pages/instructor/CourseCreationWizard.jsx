@@ -38,7 +38,7 @@ const initialForm = {
     previewVideoUrl: ''
 };
 
-const emptyLesson = { lessonTitle: '', videoUrl: '', isFreePreview: false };
+const emptyLesson = { lessonTitle: '', videoUrl: '', notesPdfUrl: '', resourceLink: '', isFreePreview: false };
 
 export default function CourseCreationWizard() {
     const { colors } = useTheme();
@@ -100,6 +100,8 @@ export default function CourseCreationWizard() {
             lessons: (chapter.lessons || []).map(lesson => ({
                 lessonTitle: lesson.lessonTitle.trim(),
                 videoUrl: lesson.videoUrl.trim(),
+                notesPdfUrl: lesson.notesPdfUrl ? lesson.notesPdfUrl.trim() : '',
+                resourceLink: lesson.resourceLink ? lesson.resourceLink.trim() : '',
                 isFreePreview: lesson.isFreePreview
             }))
         }))
@@ -362,7 +364,11 @@ export default function CourseCreationWizard() {
                                     </div>
                                     <div style={styles.formGroup}>
                                         <label style={styles.label}>Lesson Video URL</label>
-                                        <input style={styles.input} value={lessonDraft.videoUrl} onChange={e => setLessonDraft(prev => ({ ...prev, videoUrl: e.target.value }))} placeholder="Paste a video URL or upload a file" />
+                                        <input style={styles.input} value={lessonDraft.videoUrl} onChange={e => setLessonDraft(prev => ({ ...prev, videoUrl: e.target.value }))} placeholder="Paste YouTube link or video URL" />
+                                    </div>
+                                    <div style={styles.formGroup}>
+                                        <label style={styles.label}>PDF Notes / Google Drive URL</label>
+                                        <input style={styles.input} value={lessonDraft.notesPdfUrl || lessonDraft.resourceLink || ''} onChange={e => setLessonDraft(prev => ({ ...prev, notesPdfUrl: e.target.value, resourceLink: e.target.value }))} placeholder="Paste Google Drive link or PDF URL" />
                                     </div>
                                     <div style={styles.formGroup}>
                                         <label style={styles.label}>Free Preview</label>
@@ -377,15 +383,22 @@ export default function CourseCreationWizard() {
                                             <UploadCloud size={16} /> Upload Video
                                             <input type="file" accept="video/*" onChange={e => handleLessonUpload(e)} style={{ display: 'none' }} />
                                         </label>
+                                        <label style={{ ...styles.uploadLabel, background: 'rgba(16,185,129,0.15)', color: '#10b981', borderColor: 'rgba(16,185,129,0.3)' }}>
+                                            <FileText size={16} /> Upload PDF Notes
+                                            <input type="file" accept="application/pdf" onChange={e => handlePdfUpload(e)} style={{ display: 'none' }} />
+                                        </label>
                                     </div>
                                 </div>
                                 {chapter.lessons.length > 0 && chapter.lessons.map((lesson, lessonIndex) => (
                                     <div key={lessonIndex} style={styles.lessonRow}>
                                         <div>
                                             <div style={{ color: colors.text, fontWeight: 700 }}>{lesson.lessonTitle}</div>
-                                            <div style={{ color: colors.textMuted, fontSize: 12 }}>{lesson.videoUrl}</div>
+                                            <div style={{ color: colors.textMuted, fontSize: 12 }}>🎬 {lesson.videoUrl}</div>
+                                            {(lesson.notesPdfUrl || lesson.resourceLink) && (
+                                                <div style={{ color: '#10b981', fontSize: 12, marginTop: 2 }}>📄 PDF/Drive: {lesson.notesPdfUrl || lesson.resourceLink}</div>
+                                            )}
                                         </div>
-                                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                                             <span style={styles.badge}>{lesson.isFreePreview ? 'Free Preview' : 'Locked'}</span>
                                             <button type="button" onClick={() => removeLesson(chapterIndex, lessonIndex)} style={styles.textBtn}><Trash2 size={14} /> Remove</button>
                                         </div>
@@ -476,6 +489,28 @@ export default function CourseCreationWizard() {
         } catch (err) {
             console.error(err);
             setErrorMessage(err.response?.data?.message || 'Lesson upload failed.');
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handlePdfUpload = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        setErrorMessage('');
+        setStatusMessage('');
+        setIsUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await uploadService.uploadFile(formData);
+            const url = res.data?.data?.url || res.data?.data;
+            if (!url) throw new Error('Upload returned no URL.');
+            setLessonDraft(prev => ({ ...prev, notesPdfUrl: url, resourceLink: url }));
+            setStatusMessage('Lesson PDF notes uploaded.');
+        } catch (err) {
+            console.error(err);
+            setErrorMessage(err.response?.data?.message || 'PDF upload failed.');
         } finally {
             setIsUploading(false);
         }

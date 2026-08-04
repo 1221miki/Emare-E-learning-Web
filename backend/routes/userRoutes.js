@@ -4,6 +4,7 @@ const { protect, authorizeRoles, optionalProtect } = require('../middleware/auth
 const {
     getAllUsers,
     getUserById,
+    createUser,
     updateUser,
     resetUserPassword,
     deleteUser,
@@ -24,6 +25,7 @@ router.put('/instructor/profile', protect, authorizeRoles('Instructor'), updateI
 router.get('/', optionalProtect, getAllUsers);
 
 // ── Admin User Management ──────────────────────────────────
+router.post('/', protect, authorizeRoles('Admin'), createUser);
 router.get('/:id', protect, authorizeRoles('Admin'), getUserById);
 router.patch('/:id', protect, authorizeRoles('Admin'), updateUser);
 router.patch('/:id/reset-password', protect, authorizeRoles('Admin'), resetUserPassword);

@@ -17,6 +17,14 @@ const LessonSchema = new mongoose.Schema({
     isFreePreview: {
         type: Boolean,
         default: false
+    },
+    resourceLink: {
+        type: String,
+        default: ''
+    },
+    notesPdfUrl: {
+        type: String,
+        default: ''
     }
 });
 
@@ -89,6 +97,10 @@ const CourseSchema = new mongoose.Schema({
         type: [String],
         default: []
     },
+    resources: [{
+        name: { type: String, trim: true },
+        url: { type: String, trim: true }
+    }],
     creatorRef: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',

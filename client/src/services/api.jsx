@@ -13,14 +13,19 @@ API.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Handle expired session globally - redirect to login
+// Handle expired session globally - redirect to login only for protected routes
 API.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
             localStorage.removeItem('elms_token');
             localStorage.removeItem('elms_user');
-            window.location.href = '/login';
+            const publicPaths = ['/login', '/register', '/', '/about', '/contact', '/help', '/privacy', '/terms', '/cookies', '/courses', '/search', '/career-tracks', '/categories', '/leaderboard', '/payment/callback', '/payment/success', '/payment/failed'];
+            const currentPath = window.location.pathname;
+            const isPublic = publicPaths.some(p => currentPath === p || currentPath.startsWith('/courses/') || currentPath.startsWith('/instructors/') || currentPath.startsWith('/payment/'));
+            if (!isPublic && currentPath !== '/login') {
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }
@@ -72,6 +77,9 @@ export const quizService = {
     create: (data) => API.post('/quizzes', data),
     getByCourse: (courseId) => API.get(`/quizzes/course/${courseId}`),
     getById: (id) => API.get(`/quizzes/${id}`),
+    update: (id, data) => API.put(`/quizzes/${id}`, data),
+    delete: (id) => API.delete(`/quizzes/${id}`),
+    getInstructorQuizzes: () => API.get('/quizzes/instructor/mine'),
     submitAttempt: (id, answers) => API.post(`/quizzes/${id}/attempt`, { answers }),
     getResults: (id) => API.get(`/quizzes/${id}/results`)
 };
@@ -80,6 +88,7 @@ export const quizService = {
 export const userService = {
     getAll: (params) => API.get('/users', { params }),
     getById: (id) => API.get(`/users/${id}`),
+    createUser: (data) => API.post('/users', data),
     update: (id, data) => API.patch(`/users/${id}`, data),
     updateProfile: (data) => API.patch('/users/profile', data),
     getProfile: () => API.get('/auth/me'),
@@ -193,12 +202,16 @@ export const certificateService = {
     // student-facing
     getMine: () => API.get('/certificates/mine'),
     myCertificates: () => API.get('/certificates/my'),
+    getMyCertificates: () => API.get('/certificates/me'),
     issue: (courseId) => API.post(`/certificates/issue/${courseId}`),
+    issueCertificate: (courseId) => API.post(`/certificates/course/${courseId}/issue`),
     checkEligibility: (courseId) => API.get(`/certificates/check/${courseId}`),
     // verification & download
     verify: (certNumber) => API.get(`/certificates/verify/${certNumber}`),
+    verifyCertificate: (certNumber) => API.get(`/certificates/verify/${certNumber}`),
     verifyPublic: (certificateId) => API.get(`/certificates/verify/${certificateId}`),
-    download: (id, opts = { responseType: 'blob' }) => API.get(`/certificates/${id}/download`, opts)
+    download: (id, opts = { responseType: 'blob' }) => API.get(`/certificates/${id}/download`, opts),
+    downloadCertificate: (id) => API.get(`/certificates/${id}/download`, { responseType: 'blob' })
 };
 
 // ── Discussion API Calls ───────────────────────────────────
@@ -244,8 +257,6 @@ export const projectService = {
 export const leaderboardService = {
     getTop: () => API.get('/leaderboard')
 };
-
-// Messaging APIs are defined above (merged messageService)
 
 // ── Live Sessions API Calls ────────────────────────────────
 export const liveSessionService = {
@@ -295,7 +306,11 @@ export const paymentService = {
     applyCoupon: (data) => API.post('/payments/coupon', data)
 };
 
-// Certificate API is defined above (merged `certificateService`).
+// ── Audit Logs API Calls (Admin) ──────────────────────────
+export const auditService = {
+    getLogs: (params) => API.get('/audit-logs', { params }),
+    getStats: () => API.get('/audit-logs/stats')
+};
 
 // ── System API Calls (Admin) ─────────────────────────────────
 export const systemService = {
@@ -314,11 +329,6 @@ export const contentService = {
     getPage: (page) => API.get(`/content/${page}`),
     savePage: (page, data) => API.put(`/content/${page}`, data),
     getAll: () => API.get('/content')
-};
-
-// ── Audit Logs API Calls (Admin) ──────────────────────────
-export const auditService = {
-    getLogs: (params) => API.get('/audit-logs', { params })
 };
 
 // ── Calendar API Calls (Admin) ────────────────────────────

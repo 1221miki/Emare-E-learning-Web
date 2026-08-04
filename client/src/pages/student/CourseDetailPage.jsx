@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { courseService, reviewService, wishlistService, paymentService, enrollmentService } from '../../services/api';
+import { courseService, reviewService, wishlistService, enrollmentService } from '../../services/api';
 import Navbar from '../../components/Navbar';
 import GuestModal from '../../components/GuestModal';
 import LearningContentAccessChecklist from '../../components/dashboard/LearningContentAccessChecklist';
@@ -10,7 +10,7 @@ import LearningContentAccessChecklist from '../../components/dashboard/LearningC
 export default function CourseDetailPage() {
     const { courseId } = useParams();
     const { isAuthenticated, isStudent, isSuspended } = useAuth();
-    const { colors, theme } = useTheme();
+    const { colors } = useTheme();
     const navigate = useNavigate();
 
     const [course, setCourse] = useState(null);
@@ -64,14 +64,14 @@ export default function CourseDetailPage() {
                 enrollmentService.getMyStatus().then(res => {
                     const enrollments = res.data?.data || [];
                     const enrolled = enrollments.some(e => {
-                        const eId = e.courseRef?._id || e.courseRef;
-                        return eId === courseId && (e.paymentStatus === 'Cleared' || e.tuitionClearanceFlag === true);
+                        const eCourseId = e.courseRef?._id ? String(e.courseRef._id) : String(e.courseRef || '');
+                        return eCourseId === courseId && (e.paymentStatus === 'Cleared' || e.tuitionClearanceFlag === true);
                     });
                     setIsEnrolled(enrolled);
                 }).catch(() => {});
             }
-        }).catch(err => {
-            console.error(err);
+        }).catch(() => {
+            console.error('Failed to load enrollment or wishlist state.');
         }).finally(() => {
             setLoading(false);
         });

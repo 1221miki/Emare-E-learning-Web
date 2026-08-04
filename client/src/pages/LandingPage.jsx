@@ -130,7 +130,12 @@ export default function LandingPage() {
     );
 
     const featuredList = allCourses.slice(0, 4);
-    const freeList = allCourses.slice(4, 8); // Mock slice
+    const freeCourses = allCourses.filter(c => c.price === 0);
+    const paidCourses = allCourses.filter(c => c.price > 0);
+    const freeList = [
+        ...freeCourses.slice(0, 3),
+        ...paidCourses.slice(0, Math.max(0, 4 - freeCourses.slice(0, 3).length))
+    ];
     const newList = allCourses.slice(0, 4);  // Mock slice
     const trendingList = allCourses.slice(2, 6); // Mock slice
 

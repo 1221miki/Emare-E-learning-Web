@@ -7,6 +7,7 @@ const {
     sendAdminPasswordResetEmail,
     sendAccountCreatedEmail
 } = require('../services/emailService');
+const { audit, resolveIp } = require('../utils/auditLogger');
 
 // Helper: Generate JWT and set as HTTP-Only cookie
 const sendTokenResponse = (user, statusCode, res) => {
@@ -72,6 +73,11 @@ const register = async (req, res, next) => {
             lastLoginTimestamp: Date.now()
         });
 
+        // Audit: new account registered
+        audit.security({ req, user, action: 'REGISTER', severity: 'info',
+            description: `New ${user.assignedRole} account registered: ${user.fullName} (${user.accountEmail}).`,
+            targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
+
         sendTokenResponse(user, 201, res);
     } catch (err) {
         next(err);
@@ -97,22 +103,39 @@ const login = async (req, res, next) => {
         const user = await User.findOne({ accountEmail: normalizedEmail }).select('+securedPassword');
 
         if (!user) {
+            // Audit: login attempt for non-existent account
+            audit.security({ req, action: 'LOGIN_FAILED', severity: 'warning',
+                description: `Failed login attempt for unknown account (${normalizedEmail}) from IP ${resolveIp(req)}.`,
+                ipAddress: resolveIp(req) });
             return res.status(401).json({ success: false, message: 'Invalid credentials.' });
         }
 
         if (!user.isActive) {
+            // Audit: login attempt on deactivated account
+            audit.security({ req, user, action: 'LOGIN_BLOCKED', severity: 'warning',
+                description: `Login blocked for deactivated account (${normalizedEmail}) from IP ${resolveIp(req)}.`,
+                targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
             return res.status(401).json({ success: false, message: 'Your account is deactivated. Please contact an administrator.' });
         }
 
         // Validate password using bcrypt instance method
         const isMatch = await user.comparePassword(loginPassword);
         if (!isMatch) {
+            // Audit: wrong password
+            audit.security({ req, user, action: 'LOGIN_FAILED', severity: 'warning',
+                description: `Failed login attempt for user account (${normalizedEmail}) from IP ${resolveIp(req)}.`,
+                targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
             return res.status(401).json({ success: false, message: 'Invalid credentials.' });
         }
 
         // Update last login timestamp
         user.lastLoginTimestamp = Date.now();
         await user.save({ validateBeforeSave: false });
+
+        // Audit: successful login
+        audit.security({ req, user, action: 'LOGIN_SUCCESS', severity: 'info',
+            description: `${user.assignedRole} user (${user.accountEmail}) logged in successfully from IP ${resolveIp(req)}.`,
+            targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
 
         sendTokenResponse(user, 200, res);
     } catch (err) {
@@ -127,6 +150,12 @@ const login = async (req, res, next) => {
 // ─────────────────────────────────────────────
 const logout = async (req, res, next) => {
     try {
+        // Audit: logout
+        if (req.user) {
+            audit.security({ req, user: req.user, action: 'LOGOUT', severity: 'info',
+                description: `${req.user.assignedRole} user (${req.user.accountEmail}) logged out.`,
+                targetType: 'User', targetId: req.user._id, targetLabel: req.user.accountEmail });
+        }
         res.cookie('token', 'expired', {
             httpOnly: true,
             expires: new Date(Date.now() + 5 * 1000) // Expire in 5 seconds
@@ -312,6 +341,11 @@ const resetPassword = async (req, res, next) => {
         user.lastLoginTimestamp = Date.now();
 
         await user.save({ validateBeforeSave: false });
+
+        // Audit: password reset completed
+        audit.security({ req, user, action: 'PASSWORD_RESET', severity: 'warning',
+            description: `Password reset completed for account (${user.accountEmail}) from IP ${resolveIp(req)}.`,
+            targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
 
         // Send confirmation email with new password
         const emailResult = await sendPasswordResetConfirmationEmail(user, newPassword);

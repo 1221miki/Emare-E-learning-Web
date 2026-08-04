@@ -136,6 +136,134 @@ export default function RegisterPage() {
                 provider: socialProvider.toLowerCase(),
                 email: socialEmail,
                 name: socialName,
+                role: socialRole,
+            };
+
+            const user = await socialAuth(mockData);
+
+            if (user.assignedRole === 'Instructor' && user.status === 'Pending') {
+                navigate('/pending-approval');
+            } else if (user.assignedRole === 'Admin') {
+                navigate('/admin/dashboard');
+            } else if (user.assignedRole === 'Instructor') {
+                navigate('/instructor/dashboard');
+            } else {
+                navigate('/student/dashboard');
+            }
+        } catch (err) {
+            setSocialError(err.response?.data?.message || `Unable to authorize ${socialProvider}. Please try again.`);
+        } finally {
+            setSocialLoading(false);
+        }
+    };
+
+    const renderProviderIcon = (provider) => {
+        switch (provider) {
+            case 'Google':
+                return <FaGoogle style={{ color: '#ea4335' }} />;
+            case 'GitHub':
+                return <FaGithub style={{ color: '#24292e' }} />;
+            case 'Microsoft':
+                return <FaMicrosoft style={{ color: '#00a4ef' }} />;
+            case 'Facebook':
+                return <FaFacebook style={{ color: '#1877f2' }} />;
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <div style={styles.page}>
+            <div style={styles.card}>
+                <Link to="/" style={styles.backButton}>
+                    <FaArrowLeft /> Back to home
+                </Link>
+
+                <div style={styles.header}>
+                    <div style={styles.logo}>E</div>
+                    <h1 style={styles.title}>Create your Emare account</h1>
+                    <p style={styles.subtitle}>Join Emare and access student and instructor learning experiences.</p>
+                </div>
+
+                {/* ── ROLE SELECTION ── */}
+                <div style={{ gridColumn: '1 / -1', marginBottom: '28px' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '14px', fontWeight: '700', textAlign: 'center', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                        I want to join as...
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        {/* Student Card */}
+                        <button
+                            type="button"
+                            onClick={() => setForm(prev => ({ ...prev, assignedRole: 'Student' }))}
+                            style={{
+                                background: form.assignedRole === 'Student'
+                                    ? 'linear-gradient(135deg, rgba(59,130,246,0.25), rgba(139,92,246,0.2))'
+                                    : 'rgba(255,255,255,0.04)',
+                                border: form.assignedRole === 'Student'
+                                    ? '2px solid #3b82f6'
+                                    : '2px solid rgba(255,255,255,0.1)',
+                                borderRadius: '16px',
+                                padding: '24px 20px',
+                                cursor: 'pointer',
+                                textAlign: 'center',
+                                transition: 'all 0.25s ease',
+                                transform: form.assignedRole === 'Student' ? 'scale(1.02)' : 'scale(1)',
+                                boxShadow: form.assignedRole === 'Student' ? '0 0 0 3px rgba(59,130,246,0.2)' : 'none'
+                            }}
+                        >
+                            <div style={{ fontSize: '42px', marginBottom: '10px' }}>🎓</div>
+                            <div style={{ color: '#fff', fontWeight: '800', fontSize: '17px', marginBottom: '6px' }}>Student</div>
+                            <div style={{ color: '#94a3b8', fontSize: '13px', lineHeight: 1.5 }}>
+                                Learn new skills, take courses, and earn certificates.
+                            </div>
+                            {form.assignedRole === 'Student' && (
+                                <div style={{ marginTop: '12px', background: '#3b82f6', color: '#fff', borderRadius: '20px', padding: '4px 14px', fontSize: '12px', fontWeight: '700', display: 'inline-block' }}>
+                                    ✓ Selected
+                                </div>
+                            )}
+                        </button>
+
+                        {/* Instructor Card */}
+                        <button
+                            type="button"
+                            onClick={() => setForm(prev => ({ ...prev, assignedRole: 'Instructor' }))}
+                            style={{
+                                background: form.assignedRole === 'Instructor'
+                                    ? 'linear-gradient(135deg, rgba(16,185,129,0.25), rgba(5,150,105,0.2))'
+                                    : 'rgba(255,255,255,0.04)',
+                                border: form.assignedRole === 'Instructor'
+                                    ? '2px solid #10b981'
+                                    : '2px solid rgba(255,255,255,0.1)',
+                                borderRadius: '16px',
+                                padding: '24px 20px',
+                                cursor: 'pointer',
+                                textAlign: 'center',
+                                transition: 'all 0.25s ease',
+                                transform: form.assignedRole === 'Instructor' ? 'scale(1.02)' : 'scale(1)',
+                                boxShadow: form.assignedRole === 'Instructor' ? '0 0 0 3px rgba(16,185,129,0.2)' : 'none'
+                            }}
+                        >
+                            <div style={{ fontSize: '42px', marginBottom: '10px' }}>👨‍💻</div>
+                            <div style={{ color: '#fff', fontWeight: '800', fontSize: '17px', marginBottom: '6px' }}>Instructor</div>
+                            <div style={{ color: '#94a3b8', fontSize: '13px', lineHeight: 1.5 }}>
+                                Create courses, teach students, and share expertise.
+                            </div>
+                            {form.assignedRole === 'Instructor' && (
+                                <div style={{ marginTop: '12px', background: '#10b981', color: '#fff', borderRadius: '20px', padding: '4px 14px', fontSize: '12px', fontWeight: '700', display: 'inline-block' }}>
+                                    ✓ Selected
+                                </div>
+                            )}
+                        </button>
+                    </div>
+                    {form.assignedRole === 'Instructor' && (
+                        <div style={{ marginTop: '12px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '10px', padding: '10px 16px', color: '#fbbf24', fontSize: '13px', textAlign: 'center' }}>
+                            ⏳ Instructor accounts require admin approval before activation.
+                        </div>
+                    )}
+                </div>
+
+                {error && <div style={styles.errorBox}>{error}</div>}
+
                 <form onSubmit={handleSubmit} style={styles.form}>
                     <h3 style={styles.sectionHeader}>Biographical Information</h3>
                     <div style={styles.fieldGroup}>
@@ -179,7 +307,7 @@ export default function RegisterPage() {
                     <div style={styles.fieldGroup}>
                         <label style={styles.label}>Password</label>
                         <div style={styles.passwordWrapper}>
-                            <input name="securedPassword" type={showPassword ? "text" : "password"} required placeholder="••••••••" value={form.securedPassword} onChange={handleChange} style={{ ...styles.input, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }} />
+                            <input name="securedPassword" type={showPassword ? 'text' : 'password'} required placeholder="••••••••" value={form.securedPassword} onChange={handleChange} style={{ ...styles.input, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }} />
                             <button type="button" onClick={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
                                 {showPassword ? <FaEyeSlash /> : <FaEye />}
                             </button>
@@ -188,7 +316,7 @@ export default function RegisterPage() {
                     <div style={styles.fieldGroup}>
                         <label style={styles.label}>Confirm Password</label>
                         <div style={styles.passwordWrapper}>
-                            <input name="confirmPassword" type={showConfirmPassword ? "text" : "password"} required placeholder="••••••••" value={form.confirmPassword} onChange={handleChange} style={{ ...styles.input, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }} />
+                            <input name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} required placeholder="••••••••" value={form.confirmPassword} onChange={handleChange} style={{ ...styles.input, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }} />
                             <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
                                 {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                             </button>
@@ -204,87 +332,83 @@ export default function RegisterPage() {
                         <div />
                     </div>
 
-                    <h3 style={styles.sectionHeader}>Professional & Academic Details</h3>
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Professional Title</label>
-                        <input name="professionalTitle" type="text" placeholder="Professional Title" value={form.professionalTitle} onChange={handleChange} style={styles.input} />
-                    </div>
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Education Level</label>
-                        <input name="educationLevel" type="text" placeholder="e.g., Bachelor" value={form.educationLevel} onChange={handleChange} style={styles.input} />
-                    </div>
+                    {/* ── Student-specific fields ── */}
+                    {form.assignedRole === 'Student' && (<>
+                        <h3 style={styles.sectionHeader}>🎓 Academic Details</h3>
+                        <div style={styles.fieldGroup}>
+                            <label style={styles.label}>Education Level</label>
+                            <input name="educationLevel" type="text" placeholder="e.g., Bachelor" value={form.educationLevel} onChange={handleChange} style={styles.input} />
+                        </div>
+                        <div style={styles.fieldGroup}>
+                            <label style={styles.label}>Institution / University (Optional)</label>
+                            <input name="institution" type="text" placeholder="University name" value={form.institution} onChange={handleChange} style={styles.input} />
+                        </div>
+                        <div style={styles.fieldGroup}>
+                            <label style={styles.label}>Field of Study</label>
+                            <input name="fieldOfStudy" type="text" placeholder="Computer Science" value={form.fieldOfStudy} onChange={handleChange} style={styles.input} />
+                        </div>
+                        <div style={styles.fieldGroup}>
+                            <label style={styles.label}>Learning Interests</label>
+                            <input name="learningInterests" type="text" placeholder="AI, Data Science, Cloud..." value={form.learningInterests} onChange={handleChange} style={styles.input} />
+                        </div>
+                        <div style={styles.fieldGroup}>
+                            <label style={styles.label}>Preferred Language</label>
+                            <select name="preferredLanguage" value={form.preferredLanguage} onChange={handleChange} style={styles.input}>
+                                <option value="">Select</option>
+                                <option value="English">English</option>
+                                <option value="Amharic">Amharic</option>
+                                <option value="Afaan Oromo">Afaan Oromo</option>
+                                <option value="Tigrinya">Tigrinya</option>
+                            </select>
+                        </div>
+                    </>)}
 
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Institution / University (Optional)</label>
-                        <input name="institution" type="text" placeholder="University name" value={form.institution} onChange={handleChange} style={styles.input} />
-                    </div>
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Field of Study</label>
-                        <input name="fieldOfStudy" type="text" placeholder="Computer Science" value={form.fieldOfStudy} onChange={handleChange} style={styles.input} />
-                    </div>
-
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Learning Interests</label>
-                        <input name="learningInterests" type="text" placeholder="AI, Data Science" value={form.learningInterests} onChange={handleChange} style={styles.input} />
-                    </div>
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Preferred Language</label>
-                        <input name="preferredLanguage" type="text" placeholder="English" value={form.preferredLanguage} onChange={handleChange} style={styles.input} />
-                    </div>
+                    {/* ── Instructor-specific fields ── */}
+                    {form.assignedRole === 'Instructor' && (<>
+                        <h3 style={styles.sectionHeader}>👨‍💻 Instructor Profile</h3>
+                        <div style={styles.fieldGroup}>
+                            <label style={styles.label}>Professional Title <span style={{ color: '#ef4444' }}>*</span></label>
+                            <input name="professionalTitle" type="text" required placeholder="e.g., Senior Software Engineer" value={form.professionalTitle} onChange={handleChange} style={styles.input} />
+                        </div>
+                        <div style={styles.fieldGroup}>
+                            <label style={styles.label}>Years of Experience</label>
+                            <input name="yearsOfExperience" type="number" min="0" max="50" placeholder="5" value={form.yearsOfExperience} onChange={handleChange} style={styles.input} />
+                        </div>
+                        <div style={styles.fieldGroup}>
+                            <label style={styles.label}>Expertise Areas</label>
+                            <input name="expertiseAreas" type="text" placeholder="AI, Web Dev, Cloud..." value={form.expertiseAreas} onChange={handleChange} style={styles.input} />
+                        </div>
+                        <div style={styles.fieldGroup}>
+                            <label style={styles.label}>LinkedIn Profile (Optional)</label>
+                            <input name="linkedIn" type="url" placeholder="https://linkedin.com/in/..." value={form.linkedIn} onChange={handleChange} style={styles.input} />
+                        </div>
+                        <div style={styles.fieldGroup}>
+                            <label style={styles.label}>Highest Qualification</label>
+                            <select name="highestQualification" value={form.highestQualification} onChange={handleChange} style={styles.input}>
+                                <option value="">Select</option>
+                                <option value="Diploma">Diploma</option>
+                                <option value="Bachelor">Bachelor's Degree</option>
+                                <option value="Master">Master's Degree</option>
+                                <option value="PhD">PhD / Doctorate</option>
+                                <option value="Professional">Professional Certification</option>
+                            </select>
+                        </div>
+                        <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
+                            <label style={styles.label}>Short Biography</label>
+                            <textarea name="biography" rows={3} placeholder="Tell students about yourself and your expertise..." value={form.biography} onChange={handleChange} style={styles.textarea} />
+                        </div>
+                        <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
+                            <label style={styles.label}>Upload CV / Resume (Optional)</label>
+                            <input name="cvResume" type="file" accept=".pdf,.doc,.docx" onChange={handleChange} style={styles.input} />
+                        </div>
+                    </>)}
 
                     <button type="submit" style={loading ? { ...styles.btn, opacity: 0.7, gridColumn: '1 / -1' } : { ...styles.btn, gridColumn: '1 / -1' }} disabled={loading}>
-                        {loading ? 'Creating Account...' : 'Create Account'}
+                        {loading ? 'Creating Account...' : `Create ${form.assignedRole} Account →`}
                     </button>
                 </form>
-                        <>
-                            <div style={styles.fieldGroup}>
-                                <label style={styles.label}>Professional Title</label>
-                                <input name="professionalTitle" type="text" required placeholder="Senior Lecturer" value={form.professionalTitle} onChange={handleChange} style={styles.input} />
-                            </div>
-                            <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
-                                <label style={styles.label}>Biography</label>
-                                <textarea name="biography" rows={3} placeholder="Tell us about yourself" value={form.biography} onChange={handleChange} style={styles.textarea} />
-                            </div>
-                            <div style={styles.fieldGroup}>
-                                <label style={styles.label}>Skills (comma separated)</label>
-                                <input name="skills" type="text" placeholder="Python, React, Node.js" value={form.skills} onChange={handleChange} style={styles.input} />
-                            </div>
-                            <div style={styles.fieldGroup}>
-                                <label style={styles.label}>Years of Experience</label>
-                                <input name="yearsOfExperience" type="number" min="0" placeholder="5" value={form.yearsOfExperience} onChange={handleChange} style={styles.input} />
-                            </div>
-                            <div style={styles.fieldGroup}>
-                                <label style={styles.label}>Highest Qualification</label>
-                                <input name="highestQualification" type="text" placeholder="Ph.D. in Computer Science" value={form.highestQualification} onChange={handleChange} style={styles.input} />
-                            </div>
-                            <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
-                                <label style={styles.label}>CV / Resume (Optional)</label>
-                                <input name="cvResume" type="file" accept="application/pdf" onChange={handleChange} style={styles.input} />
-                            </div>
-                            <div style={styles.fieldGroup}>
-                                <label style={styles.label}>Portfolio Website</label>
-                                <input name="portfolioUrl" type="url" placeholder="https://myportfolio.com" value={form.portfolioUrl} onChange={handleChange} style={styles.input} />
-                            </div>
-                            <div style={styles.fieldGroup}>
-                                <label style={styles.label}>LinkedIn Profile</label>
-                                <input name="linkedIn" type="url" placeholder="https://linkedin.com/in/username" value={form.linkedIn} onChange={handleChange} style={styles.input} />
-                            </div>
-                            <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
-                                <label style={styles.label}>Certificates Upload (Optional)</label>
-                                <input name="certificates" type="file" multiple onChange={handleChange} style={styles.input} />
-                            </div>
-                            <div style={styles.fieldGroup}>
-                                <label style={styles.label}>Areas of Expertise</label>
-                                <input name="expertiseAreas" type="text" placeholder="Machine Learning, Data Visualization" value={form.expertiseAreas} onChange={handleChange} style={styles.input} />
-                            </div>
-                        </>
-                    )}
-                    <button type="submit" style={loading ? { ...styles.btn, opacity: 0.7, gridColumn: '1 / -1' } : { ...styles.btn, gridColumn: '1 / -1' }} disabled={loading}>
-                        {loading ? 'Creating Account...' : 'Create Account'}
-                    </button>
-                </form>
-                {/* Social Registration */}
-                <div style={{ ...styles.socialContainer, gridColumn: '1 / -1' }}>
+
+                <div style={styles.socialContainer}>
                     <p style={styles.socialText}>Or continue with</p>
                     <div style={styles.socialButtons}>
                         <button type="button" onClick={() => openSocialModal('Google')} style={styles.socialBtn} title="Register with Google"><FaGoogle style={{ color: '#ea4335' }} /></button>
@@ -293,12 +417,12 @@ export default function RegisterPage() {
                         <button type="button" onClick={() => openSocialModal('Facebook')} style={styles.socialBtn} title="Register with Facebook"><FaFacebook style={{ color: '#1877f2' }} /></button>
                     </div>
                 </div>
-                <p style={{ ...styles.footerText, gridColumn: '1 / -1' }}>
+
+                <p style={styles.footerText}>
                     Already have an account? <Link to="/login" style={styles.link}>Sign in</Link>
                 </p>
             </div>
 
-            {/* Social Registration Modal */}
             {showSocialModal && (
                 <div style={styles.modalOverlay}>
                     <div style={styles.modalContent}>

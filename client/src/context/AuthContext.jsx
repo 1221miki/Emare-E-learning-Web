@@ -96,7 +96,29 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={value}>
-            {!loading && children}
+            {loading ? (
+                <div style={{
+                    minHeight: '100vh',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: '#0f172a',
+                    color: '#fff',
+                    fontFamily: 'system-ui, sans-serif'
+                }}>
+                    <div style={{
+                        width: '48px',
+                        height: '48px',
+                        border: '4px solid rgba(59,130,246,0.2)',
+                        borderTopColor: '#3b82f6',
+                        borderRadius: '50%',
+                        animation: 'spin 0.8s linear infinite'
+                    }} />
+                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                    <p style={{ marginTop: '16px', color: '#94a3b8', fontSize: '14px', fontWeight: '600' }}>Loading Emare ELMS...</p>
+                </div>
+            ) : children}
         </AuthContext.Provider>
     );
 };
