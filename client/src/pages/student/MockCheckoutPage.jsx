@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { paymentService } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
@@ -16,10 +16,15 @@ export default function MockCheckoutPage() {
         setErrorMsg('');
         try {
             const res = await paymentService.verifyChapa(txRef);
-            if (res.data && res.data.success) {
+            if (res.data?.verified) {
                 setStatus('success');
+                const courseId = res.data.courseId;
                 setTimeout(() => {
-                    navigate('/student/dashboard');
+                    if (courseId) {
+                        navigate(`/payment/success?courseId=${courseId}&tx_ref=${encodeURIComponent(txRef)}`);
+                    } else {
+                        navigate('/student/dashboard');
+                    }
                 }, 2200);
             } else {
                 setErrorMsg('Verification failed or returned unsuccessful.');

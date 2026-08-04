@@ -104,6 +104,8 @@ async function seedDefaultData() {
         }
 
         console.log('✅ Default data seeded successfully.');
+        const { seedCategoryCoursesHelper } = require('../utils/seedHelper');
+        await seedCategoryCoursesHelper();
     } catch (seedErr) {
         console.warn(`⚠️  Could not seed default data: ${seedErr.message}`);
     }

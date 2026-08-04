@@ -194,4 +194,77 @@ const getQuizResults = async (req, res, next) => {
     }
 };
 
-module.exports = { createQuiz, getQuizzesByCourse, getQuizById, submitQuizAttempt, getQuizResults };
+// ─────────────────────────────────────────────
+// @desc    Get all quizzes for courses owned by the instructor
+// @route   GET /api/quizzes/instructor/mine
+// @access  Private (Instructor only)
+// ─────────────────────────────────────────────
+const getInstructorQuizzes = async (req, res, next) => {
+    try {
+        // Find all courses belonging to this instructor
+        const courses = await Course.find({ creatorRef: req.user.id }).select('_id courseTitle').lean();
+        const courseIds = courses.map(c => c._id);
+
+        // Find all quizzes for those courses
+        const quizzes = await Quiz.find({ courseRef: { $in: courseIds } })
+            .populate('courseRef', 'courseTitle')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        res.status(200).json({ success: true, count: quizzes.length, data: quizzes });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Update a quiz
+// @route   PUT /api/quizzes/:id
+// @access  Private (Instructor only)
+// ─────────────────────────────────────────────
+const updateQuiz = async (req, res, next) => {
+    try {
+        let quiz = await Quiz.findById(req.params.id);
+        if (!quiz) {
+            return res.status(404).json({ success: false, message: 'Quiz not found.' });
+        }
+
+        // Verify ownership through the course
+        const course = await Course.findById(quiz.courseRef);
+        if (!course || course.creatorRef.toString() !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'You can only edit quizzes for your own courses.' });
+        }
+
+        quiz = await Quiz.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+        res.status(200).json({ success: true, data: quiz });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Delete a quiz
+// @route   DELETE /api/quizzes/:id
+// @access  Private (Instructor only)
+// ─────────────────────────────────────────────
+const deleteQuiz = async (req, res, next) => {
+    try {
+        const quiz = await Quiz.findById(req.params.id);
+        if (!quiz) {
+            return res.status(404).json({ success: false, message: 'Quiz not found.' });
+        }
+
+        // Verify ownership through the course
+        const course = await Course.findById(quiz.courseRef);
+        if (!course || course.creatorRef.toString() !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'You can only delete quizzes for your own courses.' });
+        }
+
+        await Quiz.findByIdAndDelete(req.params.id);
+        res.status(200).json({ success: true, message: 'Quiz deleted successfully.' });
+    } catch (err) {
+        next(err);
+    }
+};
+
+module.exports = { createQuiz, getQuizzesByCourse, getQuizById, submitQuizAttempt, getQuizResults, getInstructorQuizzes, updateQuiz, deleteQuiz };

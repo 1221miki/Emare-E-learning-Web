@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import NotificationBell from './NotificationBell';
-import { Sun, Moon, BookOpen, Home, LogOut } from 'lucide-react';
+import { 
+    Sun, Moon, BookOpen, Home, LogOut, LayoutDashboard, Award, 
+    Heart, Trophy, MessageSquare, Video, User, Settings, PlusCircle, FilePlus, Shield, HelpCircle 
+} from 'lucide-react';
 
 const SIDEBAR_WIDTH = 260;
 
@@ -11,7 +14,44 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
     const { user, logout } = useAuth();
     const { theme, toggleTheme, colors } = useTheme();
     const navigate = useNavigate();
+    const location = useLocation();
     const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+
+    // Fallback default nav items if not provided by parent
+    const effectiveNavItems = (navItems && navItems.length > 0) ? navItems : (() => {
+        const role = user?.assignedRole;
+        if (role === 'Instructor') {
+            return [
+                { key: 'dashboard', label: 'Dashboard', path: '/instructor/dashboard', icon: <LayoutDashboard size={20} /> },
+                { key: 'quizzes', label: 'Quiz Management', path: '/instructor/quizzes', icon: <HelpCircle size={20} /> },
+                { key: 'create-course', label: 'Create Course', path: '/instructor/courses/new', icon: <PlusCircle size={20} /> },
+                { key: 'create-assignment', label: 'Create Assignment', path: '/instructor/assignments/new', icon: <FilePlus size={20} /> },
+                { key: 'messages', label: 'Messages', path: '/messages', icon: <MessageSquare size={20} /> },
+                { key: 'live', label: 'Live Sessions', path: '/live-sessions', icon: <Video size={20} /> },
+                { key: 'settings', label: 'Settings', path: '/instructor/settings', icon: <Settings size={20} /> },
+            ];
+        } else if (role === 'Admin') {
+            return [
+                { key: 'dashboard', label: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
+                { key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-logs', icon: <Shield size={20} /> },
+                { key: 'messages', label: 'Messages', path: '/messages', icon: <MessageSquare size={20} /> },
+                { key: 'live', label: 'Live Sessions', path: '/live-sessions', icon: <Video size={20} /> },
+                { key: 'catalog', label: 'Course Catalog', path: '/courses', icon: <BookOpen size={20} /> },
+            ];
+        } else {
+            // Student or Default
+            return [
+                { key: 'dashboard', label: 'Dashboard', path: '/student/dashboard', icon: <LayoutDashboard size={20} /> },
+                { key: 'courses', label: 'Course Catalog', path: '/courses', icon: <BookOpen size={20} /> },
+                { key: 'wishlist', label: 'Wishlist', path: '/student/wishlist', icon: <Heart size={20} /> },
+                { key: 'certificates', label: 'Certificates', path: '/student/certificates', icon: <Award size={20} /> },
+                { key: 'leaderboard', label: 'Leaderboard', path: '/leaderboard', icon: <Trophy size={20} /> },
+                { key: 'messages', label: 'Messages', path: '/messages', icon: <MessageSquare size={20} /> },
+                { key: 'live', label: 'Live Sessions', path: '/live-sessions', icon: <Video size={20} /> },
+                { key: 'profile', label: 'Profile', path: '/student/profile', icon: <User size={20} /> },
+            ];
+        }
+    })();
 
     // Sidebar reposition (drag left/right)
     const [position, setPosition] = useState(() => localStorage.getItem('emare-sidebar-position') === 'right' ? 'right' : 'left');
@@ -100,8 +140,8 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
 
             {/* Navigation */}
             <nav style={styles.nav}>
-                {navItems.map((item) => {
-                    const isActive = activeTab === item.key;
+                {effectiveNavItems.map((item) => {
+                    const isActive = activeTab === item.key || location.pathname === item.path;
                     const itemStyles = {
                         ...styles.navItem,
                         color: isActive ? colors.primary : colors.textMuted,

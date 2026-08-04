@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { courseService, quizService, assignmentService, userService, enrollmentService, analyticsService, systemService, notificationService, authService, reportService, certificateService, contentService, uploadService, auditService, calendarService } from '../../services/api';
 import Sidebar from '../../components/Sidebar';
 import StatCard from '../../components/StatCard';
@@ -11,8 +11,15 @@ import { useTheme } from '../../context/ThemeContext';
 export default function AdminDashboard() {
     const { colors, theme } = useTheme();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('overview');
+    const location = useLocation();
+    const [activeTab, setActiveTab] = useState(() => location.state?.activeTab || 'overview');
     const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (location.state?.activeTab) {
+            setActiveTab(location.state.activeTab);
+        }
+    }, [location.state]);
     
     // Data states
     const [analytics, setAnalytics] = useState(null);
@@ -37,7 +44,7 @@ export default function AdminDashboard() {
     const [newPassword, setNewPassword] = useState('');
     const [notificationMsg, setNotificationMsg] = useState('');
     const [userFilter, setUserFilter] = useState('All');
-    const [createForm, setCreateForm] = useState({ fullName: '', accountEmail: '', securedPassword: '', assignedRole: 'Student' });
+    const [createForm, setCreateForm] = useState({ fullName: '', accountEmail: '', securedPassword: '', assignedRole: 'Instructor', contactPhone: '', isActive: true, requirePasswordChange: true, sendWelcomeEmail: true });
     const [editForm, setEditForm] = useState({ fullName: '', accountEmail: '' });
     const [showCreatePassword, setShowCreatePassword] = useState(false);
     const [showResetPassword, setShowResetPassword] = useState(false);
@@ -491,14 +498,18 @@ export default function AdminDashboard() {
                 fullName: createForm.fullName.trim(),
                 accountEmail: createForm.accountEmail.trim().toLowerCase(),
                 securedPassword: createForm.securedPassword,
-                assignedRole: createForm.assignedRole || 'Student'
+                assignedRole: createForm.assignedRole,
+                contactPhone: createForm.contactPhone,
+                isActive: createForm.isActive,
+                requirePasswordChange: createForm.requirePasswordChange,
+                sendWelcomeEmail: createForm.sendWelcomeEmail
             };
 
-            const response = await authService.register(payload);
+            const response = await userService.createUser(payload);
             if (response?.data?.success) {
-                showNotification('Student account created successfully');
+                showNotification(`${createForm.assignedRole} account created successfully`);
                 setIsCreateModalOpen(false);
-                setCreateForm({ fullName: '', accountEmail: '', securedPassword: '' });
+                setCreateForm({ fullName: '', accountEmail: '', securedPassword: '', assignedRole: 'Instructor', contactPhone: '', isActive: true, requirePasswordChange: true, sendWelcomeEmail: true });
                 setShowCreatePassword(false);
                 fetchData();
             }
@@ -1082,9 +1093,12 @@ export default function AdminDashboard() {
 
     const renderUsers = () => {
         const filteredUsers = users.filter((user) => userFilter === 'All' || user.assignedRole === userFilter);
-        const activeStudents = users.filter((u) => u.assignedRole === 'Student' && u.isActive);
-        const activeInstructors = users.filter((u) => u.assignedRole === 'Instructor' && u.isActive);
-        const activeAdmins = users.filter((u) => u.assignedRole === 'Admin' && u.isActive);
+        const totalUsers = users.length;
+        const totalAdmins = users.filter((u) => u.assignedRole === 'Admin').length;
+        const totalInstructors = users.filter((u) => u.assignedRole === 'Instructor').length;
+        const totalStudents = users.filter((u) => u.assignedRole === 'Student').length;
+        const activeUsers = users.filter((u) => u.isActive && !u.isSuspended).length;
+        const suspendedUsers = users.filter((u) => !u.isActive || u.isSuspended).length;
 
         return (
             <div style={s.tabContent}>
@@ -1093,13 +1107,20 @@ export default function AdminDashboard() {
                     <p style={s.sectionSub}>Create, review, edit, suspend, activate, and manage students, instructors, and administrators.</p>
                 </div>
 
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                    <StatCard icon={<Users size={24} aria-hidden="true" />} label="Total Users" value={totalUsers} color={colors.primary} />
+                    <StatCard icon={<ShieldCheck size={24} aria-hidden="true" />} label="Total Admins" value={totalAdmins} color={colors.accent} />
+                    <StatCard icon={<BookOpen size={24} aria-hidden="true" />} label="Total Instructors" value={totalInstructors} color={colors.info} />
+                    <StatCard icon={<GraduationCap size={24} aria-hidden="true" />} label="Total Students" value={`${totalStudents} (Read Only)`} color={colors.textMuted} />
+                    <StatCard icon={<CircleCheck size={24} aria-hidden="true" />} label="Active Users" value={activeUsers} color={colors.success} />
+                    <StatCard icon={<AlertTriangle size={24} aria-hidden="true" />} label="Suspended Users" value={suspendedUsers} color={colors.danger} />
+                </div>
+
                 <div style={{ ...s.card, marginBottom: '24px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
                         <div>
-                            <div style={{ color: colors.text, fontWeight: '800', marginBottom: '6px' }}>Account overview</div>
-                            <div style={{ color: colors.textMuted, fontSize: '14px' }}>
-                                Students: {activeStudents.length} • Instructors: {activeInstructors.length} • Admins: {activeAdmins.length}
-                            </div>
+                            <div style={{ color: colors.text, fontWeight: '800', marginBottom: '6px' }}>User Roster</div>
+                            <div style={{ color: colors.textMuted, fontSize: '14px' }}>Manage platform access and permissions.</div>
                         </div>
                         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                             <select value={userFilter} onChange={(e) => setUserFilter(e.target.value)} style={s.select}>
@@ -2302,7 +2323,7 @@ export default function AdminDashboard() {
 
     return (
         <div style={s.page}>
-            <Sidebar navItems={sidebarItems} activeTab={activeTab} onTabChange={setActiveTab} />
+            <Sidebar navItems={sidebarItems} activeTab={activeTab} onTabChange={(tab) => { if (tab === 'audit') { navigate('/admin/audit-logs'); } else { setActiveTab(tab); } }} />
             
             <main style={s.main}>
                 <header style={s.header}>
@@ -2463,6 +2484,10 @@ export default function AdminDashboard() {
                         <input type="email" value={createForm.accountEmail} onChange={(e) => setCreateForm({ ...createForm, accountEmail: e.target.value })} placeholder="Enter email" style={s.input} required />
                     </div>
                     <div>
+                        <label style={s.label}>Phone Number (Optional)</label>
+                        <input type="tel" value={createForm.contactPhone} onChange={(e) => setCreateForm({ ...createForm, contactPhone: e.target.value })} placeholder="Enter phone number" style={s.input} />
+                    </div>
+                    <div>
                         <label style={s.label}>Temporary password</label>
                         <div style={{ position: 'relative' }}>
                             <input type={showCreatePassword ? 'text' : 'password'} value={createForm.securedPassword} onChange={(e) => setCreateForm({ ...createForm, securedPassword: e.target.value })} placeholder="Minimum 8 characters" style={{ ...s.input, paddingRight: '44px' }} required minLength={8} />
@@ -2472,12 +2497,31 @@ export default function AdminDashboard() {
                     <div>
                         <label style={s.label}>Role</label>
                         <select value={createForm.assignedRole} onChange={(e) => setCreateForm({ ...createForm, assignedRole: e.target.value })} style={s.select}>
-                            <option value="Student">Student</option>
                             <option value="Instructor">Instructor</option>
-                            <option value="Admin">Admin</option>
+                            <option value="Admin">Administrator</option>
+                        </select>
+                        <p style={{...s.sectionSub, marginTop: '4px', fontSize: '12px'}}>Students can only be created via public Sign Up.</p>
+                    </div>
+                    <div>
+                        <label style={s.label}>Account Status</label>
+                        <select value={createForm.isActive ? 'Active' : 'Inactive'} onChange={(e) => setCreateForm({ ...createForm, isActive: e.target.value === 'Active' })} style={s.select}>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
                         </select>
                     </div>
-                    <button type="submit" style={s.primaryBtn}>Create Account</button>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <input type="checkbox" id="requirePasswordChange" checked={createForm.requirePasswordChange} onChange={(e) => setCreateForm({ ...createForm, requirePasswordChange: e.target.checked })} />
+                        <label htmlFor="requirePasswordChange" style={{...s.label, margin: 0, cursor: 'pointer'}}>Require Password Change on First Login</label>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
+                        <input type="checkbox" id="sendWelcomeEmail" checked={createForm.sendWelcomeEmail} onChange={(e) => setCreateForm({ ...createForm, sendWelcomeEmail: e.target.checked })} />
+                        <label htmlFor="sendWelcomeEmail" style={{...s.label, margin: 0, cursor: 'pointer'}}>Send Welcome Email</label>
+                    </div>
+                    
+                    <div style={{display: 'flex', gap: '12px', marginTop: '8px'}}>
+                        <button type="submit" style={{...s.primaryBtn, flex: 1}}>Create Account</button>
+                        <button type="button" onClick={() => setIsCreateModalOpen(false)} style={{...s.secondaryBtn, flex: 1}}>Cancel</button>
+                    </div>
                 </form>
             </Modal>
 

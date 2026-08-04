@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { courseService, paymentService } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
@@ -6,7 +6,7 @@ import { useTheme } from '../../context/ThemeContext';
 export default function Checkout() {
     const { courseId } = useParams();
     const navigate = useNavigate();
-    const { colors, theme } = useTheme();
+    const { colors } = useTheme();
 
     const [course, setCourse] = useState(null);
     const [loading, setLoading] = useState(false);

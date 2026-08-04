@@ -7,6 +7,7 @@ const Submission = require('../models/Submission');
 const Quiz = require('../models/Quiz');
 const QuizAttempt = require('../models/QuizAttempt');
 const LearningProgress = require('../models/LearningProgress');
+const { audit } = require('../utils/auditLogger');
 
 // ─────────────────────────────────────────────
 // @desc    Create a new course (Draft state)
@@ -27,6 +28,11 @@ const createCourse = async (req, res, next) => {
             creatorRef: req.user.id,
             publicationState: 'Draft'
         });
+
+        // Audit: course created
+        audit.course({ req, user: req.user, action: 'COURSE_CREATED', severity: 'info',
+            description: `Instructor (${req.user?.accountEmail}) created course: '${course.courseTitle}' as Draft.`,
+            targetType: 'Course', targetId: course._id, targetLabel: course.courseTitle });
 
         res.status(201).json({ success: true, data: course });
     } catch (err) {
@@ -172,6 +178,11 @@ const submitCourseForReview = async (req, res, next) => {
         course.publicationState = 'Pending Review';
         await course.save();
 
+        // Audit: course submitted for review
+        audit.course({ req, user: req.user, action: 'COURSE_SUBMITTED', severity: 'info',
+            description: `Instructor (${req.user?.accountEmail}) submitted course for review: '${course.courseTitle}'.`,
+            targetType: 'Course', targetId: course._id, targetLabel: course.courseTitle });
+
         res.status(200).json({ success: true, message: 'Course submitted for administrator review.', data: course });
     } catch (err) {
         next(err);
@@ -192,6 +203,11 @@ const approveCourse = async (req, res, next) => {
 
         course.publicationState = 'Published';
         await course.save();
+
+        // Audit: course approved
+        audit.course({ req, user: req.user, action: 'COURSE_APPROVED', severity: 'info',
+            description: `Admin (${req.user?.accountEmail}) approved course submission: '${course.courseTitle}'.`,
+            targetType: 'Course', targetId: course._id, targetLabel: course.courseTitle });
 
         res.status(200).json({ success: true, message: 'Course approved and is now live in the catalog.', data: course });
     } catch (err) {
@@ -225,6 +241,11 @@ const requestCourseRevision = async (req, res, next) => {
 
         await course.save();
 
+        // Audit: revision requested
+        audit.course({ req, user: req.user, action: 'COURSE_REVISION_REQUESTED', severity: 'warning',
+            description: `Admin (${req.user?.accountEmail}) requested revisions for course '${course.courseTitle}': "${message || 'No reason given'}".`,
+            targetType: 'Course', targetId: course._id, targetLabel: course.courseTitle });
+
         res.status(200).json({ success: true, message: 'Revision requested. The course has been sent back to the instructor for updates.', data: course });
     } catch (err) {
         next(err);
@@ -257,6 +278,11 @@ const rejectCourse = async (req, res, next) => {
 
         await course.save();
 
+        // Audit: course rejected
+        audit.course({ req, user: req.user, action: 'COURSE_REJECTED', severity: 'warning',
+            description: `Admin (${req.user?.accountEmail}) rejected course '${course.courseTitle}': "${message || 'No reason given'}".`,
+            targetType: 'Course', targetId: course._id, targetLabel: course.courseTitle });
+
         res.status(200).json({ success: true, message: 'Course rejected and reverted back to Draft.', data: course });
     } catch (err) {
         next(err);
@@ -279,6 +305,11 @@ const publishCourse = async (req, res, next) => {
 
         course.publicationState = 'Published';
         await course.save();
+
+        // Audit: course published
+        audit.course({ req, user: req.user, action: 'COURSE_PUBLISHED', severity: 'info',
+            description: `Admin (${req.user?.accountEmail}) published course '${course.courseTitle}' — now visible to all learners.`,
+            targetType: 'Course', targetId: course._id, targetLabel: course.courseTitle });
 
         res.status(200).json({ success: true, message: 'Course published and visible to learners.', data: course });
     } catch (err) {

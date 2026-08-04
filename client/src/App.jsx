@@ -19,7 +19,9 @@ import InstructorDashboard from './pages/instructor/InstructorDashboard';
 import InstructorSettings from './pages/instructor/InstructorSettings';
 import AssignmentBuilder from './pages/instructor/AssignmentBuilder';
 import CourseCreationWizard from './pages/instructor/CourseCreationWizard';
+import QuizManagementDashboard from './pages/instructor/QuizManagementDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminAuditLogs from './pages/admin/AdminAuditLogs';
 import LearningWorkspace from './pages/student/LearningWorkspace';
 import CourseCatalog from './pages/student/CourseCatalog';
 import CourseDetailPage from './pages/student/CourseDetailPage';
@@ -101,14 +103,15 @@ function AppRoutes() {
             <Route path="/student/assignments/:courseId" element={<PrivateRoute allowedRoles={['Student']}><AssignmentPage /></PrivateRoute>} />
             <Route path="/checkout/:courseId" element={<PrivateRoute allowedRoles={['Student']}><Checkout /></PrivateRoute>} />
             <Route path="/mock-checkout/:txRef" element={<PrivateRoute allowedRoles={['Student']}><MockCheckoutPage /></PrivateRoute>} />
-            <Route path="/payment/callback" element={<PrivateRoute allowedRoles={['Student']}><PaymentCallbackPage /></PrivateRoute>} />
-            <Route path="/payment/success" element={<PrivateRoute allowedRoles={['Student']}><PaymentSuccess /></PrivateRoute>} />
-            <Route path="/payment/failed" element={<PrivateRoute allowedRoles={['Student']}><PaymentFailed /></PrivateRoute>} />
+            <Route path="/payment/callback" element={<PaymentCallbackPage />} />
+            <Route path="/payment/success" element={<PaymentSuccess />} />
+            <Route path="/payment/failed" element={<PaymentFailed />} />
             <Route path="/messages" element={<PrivateRoute><MessageInboxPage /></PrivateRoute>} />
             <Route path="/live-sessions" element={<PrivateRoute><LiveSessionsPage /></PrivateRoute>} />
 
             {/* ── Instructor Routes ───────────────────────────── */}
             <Route path="/instructor/dashboard" element={<PrivateRoute allowedRoles={['Instructor']}><InstructorDashboard /></PrivateRoute>} />
+            <Route path="/instructor/quizzes" element={<PrivateRoute allowedRoles={['Instructor']}><QuizManagementDashboard /></PrivateRoute>} />
             <Route path="/instructor/settings" element={<PrivateRoute allowedRoles={['Instructor']}><InstructorSettings /></PrivateRoute>} />
             <Route path="/instructor/courses/new" element={<PrivateRoute allowedRoles={['Instructor']}><CourseCreationWizard /></PrivateRoute>} />
             <Route path="/instructor/assignments/new" element={<PrivateRoute allowedRoles={['Instructor']}><AssignmentBuilder /></PrivateRoute>} />
@@ -116,6 +119,7 @@ function AppRoutes() {
             {/* ── Admin Routes ────────────────────────────────── */}
             <Route path="/admin/dashboard" element={<PrivateRoute allowedRoles={['Admin']}><AdminDashboard /></PrivateRoute>} />
             <Route path="/admin/users/:id" element={<PrivateRoute allowedRoles={['Admin']}><AdminUserProfilePage /></PrivateRoute>} />
+            <Route path="/admin/audit-logs" element={<PrivateRoute allowedRoles={['Admin']}><AdminAuditLogs /></PrivateRoute>} />
 
             {/* ── Fallback ─────────────────────────────────────── */}
             <Route path="/unauthorized" element={

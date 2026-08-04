@@ -6,11 +6,17 @@ const {
     getQuizzesByCourse,
     getQuizById,
     submitQuizAttempt,
-    getQuizResults
+    getQuizResults,
+    getInstructorQuizzes,
+    updateQuiz,
+    deleteQuiz
 } = require('../controllers/quizController');
 
 // ── Instructor Routes ──────────────────────────────────────
+router.get('/instructor/mine', protect, denySuspendedActions, authorizeRoles('Instructor'), getInstructorQuizzes);
 router.post('/', protect, denySuspendedActions, authorizeRoles('Instructor'), createQuiz);
+router.put('/:id', protect, denySuspendedActions, authorizeRoles('Instructor'), updateQuiz);
+router.delete('/:id', protect, denySuspendedActions, authorizeRoles('Instructor'), deleteQuiz);
 
 // ── Shared Routes (authenticated users) ────────────────────
 router.get('/course/:courseId', protect, getQuizzesByCourse);

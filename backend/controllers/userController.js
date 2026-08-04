@@ -75,6 +75,55 @@ const getUserById = async (req, res, next) => {
 };
 
 // ─────────────────────────────────────────────
+// @desc    Create a new Admin or Instructor account
+// @route   POST /api/users
+// @access  Private (Admin only)
+// ─────────────────────────────────────────────
+const createUser = async (req, res, next) => {
+    try {
+        const { fullName, accountEmail, securedPassword, assignedRole, contactPhone, isActive, requirePasswordChange, sendWelcomeEmail } = req.body;
+
+        // Security check: Only allow Admin and Instructor roles
+        if (!assignedRole || !['Admin', 'Instructor'].includes(assignedRole)) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Invalid role selection. Only Administrators and Instructors can be created manually.' 
+            });
+        }
+
+        const existingUser = await User.findOne({ accountEmail: accountEmail.toLowerCase() });
+        if (existingUser) {
+            return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
+        }
+
+        const user = await User.create({
+            fullName,
+            accountEmail: accountEmail.toLowerCase(),
+            securedPassword,
+            assignedRole,
+            contactPhone: contactPhone || '',
+            isActive: isActive !== false,
+            requirePasswordChange: !!requirePasswordChange
+        });
+
+        if (sendWelcomeEmail && typeof sendAccountCreatedEmail === 'function') {
+            try {
+                await sendAccountCreatedEmail(user, securedPassword);
+            } catch (emailErr) {
+                console.error('Failed to send welcome email:', emailErr);
+            }
+        }
+
+        const userData = user.toObject();
+        delete userData.securedPassword;
+
+        res.status(201).json({ success: true, message: `${assignedRole} account created successfully.`, data: userData });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
 // @desc    Update user (role, active status)
 // @route   PATCH /api/users/:id
 // @access  Private (Admin only)
@@ -112,6 +161,13 @@ const updateUser = async (req, res, next) => {
         if (fullName !== undefined) user.fullName = fullName;
         if (accountEmail !== undefined) user.accountEmail = accountEmail;
         if (avatarUrl !== undefined) user.avatarUrl = avatarUrl;
+        if (req.body.profilePicture !== undefined) user.profilePicture = req.body.profilePicture;
+        if (req.body.professionalTitle !== undefined) user.professionalTitle = req.body.professionalTitle;
+        if (req.body.phoneNumber !== undefined) user.phoneNumber = req.body.phoneNumber;
+        if (req.body.linkedIn !== undefined) user.linkedIn = req.body.linkedIn;
+        if (req.body.portfolioUrl !== undefined) user.portfolioUrl = req.body.portfolioUrl;
+        if (req.body.institution !== undefined) user.institution = req.body.institution;
+        if (req.body.expertiseAreas !== undefined) user.expertiseAreas = req.body.expertiseAreas;
         if (assignedRole && ['Student', 'Instructor', 'Admin'].includes(assignedRole)) user.assignedRole = assignedRole;
         if (typeof isActive === 'boolean') user.isActive = isActive;
 
@@ -496,4 +552,4 @@ const updateInstructorProfile = async (req, res, next) => {
     }
 };
 
-module.exports = { getAllUsers, getUserById, updateUser, resetUserPassword, deleteUser, getAnalytics, updateInstructorProfile };
+module.exports = { getAllUsers, getUserById, createUser, updateUser, resetUserPassword, deleteUser, getAnalytics, updateInstructorProfile };

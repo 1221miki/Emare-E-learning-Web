@@ -110,6 +110,7 @@ const UserSchema = new mongoose.Schema({
     githubUrl: { type: String, trim: true },
     
     // Account Settings & Preferences
+    requirePasswordChange: { type: Boolean, default: false },
     twoFactorEnabled: { type: Boolean, default: false },
     preferredLanguage: { type: String, default: 'English' },
     timeZone: { type: String, default: 'UTC+3 (East Africa Time)' },

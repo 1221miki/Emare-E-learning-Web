@@ -9,6 +9,7 @@ const Enrollment = require('../models/Enrollment');
 const Course = require('../models/Course');
 const User = require('../models/User');
 const emailService = require('../services/emailService');
+const { audit, resolveIp } = require('../utils/auditLogger');
 
 const chapa = require('../services/chapaService');
 const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY || '';
@@ -55,6 +56,10 @@ exports.initiatePayment = async (req, res) => {
                 },
                 { upsert: true, new: true }
             );
+            // Audit: free course enrollment
+            audit.enrollment({ req, user: req.user, action: 'FREE_COURSE_ENROLLED', severity: 'info',
+                description: `Student user (${req.user.accountEmail}) enrolled in free course '${course.courseTitle}'.`,
+                targetType: 'Course', targetId: courseId, targetLabel: course.courseTitle });
             return res.status(201).json({ success: true, data: { free: true, message: 'Enrolled successfully (free course).' } });
         }
 
@@ -96,8 +101,8 @@ exports.initiatePayment = async (req, res) => {
 
         if (provider === 'chapa') {
             const tx_ref = tx.metadata.tx_ref;
-            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-            const backendUrl = process.env.APP_BASE_URL || 'http://localhost:5000';
+            const frontendUrl = req.get('origin') || process.env.FRONTEND_URL || 'http://localhost:5173';
+            const backendUrl = process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`;
 
             const paymentRecord = await Payment.findOneAndUpdate(
                 { studentRef: req.user._id, courseRef: courseId, tx_ref },
@@ -124,12 +129,19 @@ exports.initiatePayment = async (req, res) => {
                 .slice(0, 35); // Leave room for "Payment for " prefix
             const sanitizedDescription = `Payment for ${courseTitle}`.slice(0, 50);
 
+            const userEmail = req.user.accountEmail || req.user.email || 'student@emare.com';
+            const userFirstName = (req.user.fullName || '').split(' ')[0] || 'Student';
+            const userLastName = (req.user.fullName || '').split(' ')[1] || 'User';
+
             const payload = {
                 amount: finalAmount,
                 currency,
-                customer_email: req.user.accountEmail || req.user.email,
-                customer_first_name: (req.user.fullName || '').split(' ')[0] || '',
-                customer_last_name: (req.user.fullName || '').split(' ')[1] || '',
+                email: userEmail,
+                customer_email: userEmail,
+                first_name: userFirstName,
+                customer_first_name: userFirstName,
+                last_name: userLastName,
+                customer_last_name: userLastName,
                 tx_ref,
                 callback_url: callbackUrl,
                 return_url: callbackUrl,
@@ -276,18 +288,19 @@ exports.verifyChapa = async (req, res) => {
         const { tx_ref } = req.params;
         const chapaRes = await chapa.verify(tx_ref);
         const status = (chapaRes && chapaRes.data && chapaRes.data.status) || (chapaRes && chapaRes.data && chapaRes.data.data && chapaRes.data.data.status) || '';
+        const normalizedStatus = status.toLowerCase();
 
         const tx = await Transaction.findOne({ 'metadata.tx_ref': tx_ref });
         if (!tx) return res.status(404).json({ success: false, message: 'Transaction not found' });
 
-        if (status === 'success' || status === 'completed') {
-            const providerAmount = (chapaRes.data && chapaRes.data.amount) || (chapaRes.data?.data && chapaRes.data.data.amount) || null;
+        const providerAmount = (chapaRes.data && chapaRes.data.amount) || (chapaRes.data?.data && chapaRes.data.data.amount) || null;
+        if (normalizedStatus === 'success' || normalizedStatus === 'completed') {
             if (providerAmount && providerAmount !== tx.amount) {
                 console.warn('Chapa verification amount mismatch', { expected: tx.amount, received: providerAmount, tx_ref });
                 tx.status = 'Failed';
                 await tx.save();
                 await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Failed' } });
-                return res.status(400).json({ success: false, message: 'Payment verification amount mismatch' });
+                return res.status(400).json({ success: false, verified: false, transactionStatus: 'failed', message: 'Payment verification amount mismatch' });
             }
 
             tx.status = 'Completed';
@@ -319,19 +332,39 @@ exports.verifyChapa = async (req, res) => {
                 { upsert: true, new: true }
             );
 
-            // Send confirmation email (avoid sending multiple times if webhook already processed, but okay for now)
             try {
                 const user = await User.findById(tx.studentRef);
                 const course = await Course.findById(tx.courseRef);
                 if (user && course && emailService.sendCourseEnrollmentEmail) {
                     emailService.sendCourseEnrollmentEmail(user, course, tx_ref);
                 }
+                // Audit: successful enrollment after Chapa verify
+                if (user && course) {
+                    audit.enrollment({ action: 'CHAPA_PAYMENT_VERIFIED', severity: 'info',
+                        user,
+                        description: `Student user (${user.accountEmail}) enrolled in course '${course.courseTitle}' after successful Chapa payment (${tx_ref}).`,
+                        targetType: 'Course', targetId: tx.courseRef, targetLabel: course.courseTitle,
+                        metadata: { tx_ref, amount: tx.amount, currency: tx.currency } });
+                }
             } catch (err) {
                 console.error('Failed to send enrollment email from verify:', err);
             }
+
+            return res.json({ success: true, verified: true, transactionStatus: normalizedStatus, courseId: tx.courseRef, raw: chapaRes.data });
         }
 
-        res.json({ success: true, courseId: tx.courseRef, raw: chapaRes.data });
+        if (normalizedStatus === 'failed' || normalizedStatus === 'error') {
+            tx.status = 'Failed';
+            await tx.save();
+            await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Failed' } });
+            return res.json({ success: false, verified: false, transactionStatus: normalizedStatus, courseId: tx.courseRef, raw: chapaRes.data });
+        }
+
+        // Pending or unknown status
+        tx.status = 'Pending';
+        await tx.save();
+        await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Pending' } }, { upsert: true, new: true });
+        return res.json({ success: true, verified: false, transactionStatus: normalizedStatus || 'pending', courseId: tx.courseRef, raw: chapaRes.data });
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false });

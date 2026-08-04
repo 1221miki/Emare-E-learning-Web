@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { paymentService } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
@@ -35,11 +35,13 @@ export default function PaymentCallbackPage() {
                 clearInterval(progressInterval);
                 setProgress(100);
 
-                if (res.data && res.data.success) {
+                const verified = res.data?.verified === true;
+                const statusKey = res.data?.transactionStatus || '';
+
+                if (verified) {
                     setStatus('success');
                     const cId = res.data.courseId;
                     setEnrolledCourseId(cId);
-                    // Redirect to a dedicated success page after verification
                     setTimeout(() => {
                         if (cId) {
                             navigate(`/payment/success?courseId=${cId}&tx_ref=${encodeURIComponent(txRef)}`);
@@ -47,13 +49,19 @@ export default function PaymentCallbackPage() {
                             navigate(`/payment/success?tx_ref=${encodeURIComponent(txRef)}`);
                         }
                     }, 1800);
-                } else {
-                    setStatus('failed');
-                    setErrorMsg('Payment verification returned unsuccessful. Please contact support.');
-                    setTimeout(() => {
-                        navigate(`/payment/failed?tx_ref=${encodeURIComponent(txRef)}&message=${encodeURIComponent('Verification failed')}`);
-                    }, 2200);
+                    return;
                 }
+
+                setStatus('failed');
+                const failureMessage = res.data?.success === false && statusKey === 'failed'
+                    ? 'Payment was declined or failed. Please try again or contact support.'
+                    : statusKey === 'pending'
+                        ? 'Payment is still pending verification. Please wait a moment and try again.'
+                        : 'Payment verification returned unsuccessful. Please contact support.';
+                setErrorMsg(failureMessage);
+                setTimeout(() => {
+                    navigate(`/payment/failed?tx_ref=${encodeURIComponent(txRef)}&message=${encodeURIComponent(failureMessage)}`);
+                }, 2200);
             } catch (err) {
                 clearInterval(progressInterval);
                 console.error('Payment verification error:', err);
