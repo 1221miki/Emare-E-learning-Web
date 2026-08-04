@@ -1,4 +1,8 @@
 import React from 'react';
+import { Trophy, Medal } from 'lucide-react';
+
+const MEDAL_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32'];
+const MEDAL_LABELS = ['Gold', 'Silver', 'Bronze'];
 
 export default function LeaderboardTab(dash) {
     const { user, colors, leaderboard, avatarUrl, styles } = dash;
@@ -10,18 +14,20 @@ export default function LeaderboardTab(dash) {
         const podiumOrder = [1, 0, 2]; // 2nd, 1st, 3rd
         const podiumHeights = ['160px', '200px', '130px'];
         const podiumColors = [colors.textMuted, '#f59e0b', colors.primary];
-        const podiumMedals = ['🥈', '🥇', '🥉'];
+        const podiumMedalColors = [colors.textMuted, '#f59e0b', '#cd7f32'];
 
         return (
             <div>
                 <div style={styles.tabHeader}>
-                    <h2 style={styles.tabTitle}>🏆 Student Leaderboard</h2>
+                    <h2 style={{ ...styles.tabTitle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Trophy size={20} aria-hidden="true" /> Student Leaderboard
+                    </h2>
                     <p style={styles.tabSubtitle}>See how you stack up against peers. Earn XP by completing lessons, quizzes, and assignments!</p>
                 </div>
 
                 {board.length === 0 && (
                     <div style={styles.emptyContent}>
-                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏆</div>
+                        <Trophy size={48} color={colors.textMuted} style={{ marginBottom: '16px' }} aria-hidden="true" />
                         <p style={styles.emptyText}>No leaderboard data yet. Complete lessons and quizzes to start earning XP!</p>
                     </div>
                 )}
@@ -44,7 +50,7 @@ export default function LeaderboardTab(dash) {
                         if (!entry) return null;
                         return (
                             <div key={entry._id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ fontSize: '28px' }}>{podiumMedals[i]}</span>
+                                <Medal size={28} color={podiumMedalColors[i]} aria-label={MEDAL_LABELS[i]} />
                                 <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '18px' }}>
                                     {entry.fullName?.[0]?.toUpperCase()}
                                 </div>
@@ -78,7 +84,10 @@ export default function LeaderboardTab(dash) {
                                 return (
                                     <tr key={entry._id} style={{ ...styles.tr, background: isMe ? `${colors.primary}08` : 'transparent' }}>
                                         <td style={{ ...styles.td, fontWeight: '800', color: idx === 0 ? '#f59e0b' : idx === 1 ? colors.textMuted : idx === 2 ? '#cd7f32' : colors.text, fontSize: '16px' }}>
-                                            {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
+                                            {idx < 3
+                                                ? <Medal size={20} color={[MEDAL_COLORS[0], MEDAL_COLORS[1], MEDAL_COLORS[2]][idx]} aria-label={[MEDAL_LABELS[0], MEDAL_LABELS[1], MEDAL_LABELS[2]][idx]} />
+                                                : `#${idx + 1}`
+                                            }
                                         </td>
                                         <td style={styles.td}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

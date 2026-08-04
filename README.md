@@ -92,7 +92,7 @@ The backend seeds default accounts during development. Use these credentials for
 
 - Admin
   - Email: admin@emare.com
-  - Password: admin12345
+  - Password: 45
 - Student
   - Email: student@emare.com
   - Password: student12345
@@ -178,6 +178,12 @@ The instructor can:
 - Add markdown/text notes.
 - Attach learning materials to chapters.
 - Manage multimedia content.
+
+#### Video Delivery Notes
+
+- The current student experience supports embedded YouTube video links directly in the lesson player, which makes it easy to launch the platform quickly with existing public video content.
+- For future scalability, the platform is designed to support self-hosted video delivery through Cloudinary, AWS S3, Vimeo, or Bunny.net once instructor-uploaded media is fully integrated into the lesson workflow.
+- This will improve playback reliability, streaming performance, analytics, and storage control for institution-owned course content.
 
 ### 3. Assignment Management
 

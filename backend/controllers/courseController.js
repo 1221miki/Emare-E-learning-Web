@@ -1,6 +1,12 @@
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
+const Review = require('../models/Review');
+const Assignment = require('../models/Assignment');
+const Submission = require('../models/Submission');
+const Quiz = require('../models/Quiz');
+const QuizAttempt = require('../models/QuizAttempt');
+const LearningProgress = require('../models/LearningProgress');
 
 // ─────────────────────────────────────────────
 // @desc    Create a new course (Draft state)
@@ -694,8 +700,10 @@ const getInstructorAnalytics = async (req, res, next) => {
         const courses = await Course.find({ creatorRef: req.user.id }).lean();
         const courseIds = courses.map(c => c._id);
 
-        const totalStudents = await Enrollment.countDocuments({ courseRef: { $in: courseIds } });
-        const clearedStudents = await Enrollment.countDocuments({ courseRef: { $in: courseIds }, tuitionClearanceFlag: true });
+        const [totalStudents, clearedStudents] = await Promise.all([
+            Enrollment.countDocuments({ courseRef: { $in: courseIds } }),
+            Enrollment.countDocuments({ courseRef: { $in: courseIds }, tuitionClearanceFlag: true })
+        ]);
 
         const totalEarnings = courses.reduce((sum, c) => {
             return sum + (c.price || 0) * (c.totalEnrollments || 0);
@@ -705,12 +713,196 @@ const getInstructorAnalytics = async (req, res, next) => {
             ? parseFloat((courses.reduce((sum, c) => sum + (c.averageRating || 0), 0) / courses.length).toFixed(1))
             : 0;
 
+        const totalReviews = courses.reduce((sum, c) => sum + (c.totalReviews || 0), 0);
+
+        // Pending reviews (not yet answered by the instructor)
+        const pendingReviews = await Review.countDocuments({ courseRef: { $in: courseIds }, instructorReply: '' });
+
+        // ── Recent Enrollments (with student + course info) ──
+        const recentEnrollments = await Enrollment.find({ courseRef: { $in: courseIds } })
+            .populate({ path: 'studentRef', select: 'fullName avatarUrl accountEmail' })
+            .populate({ path: 'courseRef', select: 'courseTitle price' })
+            .sort({ createdAt: -1 })
+            .limit(8)
+            .lean()
+            .then(list => list.map(e => ({
+                _id: e._id,
+                studentName: e.studentRef?.fullName || 'Student',
+                studentAvatar: e.studentRef?.avatarUrl || '',
+                courseTitle: e.courseRef?.courseTitle || 'Course',
+                coursePrice: e.courseRef?.price || 0,
+                paymentStatus: e.paymentStatus || 'Unpaid',
+                tuitionClearanceFlag: !!e.tuitionClearanceFlag,
+                progress: Math.round(e.completionPercentage || 0),
+                date: e.enrollmentTimestamp || e.createdAt
+            })));
+
+        // ── Recent Activity Feed ──
+        const activity = [];
+
+        recentEnrollments.slice(0, 5).forEach(e => {
+            activity.push({
+                id: `enroll-${e._id}`,
+                type: 'enrollment',
+                title: `${e.studentName} enrolled`,
+                description: `Joined ${e.courseTitle}`,
+                createdAt: e.date
+            });
+        });
+
+        const [recentReviews, recentSubmissions, recentQuizAttempts] = await Promise.all([
+            Review.find({ courseRef: { $in: courseIds } })
+                .populate({ path: 'studentRef', select: 'fullName' })
+                .populate({ path: 'courseRef', select: 'courseTitle' })
+                .sort({ createdAt: -1 })
+                .limit(5)
+                .lean(),
+            (async () => {
+                const assignments = await Assignment.find({ courseRef: { $in: courseIds } }).select('_id').lean();
+                const assignmentIds = assignments.map(a => a._id);
+                if (assignmentIds.length === 0) return [];
+                return Submission.find({ assignmentRef: { $in: assignmentIds } })
+                    .populate({ path: 'studentRef', select: 'fullName' })
+                    .populate({ path: 'assignmentRef', select: 'title' })
+                    .sort({ submittedAt: -1 })
+                    .limit(5)
+                    .lean();
+            })(),
+            (async () => {
+                const quizzes = await Quiz.find({ courseRef: { $in: courseIds } }).select('_id').lean();
+                const quizIds = quizzes.map(q => q._id);
+                if (quizIds.length === 0) return [];
+                return QuizAttempt.find({ quizRef: { $in: quizIds } })
+                    .populate({ path: 'studentRef', select: 'fullName' })
+                    .populate({ path: 'quizRef', select: 'title' })
+                    .sort({ submittedAt: -1 })
+                    .limit(5)
+                    .lean();
+            })()
+        ]);
+
+        recentReviews.forEach(r => {
+            activity.push({
+                id: `review-${r._id}`,
+                type: 'review',
+                title: `${r.studentRef?.fullName || 'A student'} left a review`,
+                description: `${'★'.repeat(r.rating || 0)}${'☆'.repeat(Math.max(0, 5 - (r.rating || 0)))} on ${r.courseRef?.courseTitle || 'a course'}`,
+                createdAt: r.createdAt
+            });
+        });
+
+        recentSubmissions.forEach(s => {
+            activity.push({
+                id: `sub-${s._id}`,
+                type: 'assignment',
+                title: `${s.studentRef?.fullName || 'A student'} submitted an assignment`,
+                description: s.assignmentRef?.title || 'Assignment',
+                createdAt: s.submittedAt || s.createdAt
+            });
+        });
+
+        recentQuizAttempts.forEach(qa => {
+            activity.push({
+                id: `quiz-${qa._id}`,
+                type: 'quiz',
+                title: `${qa.studentRef?.fullName || 'A student'} completed a quiz`,
+                description: qa.quizRef?.title || 'Quiz',
+                createdAt: qa.submittedAt || qa.createdAt
+            });
+        });
+
+        // Lesson completions from learning progress
+        const progresses = await LearningProgress.find({ courseRef: { $in: courseIds } })
+            .populate({ path: 'studentRef', select: 'fullName' })
+            .populate({ path: 'courseRef', select: 'courseTitle' })
+            .lean();
+        progresses.forEach(p => {
+            const completedLessons = (p.progressItems || []).filter(item => item.completed && item.completedAt);
+            completedLessons.slice(0, 2).forEach(item => {
+                activity.push({
+                    id: `lesson-${p._id}-${item.lessonId || Math.random()}`,
+                    type: 'lesson',
+                    title: `${p.studentRef?.fullName || 'A student'} completed a lesson`,
+                    description: item.lessonTitle || `Lesson in ${p.courseRef?.courseTitle || 'a course'}`,
+                    createdAt: item.completedAt
+                });
+            });
+        });
+
+        const recentActivity = activity
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 8);
+
+        // ── Trend Charts (last 6 months) ──
+        const monthNames = [];
+        const now = new Date();
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            monthNames.push(d.toLocaleString('en-US', { month: 'short' }));
+        }
+
+        const startDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+        const monthEnrollments = await Enrollment.find({ courseRef: { $in: courseIds }, createdAt: { $gte: startDate } })
+            .select('createdAt courseRef')
+            .lean();
+
+        const revenueTrend = monthNames.map(name => ({ name, revenue: 0 }));
+        const enrollmentTrend = monthNames.map(name => ({ name, students: 0 }));
+        const studentGrowth = monthNames.map(name => ({ name, students: 0 }));
+        const coursePrices = Object.fromEntries(courses.map(c => [String(c._id), c.price || 0]));
+        const totalStudentsAtMonth = [];
+
+        let runningTotal = 0;
+        monthNames.forEach((name, idx) => {
+            const monthIndex = (now.getMonth() - (5 - idx) + 12) % 12;
+            const monthStart = new Date(now.getFullYear(), monthIndex, 1);
+            const monthEnd = new Date(now.getFullYear(), monthIndex + 1, 1);
+            const bucket = monthEnrollments.filter(e => {
+                const t = new Date(e.createdAt);
+                return t >= monthStart && t < monthEnd;
+            });
+            const count = bucket.length;
+            const revenue = bucket.reduce((sum, e) => sum + (coursePrices[String(e.courseRef)] || 0), 0);
+            revenueTrend[idx].revenue = revenue;
+            enrollmentTrend[idx].students = count;
+            runningTotal += count;
+            studentGrowth[idx].students = runningTotal;
+        });
+
+        // ── Course Performance ──
+        const coursePerformance = [];
+        for (const c of courses) {
+            const enrollCount = c.totalEnrollments || 0;
+            const perCourseEnrollments = await Enrollment.find({ courseRef: c._id })
+                .select('completionPercentage')
+                .lean();
+            const completionRate = perCourseEnrollments.length
+                ? Math.round(perCourseEnrollments.reduce((sum, e) => sum + (e.completionPercentage || 0), 0) / perCourseEnrollments.length)
+                : 0;
+            coursePerformance.push({
+                name: c.courseTitle,
+                category: c.technicalCategory || 'Other',
+                views: c.views || 0,
+                enrollments: enrollCount,
+                completionRate,
+                rating: c.averageRating || 0,
+                reviews: c.totalReviews || 0
+            });
+        }
+
         const enrollmentsByCategory = {};
         for (const c of courses) {
-            const catEnrollments = await Enrollment.countDocuments({ courseRef: c._id });
             const cat = c.technicalCategory || 'Other';
-            enrollmentsByCategory[cat] = (enrollmentsByCategory[cat] || 0) + catEnrollments;
+            enrollmentsByCategory[cat] = (enrollmentsByCategory[cat] || 0) + (c.totalEnrollments || 0);
         }
+
+        // Growth percentages (mock-friendly, based on trend buckets)
+        const studentGrowthPct = enrollmentTrend.length >= 2
+            ? computeGrowthPct(enrollmentTrend[enrollmentTrend.length - 1].students, enrollmentTrend[enrollmentTrend.length - 2].students)
+            : 0;
+        const revenueGrowthPct = revenueTrend.length >= 2
+            ? computeGrowthPct(revenueTrend[revenueTrend.length - 1].revenue, revenueTrend[revenueTrend.length - 2].revenue)
+            : 0;
 
         res.status(200).json({
             success: true,
@@ -718,17 +910,32 @@ const getInstructorAnalytics = async (req, res, next) => {
                 totalCourses: courses.length,
                 publishedCourses: courses.filter(c => ['Published', 'Active'].includes(c.publicationState)).length,
                 draftCourses: courses.filter(c => c.publicationState === 'Draft').length,
+                archivedCourses: courses.filter(c => c.publicationState === 'Archived').length,
                 totalStudents,
                 clearedStudents,
                 totalEarnings,
                 avgRating,
-                totalReviews: courses.reduce((sum, c) => sum + (c.totalReviews || 0), 0),
-                enrollmentsByCategory
+                totalReviews,
+                pendingReviews,
+                studentGrowthPct,
+                revenueGrowthPct,
+                enrollmentsByCategory,
+                recentEnrollments,
+                recentActivity,
+                revenueTrend,
+                enrollmentTrend,
+                studentGrowth,
+                coursePerformance
             }
         });
     } catch (err) {
         next(err);
     }
+};
+
+const computeGrowthPct = (current, previous) => {
+    if (!previous || previous <= 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - previous) / previous) * 100);
 };
 
 module.exports = {

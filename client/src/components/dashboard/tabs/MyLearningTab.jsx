@@ -1,7 +1,10 @@
 import React from 'react';
+import { BookOpen, ChevronRight, CheckCircle2, Circle, Clock3, Lock, PlayCircle } from 'lucide-react';
+import FeaturedCarousel from '../FeaturedCarousel';
 
 export default function MyLearningTab(dash) {
     const { colors, setActiveTab, enrollments, certificates, allCourses, searchQuery, setSearchQuery, navigate, styles } = dash;
+    return (
         <div>
             <div style={styles.tabHeader}>
                 <h2 style={styles.tabTitle}>My Courses & Learning Tracks</h2>
@@ -12,7 +15,9 @@ export default function MyLearningTab(dash) {
                     <div style={{ ...styles.panelCard, display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, alignItems: 'center' }}>
                         <div>
                             <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-                                <div style={{ width: 84, height: 84, borderRadius: 18, background: `linear-gradient(135deg, ${colors.primary}20, ${colors.accent}20)`, display: 'grid', placeItems: 'center', fontSize: 40 }}>🚀</div>
+                                <div style={{ width: 84, height: 84, borderRadius: 18, background: `linear-gradient(135deg, ${colors.primary}20, ${colors.accent}20)`, display: 'grid', placeItems: 'center' }}>
+                                    <PlayCircle size={40} color={colors.primary} aria-hidden="true" />
+                                </div>
                                 <div>
                                     <h3 style={{ margin: 0, color: colors.text, fontSize: 22, fontWeight: 900 }}>Start Your Learning Journey</h3>
                                     <p style={{ margin: '8px 0 0', color: colors.textMuted, maxWidth: 560 }}>You haven't enrolled in any courses yet. Explore featured courses, curated learning paths, and start a career-focused learning track.</p>
@@ -112,8 +117,9 @@ export default function MyLearningTab(dash) {
                                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: `linear-gradient(90deg, ${colors.primary}, ${colors.accent})`, width: `${progress}%`, transition: 'width 0.5s' }} />
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '8px' }}>
                                     <span style={styles.courseBadge}>{course.technicalCategory || 'Development'}</span>
-                                    <span style={{ fontSize: '11px', fontWeight: '700', color: cleared ? colors.success : colors.warning, background: cleared ? `${colors.success}15` : `${colors.warning}15`, padding: '3px 8px', borderRadius: '6px' }}>
-                                        {cleared ? '✓ Cleared' : '⏳ Pending'}
+                                    <span style={{ fontSize: '11px', fontWeight: '700', color: cleared ? colors.success : colors.warning, background: cleared ? `${colors.success}15` : `${colors.warning}15`, padding: '3px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                        {cleared ? <CheckCircle2 size={12} aria-hidden="true" /> : <Clock3 size={12} aria-hidden="true" />}
+                                        {cleared ? 'Cleared' : 'Pending'}
                                     </span>
                                 </div>
                                 <h3 style={styles.courseTitle}>{course.courseTitle || 'Course'}</h3>
@@ -129,9 +135,15 @@ export default function MyLearningTab(dash) {
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
                                     {cleared ? (
-                                        <button onClick={() => navigate(`/student/learn/${course._id}`)} style={{ ...styles.watchBtn, flex: 1 }}>▶ Continue Learning</button>
+                                        <button onClick={() => navigate(`/student/learn/${course._id}`)} style={{ ...styles.watchBtn, flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                            <PlayCircle size={16} aria-hidden="true" />
+                                            Continue Learning
+                                        </button>
                                     ) : (
-                                        <button onClick={() => setActiveTab('payments')} style={{ ...styles.lockedBtn, flex: 1, textAlign: 'center' }}>🔒 Clear Tuition to Access</button>
+                                        <button onClick={() => setActiveTab('payments')} style={{ ...styles.lockedBtn, flex: 1, textAlign: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                            <Lock size={16} aria-hidden="true" />
+                                            Clear Tuition to Access
+                                        </button>
                                     )}
                                     <button onClick={() => navigate(`/courses/${course._id}`)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.textMuted, borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', fontSize: '12px' }}>Details</button>
                                 </div>
@@ -141,4 +153,5 @@ export default function MyLearningTab(dash) {
                 </div>
             )}
         </div>
+    );
 }

@@ -32,6 +32,7 @@ const sendTokenResponse = (user, statusCode, res) => {
                 id: user._id,
                 fullName: user.fullName,
                 accountEmail: user.accountEmail,
+                username: user.username || '',
                 assignedRole: user.assignedRole,
                 isActive: user.isActive,
                 socialProvider: user.socialProvider
@@ -46,7 +47,7 @@ const sendTokenResponse = (user, statusCode, res) => {
 // ─────────────────────────────────────────────
 const register = async (req, res, next) => {
     try {
-        const { fullName, accountEmail, email, securedPassword, password, assignedRole } = req.body;
+        const { fullName, accountEmail, email, securedPassword, password, assignedRole, username } = req.body;
         const normalizedEmail = (accountEmail || email || '').trim().toLowerCase();
         const newPassword = securedPassword || password;
 
@@ -61,12 +62,13 @@ const register = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
         }
 
-                // Create new user - password is hashed via pre-save hook in User model
+        // Create new user - password is hashed via pre-save hook in User model
         const user = await User.create({
             fullName,
             accountEmail: normalizedEmail,
             securedPassword: newPassword,
             assignedRole: assignedRole || 'Student',
+            username: username || undefined,
             lastLoginTimestamp: Date.now()
         });
 

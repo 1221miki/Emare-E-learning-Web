@@ -190,7 +190,11 @@ export default function CourseDetailPage() {
                         </button>
                         <ul style={{ listStyle: 'none', padding: 0, margin: '24px 0 0', color: colors.textMuted, fontSize: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             <li>⏱️ {course.estimatedDurationHours} hours of on-demand video</li>
-                            <li>📄 Downloadable resources</li>
+                            {course.resources?.length > 0 ? (
+                                <li>📄 Resources available: {course.resources.length}</li>
+                            ) : (
+                                <li>📄 Downloadable resources</li>
+                            )}
                             <li>🏆 Certificate of completion</li>
                             <li>♾️ Full lifetime access</li>
                         </ul>
@@ -238,6 +242,30 @@ export default function CourseDetailPage() {
                             <ul style={{ paddingLeft: '20px', margin: 0, color: colors.textMuted, fontSize: '15px', lineHeight: 1.6 }}>
                                 {course.requirements.map((req, i) => <li key={i} style={{ marginBottom: '8px' }}>{req}</li>)}
                             </ul>
+                        </section>
+                    )}
+
+                    {course.resources?.length > 0 && (
+                        <section style={{ marginBottom: '48px' }}>
+                            <h2 style={{ color: colors.text, fontSize: '24px', fontWeight: '800', marginBottom: '16px' }}>Course Resources</h2>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {course.resources.map((resource, index) => {
+                                    const normalized = typeof resource === 'string' ? resource : resource?.url || '';
+                                    const label = typeof resource === 'string' ? `Resource ${index + 1}` : resource?.name || `Resource ${index + 1}`;
+                                    if (!normalized) return null;
+                                    return (
+                                        <a
+                                            key={`${label}-${index}`}
+                                            href={normalized}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            style={{ padding: '14px 16px', borderRadius: '10px', background: colors.bgCard, border: `1px solid ${colors.border}`, color: colors.primary, fontWeight: '700', textDecoration: 'none' }}
+                                        >
+                                            {label} ↗
+                                        </a>
+                                    );
+                                })}
+                            </div>
                         </section>
                     )}
 

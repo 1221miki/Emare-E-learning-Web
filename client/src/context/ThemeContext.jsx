@@ -3,7 +3,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-    const [theme, setTheme] = useState(localStorage.getItem('elms_theme') || 'dark');
+    const [theme, setThemeValue] = useState(localStorage.getItem('elms_theme') || 'dark');
 
     useEffect(() => {
         localStorage.setItem('elms_theme', theme);
@@ -11,7 +11,8 @@ export const ThemeProvider = ({ children }) => {
         document.body.style.color = theme === 'dark' ? '#f1f5f9' : '#0f172a';
     }, [theme]);
 
-    const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    const setTheme = (value) => setThemeValue(value);
+    const toggleTheme = () => setThemeValue(prev => prev === 'dark' ? 'light' : 'dark');
 
     const colors = theme === 'dark' ? {
         bg: '#0f172a', bgCard: '#1e293b', bgInput: 'rgba(255,255,255,0.05)',
@@ -24,7 +25,7 @@ export const ThemeProvider = ({ children }) => {
     };
 
     return (
-        <ThemeContext.Provider value={{ theme, toggleTheme, colors }}>
+        <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, colors }}>
             {children}
         </ThemeContext.Provider>
     );

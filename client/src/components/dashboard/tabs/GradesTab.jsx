@@ -1,4 +1,5 @@
 import React from 'react';
+import { BarChart3, FileText } from 'lucide-react';
 
 export default function GradesTab(dash) {
     const { colors, grades, completedCoursesCount, styles } = dash;
@@ -11,7 +12,9 @@ export default function GradesTab(dash) {
         return (
             <div>
                 <div style={styles.tabHeader}>
-                    <h2 style={styles.tabTitle}>📊 Grades & Academic Performance</h2>
+                    <h2 style={{ ...styles.tabTitle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <BarChart3 size={20} aria-hidden="true" /> Grades &amp; Academic Performance
+                    </h2>
                     <p style={styles.tabSubtitle}>Track your academic standing and assessment history</p>
                 </div>
 
@@ -36,7 +39,7 @@ export default function GradesTab(dash) {
 
                 {grades.length === 0 ? (
                     <div style={styles.emptyContent}>
-                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
+                        <FileText size={48} color={colors.textMuted} style={{ marginBottom: '16px' }} aria-hidden="true" />
                         <p style={styles.emptyText}>No graded submissions yet. Submit assignments and take quizzes to see your grades here.</p>
                     </div>
                 ) : (

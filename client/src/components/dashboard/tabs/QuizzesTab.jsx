@@ -1,5 +1,6 @@
 import React from 'react';
 import { quizService } from '../../../services/api';
+import { BrainCircuit, Target, ClipboardList, Clock, CheckCircle2, BookOpen, Rocket } from 'lucide-react';
 
 export default function QuizzesTab(dash) {
     const { colors, quizzesList, activeQuiz, setActiveQuiz, quizAnswers, setQuizAnswers, quizResult, setQuizResult, quizSubmitting, setQuizSubmitting, styles } = dash;
@@ -41,7 +42,12 @@ export default function QuizzesTab(dash) {
 
                     {quizResult ? (
                         <div style={{ ...styles.panelCard, textAlign: 'center', padding: '48px' }}>
-                            <div style={{ fontSize: '64px', marginBottom: '16px' }}>{quizResult.passed ? '🎉' : '📚'}</div>
+                            <div style={{ fontSize: '64px', marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+                                {quizResult.passed
+                                    ? <CheckCircle2 size={64} color={colors.success} aria-hidden="true" />
+                                    : <BookOpen size={64} color={colors.primary} aria-hidden="true" />
+                                }
+                            </div>
                             <h2 style={{ color: colors.text, fontSize: '24px', fontWeight: '800', margin: '0 0 8px' }}>{quizResult.passed ? 'Quiz Passed!' : 'Keep Practicing!'}</h2>
                             <p style={{ color: colors.textMuted, fontSize: '14px', margin: '0 0 24px' }}>{activeQuiz.quizTitle}</p>
                             <div style={{ display: 'flex', gap: '24px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '32px' }}>
@@ -61,9 +67,9 @@ export default function QuizzesTab(dash) {
                             <div style={{ marginBottom: '24px' }}>
                                 <h2 style={{ color: colors.text, fontSize: '20px', fontWeight: '800', margin: '0 0 8px' }}>{activeQuiz.quizTitle}</h2>
                                 <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: colors.textMuted }}>
-                                    <span>📋 {questions.length} Questions</span>
-                                    {activeQuiz.timeLimitMinutes && <span>⏱ {activeQuiz.timeLimitMinutes} min</span>}
-                                    <span>🎯 Passing Score: {activeQuiz.passingScore || 60}%</span>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><ClipboardList size={14} aria-hidden="true" /> {questions.length} Questions</span>
+                                    {activeQuiz.timeLimitMinutes && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} aria-hidden="true" /> {activeQuiz.timeLimitMinutes} min</span>}
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Target size={14} aria-hidden="true" /> Passing Score: {activeQuiz.passingScore || 60}%</span>
                                 </div>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -93,9 +99,10 @@ export default function QuizzesTab(dash) {
                                 <button
                                     onClick={handleSubmitQuiz}
                                     disabled={quizSubmitting || Object.keys(quizAnswers).length === 0}
-                                    style={{ ...styles.resumeBtn, opacity: Object.keys(quizAnswers).length === 0 ? 0.5 : 1 }}
+                                    style={{ ...styles.resumeBtn, opacity: Object.keys(quizAnswers).length === 0 ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '6px' }}
+                                    aria-label="Submit Quiz"
                                 >
-                                    {quizSubmitting ? 'Submitting...' : '🚀 Submit Quiz'}
+                                    <Rocket size={16} aria-hidden="true" /> {quizSubmitting ? 'Submitting...' : 'Submit Quiz'}
                                 </button>
                             </div>
                         </div>
@@ -107,12 +114,14 @@ export default function QuizzesTab(dash) {
         return (
             <div>
                 <div style={styles.tabHeader}>
-                    <h2 style={styles.tabTitle}>🧠 Quizzes & Assessments</h2>
+                    <h2 style={{ ...styles.tabTitle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <BrainCircuit size={20} aria-hidden="true" /> Quizzes &amp; Assessments
+                    </h2>
                     <p style={styles.tabSubtitle}>Take quizzes from your enrolled courses and test your knowledge</p>
                 </div>
                 {quizzesList.length === 0 ? (
                     <div style={styles.emptyContent}>
-                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎯</div>
+                        <Target size={48} color={colors.textMuted} style={{ marginBottom: '16px' }} aria-hidden="true" />
                         <p style={styles.emptyText}>No quizzes available for your courses yet. Check back after lessons are published.</p>
                     </div>
                 ) : (
@@ -125,9 +134,9 @@ export default function QuizzesTab(dash) {
                                 </div>
                                 <h3 style={{ ...styles.courseTitle, marginBottom: '8px' }}>{quiz.quizTitle || 'Course Quiz'}</h3>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
-                                    <span style={{ fontSize: '12px', color: colors.textMuted }}>📋 {(quiz.questions || []).length} Questions</span>
-                                    {quiz.timeLimitMinutes && <span style={{ fontSize: '12px', color: colors.textMuted }}>⏱ {quiz.timeLimitMinutes} min time limit</span>}
-                                    <span style={{ fontSize: '12px', color: colors.textMuted }}>🎯 Pass at {quiz.passingScore || 60}%</span>
+                                    <span style={{ fontSize: '12px', color: colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}><ClipboardList size={13} aria-hidden="true" /> {(quiz.questions || []).length} Questions</span>
+                                    {quiz.timeLimitMinutes && <span style={{ fontSize: '12px', color: colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={13} aria-hidden="true" /> {quiz.timeLimitMinutes} min time limit</span>}
+                                    <span style={{ fontSize: '12px', color: colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}><Target size={13} aria-hidden="true" /> Pass at {quiz.passingScore || 60}%</span>
                                 </div>
                                 <button onClick={() => handleStartQuiz(quiz)} style={{ ...styles.watchBtn, width: '100%' }}>Start Quiz →</button>
                             </div>

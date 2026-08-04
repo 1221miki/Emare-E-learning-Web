@@ -57,10 +57,13 @@ const CourseSchema = new mongoose.Schema({
             'Network Engineering',
             'Mobile Development',
             'Data Science',
-            'Cyber Security',
+            'Cybersecurity',
             'Cloud Computing',
             'Artificial Intelligence',
-            'Business & Marketing'
+            'Business & Management',
+            'Databases',
+            'DevOps & CI/CD',
+            'Graphic Design'
         ],
         required: true
     },

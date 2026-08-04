@@ -5,6 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import AiAssistant from '../../components/AiAssistant';
 import LearningContentAccessChecklist from '../../components/dashboard/LearningContentAccessChecklist';
+import { getLessonVideoUrl, getVideoEmbedUrl } from '../../utils/videoPlayer';
 
 export default function LearningWorkspace() {
     const { logout } = useAuth();
@@ -37,7 +38,7 @@ export default function LearningWorkspace() {
                 const firstChapter = res.data.data.curriculumTree?.[0];
                 const firstLesson = firstChapter?.lessons?.[0];
                 if (firstLesson) {
-                    playLessonVideo(firstLesson.videoAssetURL);
+                    playLessonVideo(getLessonVideoUrl(firstLesson));
                 }
             })
             .catch(err => setError(err.response?.data?.message || 'Failed to load course workspace.'))
@@ -53,8 +54,13 @@ export default function LearningWorkspace() {
         setVideoLoading(true);
         setVideoError('');
         try {
-            const res = await courseService.streamVideo(assetUrl);
-            setVideoUrl(res.data.streamUrl);
+            const normalizedUrl = getVideoEmbedUrl(assetUrl);
+            if (normalizedUrl.startsWith('http')) {
+                setVideoUrl(normalizedUrl);
+            } else {
+                setVideoUrl('');
+                setVideoError('This lesson does not have a playable video URL.');
+            }
         } catch (err) {
             setVideoError(err.response?.data?.message || 'Access Denied. Please ensure you are enrolled in this course.');
         } finally {
@@ -155,7 +161,13 @@ export default function LearningWorkspace() {
                                 <button onClick={() => navigate('/student/payments')} style={styles.payBtn}>Proceed to Tuition Clearance</button>
                             </div>
                         ) : videoUrl ? (
-                            <video src={videoUrl} controls controlsList="nodownload" style={styles.videoPlayer} autoPlay />
+                            <iframe
+                                src={videoUrl}
+                                title={activeLesson?.lessonTitle || 'Lesson video'}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                style={{ width: '100%', height: '100%', border: 'none', background: '#000' }}
+                            />
                         ) : (
                             <div style={styles.videoOverlay}>
                                 <div>Select a lesson to begin learning</div>
@@ -191,7 +203,7 @@ export default function LearningWorkspace() {
                                         return (
                                             <div 
                                                 key={lesson._id || lIdx}
-                                                onClick={() => handleLessonSelect(cIdx, lIdx, lesson.videoAssetURL)}
+                                                onClick={() => handleLessonSelect(cIdx, lIdx, getLessonVideoUrl(lesson))}
                                                 style={{
                                                     ...styles.lessonItem,
                                                     background: isActive ? colors.bgInput : 'transparent',

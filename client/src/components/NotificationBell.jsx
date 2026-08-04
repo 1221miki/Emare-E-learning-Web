@@ -53,7 +53,7 @@ export default function NotificationBell() {
         <div ref={dropdownRef} style={{ position: 'relative' }}>
             <button onClick={() => setIsOpen(!isOpen)} style={{
                 background: 'transparent', border: 'none', cursor: 'pointer',
-                fontSize: '22px', position: 'relative', padding: '8px'
+                fontSize: '26px', position: 'relative', padding: '8px'
             }}>
                 🔔
                 {unreadCount > 0 && (

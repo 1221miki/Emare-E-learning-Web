@@ -1,4 +1,10 @@
 import React from 'react';
+import {
+    GraduationCap, ShieldCheck, ShieldAlert, ClipboardCheck, CreditCard,
+    Video, Trophy, Award, MessagesSquare, Bot, BookOpen, TrendingUp,
+    Pin, PinOff, CalendarDays, Megaphone, Bell, Lightbulb, BarChart3,
+    CheckCircle2, XCircle, Star, Zap, Heart, Trash2
+} from 'lucide-react';
 
 export default function OverviewTab(dash) {
     const { user, colors, setActiveTab, enrollments, wishlist, grades, certificates, allCourses, notifications, liveSessions, assignmentsList, recentlyViewed, studyTargetHours, studyCompletedHours, notificationTab, setNotificationTab, leaderboard, hiddenWidgets, pinnedCourses, navigate, toggleWidgetVisibility, togglePinCourse, triggerAssistantPrompt, handleToggleWishlist, handleMarkNotificationAsRead, handleUpdateStudyTarget, completedCoursesCount, averageProgress, xpPoints, currentLevel, nextLevelXP, xpProgress, currentCourseTitle, currentLessonTitle, currentProgress, quizAverage, upcomingAssignmentsCount, badges, styles } = dash;
@@ -83,12 +89,12 @@ export default function OverviewTab(dash) {
         const has100Grade = grades.some(g => (g.numericalScoreEarned || 0) >= 100);
 
         const allSystemBadges = [
-            { name: 'Fast Learner', icon: '🚀', desc: 'Completed a course track', color: colors.primary, unlocked: completedCoursesCount >= 1 },
-            { name: 'Quiz Master', icon: '🎯', desc: 'Scored 100% on an assessment', color: colors.success, unlocked: has100Grade },
-            { name: '7-Day Streak', icon: '🔥', desc: 'Checked in 7 consecutive days', color: '#f59e0b', unlocked: false },
-            { name: 'Code Warrior', icon: '💻', desc: 'Submitted assignment tasks', color: colors.accent, unlocked: grades.length > 0 || assignmentsList.length > 0 },
-            { name: 'Clearance Award', icon: '💳', desc: 'Tuition completely cleared', color: '#ec4899', unlocked: hasClearance },
-            { name: 'Super Scholar', icon: '👑', desc: 'Enrolled in multiple tracks', color: '#14b8a6', unlocked: enrollments.length >= 2 }
+            { name: 'Fast Learner', icon: <Star size={20} aria-hidden="true" />, desc: 'Completed a course track', color: colors.primary, unlocked: completedCoursesCount >= 1 },
+            { name: 'Quiz Master', icon: <Trophy size={20} aria-hidden="true" />, desc: 'Scored 100% on an assessment', color: colors.success, unlocked: has100Grade },
+            { name: '7-Day Streak', icon: <Zap size={20} aria-hidden="true" />, desc: 'Checked in 7 consecutive days', color: '#f59e0b', unlocked: false },
+            { name: 'Code Warrior', icon: <BookOpen size={20} aria-hidden="true" />, desc: 'Submitted assignment tasks', color: colors.accent, unlocked: grades.length > 0 || assignmentsList.length > 0 },
+            { name: 'Clearance Award', icon: <ShieldCheck size={20} aria-hidden="true" />, desc: 'Tuition completely cleared', color: '#ec4899', unlocked: hasClearance },
+            { name: 'Super Scholar', icon: <GraduationCap size={20} aria-hidden="true" />, desc: 'Enrolled in multiple tracks', color: '#14b8a6', unlocked: enrollments.length >= 2 }
         ];
 
         const enrolledIds = enrollments.map(e => e.courseRef?._id || e.courseRef);
@@ -114,7 +120,7 @@ export default function OverviewTab(dash) {
                             <circle cx={size / 2} cy={size / 2} r={radius} stroke={color} strokeWidth={strokeWidth} fill="transparent" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.8s ease' }} />
                         </svg>
                         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                            {icon && <span style={{ fontSize: '12px' }}>{icon}</span>}
+                            {icon && <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</span>}
                             <span style={{ fontSize: '13px', fontWeight: '800', color: colors.text }}>{value}%</span>
                         </div>
                     </div>
@@ -139,7 +145,7 @@ export default function OverviewTab(dash) {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
                                     <div>
                                         <h2 style={{ color: colors.text, fontSize: '26px', fontWeight: '900', margin: 0, letterSpacing: '-0.5px' }}>
-                                            {getGreeting()}, {user?.fullName?.split(' ')[0]}! 🚀
+                                            {getGreeting()}, {user?.fullName?.split(' ')[0]}!
                                         </h2>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
                                             <span style={{ color: colors.primary, fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', background: `${colors.primary}15`, border: `1px solid ${colors.primary}30`, padding: '4px 10px', borderRadius: '6px' }}>
@@ -147,7 +153,10 @@ export default function OverviewTab(dash) {
                                             </span>
                                             {/* Tuition Clearance Badge */}
                                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: hasClearance ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)', border: `1px solid ${hasClearance ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)'}`, padding: '4px 10px', borderRadius: '6px' }}>
-                                                <span style={{ fontSize: '12px' }}>{hasClearance ? '✅' : '💳'}</span>
+                                                {hasClearance
+                                                    ? <ShieldCheck size={14} color={colors.success} aria-hidden="true" />
+                                                    : <ShieldAlert size={14} color="#f59e0b" aria-hidden="true" />
+                                                }
                                                 <span style={{ fontSize: '11px', fontWeight: '800', color: hasClearance ? colors.success : '#f59e0b' }}>
                                                     {hasClearance ? 'Tuition Cleared' : 'Clearance Pending'}
                                                 </span>
@@ -155,7 +164,7 @@ export default function OverviewTab(dash) {
                                         </div>
                                     </div>
                                     <div style={{ background: `${colors.success}10`, border: `1px solid ${colors.success}30`, borderRadius: '12px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <span style={{ fontSize: '22px' }}>🎓</span>
+                                        <GraduationCap size={22} color={colors.success} aria-hidden="true" />
                                         <div>
                                             <span style={{ display: 'block', fontSize: '13px', fontWeight: '800', color: colors.success }}>{completedCoursesCount} Course{completedCoursesCount === 1 ? '' : 's'} Completed</span>
                                             <span style={{ display: 'block', fontSize: '10px', color: colors.textMuted }}>{activeCourses.length} in progress</span>
@@ -173,18 +182,20 @@ export default function OverviewTab(dash) {
 
                             {/* Quick Action Shortcuts */}
                             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', paddingTop: '4px' }}>
-                                <span style={{ fontSize: '11px', fontWeight: '800', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>⚡ Quick Actions:</span>
-                                <button onClick={() => setActiveTab('assignments')} style={{ background: `${colors.primary}10`, border: `1px solid ${colors.primary}30`, color: colors.primary, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    📤 Submit Tasks
+                                <span style={{ fontSize: '11px', fontWeight: '800', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <Zap size={13} aria-hidden="true" /> Quick Actions:
+                                </span>
+                                <button onClick={() => setActiveTab('assignments')} style={{ background: `${colors.primary}10`, border: `1px solid ${colors.primary}30`, color: colors.primary, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'transform 0.15s' }} aria-label="Submit Tasks">
+                                    <ClipboardCheck size={14} aria-hidden="true" /> Submit Tasks
                                 </button>
-                                <button onClick={() => setActiveTab('payments')} style={{ background: `${colors.accent}10`, border: `1px solid ${colors.accent}30`, color: colors.accent, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    💳 Tuition Portal
+                                <button onClick={() => setActiveTab('payments')} style={{ background: `${colors.accent}10`, border: `1px solid ${colors.accent}30`, color: colors.accent, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'transform 0.15s' }} aria-label="Tuition Portal">
+                                    <CreditCard size={14} aria-hidden="true" /> Tuition Portal
                                 </button>
-                                <button onClick={() => setActiveTab('live')} style={{ background: `${colors.success}10`, border: `1px solid ${colors.success}30`, color: colors.success, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    🔴 Live Classes
+                                <button onClick={() => setActiveTab('live')} style={{ background: `${colors.success}10`, border: `1px solid ${colors.success}30`, color: colors.success, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'transform 0.15s' }} aria-label="Live Classes">
+                                    <Video size={14} aria-hidden="true" /> Live Classes
                                 </button>
-                                <button onClick={() => setActiveTab('leaderboard')} style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    🏆 Leaderboard
+                                <button onClick={() => setActiveTab('leaderboard')} style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'transform 0.15s' }} aria-label="Leaderboard">
+                                    <Trophy size={14} aria-hidden="true" /> Leaderboard
                                 </button>
                             </div>
                         </div>
@@ -195,10 +206,10 @@ export default function OverviewTab(dash) {
                         <span style={{ fontSize: '13px', fontWeight: '700', color: colors.text }}>Customize Widgets</span>
                         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                             {[
-                                { key: 'stats', label: '📊 Stats' },
-                                { key: 'calendar', label: '📅 Calendar' },
-                                { key: 'badges', label: '🏆 Badges' },
-                                { key: 'recs', label: '💡 Suggestions' }
+                                { key: 'stats', label: 'Stats', icon: <BarChart3 size={14} aria-hidden="true" /> },
+                                { key: 'calendar', label: 'Calendar', icon: <CalendarDays size={14} aria-hidden="true" /> },
+                                { key: 'badges', label: 'Badges', icon: <Award size={14} aria-hidden="true" /> },
+                                { key: 'recs', label: 'Suggestions', icon: <Lightbulb size={14} aria-hidden="true" /> }
                             ].map(widget => {
                                 const isHidden = hiddenWidgets[widget.key];
                                 return (
@@ -213,10 +224,15 @@ export default function OverviewTab(dash) {
                                             cursor: 'pointer', 
                                             background: isHidden ? colors.bgInput : `${colors.primary}15`, 
                                             border: `1px solid ${isHidden ? colors.border : colors.primary}`,
-                                            color: isHidden ? colors.textMuted : colors.primary
+                                            color: isHidden ? colors.textMuted : colors.primary,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '5px'
                                         }}
+                                        aria-label={`${isHidden ? 'Show' : 'Hide'} ${widget.label}`}
                                     >
-                                        {isHidden ? `Show ${widget.label.split(' ')[1]}` : `Hide ${widget.label.split(' ')[1]}`}
+                                        {widget.icon}
+                                        {isHidden ? `Show ${widget.label}` : `Hide ${widget.label}`}
                                     </button>
                                 );
                             })}
@@ -226,8 +242,10 @@ export default function OverviewTab(dash) {
                     {/* AI Study Assistant */}
                     <div style={{ ...styles.panelCard, margin: 0, padding: '24px', borderLeft: `4px solid ${colors.accent}` }}>
                         <div style={styles.aiWidgetHeader}>
-                            <div>
-                                <h3 style={{ ...styles.panelCardTitle, marginBottom: '8px', fontSize: '17px' }}>🧠 AI Study Assistant</h3>
+                        <h3 style={{ ...styles.panelCardTitle, marginBottom: '8px', fontSize: '17px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Bot size={20} color={colors.accent} aria-hidden="true" />
+                                AI Study Assistant
+                            </h3>
                                 <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Your AI coach knows your current course, progress, upcoming work, and quiz readiness.</p>
                             </div>
                             <button onClick={() => triggerAssistantPrompt('What should I work on next in this course?')} style={styles.aiActionBtn}>
@@ -271,9 +289,9 @@ export default function OverviewTab(dash) {
                             <div style={{ ...styles.panelCard, margin: 0, padding: '24px' }}>
                                 <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>Course Milestones</h3>
                                 <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                                    <CircularProgress value={enrollments.length ? Math.round((completedCoursesCount / enrollments.length) * 100) : 0} color={colors.primary} label="Completed Tracks" icon="🎓" />
-                                    <CircularProgress value={averageProgress} color={averageProgress > 0 ? colors.success : colors.textMuted} label={averageProgress > 0 ? "Avg Progress" : "Ready to Start"} icon="📈" />
-                                    <CircularProgress value={Math.round((certificates.length / Math.max(enrollments.length, 1)) * 100)} color={colors.accent} label="Credentials Earned" icon="🏆" />
+                                    <CircularProgress value={enrollments.length ? Math.round((completedCoursesCount / enrollments.length) * 100) : 0} color={colors.primary} label="Completed Tracks" icon={<GraduationCap size={12} aria-hidden="true" />} />
+                                    <CircularProgress value={averageProgress} color={averageProgress > 0 ? colors.success : colors.textMuted} label={averageProgress > 0 ? "Avg Progress" : "Ready to Start"} icon={<TrendingUp size={12} aria-hidden="true" />} />
+                                    <CircularProgress value={Math.round((certificates.length / Math.max(enrollments.length, 1)) * 100)} color={colors.accent} label="Credentials Earned" icon={<Award size={12} aria-hidden="true" />} />
                                 </div>
                             </div>
 
@@ -292,7 +310,10 @@ export default function OverviewTab(dash) {
                     {/* Pinned Courses Component */}
                     {pinnedCourses.length > 0 && (
                         <div style={{ ...styles.panelCard, margin: 0, padding: '24px', borderLeft: `4px solid ${colors.primary}` }}>
-                            <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>📌 Pinned Favorite Courses</h3>
+                        <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Pin size={18} color={colors.primary} aria-hidden="true" />
+                                Pinned Favorite Courses
+                            </h3>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
                                 {enrollments.filter(e => pinnedCourses.includes(e.courseRef?._id || e.courseRef)).map(enroll => {
                                     const c = enroll.courseRef || {};
@@ -303,7 +324,9 @@ export default function OverviewTab(dash) {
                                                 <span style={{ color: colors.textMuted, fontSize: '11px' }}>{enroll.completionPercentage || 0}% Done</span>
                                             </div>
                                             <div style={{ display: 'flex', gap: '6px' }}>
-                                                <button onClick={() => togglePinCourse(c._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>📌</button>
+                                                <button onClick={() => togglePinCourse(c._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }} aria-label="Unpin course">
+                                                <PinOff size={16} color={colors.textMuted} aria-hidden="true" />
+                                            </button>
                                                 <button onClick={() => navigate(`/student/learn/${c._id}`)} style={{ background: colors.primary, color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>Learn</button>
                                             </div>
                                         </div>
@@ -321,8 +344,11 @@ export default function OverviewTab(dash) {
                                 <div style={styles.recentCourseLeft}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <span style={styles.courseBadge}>{primaryActive.courseRef?.technicalCategory || 'Development'}</span>
-                                        <button onClick={() => togglePinCourse(primaryActive.courseRef?._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }} title="Pin to Top">
-                                            {pinnedCourses.includes(primaryActive.courseRef?._id) ? '📌' : '📍'}
+                                        <button onClick={() => togglePinCourse(primaryActive.courseRef?._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title={pinnedCourses.includes(primaryActive.courseRef?._id) ? 'Unpin' : 'Pin to Top'} aria-label={pinnedCourses.includes(primaryActive.courseRef?._id) ? 'Unpin course' : 'Pin course to top'}>
+                                            {pinnedCourses.includes(primaryActive.courseRef?._id)
+                                                ? <PinOff size={16} color={colors.primary} aria-hidden="true" />
+                                                : <Pin size={16} color={colors.textMuted} aria-hidden="true" />
+                                            }
                                         </button>
                                     </div>
                                     <h4 style={{ ...styles.recentCourseName, fontSize: '20px', fontWeight: '800', marginTop: '6px' }}>{primaryActive.courseRef?.courseTitle}</h4>
@@ -339,14 +365,15 @@ export default function OverviewTab(dash) {
                                         </button>
                                     ) : (
                                         <button onClick={() => setActiveTab('payments')} style={styles.lockedBtn}>
-                                            🔒 Pending Clearance
+                                            <CreditCard size={14} style={{ marginRight: '6px' }} aria-hidden="true" />
+                                            Pending Clearance
                                         </button>
                                     )}
                                 </div>
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '32px 20px', background: `${colors.bgInput}40`, borderRadius: '16px', border: `1px dashed ${colors.border}` }}>
-                                <div style={{ fontSize: '50px', marginBottom: '16px' }}>📚</div>
+                                <BookOpen size={50} color={colors.textMuted} style={{ marginBottom: '16px' }} aria-hidden="true" />
                                 <h4 style={{ color: colors.text, fontSize: '18px', fontWeight: '800', margin: '0 0 8px' }}>Start Your Learning Journey</h4>
                                 <p style={{ color: colors.textMuted, fontSize: '13px', maxWidth: '360px', margin: '0 0 20px', lineHeight: 1.5 }}>
                                     Explore professional courses to begin building your skills. Select from Web Development, UI/UX Design, Cyber Security, and more.
@@ -422,14 +449,17 @@ export default function OverviewTab(dash) {
                                             filter: badge.unlocked ? 'none' : 'grayscale(100%) opacity(50%)'
                                         }}
                                         title={badge.desc}
+                                        aria-label={`${badge.name}: ${badge.desc}${badge.unlocked ? ' (Unlocked)' : ' (Locked)'}`}
                                     >
-                                        <div style={styles.badgeIcon}>{badge.icon}</div>
+                                        <div style={{ ...styles.badgeIcon, color: badge.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{badge.icon}</div>
                                         <span style={styles.badgeName}>{badge.name}</span>
                                         <span style={styles.badgeDesc}>{badge.desc}</span>
                                         {badge.unlocked ? (
-                                            <span style={{ display: 'inline-block', marginTop: '8px', fontSize: '10px', color: colors.success, fontWeight: '800' }}>✓ UNLOCKED</span>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '8px', fontSize: '10px', color: colors.success, fontWeight: '800' }}>
+                                                <CheckCircle2 size={12} aria-hidden="true" /> UNLOCKED
+                                            </span>
                                         ) : (
-                                            <span style={{ display: 'inline-block', marginTop: '8px', fontSize: '10px', color: colors.textMuted, fontWeight: '700' }}>🔒 LOCKED</span>
+                                            <span style={{ display: 'inline-block', marginTop: '8px', fontSize: '10px', color: colors.textMuted, fontWeight: '700' }}>LOCKED</span>
                                         )}
                                     </div>
                                 ))}
@@ -450,11 +480,11 @@ export default function OverviewTab(dash) {
                                                 <div>
                                                     <span style={styles.courseBadge}>{course.technicalCategory || 'Development'}</span>
                                                     <h4 style={{ color: colors.text, fontSize: '14px', fontWeight: '700', margin: '8px 0 4px', lineHeight: '1.4' }}>{course.courseTitle}</h4>
-                                                    <p style={{ color: colors.textMuted, fontSize: '11px', margin: '0 0 12px' }}>Rating: ⭐ {course.averageRating || '4.8'} | {course.level || 'Beginner'}</p>
+                                                    <p style={{ color: colors.textMuted, fontSize: '11px', margin: '0 0 12px' }}>Rating: <Star size={12} style={{ verticalAlign: 'middle', marginRight: '2px' }} aria-hidden="true" />{course.averageRating || '4.8'} | {course.level || 'Beginner'}</p>
                                                 </div>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', gap: '8px' }}>
-                                                    <button onClick={() => handleToggleWishlist(course._id)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: isSaved ? '#ef4444' : colors.textMuted, borderRadius: '6px', padding: '6px', cursor: 'pointer' }} title="Toggle Wishlist">
-                                                        {isSaved ? '💖' : '🤍'}
+                                                    <button onClick={() => handleToggleWishlist(course._id)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: isSaved ? '#ef4444' : colors.textMuted, borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Toggle Wishlist" aria-label={isSaved ? 'Remove from wishlist' : 'Add to wishlist'}>
+                                                        {isSaved ? <Heart size={16} fill="#ef4444" color="#ef4444" aria-hidden="true" /> : <Heart size={16} color={colors.textMuted} aria-hidden="true" />}
                                                     </button>
                                                     <button onClick={() => navigate(`/courses/${course._id}`)} style={{ ...styles.resumeBtn, padding: '6px 12px', fontSize: '11px', flex: 1 }}>
                                                         View Details
@@ -466,7 +496,7 @@ export default function OverviewTab(dash) {
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '24px', background: `${colors.bgInput}40`, borderRadius: '16px', border: `1px dashed ${colors.border}` }}>
-                                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>💡</div>
+                                    <Lightbulb size={32} color={colors.textMuted} style={{ marginBottom: '8px' }} aria-hidden="true" />
                                     <h5 style={{ color: colors.text, fontSize: '14px', fontWeight: '700', margin: '0 0 4px' }}>Personalized Suggestions</h5>
                                     <p style={{ color: colors.textMuted, fontSize: '12px', margin: '0 0 12px' }}>Enrolling in your first course helps us recommend the perfect next steps for you.</p>
                                     <button onClick={() => navigate('/courses')} style={{ ...styles.resumeBtn, padding: '8px 16px', fontSize: '12px' }}>Explore Catalog</button>
@@ -496,7 +526,7 @@ export default function OverviewTab(dash) {
                             </div>
                         ) : (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '20px', background: `${colors.bgInput}40`, borderRadius: '16px', border: `1px dashed ${colors.border}` }}>
-                                <div style={{ fontSize: '32px' }}>🔍</div>
+                                <BookOpen size={32} color={colors.textMuted} aria-hidden="true" />
                                 <div style={{ flex: 1 }}>
                                     <h5 style={{ color: colors.text, fontSize: '14px', fontWeight: '700', margin: '0 0 4px' }}>Explore Top Learning Paths</h5>
                                     <p style={{ color: colors.textMuted, fontSize: '12px', margin: '0 0 10px', lineHeight: 1.4 }}>Discover our top tracks like Web Coding, UI/UX Design, or AI Development.</p>
@@ -509,8 +539,6 @@ export default function OverviewTab(dash) {
                             </div>
                         )}
                     </div>
-
-                </div>
 
                 {/* RIGHT SIDEBAR PANEL COLUMN */}
                 <div style={styles.dashboardGrid}>
@@ -583,7 +611,7 @@ export default function OverviewTab(dash) {
                                         <div>
                                             <h4 style={{ color: colors.text, fontSize: '13px', fontWeight: '700', margin: 0 }}>{session.title}</h4>
                                             <span style={{ color: colors.textMuted, fontSize: '11px', display: 'block', marginTop: '2px' }}>
-                                                ⏱️ {new Date(session.startTime).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})} | {new Date(session.startTime).toLocaleTimeString(undefined, {hour: '2-digit', minute:'2-digit'})}
+                                                {new Date(session.startTime).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})} | {new Date(session.startTime).toLocaleTimeString(undefined, {hour: '2-digit', minute:'2-digit'})}
                                             </span>
                                         </div>
                                         <button onClick={() => navigate('/live-sessions')} style={styles.liveBtn}>
@@ -607,20 +635,24 @@ export default function OverviewTab(dash) {
                                 style={{
                                     ...styles.tabSwitchBtn,
                                     color: notificationTab === 'announcements' ? colors.primary : colors.textMuted,
-                                    borderBottom: notificationTab === 'announcements' ? `2px solid ${colors.primary}` : 'none'
+                                    borderBottom: notificationTab === 'announcements' ? `2px solid ${colors.primary}` : 'none',
+                                    display: 'flex', alignItems: 'center', gap: '6px'
                                 }}
+                                aria-label="Bulletins"
                             >
-                                📢 Bulletins ({finalAnnouncements.length})
+                                <Megaphone size={15} aria-hidden="true" /> Bulletins ({finalAnnouncements.length})
                             </button>
                             <button 
                                 onClick={() => setNotificationTab('notifications')} 
                                 style={{
                                     ...styles.tabSwitchBtn,
                                     color: notificationTab === 'notifications' ? colors.primary : colors.textMuted,
-                                    borderBottom: notificationTab === 'notifications' ? `2px solid ${colors.primary}` : 'none'
+                                    borderBottom: notificationTab === 'notifications' ? `2px solid ${colors.primary}` : 'none',
+                                    display: 'flex', alignItems: 'center', gap: '6px'
                                 }}
+                                aria-label="Alerts"
                             >
-                                🔔 Alerts ({finalNotifications.length})
+                                <Bell size={15} aria-hidden="true" /> Alerts ({finalNotifications.length})
                             </button>
                         </div>
                         
@@ -632,8 +664,9 @@ export default function OverviewTab(dash) {
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                                 <strong style={{ color: colors.text }}>{ann.title}</strong>
                                                 {ann._id && !ann.isRead && (
-                                                    <button onClick={() => handleMarkNotificationAsRead(ann._id)} style={{ background: 'none', border: 'none', color: colors.primary, fontSize: '10px', cursor: 'pointer', fontWeight: '700' }}>
-                                                        ✓ Read
+                                                    <button onClick={() => handleMarkNotificationAsRead(ann._id)} style={{ background: 'none', border: 'none', color: colors.primary, fontSize: '10px', cursor: 'pointer', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                        <CheckCircle2 size={12} aria-hidden="true" />
+                                                        Read
                                                     </button>
                                                 )}
                                             </div>
@@ -656,8 +689,9 @@ export default function OverviewTab(dash) {
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                                 <strong style={{ color: colors.text }}>{notif.title}</strong>
                                                 {notif._id && !notif.isRead && (
-                                                    <button onClick={() => handleMarkNotificationAsRead(notif._id)} style={{ background: 'none', border: 'none', color: colors.primary, fontSize: '10px', cursor: 'pointer', fontWeight: '700' }}>
-                                                        ✓ Read
+                                                    <button onClick={() => handleMarkNotificationAsRead(notif._id)} style={{ background: 'none', border: 'none', color: colors.primary, fontSize: '10px', cursor: 'pointer', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                        <CheckCircle2 size={12} aria-hidden="true" />
+                                                        Read
                                                     </button>
                                                 )}
                                             </div>
@@ -716,9 +750,9 @@ export default function OverviewTab(dash) {
                                                 <span style={{ fontSize: '11px', color: colors.textMuted }}>{c.price === 0 ? 'Free' : `${c.price} Birr`}</span>
                                             </div>
                                             <div style={{ display: 'flex', gap: '4px' }}>
-                                                <button onClick={() => handleToggleWishlist(c._id)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: '#ef4444', borderRadius: '6px', padding: '6px', cursor: 'pointer', fontSize: '11px' }} title="Remove from Wishlist">
-                                                    🗑️
-                                                </button>
+                                                <button onClick={() => handleToggleWishlist(c._id)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: '#ef4444', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Remove from Wishlist" aria-label="Remove from wishlist">
+                                                <Trash2 size={14} aria-hidden="true" />
+                                            </button>
                                                 <button onClick={() => navigate(`/courses/${c._id}`)} style={{ ...styles.liveBtn, background: colors.primary }}>
                                                     View
                                                 </button>

@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import NotificationBell from './NotificationBell';
+import { Sun, Moon, BookOpen, Home, LogOut } from 'lucide-react';
+
+const SIDEBAR_WIDTH = 260;
 
 export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBottomButtons }) {
     const { user, logout } = useAuth();
@@ -10,8 +13,77 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
     const navigate = useNavigate();
     const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
 
+    // Sidebar reposition (drag left/right)
+    const [position, setPosition] = useState(() => localStorage.getItem('emare-sidebar-position') === 'right' ? 'right' : 'left');
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragOffset, setDragOffset] = useState(0);
+    const asideRef = useRef(null);
+    const dragStartX = useRef(0);
+    const dragStartLeft = useRef(0);
+
+    useEffect(() => {
+        document.body.classList.toggle('emare-sidebar-right', position === 'right');
+        localStorage.setItem('emare-sidebar-position', position);
+        return () => document.body.classList.remove('emare-sidebar-right');
+    }, [position]);
+
+    const startDrag = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+        const rect = asideRef.current.getBoundingClientRect();
+        dragStartX.current = e.clientX;
+        dragStartLeft.current = rect.left;
+        e.currentTarget.setPointerCapture(e.pointerId);
+    };
+
+    const onDrag = (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - dragStartX.current;
+        const newLeft = Math.max(0, Math.min(window.innerWidth - SIDEBAR_WIDTH, dragStartLeft.current + dx));
+        setDragOffset(newLeft);
+    };
+
+    const endDrag = () => {
+        if (!isDragging) return;
+        const midpoint = (window.innerWidth - SIDEBAR_WIDTH) / 2;
+        setPosition(dragOffset < midpoint ? 'left' : 'right');
+        setDragOffset(0);
+        setIsDragging(false);
+    };
+
+    const handlePosition = position === 'right' ? 'left' : 'right';
+
     return (
-        <aside style={{ ...styles.sidebar, background: colors.bgCard, borderRight: `1px solid ${colors.border}` }}>
+        <aside
+            ref={asideRef}
+            style={{
+                ...styles.sidebar,
+                background: colors.bgCard,
+                borderRight: position === 'left' ? `1px solid ${colors.border}` : 'none',
+                borderLeft: position === 'right' ? `1px solid ${colors.border}` : 'none',
+                left: isDragging ? dragOffset : (position === 'left' ? 0 : 'auto'),
+                right: isDragging ? 'auto' : (position === 'right' ? 0 : 'auto'),
+                transition: isDragging ? 'none' : 'left 0.25s ease, right 0.25s ease, background 0.3s, border-color 0.3s'
+            }}
+        >
+            {/* Drag handle to reposition the sidebar */}
+            <div
+                style={{ ...styles.dragHandle, [handlePosition]: -6 }}
+                onPointerDown={startDrag}
+                onPointerMove={onDrag}
+                onPointerUp={endDrag}
+                onPointerCancel={endDrag}
+                title="Drag to move sidebar left/right"
+                aria-label="Drag to move sidebar left/right"
+            >
+                <span style={{ ...styles.dragGrip, background: isDragging ? colors.primary : colors.bgInput, border: `1px solid ${colors.border}` }}>
+                    <span style={{ ...styles.dragDot, background: colors.textMuted }} />
+                    <span style={{ ...styles.dragDot, background: colors.textMuted }} />
+                    <span style={{ ...styles.dragDot, background: colors.textMuted }} />
+                </span>
+            </div>
+
             {/* Header: Logo + Notifications + Theme Toggle */}
             <div style={styles.headerBox}>
                 <div style={styles.logoBox}>
@@ -19,8 +91,8 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                     <span style={{ ...styles.logoText, color: colors.text }}>Emare ELMS</span>
                 </div>
                 <div style={styles.actionsBox}>
-                    <button onClick={toggleTheme} style={styles.iconBtn} title="Toggle Theme">
-                        {theme === 'dark' ? '☀️' : '🌙'}
+                    <button onClick={toggleTheme} style={styles.iconBtn} title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'} aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+                        {theme === 'dark' ? <Sun size={26} /> : <Moon size={26} />}
                     </button>
                     <NotificationBell />
                 </div>
@@ -42,6 +114,11 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                     };
                     const labelContent = (
                         <span style={styles.navItemContent}>
+                            {item.icon && (
+                                <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                                    {React.cloneElement(item.icon, { size: 28 })}
+                                </span>
+                            )}
                             <span>{item.label}</span>
                             {item.badge ? <span style={{ ...styles.navBadge, background: colors.primary }}>{item.badge}</span> : null}
                         </span>
@@ -108,16 +185,16 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
 
                         {/* Menu Items */}
                         <button 
-                            onClick={() => { navigate('/catalog'); setAccountDropdownOpen(false); }}
-                            style={{ ...styles.dropdownItem, color: colors.text, borderBottom: `1px solid ${colors.border}` }}
+                            onClick={() => { navigate('/courses'); setAccountDropdownOpen(false); }}
+                            style={{ ...styles.dropdownItem, color: colors.text, borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '10px' }}
                         >
-                            📚 Course Catalog
+                            <BookOpen size={20} aria-hidden="true" /> Course Catalog
                         </button>
                         <button 
                             onClick={() => { navigate('/'); setAccountDropdownOpen(false); }}
-                            style={{ ...styles.dropdownItem, color: colors.text, borderBottom: `1px solid ${colors.border}` }}
+                            style={{ ...styles.dropdownItem, color: colors.text, borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '10px' }}
                         >
-                            🏠 Home Page
+                            <Home size={20} aria-hidden="true" /> Home Page
                         </button>
                         <button 
                             onClick={async () => { 
@@ -125,9 +202,9 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                                 setAccountDropdownOpen(false);
                                 navigate('/'); 
                             }}
-                            style={{ ...styles.dropdownItem, color: '#dc2626' }}
+                            style={{ ...styles.dropdownItem, color: '#dc2626', display: 'flex', alignItems: 'center', gap: '10px' }}
                         >
-                            ↩ Sign Out
+                            <LogOut size={20} aria-hidden="true" /> Sign Out
                         </button>
                     </div>
                 )}
@@ -138,7 +215,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
 
 const styles = {
     sidebar: {
-        width: '260px',
+        width: `${SIDEBAR_WIDTH}px`,
         display: 'flex',
         flexDirection: 'column',
         padding: '24px 16px 32px',
@@ -146,24 +223,56 @@ const styles = {
         left: 0,
         top: 0,
         height: '100vh',
-        zIndex: 20,
-        transition: 'background 0.3s, border-color 0.3s'
+        zIndex: 20
+    },
+    dragHandle: {
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        width: '14px',
+        cursor: 'ew-resize',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 5,
+        touchAction: 'none',
+        userSelect: 'none',
+        WebkitUserSelect: 'none'
+    },
+    dragGrip: {
+        width: '10px',
+        height: '56px',
+        borderRadius: '99px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '4px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+        transition: 'background 0.2s',
+        cursor: 'ew-resize'
+    },
+    dragDot: {
+        width: '3px',
+        height: '3px',
+        borderRadius: '50%',
+        flexShrink: 0
     },
     headerBox: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' },
     logoBox: { display: 'flex', alignItems: 'center', gap: '10px' },
     logo: {
-        width: '36px', height: '36px', borderRadius: '10px',
+        width: '40px', height: '40px', borderRadius: '10px',
         background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontWeight: '900', color: '#fff', fontSize: '18px'
     },
     logoText: { fontWeight: '700', fontSize: '16px' },
     actionsBox: { display: 'flex', alignItems: 'center', gap: '8px' },
-    iconBtn: { background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px' },
+    iconBtn: { background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px', display: 'flex', alignItems: 'center' },
     nav: { display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflowY: 'auto' },
     navItem: {
         textDecoration: 'none',
-        padding: '10px 14px',
+        padding: '12px 14px',
         borderRadius: '10px',
         fontSize: '14px',
         cursor: 'pointer',
@@ -177,7 +286,7 @@ const styles = {
     navItemContent: {
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '10px'
+        gap: '12px'
     },
     navBadge: {
         color: '#fff',

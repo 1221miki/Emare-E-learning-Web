@@ -1,13 +1,14 @@
 import React from 'react';
+import { Award, Clock3, Trophy, Zap } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function AchievementsPanel({ certificates = [], badges = [] }) {
     const { colors } = useTheme();
 
     const defaultBadges = badges.length ? badges : [
-        { name: 'Fast Learner', icon: '🚀', unlocked: certificates.length > 0 },
-        { name: 'Course Completer', icon: '🏆', unlocked: certificates.length > 0 },
-        { name: 'Streak 7 Days', icon: '🔥', unlocked: false }
+        { name: 'Fast Learner', icon: <Zap size={24} aria-hidden="true" />, unlocked: certificates.length > 0 },
+        { name: 'Course Completer', icon: <Trophy size={24} aria-hidden="true" />, unlocked: certificates.length > 0 },
+        { name: 'Streak 7 Days', icon: <Clock3 size={24} aria-hidden="true" />, unlocked: false }
     ];
 
     return (
@@ -18,7 +19,9 @@ export default function AchievementsPanel({ certificates = [], badges = [] }) {
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {defaultBadges.map((b, i) => (
                     <div key={b.name + i} style={{ minWidth: 120, background: b.unlocked ? `${colors.success}08` : colors.bgInput, border: `1px solid ${colors.border}`, borderRadius: 10, padding: 10, textAlign: 'center' }}>
-                        <div style={{ fontSize: 28 }}>{b.icon}</div>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 12, background: b.unlocked ? `${colors.primary}15` : colors.bgInput, color: b.unlocked ? colors.primary : colors.textMuted, margin: '0 auto' }}>
+                            {b.icon}
+                        </div>
                         <div style={{ fontWeight: 800, color: b.unlocked ? colors.text : colors.textMuted, marginTop: 8 }}>{b.name}</div>
                         <div style={{ fontSize: 12, color: colors.textMuted }}>{b.unlocked ? 'Unlocked' : 'Locked'}</div>
                     </div>

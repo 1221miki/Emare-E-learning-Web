@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Award, BookOpen, ChevronRight, GraduationCap, Lightbulb, PlayCircle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import ProfessionalCourseCard from './ProfessionalCourseCard';
 
@@ -19,7 +20,7 @@ export default function MyCoursesHub({
     const completedCourses = enrollments.filter(e => (e.completionPercentage || 0) >= 100);
     const primaryActive = activeCourses.length > 0 ? activeCourses[0] : null;
     const resumeLabel = primaryActive?.completionPercentage === 0 ? 'Start First Lesson' : 'Continue Learning';
-    const resumeButtonText = primaryActive?.completionPercentage === 0 ? '▶ Start Lesson' : '▶ Resume Course';
+    const resumeButtonText = primaryActive?.completionPercentage === 0 ? 'Start Lesson' : 'Resume Course';
 
     // Determine recommendations
     const enrolledIds = enrollments.map(e => e.courseRef?._id || e.courseRef);
@@ -125,7 +126,9 @@ export default function MyCoursesHub({
             cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '8px',
+            transition: 'transform 0.2s ease, background 0.2s ease, color 0.2s ease',
             boxShadow: `0 4px 12px ${colors.primary}40`
         }
     };
@@ -138,7 +141,7 @@ export default function MyCoursesHub({
                     <div style={s.resumeImgBox}>
                         {primaryActive.courseRef?.thumbnailUrl ? (
                             <img src={primaryActive.courseRef.thumbnailUrl} alt="Thumbnail" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                        ) : '🎓'}
+                        ) : <GraduationCap size={40} color={colors.primary} aria-hidden="true" />}
                     </div>
                     <div style={s.resumeContent}>
                         <span style={{ fontSize: '12px', fontWeight: '800', color: colors.primary, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', display: 'block' }}>
@@ -154,8 +157,12 @@ export default function MyCoursesHub({
                         <button 
                             style={s.resumeBtn}
                             onClick={() => navigate(`/student/learn/${primaryActive.courseRef?._id}`)}
+                            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                         >
+                            <PlayCircle size={18} aria-hidden="true" />
                             {resumeButtonText}
+                            <ChevronRight size={16} aria-hidden="true" />
                         </button>
                     </div>
                 </div>
@@ -165,7 +172,7 @@ export default function MyCoursesHub({
             {activeCourses.length > 0 && (
                 <div style={s.section}>
                     <div style={s.sectionHeader}>
-                        <h3 style={s.sectionTitle}><span>🚀</span> My Active Courses</h3>
+                        <h3 style={s.sectionTitle}><BookOpen size={20} aria-hidden="true" /> My Active Courses</h3>
                         <span style={{ fontSize: '13px', color: colors.textMuted, fontWeight: '700', background: colors.bgInput, padding: '4px 10px', borderRadius: '12px' }}>
                             {activeCourses.length} in progress
                         </span>
@@ -182,7 +189,7 @@ export default function MyCoursesHub({
             {recommendations.length > 0 && (
                 <div style={s.section}>
                     <div style={s.sectionHeader}>
-                        <h3 style={s.sectionTitle}><span>💡</span> Recommended for You</h3>
+                        <h3 style={s.sectionTitle}><Lightbulb size={20} aria-hidden="true" /> Recommended for You</h3>
                         <button 
                             style={s.viewAllBtn}
                             onClick={() => navigate('/career-tracks')}
@@ -204,7 +211,7 @@ export default function MyCoursesHub({
             {completedCourses.length > 0 && (
                 <div style={s.section}>
                     <div style={s.sectionHeader}>
-                        <h3 style={s.sectionTitle}><span>🏆</span> Completed Courses</h3>
+                        <h3 style={s.sectionTitle}><Award size={20} aria-hidden="true" /> Completed Courses</h3>
                         <button 
                             style={s.viewAllBtn}
                             onClick={() => setActiveTab('certificates')}
@@ -225,7 +232,9 @@ export default function MyCoursesHub({
             {/* Empty State */}
             {enrollments.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '60px 20px', background: colors.bgCard, borderRadius: '16px', border: `1px dashed ${colors.border}` }}>
-                    <span style={{ fontSize: '64px', display: 'block', marginBottom: '16px' }}>📚</span>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 80, height: 80, margin: '0 auto 16px', borderRadius: 20, background: colors.bgInput }}>
+                        <BookOpen size={64} color={colors.primary} aria-hidden="true" />
+                    </div>
                     <h2 style={{ fontSize: '24px', fontWeight: '900', color: colors.text, margin: '0 0 12px' }}>Your Learning Journey Starts Here</h2>
                     <p style={{ color: colors.textMuted, fontSize: '15px', maxWidth: '400px', margin: '0 auto 24px', lineHeight: 1.6 }}>
                         Enroll in a professional career track and gain the skills needed for today's digital economy.

@@ -3,28 +3,39 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { categoryService, courseService } from '../services/api';
 import Navbar from '../components/Navbar';
 import { useTheme } from '../context/ThemeContext';
+import { BookOpen, Wifi, Cpu, Shield, Globe, Smartphone, BarChart3, Palette, Briefcase, Cloud, Database, Terminal, ArrowRight } from 'lucide-react';
+import { categoryMatchesCourse } from '../utils/categoryMatching';
 
 const FALLBACK_CATEGORIES = [
-    { _id: 'prog', name: 'Programming', icon: '💻', color: '#3b82f6' },
-    { _id: 'net', name: 'Networking', icon: '🔗', color: '#8b5cf6' },
-    { _id: 'ai', name: 'Artificial Intelligence', icon: '🤖', color: '#10b981' },
-    { _id: 'sec', name: 'Cybersecurity', icon: '🔒', color: '#f59e0b' },
-    { _id: 'web', name: 'Web Development', icon: '🌐', color: '#06b6d4' },
-    { _id: 'mob', name: 'Mobile Development', icon: '📱', color: '#ec4899' },
-    { _id: 'data', name: 'Data Science', icon: '📊', color: '#14b8a6' },
-    { _id: 'design', name: 'Graphic Design', icon: '🎨', color: '#a855f7' },
-    { _id: 'biz', name: 'Business & Management', icon: '💼', color: '#84cc16' },
-    { _id: 'cloud', name: 'Cloud Computing', icon: '☁️', color: '#64748b' },
-    { _id: 'db', name: 'Databases', icon: '🗄️', color: '#f97316' },
-    { _id: 'devops', name: 'DevOps & CI/CD', icon: '⚙️', color: '#6366f1' }
+    { _id: 'prog', name: 'Programming', color: '#3b82f6' },
+    { _id: 'web', name: 'Web Development', color: '#06b6d4' },
+    { _id: 'ai', name: 'Artificial Intelligence', color: '#10b981' },
+    { _id: 'sec', name: 'Cybersecurity', color: '#f59e0b' },
+    { _id: 'data', name: 'Data Science', color: '#14b8a6' },
+    { _id: 'mob', name: 'Mobile Development', color: '#ec4899' },
+    { _id: 'cloud', name: 'Cloud Computing', color: '#64748b' },
+    { _id: 'devops', name: 'DevOps & CI/CD', color: '#6366f1' },
+    { _id: 'design', name: 'Graphic Design', color: '#a855f7' },
+    { _id: 'biz', name: 'Business & Management', color: '#84cc16' },
+    { _id: 'db', name: 'Databases', color: '#f97316' },
+    { _id: 'net', name: 'Networking', color: '#8b5cf6' }
 ];
 
-const CAT_ICONS = {
-    'Programming': '💻', 'Networking': '🔗', 'Artificial Intelligence': '🤖',
-    'AI': '🤖', 'Cybersecurity': '🔒', 'Web Development': '🌐',
-    'Web Coding': '🌐', 'Mobile Development': '📱', 'Data Science': '📊',
-    'Graphic Design': '🎨', 'Business': '💼', 'Cloud Computing': '☁️',
-    'Databases': '🗄️', 'DevOps': '⚙️'
+const CATEGORY_META = {
+    Programming: { icon: BookOpen, description: 'Code fundamentals, algorithms, and backend systems.' },
+    'Web Development': { icon: Globe, description: 'Build responsive websites, apps, and interfaces.' },
+    'Artificial Intelligence': { icon: Cpu, description: 'AI, machine learning, and intelligent systems.' },
+    Cybersecurity: { icon: Shield, description: 'Protect systems with security tools and best practices.' },
+    'Data Science': { icon: BarChart3, description: 'Data analysis, modeling, and insights.' },
+    'Mobile Development': { icon: Smartphone, description: 'Create apps for Android and iOS devices.' },
+    'Cloud Computing': { icon: Cloud, description: 'Manage cloud infrastructure and services.' },
+    'DevOps & CI/CD': { icon: Terminal, description: 'Automate deployments, pipelines, and operations.' },
+    'Graphic Design': { icon: Palette, description: 'Design digital visuals, branding, and UX.' },
+    'Business & Management': { icon: Briefcase, description: 'Leadership, strategy, and business growth.' },
+    Databases: { icon: Database, description: 'Design and optimize data storage systems.' },
+    Networking: { icon: Wifi, description: 'Connect systems, troubleshoot networks, and scale infrastructure.' },
+    'Web Coding': { icon: Globe, description: 'Build frontend and backend web experiences.' },
+    Business: { icon: Briefcase, description: 'Leadership, strategy, and business growth.' }
 };
 const CAT_COLORS = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#06b6d4','#ec4899','#14b8a6','#a855f7','#84cc16','#64748b','#f97316','#6366f1'];
 
@@ -38,6 +49,7 @@ export default function CategoriesPage() {
     const [loading, setLoading] = useState(true);
     const [selectedCat, setSelectedCat] = useState(null);
     const [searchCat, setSearchCat] = useState('');
+    const [hoveredCategory, setHoveredCategory] = useState(null);
 
     useEffect(() => {
         Promise.all([categoryService.getAll(), courseService.getAll()])
@@ -57,10 +69,20 @@ export default function CategoriesPage() {
     );
 
     const coursesForCat = (catName) =>
-        courses.filter(c =>
-            c.technicalCategory?.toLowerCase().includes(catName.toLowerCase()) ||
-            catName.toLowerCase().includes(c.technicalCategory?.toLowerCase())
-        );
+        courses.filter(c => {
+            const isPublished = ['Published', 'Active'].includes(c.publicationState);
+            return isPublished && categoryMatchesCourse(catName, c.technicalCategory);
+        });
+
+    const sortedCats = [...filteredCats].sort((a, b) => {
+        const aCount = coursesForCat(a.name).length;
+        const bCount = coursesForCat(b.name).length;
+        if (aCount !== bCount) return bCount - aCount;
+        return a.name.localeCompare(b.name);
+    });
+
+    const displayCats = searchCat ? sortedCats : sortedCats.slice(0, 8);
+    const SelectedIcon = selectedCat?.icon;
 
     const s = {
         page: { minHeight: '100vh', background: colors.bg, fontFamily: "'Outfit','Inter',sans-serif" },
@@ -88,6 +110,7 @@ export default function CategoriesPage() {
         courseCardTitle: { fontSize: '14px', fontWeight: '700', color: colors.text, margin: '0 0 6px', lineHeight: 1.4 },
         courseCardMeta: { fontSize: '12px', color: colors.textMuted, display: 'flex', gap: '8px', alignItems: 'center', margin: '6px 0' },
         courseCardPrice: { fontSize: '16px', fontWeight: '800', color: colors.text },
+        catDesc: { fontSize: '13px', lineHeight: '1.6', color: colors.textMuted, margin: 0, minHeight: '42px' },
         emptyMsg: { color: colors.textMuted, textAlign: 'center', padding: '40px', fontSize: '15px' },
         statsRow: { display: 'flex', gap: '40px', justifyContent: 'center', margin: '0 0 60px' },
         statBox: { textAlign: 'center', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '16px', padding: '28px 40px' },
@@ -143,10 +166,12 @@ export default function CategoriesPage() {
                     <div style={s.emptyMsg}>Loading categories...</div>
                 ) : (
                     <div style={s.grid}>
-                        {filteredCats.map((cat, i) => {
-                            const icon = CAT_ICONS[cat.name] || '📚';
-                            const color = CAT_COLORS[i % CAT_COLORS.length];
+                        {displayCats.map((cat, i) => {
                             const count = coursesForCat(cat.name).length;
+                            const hasCourses = count > 0;
+                            const meta = CATEGORY_META[cat.name] || CATEGORY_META[cat.technicalCategory] || { icon: BookOpen, description: 'Explore this learning path and discover new courses.' };
+                            const Icon = meta.icon;
+                            const color = cat.color || CAT_COLORS[i % CAT_COLORS.length];
                             const isSelected = selectedCat?.name === cat.name;
                             return (
                                 <div
@@ -158,20 +183,25 @@ export default function CategoriesPage() {
                                             : theme === 'dark' ? `${color}12` : `${color}10`,
                                         border: `2px solid ${isSelected ? color : color + '30'}`,
                                         color: isSelected ? '#fff' : colors.text,
-                                        transform: isSelected ? 'scale(1.02)' : 'scale(1)'
+                                        transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                                        cursor: 'pointer'
                                     }}
-                                    onClick={() => setSelectedCat(isSelected ? null : { ...cat, color, icon, count })}
-                                    onMouseEnter={e => { if (!isSelected) e.currentTarget.style.transform = 'translateY(-4px)'; }}
-                                    onMouseLeave={e => { if (!isSelected) e.currentTarget.style.transform = 'translateY(0)'; }}
+                                    onClick={() => setSelectedCat(isSelected ? null : { ...cat, color, icon: meta.icon, count })}
+                                    onMouseEnter={() => setHoveredCategory(cat._id || cat.name)}
+                                    onMouseLeave={() => setHoveredCategory(null)}
                                 >
-                                    <span style={s.catIcon}>{icon}</span>
+                                    <div style={{ ...s.catIcon, color: isSelected ? '#fff' : color }}><Icon size={32} /></div>
                                     <div style={{ ...s.catName, color: isSelected ? '#fff' : colors.text }}>{cat.name}</div>
-                                    <div style={{ ...s.catCount, color: isSelected ? 'rgba(255,255,255,0.8)' : colors.textMuted }}>
-                                        {count} {count === 1 ? 'course' : 'courses'}
+                                    <p style={{ ...s.catDesc, color: isSelected ? 'rgba(255,255,255,0.85)' : colors.textMuted }}>{meta.description}</p>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginTop: 14 }}>
+                                        <span style={{ ...s.catCount, color: isSelected ? 'rgba(255,255,255,0.8)' : colors.textMuted }}>
+                                            {hasCourses ? `${count} course${count === 1 ? '' : 's'}` : 'Coming soon'}
+                                        </span>
+                                        <span style={{ ...s.badge, background: isSelected ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.18)', color: isSelected ? '#fff' : color, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', fontSize: 12, fontWeight: 700, borderRadius: 999, textTransform: 'uppercase' }}>
+                                            {hasCourses ? 'Browse' : 'Soon'}
+                                            <ArrowRight size={12} style={{ transform: hoveredCategory === (cat._id || cat.name) ? 'translateX(4px)' : 'translateX(0)', transition: 'transform 0.2s ease' }} />
+                                        </span>
                                     </div>
-                                    <span style={{ ...s.badge, color: isSelected ? '#fff' : color }}>
-                                        {isSelected ? '✓ Selected' : 'Browse →'}
-                                    </span>
                                 </div>
                             );
                         })}
@@ -182,7 +212,7 @@ export default function CategoriesPage() {
                 {selectedCat && (
                     <div style={s.detailPanel}>
                         <button style={s.closeBtn} onClick={() => setSelectedCat(null)}>✕ Close</button>
-                        <h2 style={s.detailTitle}>{selectedCat.icon} {selectedCat.name}</h2>
+                        <h2 style={s.detailTitle}>{SelectedIcon ? <SelectedIcon size={20} style={{ verticalAlign: 'middle', marginRight: '8px' }} /> : null}{selectedCat.name}</h2>
                         <p style={s.detailSub}>
                             {coursesForCat(selectedCat.name).length} courses available in this category
                             {' — '}

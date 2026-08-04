@@ -66,9 +66,10 @@ export default function Navbar() {
         wrapper: {
             position: 'sticky',
             top: 0,
-            zIndex: 100,
+            zIndex: 1000,
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            width: '100%'
         },
         announcementBar: {
             display: showAnnouncement ? 'flex' : 'none',
@@ -80,7 +81,7 @@ export default function Navbar() {
             fontSize: '13px',
             fontWeight: '600',
             position: 'relative',
-            zIndex: 101
+            zIndex: 1001
         },
         closeAnnouncement: {
             position: 'absolute',
@@ -97,9 +98,11 @@ export default function Navbar() {
             justifyContent: 'space-between', 
             alignItems: 'center', 
             padding: '16px 5%', 
-            background: theme === 'dark' ? 'rgba(9,13,22,0.85)' : 'rgba(255,255,255,0.85)',
-            backdropFilter: 'blur(12px)', 
-            borderBottom: `1px solid ${colors.border}`
+            background: theme === 'dark' ? 'rgba(9,13,22,0.95)' : 'rgba(255,255,255,0.95)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            borderBottom: `1px solid ${colors.border}`,
+            zIndex: 1001
         },
         logoBox: { display: 'flex', alignItems: 'center', gap: '12px' },
         logoMark: { width: '40px', height: '40px', borderRadius: '12px', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#fff', fontSize: '20px' },
