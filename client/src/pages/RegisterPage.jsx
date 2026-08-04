@@ -136,80 +136,46 @@ export default function RegisterPage() {
                 provider: socialProvider.toLowerCase(),
                 email: socialEmail,
                 name: socialName,
-                socialId: `soc_${socialProvider.toLowerCase()}_${Date.now()}`,
-                role: socialRole,
-                firstName: form.firstName,
-                lastName: form.lastName,
-                country: form.country,
-                city: form.city,
-                educationLevel: form.educationLevel,
-                institution: form.institution,
-                fieldOfStudy: form.fieldOfStudy,
-                professionalTitle: form.professionalTitle,
-                biography: form.biography,
-                skills: form.skills
-            };
-            const user = await socialAuth(mockData);
-            setShowSocialModal(false);
-            if (user.assignedRole === 'Admin') navigate('/admin/dashboard');
-            else if (user.assignedRole === 'Instructor') navigate('/instructor/dashboard');
-            else navigate('/student/dashboard');
-        } catch (err) {
-            setSocialError(err.response?.data?.message || `Registration with ${socialProvider} failed.`);
-        } finally {
-            setSocialLoading(false);
-        }
-    };
-
-    const renderProviderIcon = (provider) => {
-        switch (provider) {
-            case 'Google': return <FaGoogle style={{ color: '#ea4335', fontSize: '24px' }} />;
-            case 'GitHub': return <FaGithub style={{ color: '#fff', fontSize: '24px' }} />;
-            case 'Microsoft': return <FaMicrosoft style={{ color: '#00a4ef', fontSize: '24px' }} />;
-            case 'Facebook': return <FaFacebook style={{ color: '#1877f2', fontSize: '24px' }} />;
-            default: return null;
-        }
-    };
-
-    return (
-        <div style={styles.page}>
-            <Link to="/" style={styles.backButton}>
-                <FaArrowLeft /> Back to Home
-            </Link>
-            <div style={styles.card}>
-                <div style={styles.header}>
-                    <div style={styles.logo}>E</div>
-                    <h1 style={styles.title}>Create Account</h1>
-                    <p style={styles.subtitle}>Join the Emare ELMS platform</p>
-                </div>
-                {error && <div style={styles.errorBox}>{error}</div>}
                 <form onSubmit={handleSubmit} style={styles.form}>
-                    {/* Basic Info */}
+                    <h3 style={styles.sectionHeader}>Biographical Information</h3>
                     <div style={styles.fieldGroup}>
                         <label style={styles.label}>First Name</label>
                         <input name="firstName" type="text" required placeholder="John" value={form.firstName} onChange={handleChange} style={styles.input} />
                     </div>
                     <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Middle Name (Optional)</label>
-                        <input name="middleName" type="text" placeholder="A." value={form.middleName} onChange={handleChange} style={styles.input} />
-                    </div>
-                    <div style={styles.fieldGroup}>
                         <label style={styles.label}>Last Name</label>
                         <input name="lastName" type="text" required placeholder="Doe" value={form.lastName} onChange={handleChange} style={styles.input} />
                     </div>
+
+                    <div style={styles.fieldGroup}>
+                        <label style={styles.label}>Gender</label>
+                        <select name="gender" value={form.gender} onChange={handleChange} style={styles.input}>
+                            <option value="">Select</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div style={styles.fieldGroup}>
+                        <label style={styles.label}>Date of Birth</label>
+                        <input name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={handleChange} style={styles.input} />
+                    </div>
+
+                    <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
+                        <label style={styles.label}>Profile Picture Upload</label>
+                        <input name="profilePicture" type="file" accept="image/*" onChange={handleChange} style={styles.input} />
+                    </div>
+
+                    <h3 style={styles.sectionHeader}>Security & Contact</h3>
                     <div style={styles.fieldGroup}>
                         <label style={styles.label}>Username</label>
                         <input name="username" type="text" required placeholder="johndoe" value={form.username} onChange={handleChange} style={styles.input} />
                     </div>
                     <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Email Address</label>
+                        <label style={styles.label}>Verified Email Address</label>
                         <input name="accountEmail" type="email" required placeholder="you@example.com" value={form.accountEmail} onChange={handleChange} style={styles.input} />
                     </div>
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Phone Number (Optional)</label>
-                        <input name="phoneNumber" type="tel" placeholder="+1234567890" value={form.phoneNumber} onChange={handleChange} style={styles.input} />
-                    </div>
-                    {/* Password */}
+
                     <div style={styles.fieldGroup}>
                         <label style={styles.label}>Password</label>
                         <div style={styles.passwordWrapper}>
@@ -228,75 +194,48 @@ export default function RegisterPage() {
                             </button>
                         </div>
                     </div>
-                    {/* Profile Picture */}
-                    <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
-                        <label style={styles.label}>Profile Picture (Optional)</label>
-                        <input name="profilePicture" type="file" accept="image/*" onChange={handleChange} style={styles.input} />
-                    </div>
-                    {/* Personal Info */}
+
                     <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Gender</label>
-                        <select name="gender" value={form.gender} onChange={handleChange} style={styles.input}>
-                            <option value="">Select</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
-                        </select>
+                        <label style={styles.label}>Verified Phone Number (Optional)</label>
+                        <input name="phoneNumber" type="tel" placeholder="+1234567890" value={form.phoneNumber} onChange={handleChange} style={styles.input} />
                     </div>
                     <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Date of Birth</label>
-                        <input name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={handleChange} style={styles.input} />
+                        <label style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: 8 }}><input type="checkbox" style={{ marginRight: 8 }} /> Enable 2FA</label>
+                        <div />
+                    </div>
+
+                    <h3 style={styles.sectionHeader}>Professional & Academic Details</h3>
+                    <div style={styles.fieldGroup}>
+                        <label style={styles.label}>Professional Title</label>
+                        <input name="professionalTitle" type="text" placeholder="Professional Title" value={form.professionalTitle} onChange={handleChange} style={styles.input} />
                     </div>
                     <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Country</label>
-                        <input name="country" type="text" placeholder="Country" value={form.country} onChange={handleChange} style={styles.input} />
+                        <label style={styles.label}>Education Level</label>
+                        <input name="educationLevel" type="text" placeholder="e.g., Bachelor" value={form.educationLevel} onChange={handleChange} style={styles.input} />
+                    </div>
+
+                    <div style={styles.fieldGroup}>
+                        <label style={styles.label}>Institution / University (Optional)</label>
+                        <input name="institution" type="text" placeholder="University name" value={form.institution} onChange={handleChange} style={styles.input} />
                     </div>
                     <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Region / State</label>
-                        <input name="region" type="text" placeholder="State" value={form.region} onChange={handleChange} style={styles.input} />
+                        <label style={styles.label}>Field of Study</label>
+                        <input name="fieldOfStudy" type="text" placeholder="Computer Science" value={form.fieldOfStudy} onChange={handleChange} style={styles.input} />
+                    </div>
+
+                    <div style={styles.fieldGroup}>
+                        <label style={styles.label}>Learning Interests</label>
+                        <input name="learningInterests" type="text" placeholder="AI, Data Science" value={form.learningInterests} onChange={handleChange} style={styles.input} />
                     </div>
                     <div style={styles.fieldGroup}>
-                        <label style={styles.label}>City</label>
-                        <input name="city" type="text" placeholder="City" value={form.city} onChange={handleChange} style={styles.input} />
+                        <label style={styles.label}>Preferred Language</label>
+                        <input name="preferredLanguage" type="text" placeholder="English" value={form.preferredLanguage} onChange={handleChange} style={styles.input} />
                     </div>
-                    <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
-                        <label style={styles.label}>Address (Optional)</label>
-                        <input name="address" type="text" placeholder="Street address" value={form.address} onChange={handleChange} style={styles.input} />
-                    </div>
-                    {/* Role Selection */}
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Register As</label>
-                        <select name="assignedRole" value={form.assignedRole} onChange={handleChange} style={{ ...styles.input, cursor: 'pointer' }}>
-                            <option value="Student">Student</option>
-                            <option value="Instructor">Instructor</option>
-                        </select>
-                    </div>
-                    {/* Conditional Sections */}
-                    {form.assignedRole === 'Student' && (
-                        <>
-                            <div style={styles.fieldGroup}>
-                                <label style={styles.label}>Education Level</label>
-                                <input name="educationLevel" type="text" placeholder="e.g., Bachelor" value={form.educationLevel} onChange={handleChange} style={styles.input} />
-                            </div>
-                            <div style={styles.fieldGroup}>
-                                <label style={styles.label}>Institution / University (Optional)</label>
-                                <input name="institution" type="text" placeholder="University name" value={form.institution} onChange={handleChange} style={styles.input} />
-                            </div>
-                            <div style={styles.fieldGroup}>
-                                <label style={styles.label}>Field of Study</label>
-                                <input name="fieldOfStudy" type="text" placeholder="Computer Science" value={form.fieldOfStudy} onChange={handleChange} style={styles.input} />
-                            </div>
-                            <div style={styles.fieldGroup}>
-                                <label style={styles.label}>Learning Interests</label>
-                                <input name="learningInterests" type="text" placeholder="AI, Data Science" value={form.learningInterests} onChange={handleChange} style={styles.input} />
-                            </div>
-                            <div style={styles.fieldGroup}>
-                                <label style={styles.label}>Preferred Language</label>
-                                <input name="preferredLanguage" type="text" placeholder="English" value={form.preferredLanguage} onChange={handleChange} style={styles.input} />
-                            </div>
-                        </>
-                    )}
-                    {form.assignedRole === 'Instructor' && (
+
+                    <button type="submit" style={loading ? { ...styles.btn, opacity: 0.7, gridColumn: '1 / -1' } : { ...styles.btn, gridColumn: '1 / -1' }} disabled={loading}>
+                        {loading ? 'Creating Account...' : 'Create Account'}
+                    </button>
+                </form>
                         <>
                             <div style={styles.fieldGroup}>
                                 <label style={styles.label}>Professional Title</label>
@@ -448,6 +387,7 @@ const styles = {
     socialText: { color: '#94a3b8', marginBottom: '12px', fontSize: '13px' },
     socialButtons: { display: 'flex', justifyContent: 'center', gap: '14px' },
     socialBtn: { background: '#ffffff', borderRadius: '50%', width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', transition: 'transform 0.2s' },
+    sectionHeader: { gridColumn: '1 / -1', color: '#fff', fontSize: '14px', fontWeight: '800', marginTop: '8px', marginBottom: '8px' },
     modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' },
     modalContent: { background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '32px', width: '100%', maxWidth: '440px', boxShadow: '0 25px 50px rgba(0,0,0,0.6)' },
     closeBtn: { background: 'none', border: 'none', color: '#94a3b8', fontSize: '20px', cursor: 'pointer' }
