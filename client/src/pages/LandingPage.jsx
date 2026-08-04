@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { courseService } from '../services/api';
 import Navbar from '../components/Navbar';
+import TypingText from '../components/TypingText';
 import { useTheme } from '../context/ThemeContext';
 
 export default function LandingPage() {
@@ -139,7 +140,8 @@ export default function LandingPage() {
         page: { minHeight: '100vh', fontFamily: "'Outfit', 'Inter', sans-serif", overflowX: 'hidden' },
         hero: { position: 'relative', padding: '120px 5% 100px', display: 'flex', justifyContent: 'center', textAlign: 'center', overflow: 'hidden' },
         heroContent: { maxWidth: '800px', zIndex: 2, position: 'relative' },
-        heroTitle: { fontSize: '60px', fontWeight: '900', lineHeight: 1.1, margin: '0 0 24px', letterSpacing: '-2px', color: colors.text },
+        heroTitle: { fontSize: '60px', fontWeight: '900', lineHeight: 1.1, margin: '0 0 16px', letterSpacing: '-2px', color: colors.text },
+        heroSubtitleAnimated: { fontSize: '32px', fontWeight: '700', lineHeight: 1.2, margin: '0 0 40px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto', color: colors.primary, minHeight: '50px' },
         heroSubtitle: { fontSize: '18px', color: colors.textMuted, lineHeight: 1.7, margin: '0 0 32px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' },
         searchForm: { display: 'flex', maxWidth: '600px', margin: '0 auto 32px', background: colors.bgCard, borderRadius: '14px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' },
         searchInput: { flex: 1, background: 'transparent', border: 'none', color: colors.text, padding: '18px 24px', fontSize: '15px', outline: 'none' },
@@ -214,17 +216,28 @@ export default function LandingPage() {
             <section style={p.hero}>
                 <div style={p.heroContent}>
                     <span style={p.sectionBadge}>🚀 Empowering Africa's Tech Future</span>
-                    <h1 style={p.heroTitle}>Master In-Demand<br />Tech Skills Today</h1>
-                    <p style={p.heroSubtitle}>
-                        Join thousands of learners building the future with industry-grade courses, live classes, and interactive learning paths.
-                    </p>
+                    <h1 style={p.heroTitle}>Welcome to Emare ICT Hub</h1>
+                    <h2 style={p.heroSubtitleAnimated}>
+                        <TypingText 
+                            phrases={[
+                                'Master In-Demand Tech Skills',
+                                'Build Your Future',
+                                'Become Job Ready',
+                                'Learn from Experts',
+                                'Start Learning Today'
+                            ]}
+                            speed={50}
+                            delay={2500}
+                            style={{ color: 'currentColor' }}
+                        />
+                    </h2>
                     <form onSubmit={handleSearch} style={p.searchForm}>
                         <input type="text" placeholder="Search for courses, paths, or instructors..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={p.searchInput} />
                         <button type="submit" style={p.searchBtn}>Search Courses</button>
                     </form>
                     <div style={p.heroActions}>
                         <button onClick={() => navigate('/courses')} style={p.primaryBtn}>Browse Courses</button>
-                        <button onClick={() => navigate('/register')} style={p.secondaryBtn}>Start Learning for Free</button>
+                        <button onClick={() => navigate('/courses')} style={p.secondaryBtn}>Start Learning for Free</button>
                     </div>
                 </div>
                 <div style={p.heroGlow1} />
@@ -504,7 +517,7 @@ export default function LandingPage() {
                     Join the premier digital learning platform in Ethiopia. Start learning today or share your knowledge as an instructor.
                 </p>
                 <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                    <button onClick={() => navigate('/register')} style={{ ...p.primaryBtn, padding: '16px 36px', fontSize: '16px' }}>Start Learning</button>
+                    <button onClick={() => navigate('/courses')} style={{ ...p.primaryBtn, padding: '16px 36px', fontSize: '16px' }}>Start Learning</button>
                     <button onClick={() => navigate('/register')} style={{ ...p.secondaryBtn, padding: '16px 36px', fontSize: '16px' }}>Become an Instructor</button>
                     <button onClick={() => navigate('/contact')} style={{ background: 'transparent', border: 'none', color: colors.text, padding: '16px 36px', fontSize: '16px', fontWeight: '700', cursor: 'pointer', textDecoration: 'underline' }}>Contact Us</button>
                 </div>

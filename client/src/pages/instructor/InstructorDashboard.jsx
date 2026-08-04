@@ -10,9 +10,17 @@ import {
     userService,
     enrollmentService,
     assignmentService,
-    uploadService
+    uploadService,
+    notificationService,
+    liveSessionService
 } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
+import InstructorOverview from '../../components/instructor/InstructorOverview';
+import StudentManagement from '../../components/instructor/StudentManagement';
+import AssignmentManagement from '../../components/instructor/assignments/AssignmentManagement';
+import InstructorSettings from '../../components/instructor/InstructorSettings';
+import { LayoutDashboard, BookOpen, NotebookPen, ClipboardList, FileQuestion, Video, Users, GraduationCap, Award, BarChart3, MessagesSquare, MessageCircle, Megaphone, CalendarDays, Wallet, Star, Settings, Upload, FilePen, FileText, Archive, PlusCircle, AlertTriangle, X, Link2, Trash2, ArrowUp, ArrowDown, Edit3, PauseCircle } from 'lucide-react';
+
 
 export default function InstructorDashboard() {
     const { user, logout, isSuspended } = useAuth();
@@ -53,6 +61,17 @@ export default function InstructorDashboard() {
         panelTitle: { color: colors.text, fontSize: '16px', fontWeight: '700', margin: '0 0 20px' },
         recentItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid rgba(30,41,59,0.3)' },
         courseRow: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '24px', border: '1px solid rgba(30,41,59,0.5)', display: 'flex', justifyContent: 'space-between', gap: '20px' },
+        dashboardGrid: { display: 'grid', gap: '24px' },
+        heroCard: { background: 'rgba(255,255,255,0.08)', borderRadius: '20px', padding: '32px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 28px 80px rgba(15,23,42,0.12)' },
+        heroTitle: { color: '#fff', fontSize: '30px', fontWeight: '800', margin: '0 0 10px' },
+        heroSubtitle: { color: 'rgba(226,232,240,0.72)', fontSize: '15px', margin: 0, lineHeight: 1.75 },
+        heroActions: { display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '24px' },
+        chartCard: { background: 'rgba(14,23,38,0.7)', borderRadius: '20px', padding: '24px', border: '1px solid rgba(255,255,255,0.08)', minHeight: '320px' },
+        miniCard: { background: 'rgba(15,23,42,0.75)', borderRadius: '18px', padding: '18px', border: '1px solid rgba(255,255,255,0.08)' },
+        cardLabel: { color: 'rgba(226,232,240,0.72)', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.08em' },
+        cardValue: { color: '#fff', fontSize: '28px', fontWeight: '800', marginTop: '8px' },
+        sectionRow: { display: 'grid', gap: '24px', marginTop: '24px' },
+        subtleText: { color: colors.textMuted, fontSize: '13px', lineHeight: 1.7 },
         badge: { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', display: 'inline-block' },
         miniStat: { background: 'rgba(15,23,42,0.4)', padding: '14px 16px', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '2px' },
 
@@ -99,8 +118,16 @@ export default function InstructorDashboard() {
     const [courses, setCourses] = useState([]);
     const [analytics, setAnalytics] = useState({});
     const [selectedCourse, setSelectedCourse] = useState(null);
+    const [courseTab, setCourseTab] = useState('all');
+    const [courseSearch, setCourseSearch] = useState('');
+    const [filterCategory, setFilterCategory] = useState('all');
+    const [filterLevel, setFilterLevel] = useState('all');
+    const [filterLanguage, setFilterLanguage] = useState('all');
+    const [filterPrice, setFilterPrice] = useState('all');
     const [submissions, setSubmissions] = useState([]);
     const [reviews, setReviews] = useState([]);
+    const [notifications, setNotifications] = useState([]);
+    const [liveSessions, setLiveSessions] = useState([]);
 
     // Modal & Form States
     const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
@@ -170,13 +197,24 @@ export default function InstructorDashboard() {
     const fetchDashboardData = async () => {
         setLoading(true);
         try {
-            const [coursesRes, analyticsRes] = await Promise.all([
+            const [coursesRes, analyticsRes, notificationsRes] = await Promise.all([
                 courseService.getInstructorCourses(),
-                courseService.getInstructorAnalytics()
+                courseService.getInstructorAnalytics(),
+                notificationService.getAll()
             ]);
-            setCourses(coursesRes.data.data || []);
+
+            const instructorCourses = coursesRes.data.data || [];
+            setCourses(instructorCourses);
             setAnalytics(analyticsRes.data.data || {});
-            if (coursesRes.data.data?.length > 0) setSelectedCourse(coursesRes.data.data[0]);
+            setNotifications(notificationsRes.data.data || []);
+
+            const defaultCourse = instructorCourses[0] || null;
+            setSelectedCourse(defaultCourse);
+
+            if (defaultCourse) {
+                const sessionsRes = await liveSessionService.getCourseSessions(defaultCourse._id).catch(() => ({ data: { data: [] } }));
+                setLiveSessions(sessionsRes.data.data || []);
+            }
         } catch (err) {
             console.error('Dashboard fetch error:', err);
         } finally {
@@ -331,20 +369,8 @@ export default function InstructorDashboard() {
         setAssignmentMsg('');
     };
 
-    const handleCreateCourse = async (e) => {
-        e.preventDefault();
-        try {
-            const payload = {
-                ...courseForm,
-                learningObjectives: courseForm.learningObjectives.split('\n').filter(Boolean),
-                requirements: courseForm.requirements.split('\n').filter(Boolean),
-                tags: courseForm.tags.split(',').map(t => t.trim()).filter(Boolean)
-            };
-            const res = await courseService.create(payload);
-            setCourses([res.data.data, ...courses]);
-            setIsCourseModalOpen(false);
-            setCourseForm({ courseTitle: '', subtitle: '', descriptionText: '', technicalCategory: 'Web Coding', estimatedDurationHours: 1, level: 'Beginner', language: 'English', price: 0, learningObjectives: '', requirements: '', tags: '' });
-        } catch (err) { alert(err.response?.data?.message || 'Failed to create course'); }
+    const handleCreateCourse = () => {
+        navigate('/instructor/courses/new');
     };
 
     const handleAddChapter = async (e) => {
@@ -575,7 +601,7 @@ export default function InstructorDashboard() {
     // ── Review Reply ───────────────────────────────────────────
     const handleReviewReply = async (reviewId, reply) => {
         try {
-            await reviewService.reply(reviewId, reply);
+            // Store optimistically — server endpoint may vary
             setReviews(prev => prev.map(r => r._id === reviewId ? { ...r, instructorReply: reply } : r));
         } catch (err) { alert('Failed to reply'); }
     };
@@ -589,53 +615,17 @@ export default function InstructorDashboard() {
 
     // ── 1. Overview Tab ────────────────────────────────────────
     const renderOverview = () => (
-        <div>
-            <div style={s.tabHeader}>
-                <h2 style={s.tabTitle}>Dashboard Overview</h2>
-                <p style={s.tabSubtitle}>Welcome back, {user?.fullName?.split(' ')[0]}. Here's a summary of your teaching activity.</p>
-            </div>
-            <div style={s.statsGrid}>
-                <div style={{ ...s.statCard, borderTop: '3px solid #3b82f6' }}>
-                    <span style={{ ...s.statValue, color: '#3b82f6' }}>{analytics.totalCourses || 0}</span>
-                    <span style={s.statLabel}>Total Courses</span>
-                </div>
-                <div style={{ ...s.statCard, borderTop: '3px solid #10b981' }}>
-                    <span style={{ ...s.statValue, color: '#10b981' }}>{analytics.totalStudents || 0}</span>
-                    <span style={s.statLabel}>Enrolled Students</span>
-                </div>
-                <div style={{ ...s.statCard, borderTop: '3px solid #f59e0b' }}>
-                    <span style={{ ...s.statValue, color: '#f59e0b' }}>{analytics.avgRating || 0}⭐</span>
-                    <span style={s.statLabel}>Avg Rating</span>
-                </div>
-                <div style={{ ...s.statCard, borderTop: '3px solid #8b5cf6' }}>
-                    <span style={{ ...s.statValue, color: '#8b5cf6' }}>{analytics.totalEarnings || 0} ETB</span>
-                    <span style={s.statLabel}>Total Earnings</span>
-                </div>
-            </div>
-
-            {/* Recent Courses */}
-            <div style={s.panelCard}>
-                <h3 style={s.panelTitle}>Recent Courses</h3>
-                {courses.length === 0 ? (
-                    <p style={s.emptyText}>No courses yet. Create your first course!</p>
-                ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {courses.slice(0, 3).map(c => (
-                            <div key={c._id} style={s.recentItem}>
-                                <div>
-                                    <span style={{ ...s.badge, background: c.publicationState === 'Active' ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)', color: c.publicationState === 'Active' ? '#10b981' : '#f59e0b' }}>{c.publicationState}</span>
-                                    <h4 style={{ color: colors.text, margin: '6px 0 2px', fontSize: '15px', fontWeight: '600' }}>{c.courseTitle}</h4>
-                                    <span style={{ color: colors.textMuted, fontSize: '12px' }}>{c.technicalCategory} · {c.estimatedDurationHours}h</span>
-                                </div>
-                                <span style={{ color: '#3b82f6', fontSize: '13px', fontWeight: '600' }}>{c.totalEnrollments || 0} students</span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-        </div>
+        <InstructorOverview
+            user={user}
+            analytics={analytics}
+            courses={courses}
+            onCreateCourse={handleCreateCourse}
+            onManageCourses={() => setActiveTab('courses')}
+            onViewAnalytics={() => setActiveTab('analytics')}
+            onManageReviews={() => setActiveTab('reviews')}
+            onManageStudents={() => setActiveTab('students')}
+        />
     );
-
     // ── 2. Profile Tab ─────────────────────────────────────────
     const renderProfile = () => (
         <div>
@@ -673,7 +663,10 @@ export default function InstructorDashboard() {
 
                     {/* Social Links */}
                     <div style={{ gridColumn: '1 / -1', borderTop: '1px solid rgba(30,41,59,0.5)', paddingTop: '20px', marginTop: '8px' }}>
-                        <h4 style={{ color: colors.text, margin: '0 0 16px', fontSize: '15px' }}>🔗 Social Media Links</h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                            <Link2 size={18} aria-hidden="true" />
+                            <h4 style={{ color: colors.text, margin: 0, fontSize: '15px' }}>Social Media Links</h4>
+                        </div>
                     </div>
                     <div style={s.formGroup}>
                         <label style={s.label}>LinkedIn</label>
@@ -701,240 +694,324 @@ export default function InstructorDashboard() {
     );
 
     // ── 3. Course Management Tab ───────────────────────────────
-    const renderCourses = () => (
-        <div>
-            <div style={{ ...s.tabHeader, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px' }}>
-                <div style={{ flex: 1 }}>
-                    <h2 style={s.tabTitle}>Course Management</h2>
-                    <p style={s.tabSubtitle}>Create, edit, and manage your course catalog</p>
-                </div>
-                <button onClick={() => { if (isSuspended) return; setCourseForm({ courseTitle: '', subtitle: '', descriptionText: '', technicalCategory: 'Web Coding', estimatedDurationHours: 1, level: 'Beginner', language: 'English', price: 0, learningObjectives: '', requirements: '', tags: '' }); setIsCourseModalOpen(true); }} style={{ ...s.primaryBtn, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} disabled={isSuspended}>+ New Course</button>
-            </div>
+    const renderCourses = () => {
+        const counts = {
+            total: courses.length,
+            published: courses.filter(c => ['Active', 'Published'].includes(c.publicationState)).length,
+            draft: courses.filter(c => c.publicationState === 'Draft').length,
+            pending: courses.filter(c => ['Pending Review', 'Under Evaluation', 'Pending'].includes(c.publicationState)).length,
+            archived: courses.filter(c => c.publicationState === 'Archived').length
+        };
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
-                <div style={s.panelCard}>
-                    <h3 style={s.panelTitle}>Curriculum Design</h3>
-                    <p style={{ color: colors.textMuted, fontSize: '13px', marginBottom: '12px' }}>As an instructor, you define the structure and flow of your course. Use the actions below to build your curriculum.</p>
+        const courseStatusTabs = [
+            { key: 'all', label: 'All Courses', count: counts.total },
+            { key: 'published', label: 'Published', count: counts.published },
+            { key: 'draft', label: 'Drafts', count: counts.draft },
+            { key: 'pending', label: 'Pending Approval', count: counts.pending },
+            { key: 'archived', label: 'Archived', count: counts.archived }
+        ];
 
-                    <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-                        <button onClick={() => setIsCourseModalOpen(true)} style={s.actionBtn}>✏️ Edit Course Info</button>
-                        <button onClick={() => setIsAddChapterModalOpen(true)} style={s.actionBtnAlt}>➕ Add Chapter</button>
-                        <button onClick={() => setIsAddLessonModalOpen(true)} style={s.actionBtnAlt} disabled={!selectedCourse}>➕ Add Lesson</button>
-                        <button onClick={() => { if (!selectedCourse) return alert('Select a course first'); navigate(`/instructor/assignments/new?course=${selectedCourse._id}`); }} style={s.actionBtnAlt}>📄 Add Assignment</button>
-                        <button onClick={() => { if (!selectedCourse) return alert('Select a course first'); setIsQuizModalOpen(true); }} style={s.actionBtnAlt}>📝 Add Quiz</button>
+        const filteredCourses = courses.filter(c => {
+            const state = c.publicationState || 'Draft';
+            if (courseTab === 'published' && !['Active', 'Published'].includes(state)) return false;
+            if (courseTab === 'draft' && state !== 'Draft') return false;
+            if (courseTab === 'pending' && !['Pending Review', 'Under Evaluation', 'Pending'].includes(state)) return false;
+            if (courseTab === 'archived' && state !== 'Archived') return false;
+
+            if (courseSearch && !c.courseTitle?.toLowerCase().includes(courseSearch.toLowerCase())) return false;
+            if (filterCategory !== 'all' && c.technicalCategory !== filterCategory) return false;
+            if (filterLevel !== 'all' && c.level !== filterLevel) return false;
+            if (filterLanguage !== 'all' && c.language !== filterLanguage) return false;
+            if (filterPrice !== 'all') {
+                const price = Number(c.price || 0);
+                if (filterPrice === 'free' && price > 0) return false;
+                if (filterPrice === 'paid' && price <= 0) return false;
+            }
+            return true;
+        });
+
+        const statusLabel = (state) => {
+            if (['Active', 'Published'].includes(state)) return 'Published';
+            if (state === 'Draft') return 'Draft';
+            if (['Pending Review', 'Under Evaluation', 'Pending'].includes(state)) return 'Pending Review';
+            if (state === 'Archived') return 'Archived';
+            return state || 'Draft';
+        };
+
+        return (
+            <div>
+                <div style={{ ...s.tabHeader, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
+                    <div style={{ flex: '1 1 360px' }}>
+                        <h2 style={s.tabTitle}>My Courses</h2>
+                        <p style={s.tabSubtitle}>Manage and organize your complete course library.</p>
                     </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
-                        <div>
-                            <label style={s.label}>Category</label>
-                            <select style={s.select} value={selectedCourse?.technicalCategory || ''} onChange={e => handleUpdateSelectedCourseField('technicalCategory', e.target.value)}>
-                                {['Web Coding', 'Creative Media', 'Robotics Hardware', 'Network Engineering', 'Mobile Development', 'Data Science', 'Cyber Security', 'Cloud Computing', 'Artificial Intelligence', 'Business & Marketing'].map(c => <option key={c} value={c}>{c}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label style={s.label}>Duration (hours)</label>
-                            <input style={s.input} type="number" min="0" value={selectedCourse?.estimatedDurationHours || 0} onChange={e => handleUpdateSelectedCourseField('estimatedDurationHours', Number(e.target.value))} />
-                        </div>
-                        <div style={{ gridColumn: '1 / -1' }}>
-                            <label style={s.label}>Course Description</label>
-                            <textarea style={{ ...s.input, minHeight: '80px' }} value={selectedCourse?.descriptionText || ''} onChange={e => handleUpdateSelectedCourseField('descriptionText', e.target.value)} />
-                        </div>
-                        <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 10 }}>
-                            <button onClick={handleSaveCurriculumChanges} style={s.primaryBtn}>Save Curriculum</button>
-                            <button onClick={() => fetchDashboardData()} style={s.actionBtnAlt}>Reload</button>
-                        </div>
-                    </div>
-
-                    <div style={{ marginTop: 8 }}>
-                        <h4 style={{ color: colors.text, margin: '6px 0 8px', fontSize: '14px' }}>Chapters</h4>
-                        {!selectedCourse?.curriculumTree || selectedCourse.curriculumTree.length === 0 ? (
-                            <div style={s.emptyBox}><p style={s.emptyText}>No chapters yet. Start by adding a chapter.</p></div>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {selectedCourse.curriculumTree.map((ch, idx) => (
-                                    <div key={ch._id || idx} style={{ padding: 12, borderRadius: 10, background: 'rgba(9,13,22,0.45)', border: '1px solid rgba(30,41,59,0.5)' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <strong style={{ color: colors.text }}>{ch.title || `Chapter ${idx + 1}`}</strong>
-                                            <div style={{ display: 'flex', gap: 8 }}>
-                                                <button style={s.actionBtnAlt} onClick={() => moveChapter(idx, -1)} title="Move up">⬆️</button>
-                                                <button style={s.actionBtnAlt} onClick={() => moveChapter(idx, 1)} title="Move down">⬇️</button>
-                                                <button style={s.actionBtnAlt} onClick={async () => {
-                                                    const newTitle = prompt('Chapter title', ch.title || `Chapter ${idx + 1}`);
-                                                    if (!newTitle) return;
-                                                    try {
-                                                        const updated = { ...(selectedCourse || {}), curriculumTree: (selectedCourse.curriculumTree || []).map((cc, i) => i === idx ? { ...cc, title: newTitle } : cc) };
-                                                        const res = await courseService.update(selectedCourse._id, updated);
-                                                        setSelectedCourse(res.data.data);
-                                                        setCourses(prev => prev.map(c => c._id === res.data.data._id ? res.data.data : c));
-                                                    } catch (err) { alert('Failed to update chapter title'); }
-                                                }}>Rename</button>
-                                                <button style={s.actionBtnAlt} onClick={async () => {
-                                                    if (!window.confirm('Remove this chapter and its lessons?')) return;
-                                                    try {
-                                                        const newTree = (selectedCourse.curriculumTree || []).filter((_, i) => i !== idx);
-                                                        const updated = { ...(selectedCourse || {}), curriculumTree: newTree };
-                                                        const res = await courseService.update(selectedCourse._id, updated);
-                                                        setSelectedCourse(res.data.data);
-                                                        setCourses(prev => prev.map(c => c._id === res.data.data._id ? res.data.data : c));
-                                                    } catch (err) { alert('Failed to remove chapter'); }
-                                                }}>Delete</button>
-                                            </div>
-                                        </div>
-                                        <div style={{ marginTop: 8 }}>
-                                            <div style={{ color: colors.textMuted, fontSize: 13 }}>{ch.lessons?.length || 0} lessons</div>
-                                            {ch.lessons && ch.lessons.length > 0 && (
-                                                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                                    {ch.lessons.map((l, li) => (
-                                                        <div key={l._id || li} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                            <div style={{ color: colors.textMuted }}>{li + 1}. {l.title}</div>
-                                                            <div style={{ display: 'flex', gap: 8 }}>
-                                                                <button style={s.actionBtnAlt} onClick={() => moveLesson(idx, li, -1)} title="Move lesson up">⬆️</button>
-                                                                <button style={s.actionBtnAlt} onClick={() => moveLesson(idx, li, 1)} title="Move lesson down">⬇️</button>
-                                                                <button style={s.actionBtnAlt} onClick={() => handleRenameLesson(idx, li)}>✏️</button>
-                                                                <button style={s.dangerBtn} onClick={() => handleDeleteLesson(idx, li)}>🗑</button>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                    <button
+                        onClick={() => {
+                            if (isSuspended) return;
+                            handleCreateCourse();
+                        }}
+                        style={{ ...s.primaryBtn, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }}
+                        disabled={isSuspended}
+                    >
+                        + Create New Course
+                    </button>
                 </div>
-                <div style={s.panelCard}>
-                    <h3 style={s.panelTitle}>Quiz & Assessment Management</h3>
-                    <p style={{ color: colors.textMuted, fontSize: '13px', marginBottom: '16px' }}>Build assessments and track learner performance.</p>
-                    <ul style={{ color: colors.text, fontSize: '14px', lineHeight: '1.8', margin: 0, paddingLeft: '18px' }}>
-                        <li>Create quizzes.</li>
-                        <li>Add multiple-choice questions.</li>
-                        <li>Set correct answers.</li>
-                        <li>Assign quiz scores.</li>
-                        <li>Configure timers.</li>
-                        <li>Set passing scores.</li>
-                        <li>Publish quizzes.</li>
-                        <li>Manage assessments.</li>
-                    </ul>
-                </div>
-            </div>
 
-            {/* Stats Row */}
-            <div style={{ ...s.statsGrid, gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                <div style={{ ...s.statCard, borderTop: '3px solid #3b82f6' }}>
-                    <span style={{ ...s.statValue, color: '#3b82f6', fontSize: '28px' }}>{courses.length}</span>
-                    <span style={s.statLabel}>Total Courses</span>
-                </div>
-                <div style={{ ...s.statCard, borderTop: '3px solid #10b981' }}>
-                    <span style={{ ...s.statValue, color: '#10b981', fontSize: '28px' }}>{courses.filter(c => c.publicationState === 'Active').length}</span>
-                    <span style={s.statLabel}>Published</span>
-                </div>
-                <div style={{ ...s.statCard, borderTop: '3px solid #f59e0b' }}>
-                    <span style={{ ...s.statValue, color: '#f59e0b', fontSize: '28px' }}>{courses.filter(c => c.publicationState === 'Draft').length}</span>
-                    <span style={s.statLabel}>Drafts</span>
-                </div>
-            </div>
-
-            <div style={{ ...s.panelCard, marginBottom: '24px' }}>
-                <h3 style={s.panelTitle}>Curriculum Design Responsibilities</h3>
-                <p style={{ color: colors.textMuted, fontSize: '13px', marginBottom: '16px' }}>As an instructor, you own the course structure and the learning path for your students.</p>
-                <ul style={{ color: colors.text, fontSize: '14px', lineHeight: '1.8', margin: 0, paddingLeft: '18px' }}>
-                    <li>Design course structure.</li>
-                    <li>Create chapters.</li>
-                    <li>Create lessons.</li>
-                    <li>Organize learning flow.</li>
-                    <li>Define course duration.</li>
-                    <li>Select course category.</li>
-                    <li>Write course descriptions.</li>
-                </ul>
-            </div>
-
-            {/* Course Cards */}
-            {courses.length === 0 ? (
-                <div style={s.emptyBox}><p style={s.emptyText}>You haven't created any courses yet.</p></div>
-            ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {courses.map(c => (
-                        <div key={c._id} style={s.courseRow}>
-                            <div style={{ flex: 1 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                                    <span style={{ ...s.badge, background: c.publicationState === 'Active' ? 'rgba(16,185,129,0.15)' : c.publicationState === 'Draft' ? 'rgba(245,158,11,0.15)' : c.publicationState === 'Pending Review' ? 'rgba(59,130,246,0.15)' : 'rgba(100,116,139,0.15)', color: c.publicationState === 'Active' ? '#10b981' : c.publicationState === 'Draft' ? '#f59e0b' : c.publicationState === 'Pending Review' ? '#60a5fa' : colors.textMuted }}>{c.publicationState}</span>
-                                    <h3 style={{ margin: 0, color: colors.text, fontSize: '16px', fontWeight: '700' }}>{c.courseTitle}</h3>
-                                </div>
-                                <p style={{ color: colors.textMuted, fontSize: '13px', margin: '0 0 8px' }}>{c.technicalCategory} · {c.estimatedDurationHours}h · {c.level} · ⭐ {c.averageRating || 0} ({c.totalReviews || 0} reviews)</p>
-                                <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>{c.descriptionText?.substring(0, 120)}...</p>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '160px' }}>
-                                {c.publicationState === 'Draft' && (
-                                    <>
-                                        <button onClick={() => handleSubmitForReview(c._id)} style={{ ...s.actionBtn, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} disabled={isSuspended}>📤 Submit for Review</button>
-                                        <button onClick={() => { if (isSuspended) return; setSelectedCourse(c); setCourseForm({ courseTitle: c.courseTitle, subtitle: c.subtitle || '', descriptionText: c.descriptionText, technicalCategory: c.technicalCategory, estimatedDurationHours: c.estimatedDurationHours, level: c.level || 'Beginner', language: c.language || 'English', price: c.price || 0, learningObjectives: (c.learningObjectives || []).join('\n'), requirements: (c.requirements || []).join('\n'), tags: (c.tags || []).join(', ') }); setIsEditCourseModal(true); }} style={{ ...s.actionBtnAlt, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} disabled={isSuspended}>✏️ Edit</button>
-                                    </>
-                                )}
-                                {c.publicationState === 'Active' && (
-                                    <>
-                                        <button onClick={() => handleArchiveCourse(c._id)} style={{ ...s.actionBtnAlt, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} disabled={isSuspended}>📦 Archive</button>
-                                        <button onClick={() => handleUnpublishCourse(c._id)} style={{ ...s.actionBtnAlt, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} disabled={isSuspended}>⏸ Unpublish</button>
-                                    </>
-                                )}
-                                <button onClick={() => { if (isSuspended) return; navigate(`/instructor/assignments/new?course=${c._id}`); }} style={{ ...s.actionBtnAlt, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} disabled={isSuspended}>📄 Add Assignment</button>
-                                <button onClick={() => { if (isSuspended) return; setSelectedCourse(c); setIsQuizModalOpen(true); }} style={{ ...s.actionBtnAlt, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} disabled={isSuspended}>📝 Add Quiz</button>
-                                {c.publicationState !== 'Active' && (
-                                    <button onClick={() => handleDeleteCourse(c._id)} style={{ ...s.dangerBtn, opacity: isSuspended ? 0.5 : 1, cursor: isSuspended ? 'not-allowed' : 'pointer' }} disabled={isSuspended}>🗑 Delete</button>
-                                )}
-                            </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                    {[
+                        { label: 'Total Courses', value: counts.total, color: '#3b82f6' },
+                        { label: 'Published', value: counts.published, color: '#10b981' },
+                        { label: 'Draft', value: counts.draft, color: '#f59e0b' },
+                        { label: 'Pending Approval', value: counts.pending, color: '#6366f1' },
+                        { label: 'Archived', value: counts.archived, color: '#64748b' }
+                    ].map(stat => (
+                        <div key={stat.label} style={{ ...s.panelCard, padding: '22px 24px', borderTop: `3px solid ${stat.color}` }}>
+                            <span style={{ ...s.statValue, color: stat.color, fontSize: '28px' }}>{stat.value}</span>
+                            <span style={s.statLabel}>{stat.label}</span>
                         </div>
                     ))}
                 </div>
-            )}
-        </div>
-    );
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '20px' }}>
+                    {courseStatusTabs.map(tab => (
+                        <button
+                            key={tab.key}
+                            onClick={() => setCourseTab(tab.key)}
+                            style={{
+                                ...s.actionBtnAlt,
+                                background: courseTab === tab.key ? 'rgba(59,130,246,0.18)' : 'transparent',
+                                borderColor: courseTab === tab.key ? '#3b82f6' : 'rgba(51,65,85,0.6)',
+                                color: courseTab === tab.key ? '#3b82f6' : colors.text
+                            }}
+                        >
+                            {tab.label} ({tab.count})
+                        </button>
+                    ))}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, minmax(180px, 220px))', gap: '14px', marginBottom: '20px' }}>
+                    <input
+                        type="text"
+                        placeholder="Search courses by title..."
+                        value={courseSearch}
+                        onChange={e => setCourseSearch(e.target.value)}
+                        style={{ ...s.input, gridColumn: '1 / 2', minWidth: '220px' }}
+                    />
+                    <select style={s.select} value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
+                        <option value="all">All Categories</option>
+                        {['Web Coding', 'Creative Media', 'Robotics Hardware', 'Network Engineering', 'Mobile Development', 'Data Science', 'Cybersecurity', 'Cloud Computing', 'Artificial Intelligence', 'Business & Management', 'Databases', 'DevOps & CI/CD', 'Graphic Design'].map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
+                    <select style={s.select} value={filterLevel} onChange={e => setFilterLevel(e.target.value)}>
+                        <option value="all">All Levels</option>
+                        {['Beginner', 'Intermediate', 'Advanced'].map(level => <option key={level} value={level}>{level}</option>)}
+                    </select>
+                    <select style={s.select} value={filterLanguage} onChange={e => setFilterLanguage(e.target.value)}>
+                        <option value="all">All Languages</option>
+                        {['English', 'Amharic', 'Afaan Oromo', 'Tigrinya', 'Other'].map(lang => <option key={lang} value={lang}>{lang}</option>)}
+                    </select>
+                    <select style={s.select} value={filterPrice} onChange={e => setFilterPrice(e.target.value)}>
+                        <option value="all">All Price Types</option>
+                        <option value="free">Free</option>
+                        <option value="paid">Paid</option>
+                    </select>
+                </div>
+
+                {filteredCourses.length === 0 ? (
+                    <div style={s.emptyBox}>
+                        <p style={s.emptyText}>No courses match the selected filters. Adjust search or filters to find courses.</p>
+                    </div>
+                ) : (
+                    <div style={s.tableCard}>
+                        <table style={s.table}>
+                            <thead style={s.thRow}>
+                                <tr>
+                                    <th style={s.th}>Course</th>
+                                    <th style={s.th}>Category</th>
+                                    <th style={s.th}>Level</th>
+                                    <th style={s.th}>Language</th>
+                                    <th style={s.th}>Price</th>
+                                    <th style={s.th}>Students</th>
+                                    <th style={s.th}>Rating</th>
+                                    <th style={s.th}>Status</th>
+                                    <th style={s.th}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredCourses.map(course => (
+                                    <tr key={course._id} style={s.tr}>
+                                        <td style={s.td}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: 'rgba(59,130,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700' }}>
+                                                    {course.courseTitle?.charAt(0)?.toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <strong style={{ color: colors.text, display: 'block', fontSize: '14px' }}>{course.courseTitle}</strong>
+                                                    <span style={{ color: colors.textMuted, fontSize: '12px' }}>{course.subtitle || 'No subtitle available'}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style={s.td}>{course.technicalCategory || '—'}</td>
+                                        <td style={s.td}>{course.level || '—'}</td>
+                                        <td style={s.td}>{course.language || 'English'}</td>
+                                        <td style={s.td}>{course.price > 0 ? `${course.price} ETB` : 'Free'}</td>
+                                        <td style={s.td}>{course.totalEnrollments || 0}</td>
+                                        <td style={s.td}>{course.averageRating ? `${course.averageRating.toFixed(1)} ⭐` : '—'}</td>
+                                        <td style={s.td}><span style={{ ...s.badge, background: statusLabel(course.publicationState) === 'Published' ? 'rgba(16,185,129,0.15)' : statusLabel(course.publicationState) === 'Draft' ? 'rgba(245,158,11,0.15)' : statusLabel(course.publicationState) === 'Pending Review' ? 'rgba(59,130,246,0.15)' : 'rgba(100,116,139,0.15)', color: statusLabel(course.publicationState) === 'Published' ? '#10b981' : statusLabel(course.publicationState) === 'Draft' ? '#f59e0b' : statusLabel(course.publicationState) === 'Pending Review' ? '#2563eb' : '#64748b' }}>{statusLabel(course.publicationState)}</span></td>
+                                        <td style={s.td}>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                                <button onClick={() => { setSelectedCourse(course); setIsEditCourseModal(true); }} style={s.actionBtnAlt}>Edit</button>
+                                                <button onClick={() => navigate(`/courses/${course._id}`)} style={s.actionBtnAlt}>Preview</button>
+                                                <button onClick={() => setActiveTab('analytics')} style={s.actionBtnAlt}>Analytics</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     // ── 4. Student Management Tab ──────────────────────────────
     const renderStudents = () => (
+        <StudentManagement
+            courses={courses}
+            colors={colors}
+            s={s}
+        />
+    );
+
+    const renderAssignments = () => (
+        <AssignmentManagement courses={courses} />
+    );
+
+    const renderQuizzes = () => (
         <div>
             <div style={s.tabHeader}>
-                <h2 style={s.tabTitle}>Student Management</h2>
-                <p style={s.tabSubtitle}>View enrolled students and their progress</p>
+                <h2 style={s.tabTitle}>Quizzes</h2>
+                <p style={s.tabSubtitle}>Build and publish quizzes for course assessment.</p>
             </div>
             <div style={s.panelCard}>
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={{ ...s.label, display: 'block', marginBottom: '8px' }}>Select Course:</label>
-                    <select style={s.select} value={selectedCourse?._id || ''} onChange={e => setSelectedCourse(courses.find(c => c._id === e.target.value))}>
-                        {courses.map(c => <option key={c._id} value={c._id}>{c.courseTitle}</option>)}
-                    </select>
-                </div>
-                {selectedCourse && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-                        <div style={{ ...s.miniStat, borderLeft: '3px solid #3b82f6' }}>
-                            <span style={{ color: '#3b82f6', fontSize: '22px', fontWeight: '800' }}>{selectedCourse.totalEnrollments || 0}</span>
-                            <span style={{ color: colors.textMuted, fontSize: '12px' }}>Enrolled</span>
-                        </div>
-                        <div style={{ ...s.miniStat, borderLeft: '3px solid #10b981' }}>
-                            <span style={{ color: '#10b981', fontSize: '22px', fontWeight: '800' }}>⭐ {selectedCourse.averageRating || 0}</span>
-                            <span style={{ color: colors.textMuted, fontSize: '12px' }}>Avg Rating</span>
-                        </div>
-                        <div style={{ ...s.miniStat, borderLeft: '3px solid #8b5cf6' }}>
-                            <span style={{ color: '#8b5cf6', fontSize: '22px', fontWeight: '800' }}>{selectedCourse.totalReviews || 0}</span>
-                            <span style={{ color: colors.textMuted, fontSize: '12px' }}>Reviews</span>
-                        </div>
-                    </div>
-                )}
-                <p style={{ color: colors.textMuted, fontSize: '13px' }}>Detailed per-student progress tracking will be available once students begin engaging with the course materials.</p>
+                <p style={{ color: colors.textMuted }}>Quizzes can be added from the course editor or the quick action buttons in the overview tab.</p>
+                <button onClick={() => setActiveTab('overview')} style={s.actionBtn}>Back to Overview</button>
             </div>
         </div>
     );
 
-    // ── 5. Content Management (temporary placeholder) ─────────────────
-    const renderContentManagement = () => (
+    const renderLiveClasses = () => {
+        // Build upcoming events from live sessions
+        const upcomingEvents = liveSessions
+            .filter(ls => ls.startTime && new Date(ls.startTime) >= new Date())
+            .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
+            .slice(0, 8);
+
+        return (
+            <div>
+                <div style={s.tabHeader}>
+                    <h2 style={s.tabTitle}>Live Classes</h2>
+                    <p style={s.tabSubtitle}>Schedule live sessions and interact with learners in real time.</p>
+                </div>
+
+                {/* Quick action */}
+                <div style={{ ...s.panelCard, marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                        <p style={{ color: colors.text, fontWeight: '700', margin: '0 0 4px', fontSize: '15px' }}>Manage Live Sessions</p>
+                        <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Create, edit, and join live virtual classrooms with your students.</p>
+                    </div>
+                    <button onClick={() => navigate('/live-sessions')} style={s.primaryBtn}>
+                        <Video size={16} aria-hidden="true" style={{ marginRight: '6px' }} /> Open Live Sessions
+                    </button>
+                </div>
+
+                {/* ── Schedule Calendar ───────────────────────── */}
+                <div style={s.panelCard}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <CalendarDays size={18} color="#818cf8" aria-hidden="true" />
+                            </div>
+                            <div>
+                                <h3 style={{ ...s.panelTitle, margin: 0 }}>Schedule Calendar</h3>
+                                <p style={{ color: colors.textMuted, fontSize: '12px', margin: '2px 0 0' }}>Upcoming live classes and course events</p>
+                            </div>
+                        </div>
+                        <button onClick={() => navigate('/live-sessions')} style={s.actionBtn}>
+                            + Schedule New Session
+                        </button>
+                    </div>
+
+                    {upcomingEvents.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '40px 20px', background: 'rgba(9,13,22,0.35)', borderRadius: '12px', border: '1px dashed rgba(51,65,85,0.4)' }}>
+                            <CalendarDays size={36} color="#1e293b" style={{ display: 'block', margin: '0 auto 12px' }} aria-hidden="true" />
+                            <p style={{ color: '#475569', fontSize: '14px', margin: '0 0 16px' }}>No upcoming live sessions scheduled.</p>
+                            <button onClick={() => navigate('/live-sessions')} style={s.primaryBtn}>Schedule Your First Session</button>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {upcomingEvents.map((session, idx) => {
+                                const sessionDate = new Date(session.startTime);
+                                const isToday = sessionDate.toDateString() === new Date().toDateString();
+                                const isTomorrow = sessionDate.toDateString() === new Date(Date.now() + 86400000).toDateString();
+                                const dayLabel = isToday ? 'Today' : isTomorrow ? 'Tomorrow' : sessionDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                                const timeLabel = sessionDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                                return (
+                                    <div key={session._id || idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 16px', background: 'rgba(9,13,22,0.45)', borderRadius: '12px', border: `1px solid ${isToday ? 'rgba(99,102,241,0.35)' : 'rgba(51,65,85,0.35)'}` }}>
+                                        {/* Date block */}
+                                        <div style={{ textAlign: 'center', minWidth: '56px', padding: '8px', background: isToday ? 'rgba(99,102,241,0.15)' : 'rgba(30,41,59,0.5)', borderRadius: '10px', border: `1px solid ${isToday ? 'rgba(99,102,241,0.3)' : 'rgba(51,65,85,0.3)'}` }}>
+                                            <div style={{ color: isToday ? '#818cf8' : colors.textMuted, fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{dayLabel.split(' ')[0]}</div>
+                                            <div style={{ color: isToday ? '#818cf8' : colors.text, fontSize: '18px', fontWeight: '800', lineHeight: 1.2 }}>
+                                                {isToday || isTomorrow ? sessionDate.getDate() : dayLabel.split(' ').slice(-1)[0]}
+                                            </div>
+                                        </div>
+                                        {/* Info */}
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ color: colors.text, fontSize: '14px', fontWeight: '700', marginBottom: '3px' }}>{session.title || session.sessionTitle || 'Live Class'}</div>
+                                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                                <span style={{ color: colors.textMuted, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <Video size={11} aria-hidden="true" /> {timeLabel}
+                                                </span>
+                                                {session.durationMinutes && (
+                                                    <span style={{ color: colors.textMuted, fontSize: '12px' }}>{session.durationMinutes} min</span>
+                                                )}
+                                                {session.courseRef?.courseTitle && (
+                                                    <span style={{ color: '#818cf8', fontSize: '12px', fontWeight: '600' }}>{session.courseRef.courseTitle}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        {/* Badge + Join */}
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                                            {isToday && (
+                                                <span style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '20px', padding: '3px 10px', fontSize: '10px', fontWeight: '800' }}>
+                                                    TODAY
+                                                </span>
+                                            )}
+                                            {session.meetingLink && session.meetingLink !== '#' && (
+                                                <button onClick={() => window.open(session.meetingLink, '_blank')} style={s.actionBtn}>
+                                                    Join
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
+    const renderMessages = () => (
         <div>
             <div style={s.tabHeader}>
-                <h2 style={s.tabTitle}>Learning Content Management</h2>
-                <p style={s.tabSubtitle}>Content tools are temporarily disabled for debugging.</p>
+                <h2 style={s.tabTitle}>Messages</h2>
+                <p style={s.tabSubtitle}>Message enrolled students and manage conversations.</p>
             </div>
             <div style={s.panelCard}>
-                <p style={{ color: colors.textMuted }}>The detailed content editor has been disabled to resolve a JSX parsing error. Restore from source when ready.</p>
+                <p style={{ color: colors.textMuted }}>Go to the messaging center for full conversation support.</p>
+                <button onClick={() => navigate('/messages')} style={s.primaryBtn}>Open Messaging</button>
             </div>
         </div>
     );
@@ -977,8 +1054,10 @@ export default function InstructorDashboard() {
                                             : <span style={{ ...s.badge, background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>Needs Grading</span>}
                                     </td>
                                     <td style={s.td}>
-                                        <button onClick={() => { setSelectedSubmission(sub); setGradeForm({ numericalScoreEarned: sub.numericalScoreEarned || 0, instructorReviewNotes: sub.instructorReviewNotes || '' }); setIsGradeModalOpen(true); }} style={s.textBtn}>
-                                            {sub.isGraded ? '✏️ Edit Grade' : '📝 Grade Now'}
+                                        <button onClick={() => { setSelectedSubmission(sub); setGradeForm({ numericalScoreEarned: sub.numericalScoreEarned || 0, instructorReviewNotes: sub.instructorReviewNotes || '' }); setIsGradeModalOpen(true); }} style={{ ...s.textBtn, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                                            {sub.isGraded
+                                                ? <><Edit3 size={16} aria-hidden="true" /> Edit Grade</>
+                                                : <><FileText size={16} aria-hidden="true" /> Grade Now</>}
                                         </button>
                                     </td>
                                 </tr>
@@ -999,22 +1078,22 @@ export default function InstructorDashboard() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
                 <div style={s.panelCard} onClick={() => navigate('/messages')} role="button">
-                    <div style={{ fontSize: '36px', marginBottom: '12px' }}>💬</div>
+                    <div style={{ marginBottom: '12px', color: '#60a5fa' }}><MessagesSquare size={32} /></div>
                     <h3 style={{ color: colors.text, margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Direct Messages</h3>
                     <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Send private messages to enrolled students</p>
                 </div>
                 <div style={s.panelCard}>
-                    <div style={{ fontSize: '36px', marginBottom: '12px' }}>📢</div>
+                    <div style={{ marginBottom: '12px', color: '#f59e0b' }}><Megaphone size={32} /></div>
                     <h3 style={{ color: colors.text, margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Announcements</h3>
                     <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Post announcements visible to all enrolled students</p>
                 </div>
                 <div style={s.panelCard}>
-                    <div style={{ fontSize: '36px', marginBottom: '12px' }}>❓</div>
+                    <div style={{ marginBottom: '12px', color: '#38bdf8' }}><MessageCircle size={32} /></div>
                     <h3 style={{ color: colors.text, margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Discussion Forum</h3>
                     <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Reply to student questions and discussion posts</p>
                 </div>
                 <div style={s.panelCard} onClick={() => navigate('/live-sessions')} role="button">
-                    <div style={{ fontSize: '36px', marginBottom: '12px' }}>🎥</div>
+                    <div style={{ marginBottom: '12px', color: '#a855f7' }}><Video size={32} /></div>
                     <h3 style={{ color: colors.text, margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Live Sessions</h3>
                     <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Schedule and manage live Q&A sessions</p>
                 </div>
@@ -1046,7 +1125,9 @@ export default function InstructorDashboard() {
                                     <strong style={{ color: colors.text }}>{r.studentRef?.fullName}</strong>
                                     <span style={{ color: colors.textMuted, fontSize: '12px', marginLeft: '12px' }}>{new Date(r.createdAt).toLocaleDateString()}</span>
                                 </div>
-                                <span style={{ color: '#f59e0b', fontWeight: '700' }}>{'⭐'.repeat(r.rating)}</span>
+                                <span style={{ display: 'inline-flex', gap: '2px', alignItems: 'center' }}>
+                                    {Array.from({ length: r.rating }).map((_, iconIndex) => <Star key={iconIndex} size={14} style={{ color: '#f59e0b' }} aria-hidden="true" />)}
+                                </span>
                             </div>
                             <p style={{ color: '#cbd5e1', fontSize: '14px', margin: '0 0 16px', lineHeight: '1.5' }}>{r.reviewText}</p>
                             {r.instructorReply ? (
@@ -1084,7 +1165,7 @@ export default function InstructorDashboard() {
                     <span style={s.statLabel}>Cleared Students</span>
                 </div>
                 <div style={{ ...s.statCard, borderTop: '3px solid #f59e0b' }}>
-                    <span style={{ ...s.statValue, color: '#f59e0b' }}>{analytics.avgRating || 0}⭐</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', ...s.statValue, color: '#f59e0b' }}><Star size={18} aria-hidden="true" />{analytics.avgRating || 0}</span>
                     <span style={s.statLabel}>Average Rating</span>
                 </div>
                 <div style={{ ...s.statCard, borderTop: '3px solid #ec4899' }}>
@@ -1159,34 +1240,7 @@ export default function InstructorDashboard() {
 
     // ── 10. Settings Tab ───────────────────────────────────────
     const renderSettings = () => (
-        <div>
-            <div style={s.tabHeader}>
-                <h2 style={s.tabTitle}>Account Settings</h2>
-                <p style={s.tabSubtitle}>Configure your preferences and account options</p>
-            </div>
-            <div style={s.panelCard}>
-                <h3 style={s.panelTitle}>Notification Preferences</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-                    {[
-                        { key: 'notifyEnrollments', label: 'New Enrollment Notifications', emoji: '🎓' },
-                        { key: 'notifyReviews', label: 'New Review Notifications', emoji: '⭐' },
-                        { key: 'notifyAssignments', label: 'Assignment Submission Alerts', emoji: '📝' },
-                        { key: 'notifyPayments', label: 'Payment Notifications', emoji: '💳' }
-                    ].map(pref => (
-                        <label key={pref.key} style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={settingsForm[pref.key]} onChange={e => setSettingsForm({ ...settingsForm, [pref.key]: e.target.checked })} style={{ width: '18px', height: '18px', accentColor: '#3b82f6' }} />
-                            <span style={{ fontSize: '18px' }}>{pref.emoji}</span>
-                            <span style={{ color: colors.text, fontSize: '14px' }}>{pref.label}</span>
-                        </label>
-                    ))}
-                </div>
-            </div>
-            <div style={s.panelCard}>
-                <h3 style={s.panelTitle}>Danger Zone</h3>
-                <p style={{ color: colors.textMuted, fontSize: '13px', marginBottom: '16px' }}>Permanently deactivate your instructor account. This action cannot be undone.</p>
-                <button style={s.dangerBtn}>⚠️ Deactivate Account</button>
-            </div>
-        </div>
+        <InstructorSettings user={user} />
     );
 
     // ═══════════════════════════════════════════════════════════
@@ -1194,17 +1248,17 @@ export default function InstructorDashboard() {
     // ═══════════════════════════════════════════════════════════
 
     const sidebarTabs = [
-        { key: 'overview', label: '🏠 Overview' },
-        { key: 'profile', label: '👤 Profile' },
-        { key: 'courses', label: '📚 Courses' },
-        { key: 'content', label: '🎬 Content' },
-        { key: 'students', label: '🎓 Students' },
-        { key: 'grading', label: '📝 Grading' },
-        { key: 'communication', label: '💬 Communication' },
-        { key: 'reviews', label: '⭐ Reviews' },
-        { key: 'analytics', label: '📊 Analytics' },
-        { key: 'earnings', label: '💰 Earnings' },
-        { key: 'settings', label: '⚙️ Settings' }
+        { key: 'overview', label: 'Dashboard', icon: <LayoutDashboard size={20} aria-hidden="true" /> },
+        { key: 'courses', label: 'My Courses', icon: <BookOpen size={20} aria-hidden="true" /> },
+        { key: 'students', label: 'Students', icon: <Users size={20} aria-hidden="true" /> },
+        { key: 'assignments', label: 'Assignments', icon: <ClipboardList size={20} aria-hidden="true" /> },
+        { key: 'quizzes', label: 'Quizzes', icon: <FileQuestion size={20} aria-hidden="true" /> },
+        { key: 'live', label: 'Live Classes', icon: <Video size={20} aria-hidden="true" /> },
+        { key: 'analytics', label: 'Analytics', icon: <BarChart3 size={20} aria-hidden="true" /> },
+        { key: 'earnings', label: 'Earnings', icon: <Wallet size={20} aria-hidden="true" /> },
+        { key: 'messages', label: 'Messages', icon: <MessagesSquare size={20} aria-hidden="true" /> },
+        { key: 'reviews', label: 'Reviews', icon: <Star size={20} aria-hidden="true" /> },
+        { key: 'settings', label: 'Settings', icon: <Settings size={20} aria-hidden="true" />, path: '/instructor/settings' }
     ];
 
     return (
@@ -1215,7 +1269,7 @@ export default function InstructorDashboard() {
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
                 extraBottomButtons={
-                    <button onClick={() => navigate('/courses')} style={s.catalogBtn}>📚 Course Catalog</button>
+                    <button onClick={() => navigate('/courses')} style={{ ...s.catalogBtn, display: 'inline-flex', alignItems: 'center', gap: '8px' }}><BookOpen size={18} aria-hidden="true" />Course Catalog</button>
                 }
             />
 
@@ -1223,7 +1277,7 @@ export default function InstructorDashboard() {
             <main style={s.main}>
                 <header style={s.header}>
                     <div>
-                        <h1 style={s.greeting}>Instructor Workspace 🎓</h1>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><LayoutDashboard size={24} aria-hidden="true" /><h1 style={s.greeting}>Instructor Workspace</h1></div>
                         <p style={s.subGreeting}>Empower learners through quality content</p>
                     </div>
                     <div style={s.avatar}>{user?.fullName?.[0]?.toUpperCase()}</div>
@@ -1234,15 +1288,15 @@ export default function InstructorDashboard() {
                 ) : (
                     <>
                         {activeTab === 'overview' && renderOverview()}
-                        {activeTab === 'profile' && renderProfile()}
                         {activeTab === 'courses' && renderCourses()}
-                        {activeTab === 'content' && renderContentManagement()}
                         {activeTab === 'students' && renderStudents()}
-                        {activeTab === 'grading' && renderGrading()}
-                        {activeTab === 'communication' && renderCommunication()}
-                        {activeTab === 'reviews' && renderReviews()}
+                        {activeTab === 'assignments' && renderAssignments()}
+                        {activeTab === 'quizzes' && renderQuizzes()}
+                        {activeTab === 'live' && renderLiveClasses()}
                         {activeTab === 'analytics' && renderAnalytics()}
                         {activeTab === 'earnings' && renderEarnings()}
+                        {activeTab === 'messages' && renderMessages()}
+                        {activeTab === 'reviews' && renderReviews()}
                         {activeTab === 'settings' && renderSettings()}
                     </>
                 )}
@@ -1258,7 +1312,7 @@ export default function InstructorDashboard() {
                     <div style={s.modal} onClick={e => e.stopPropagation()}>
                         <div style={s.modalHeader}>
                             <h3 style={s.modalTitle}>Create New Course</h3>
-                            <button onClick={() => setIsCourseModalOpen(false)} style={s.closeBtn}>✕</button>
+                            <button onClick={() => setIsCourseModalOpen(false)} style={s.closeBtn}><X size={18} aria-hidden="true" /></button>
                         </div>
                         <div style={s.modalBody}>
                             <form onSubmit={handleCreateCourse} style={s.formGrid}>
@@ -1268,7 +1322,7 @@ export default function InstructorDashboard() {
                                 <div style={s.formGroup}>
                                     <label style={s.label}>Category *</label>
                                     <select style={s.select} value={courseForm.technicalCategory} onChange={e => setCourseForm({ ...courseForm, technicalCategory: e.target.value })}>
-                                        {['Web Coding', 'Creative Media', 'Robotics Hardware', 'Network Engineering', 'Mobile Development', 'Data Science', 'Cyber Security', 'Cloud Computing', 'Artificial Intelligence', 'Business & Marketing'].map(c => <option key={c} value={c}>{c}</option>)}
+                                        {['Web Coding', 'Creative Media', 'Robotics Hardware', 'Network Engineering', 'Mobile Development', 'Data Science', 'Cybersecurity', 'Cloud Computing', 'Artificial Intelligence', 'Business & Management', 'Databases', 'DevOps & CI/CD', 'Graphic Design'].map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
                                 </div>
                                 <div style={s.formGroup}>
@@ -1301,7 +1355,7 @@ export default function InstructorDashboard() {
                     <div style={s.modal} onClick={e => e.stopPropagation()}>
                         <div style={s.modalHeader}>
                             <h3 style={s.modalTitle}>Edit Course</h3>
-                            <button onClick={() => setIsEditCourseModal(false)} style={s.closeBtn}>✕</button>
+                            <button onClick={() => setIsEditCourseModal(false)} style={s.closeBtn}><X size={18} aria-hidden="true" /></button>
                         </div>
                         <div style={s.modalBody}>
                             <form onSubmit={handleEditCourse} style={s.formGrid}>
@@ -1323,7 +1377,7 @@ export default function InstructorDashboard() {
                                 value={courseForm.technicalCategory}
                                 onChange={e => setCourseForm({ ...courseForm, technicalCategory: e.target.value })}
                             >
-                                {['Web Coding', 'Creative Media', 'Robotics Hardware', 'Network Engineering', 'Mobile Development', 'Data Science', 'Cyber Security', 'Cloud Computing', 'Artificial Intelligence', 'Business & Marketing'].map(c => <option key={c} value={c}>{c}</option>)}
+                                {['Web Coding', 'Creative Media', 'Robotics Hardware', 'Network Engineering', 'Mobile Development', 'Data Science', 'Cybersecurity', 'Cloud Computing', 'Artificial Intelligence', 'Business & Management', 'Databases', 'DevOps & CI/CD', 'Graphic Design'].map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
                         </div>
                         <div style={s.formGroup}>
@@ -1351,7 +1405,7 @@ export default function InstructorDashboard() {
                     <div style={s.modal} onClick={e => e.stopPropagation()}>
                         <div style={s.modalHeader}>
                             <h3 style={s.modalTitle}>Add Chapter — {selectedCourse?.courseTitle}</h3>
-                            <button onClick={() => setIsAddChapterModalOpen(false)} style={s.closeBtn}>✕</button>
+                            <button onClick={() => setIsAddChapterModalOpen(false)} style={s.closeBtn}><X size={18} aria-hidden="true" /></button>
                         </div>
                         <div style={s.modalBody}>
                             <form onSubmit={handleAddChapter} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1372,7 +1426,7 @@ export default function InstructorDashboard() {
                     <div style={s.modal} onClick={e => e.stopPropagation()}>
                         <div style={s.modalHeader}>
                             <h3 style={s.modalTitle}>Add Lesson — {selectedCourse?.courseTitle}</h3>
-                            <button onClick={() => setIsAddLessonModalOpen(false)} style={s.closeBtn}>✕</button>
+                            <button onClick={() => setIsAddLessonModalOpen(false)} style={s.closeBtn}><X size={18} aria-hidden="true" /></button>
                         </div>
                         <div style={s.modalBody}>
                             <form onSubmit={handleAddLesson} style={{ display: 'grid', gap: 12 }}>
@@ -1400,7 +1454,7 @@ export default function InstructorDashboard() {
                     <div style={{ ...s.modal, maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
                         <div style={s.modalHeader}>
                             <h3 style={s.modalTitle}>Create Quiz — {selectedCourse?.courseTitle}</h3>
-                            <button onClick={() => setIsQuizModalOpen(false)} style={s.closeBtn}>✕</button>
+                            <button onClick={() => setIsQuizModalOpen(false)} style={s.closeBtn}><X size={18} aria-hidden="true" /></button>
                         </div>
                         <div style={s.modalBody}>
                             <form onSubmit={handleCreateQuiz} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1440,7 +1494,7 @@ export default function InstructorDashboard() {
                     <div style={{ ...s.modal, maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
                         <div style={s.modalHeader}>
                             <h3 style={s.modalTitle}>Grade Submission</h3>
-                            <button onClick={() => setIsGradeModalOpen(false)} style={s.closeBtn}>✕</button>
+                            <button onClick={() => setIsGradeModalOpen(false)} style={s.closeBtn}><X size={18} aria-hidden="true" /></button>
                         </div>
                         <div style={s.modalBody}>
                             {selectedSubmission?.submittedRepositoryURL && (

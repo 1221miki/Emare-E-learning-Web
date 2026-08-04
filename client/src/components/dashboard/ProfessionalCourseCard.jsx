@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Award, BookOpen, ChevronRight, ClipboardList, Lock, User } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function ProfessionalCourseCard({ enrollment, course }) {
@@ -191,7 +192,7 @@ export default function ProfessionalCourseCard({ enrollment, course }) {
                 {courseData.thumbnailUrl ? (
                     <img src={courseData.thumbnailUrl} alt={title} style={s.image} />
                 ) : (
-                    <span style={{ fontSize: '48px' }}>📚</span>
+                    <BookOpen size={48} color={colors.primary} aria-hidden="true" />
                 )}
                 <span style={s.badge}>{category}</span>
             </div>
@@ -200,7 +201,7 @@ export default function ProfessionalCourseCard({ enrollment, course }) {
                 <h3 style={s.title} title={title}>{title}</h3>
                 
                 <div style={s.instructor}>
-                    <span>👨‍🏫</span> {instructorName}
+                    <User size={16} aria-hidden="true" /> {instructorName}
                 </div>
 
                 <div style={s.stars}>
@@ -222,13 +223,13 @@ export default function ProfessionalCourseCard({ enrollment, course }) {
 
                 <div style={s.metaRow}>
                     <div style={s.metaItem}>
-                        <span>📚</span> {lessonsCount} Lessons
+                        <BookOpen size={16} aria-hidden="true" /> {lessonsCount} Lessons
                     </div>
                     <div style={s.metaItem}>
-                        <span>📝</span> {assignmentsCount} Tasks
+                        <ClipboardList size={16} aria-hidden="true" /> {assignmentsCount} Tasks
                     </div>
                     <div style={s.metaItem}>
-                        {isCompleted ? <span title="Certificate Earned">🏆</span> : <span title="Certificate Locked">🔒</span>}
+                        {isCompleted ? <Award size={16} title="Certificate Earned" aria-hidden="true" /> : <Lock size={16} title="Certificate Locked" aria-hidden="true" />}
                         Cert
                     </div>
                 </div>
@@ -242,7 +243,10 @@ export default function ProfessionalCourseCard({ enrollment, course }) {
                         navigate(isEnrolled ? `/student/learn/${courseData._id}` : `/courses/${courseData._id}`);
                     }}
                 >
-                    {isCompleted ? 'Review Course ✅' : (isEnrolled ? (progress === 0 ? 'Start First Lesson ➔' : 'Continue Learning ➔') : 'View Course')}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        {isCompleted ? 'Review Course' : isEnrolled ? (progress === 0 ? 'Start First Lesson' : 'Continue Learning') : 'View Course'}
+                        <ChevronRight size={16} aria-hidden="true" />
+                    </span>
                 </button>
             </div>
         </div>

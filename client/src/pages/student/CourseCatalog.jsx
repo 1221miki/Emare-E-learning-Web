@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import GuestModal from '../../components/GuestModal';
 import CourseDiscoveryChecklist from '../../components/dashboard/CourseDiscoveryChecklist';
+import { categoryMatchesCourse } from '../../utils/categoryMatching';
 
 function useQuery() {
     return new URLSearchParams(useLocation().search);
@@ -21,7 +22,23 @@ const SORT_OPTIONS = [
     { value: 'duration_long', label: '📚 Longest First' }
 ];
 
-const EMOJI_MAP = { 'Web Coding': '🌐', 'Creative Media': '🎨', 'Robotics Hardware': '🤖', 'Network Engineering': '🔌', 'Mobile Development': '📱', 'Data Science': '📊', 'Cyber Security': '🛡️', 'Cloud Computing': '☁️', 'Artificial Intelligence': '🧠', 'Business & Marketing': '💼' };
+const EMOJI_MAP = {
+    'Web Coding': '🌐',
+    'Creative Media': '🎨',
+    'Robotics Hardware': '🤖',
+    'Network Engineering': '🔌',
+    'Mobile Development': '📱',
+    'Data Science': '📊',
+    'Cybersecurity': '🛡️',
+    'Cyber Security': '🛡️',
+    'Cloud Computing': '☁️',
+    'Artificial Intelligence': '🧠',
+    'Business & Management': '💼',
+    'Business & Marketing': '💼',
+    'Databases': '🗄️',
+    'DevOps & CI/CD': '⚙️',
+    'Graphic Design': '🖌️'
+};
 const EMOJIS = ['🎓', '💻', '📊', '🔬', '🎨', '🚀', '🧠', '⚙️', '📱', '🌐'];
 
 export default function CourseCatalog() {
@@ -82,7 +99,9 @@ export default function CourseCatalog() {
 
     const filtered = useMemo(() => sectionCourses
         .filter(c => {
-            if (filterCategory !== 'All' && c.technicalCategory !== filterCategory) return false;
+            const isPublished = ['Published', 'Active'].includes(c.publicationState);
+            if (!isPublished) return false;
+            if (filterCategory !== 'All' && !categoryMatchesCourse(filterCategory, c.technicalCategory)) return false;
             if (filterLevel !== 'All' && c.level !== filterLevel) return false;
             if (filterLanguage !== 'All' && c.language !== filterLanguage) return false;
             if (filterPrice === 'Free' && c.price !== 0) return false;

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { User, Image, ShieldCheck, Settings, Camera, Sun, Moon, KeyRound, Smartphone, Lock, Download, Save } from 'lucide-react';
 
 const WARN = '#f59e0b';
 const DANGER = '#ef4444';
@@ -62,10 +63,10 @@ export default function SettingsTab(dash) {
             {/* Inner Sub-Navigation for Settings */}
             <div style={{ display: 'flex', borderBottom: `1px solid ${colors.border}`, marginBottom: '32px', gap: '8px', flexWrap: 'wrap' }}>
                 {[
-                    { key: 'personal', label: '👤 Personal Info' },
-                    { key: 'account', label: '🖼️ Avatar & Locale' },
-                    { key: 'security', label: '🔐 Security & 2FA' },
-                    { key: 'preferences', label: '⚙️ Preferences & Privacy' }
+                    { key: 'personal', label: 'Personal Info', icon: <User size={15} aria-hidden="true" /> },
+                    { key: 'account', label: 'Avatar & Locale', icon: <Image size={15} aria-hidden="true" /> },
+                    { key: 'security', label: 'Security & 2FA', icon: <ShieldCheck size={15} aria-hidden="true" /> },
+                    { key: 'preferences', label: 'Preferences & Privacy', icon: <Settings size={15} aria-hidden="true" /> }
                 ].map(tab => (
                     <button
                         key={tab.key}
@@ -79,10 +80,13 @@ export default function SettingsTab(dash) {
                             fontWeight: '700',
                             fontSize: '14px',
                             cursor: 'pointer',
-                            transition: 'all 0.2s'
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
                         }}
                     >
-                        {tab.label}
+                        {tab.icon}{tab.label}
                     </button>
                 ))}
             </div>
@@ -211,8 +215,9 @@ export default function SettingsTab(dash) {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     <span style={{ fontSize: '14px', fontWeight: '700', color: colors.text }}>Upload Custom Profile Photo</span>
                                     <span style={{ fontSize: '12px', color: colors.textMuted }}>Supports JPG, PNG or WEBP (Max 5MB)</span>
-                                    <label style={{ ...styles.resumeBtn, cursor: 'pointer', display: 'inline-block', width: 'fit-content', padding: '8px 16px', fontSize: '12px' }}>
-                                        {avatarUploading ? 'Uploading Image...' : '📷 Choose Image File'}
+                                    <label style={{ ...styles.resumeBtn, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content', padding: '8px 16px', fontSize: '12px' }}>
+                                        <Camera size={14} aria-hidden="true" />
+                                        {avatarUploading ? 'Uploading Image...' : 'Choose Image File'}
                                         <input type="file" accept="image/*" onChange={handleAvatarFileUpload} style={{ display: 'none' }} />
                                     </label>
                                 </div>
@@ -247,8 +252,11 @@ export default function SettingsTab(dash) {
                                     <span style={{ fontSize: '14px', fontWeight: '700', color: colors.text, display: 'block' }}>Current Theme Mode</span>
                                     <span style={{ fontSize: '12px', color: colors.textMuted }}>Toggle between high contrast dark mode and clean light layout</span>
                                 </div>
-                                <button type="button" onClick={toggleTheme} style={styles.catalogBtn}>
-                                    {theme === 'dark' ? '☀️ Switch to Light Mode' : '🌙 Switch to Dark Mode'}
+                                <button type="button" onClick={toggleTheme} style={{ ...styles.catalogBtn, display: 'flex', alignItems: 'center', gap: '6px' }} aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+                                    {theme === 'dark'
+                                        ? <><Sun size={15} aria-hidden="true" /> Switch to Light Mode</>
+                                        : <><Moon size={15} aria-hidden="true" /> Switch to Dark Mode</>
+                                    }
                                 </button>
                             </div>
                         </div>
@@ -316,12 +324,12 @@ export default function SettingsTab(dash) {
                             <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', margin: '24px 0 8px' }}>Account Security Tips</h3>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
                                 {[
-                                    { icon: '🔑', title: 'Strong Passwords', text: 'Use a unique mix of letters, numbers and symbols, and never reuse old passwords.' },
-                                    { icon: '📲', title: 'Enable 2FA', text: 'Two-factor authentication blocks unauthorized access even if your password leaks.' },
-                                    { icon: '🔒', title: 'Sign Out Remotely', text: 'End sessions on shared devices by signing out after every lab or library session.' }
+                                    { icon: <KeyRound size={22} color={colors.accent} aria-hidden="true" />, title: 'Strong Passwords', text: 'Use a unique mix of letters, numbers and symbols, and never reuse old passwords.' },
+                                    { icon: <Smartphone size={22} color={colors.primary} aria-hidden="true" />, title: 'Enable 2FA', text: 'Two-factor authentication blocks unauthorized access even if your password leaks.' },
+                                    { icon: <Lock size={22} color={colors.success} aria-hidden="true" />, title: 'Sign Out Remotely', text: 'End sessions on shared devices by signing out after every lab or library session.' }
                                 ].map((tip, i) => (
                                     <div key={i} style={{ padding: '16px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
-                                        <div style={{ fontSize: '22px', marginBottom: '8px' }}>{tip.icon}</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>{tip.icon}</div>
                                         <div style={{ color: colors.text, fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>{tip.title}</div>
                                         <div style={{ color: colors.textMuted, fontSize: '12px', lineHeight: 1.5 }}>{tip.text}</div>
                                     </div>
@@ -421,7 +429,9 @@ export default function SettingsTab(dash) {
                                         <span style={{ fontSize: '14px', fontWeight: '700', color: colors.text, display: 'block' }}>Download My Data</span>
                                         <span style={{ fontSize: '12px', color: colors.textMuted }}>Export a copy of your profile, preferences and settings as a JSON file</span>
                                     </div>
-                                    <button type="button" onClick={downloadMyData} style={{ ...styles.resumeBtn, fontSize: '13px', padding: '8px 16px' }}>⬇ Export Data</button>
+                                    <button type="button" onClick={downloadMyData} style={{ ...styles.resumeBtn, fontSize: '13px', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px' }} aria-label="Export Account Data">
+                                        <Download size={15} aria-hidden="true" /> Export Data
+                                    </button>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${DANGER}25`, flexWrap: 'wrap', gap: '12px' }}>
                                     <div>
@@ -442,8 +452,8 @@ export default function SettingsTab(dash) {
                     )}
 
                     <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'flex-end' }}>
-                        <button type="submit" style={{ ...styles.saveBtn, padding: '12px 32px', fontSize: '15px' }}>
-                            💾 Save Profile Settings
+                        <button type="submit" style={{ ...styles.saveBtn, padding: '12px 32px', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }} aria-label="Save Profile Settings">
+                            <Save size={16} aria-hidden="true" /> Save Profile Settings
                         </button>
                     </div>
 

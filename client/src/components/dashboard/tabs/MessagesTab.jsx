@@ -1,21 +1,22 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { messageService, notificationService, discussionService, aiService } from '../../../services/api';
+import { Award, Bell, BookOpen, Bot, ClipboardCheck, CreditCard, FileQuestion, Inbox, Medal, MessagesSquare, SendHorizonal, Settings, Star } from 'lucide-react';
 
 const WARN = '#f59e0b';
 const DANGER = '#ef4444';
 
 const TYPE_META = {
-    assignment: { icon: '📝', color: WARN },
-    quiz: { icon: '🧩', color: '#8b5cf6' },
-    grade: { icon: '🏅', color: '#10b981' },
-    enrollment: { icon: '📚', color: '#3b82f6' },
-    payment: { icon: '💳', color: '#10b981' },
-    certificate: { icon: '🎓', color: '#f59e0b' },
-    announcement: { icon: '📢', color: '#ef4444' },
-    badge: { icon: '🏆', color: '#8b5cf6' },
-    review: { icon: '⭐', color: '#f59e0b' },
-    system: { icon: '⚙️', color: '#64748b' },
-    default: { icon: '🔔', color: '#3b82f6' }
+    assignment: { icon: <ClipboardCheck size={18} aria-hidden="true" />, color: WARN },
+    quiz: { icon: <FileQuestion size={18} aria-hidden="true" />, color: '#8b5cf6' },
+    grade: { icon: <Award size={18} aria-hidden="true" />, color: '#10b981' },
+    enrollment: { icon: <BookOpen size={18} aria-hidden="true" />, color: '#3b82f6' },
+    payment: { icon: <CreditCard size={18} aria-hidden="true" />, color: '#10b981' },
+    certificate: { icon: <Award size={18} aria-hidden="true" />, color: '#f59e0b' },
+    announcement: { icon: <Medal size={18} aria-hidden="true" />, color: '#ef4444' },
+    badge: { icon: <Medal size={18} aria-hidden="true" />, color: '#8b5cf6' },
+    review: { icon: <Star size={18} aria-hidden="true" />, color: '#f59e0b' },
+    system: { icon: <Settings size={18} aria-hidden="true" />, color: '#64748b' },
+    default: { icon: <Bell size={20} aria-hidden="true" />, color: '#3b82f6' }
 };
 
 export default function MessagesTab(dash) {
@@ -224,11 +225,11 @@ export default function MessagesTab(dash) {
     });
 
     const sections = [
-        { key: 'inbox', label: '📥 Inbox' },
-        { key: 'sent', label: '📤 Sent Messages' },
-        { key: 'discussions', label: '💬 Course Discussions' },
-        { key: 'notifications', label: '🔔 Notification Center' },
-        { key: 'ai', label: '🤖 AI Tutor' }
+        { key: 'inbox', label: 'Inbox', icon: <Inbox size={15} aria-hidden="true" /> },
+        { key: 'sent', label: 'Sent Messages', icon: <SendHorizonal size={15} aria-hidden="true" /> },
+        { key: 'discussions', label: 'Course Discussions', icon: <MessagesSquare size={15} aria-hidden="true" /> },
+        { key: 'notifications', label: 'Notification Center', icon: <Bell size={15} aria-hidden="true" /> },
+        { key: 'ai', label: 'AI Tutor', icon: <Bot size={15} aria-hidden="true" /> }
     ];
 
     const chatHeader = (title, role) => (
@@ -240,7 +241,7 @@ export default function MessagesTab(dash) {
                 <div style={{ color: colors.text, fontSize: '16px', fontWeight: '700' }}>{title}</div>
                 <div style={{ color: colors.textMuted, fontSize: '12px' }}>{role || 'Connected'}</div>
             </div>
-            <button onClick={() => { setActiveConv(null); setThread([]); setActiveAiConv(null); }} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.textMuted, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>✕ Close</button>
+            <button onClick={() => { setActiveConv(null); setThread([]); setActiveAiConv(null); }} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.textMuted, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>Close</button>
         </div>
     );
 
@@ -269,7 +270,7 @@ export default function MessagesTab(dash) {
                     </div>
                     <div style={{ color: colors.textMuted, fontSize: '10px', marginTop: '4px', textAlign: isMe ? 'right' : 'left' }}>
                         {msg.createdAt ? new Date(msg.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
-                        {isMe && <span style={{ marginLeft: '6px' }}>✓</span>}
+                        {isMe && <span style={{ marginLeft: '6px', fontSize: '10px' }}>Sent</span>}
                     </div>
                 </div>
             </div>
@@ -281,12 +282,12 @@ export default function MessagesTab(dash) {
             <div style={{ background: colors.bgCard, borderRadius: '16px', border: `1px solid ${colors.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ padding: '16px 20px', borderBottom: `1px solid ${colors.border}` }}>
                     <h3 style={{ color: colors.text, fontSize: '15px', fontWeight: '700', margin: '0 0 12px' }}>Inbox <span style={{ color: colors.textMuted, fontSize: '12px', fontWeight: '500' }}>({filteredConvs.length})</span></h3>
-                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Search conversations..." style={{ width: '100%', background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, padding: '10px 12px', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search conversations..." style={{ width: '100%', background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, padding: '10px 12px', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                     {convsLoading ? <div style={{ padding: '24px', color: colors.textMuted, fontSize: '13px' }}>Loading conversations...</div> : filteredConvs.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '40px 16px', color: colors.textMuted, fontSize: '13px' }}>
-                            <div style={{ fontSize: '32px', marginBottom: '8px' }}>💬</div>
+                            <MessagesSquare size={32} style={{ marginBottom: '8px' }} aria-hidden="true" />
                             {search ? 'No conversations match your search.' : 'No conversations yet. Instructors and support will appear here.'}
                         </div>
                     ) : filteredConvs.map(conv => {
@@ -326,7 +327,7 @@ export default function MessagesTab(dash) {
                     </>
                 ) : (
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: colors.textMuted, gap: '12px' }}>
-                        <div style={{ fontSize: '48px' }}>💬</div>
+                        <MessagesSquare size={48} aria-hidden="true" />
                         <p style={{ margin: 0, fontSize: '14px' }}>Select a conversation to start messaging</p>
                     </div>
                 )}
@@ -339,7 +340,7 @@ export default function MessagesTab(dash) {
             <h3 style={{ ...styles.panelCardTitle, fontSize: '16px' }}>Messages You've Sent</h3>
             {sentLoading ? <div style={{ color: colors.textMuted, fontSize: '13px' }}>Loading sent messages...</div> : sentList.length === 0 ? (
                 <div style={styles.emptyContent}>
-                    <div style={{ fontSize: '40px', marginBottom: '12px' }}>📤</div>
+                    <SendHorizonal size={40} color={colors.textMuted} style={{ marginBottom: '12px' }} aria-hidden="true" />
                     <p style={styles.emptyText}>No sent messages yet. Send a message to an instructor or the support team from the Inbox tab.</p>
                 </div>
             ) : (
@@ -350,7 +351,7 @@ export default function MessagesTab(dash) {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                                     <span style={{ color: colors.primary, fontWeight: '700', fontSize: '13px' }}>To: {convTitle(m.conv)}</span>
                                     <span style={{ color: colors.textMuted, fontSize: '11px' }}>· {m.createdAt ? new Date(m.createdAt).toLocaleString() : ''}</span>
-                                    <span style={{ fontSize: '10px', fontWeight: '800', color: '#10b981' }}>✓ SENT</span>
+                                    <span style={{ fontSize: '10px', fontWeight: '800', color: '#10b981' }}>SENT</span>
                                 </div>
                                 <button onClick={() => { setActiveConv(m.conv); setSection('inbox'); openThread(m.conv); }} style={{ background: 'transparent', border: `1px solid ${colors.primary}`, color: colors.primary, borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>Reply in Thread</button>
                             </div>
@@ -376,7 +377,7 @@ export default function MessagesTab(dash) {
             </div>
             {discLoading ? <div style={{ color: colors.textMuted, fontSize: '13px' }}>Loading discussions...</div> : discussions.length === 0 ? (
                 <div style={styles.emptyContent}>
-                    <div style={{ fontSize: '40px', marginBottom: '12px' }}>💬</div>
+                    <MessagesSquare size={40} color={colors.textMuted} style={{ marginBottom: '12px' }} aria-hidden="true" />
                     <p style={styles.emptyText}>No discussions yet in this course. Check back when instructors or classmates post.</p>
                 </div>
             ) : (
@@ -386,8 +387,8 @@ export default function MessagesTab(dash) {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                                     <span style={{ ...styles.courseBadge, margin: 0 }}>{d.category || 'General'}</span>
-                                    {d.isPinned && <span style={{ fontSize: '11px', fontWeight: '800', color: WARN }}>📌 PINNED</span>}
-                                    {d.isResolved && <span style={{ fontSize: '11px', fontWeight: '800', color: '#10b981' }}>✓ RESOLVED</span>}
+                                    {d.isPinned && <span style={{ fontSize: '11px', fontWeight: '800', color: WARN }}>PINNED</span>}
+                                    {d.isResolved && <span style={{ fontSize: '11px', fontWeight: '800', color: '#10b981' }}>RESOLVED</span>}
                                     <span style={{ fontSize: '12px', color: colors.textMuted }}>{d.authorRef?.fullName || 'User'}</span>
                                 </div>
                                 <button onClick={() => setExpandedDisc(expandedDisc === d._id ? null : d._id)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.primary, borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
@@ -409,7 +410,7 @@ export default function MessagesTab(dash) {
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                                     <span style={{ color: colors.text, fontSize: '12px', fontWeight: '700' }}>{r.authorRef?.fullName || 'User'}</span>
                                                     <span style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                        {isBest && <span style={{ fontSize: '10px', fontWeight: '800', color: colors.success }}>✓ HELPFUL ANSWER</span>}
+                                                        {isBest && <span style={{ fontSize: '10px', fontWeight: '800', color: colors.success }}>HELPFUL ANSWER</span>}
                                                         <span style={{ fontSize: '11px', color: colors.textMuted }}>{new Date(r.createdAt).toLocaleString()}</span>
                                                     </span>
                                                 </div>
@@ -443,11 +444,13 @@ export default function MessagesTab(dash) {
         <div style={styles.panelCard}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
                 <h3 style={{ ...styles.panelCardTitle, margin: 0 }}>Notification Center</h3>
-                <button onClick={markAllNotifsRead} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.primary, borderRadius: '8px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>✓ Mark All Read</button>
+                <button onClick={markAllNotifsRead} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.primary, borderRadius: '8px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <CheckCircle2 size={14} aria-hidden="true" /> Mark All Read
+                </button>
             </div>
             {notifLoading ? <div style={{ color: colors.textMuted, fontSize: '13px' }}>Loading notifications...</div> : notifs.length === 0 ? (
                 <div style={styles.emptyContent}>
-                    <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔔</div>
+                    <Bell size={40} color={colors.textMuted} style={{ marginBottom: '12px' }} aria-hidden="true" />
                     <p style={styles.emptyText}>No notifications yet. Assignment reminders, quiz deadlines, and payment updates will appear here.</p>
                 </div>
             ) : (
@@ -483,7 +486,7 @@ export default function MessagesTab(dash) {
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                     {aiConvos.length === 0 ? <div style={{ padding: '24px', color: colors.textMuted, fontSize: '13px' }}>No AI conversations yet. Ask your first question!</div> : aiConvos.map(c => (
                         <div key={c.conversationId} onClick={() => setActiveAiConv(c.conversationId)} style={{ padding: '14px 20px', cursor: 'pointer', borderBottom: `1px solid ${colors.border}`, background: activeAiConv === c.conversationId ? `${colors.primary}10` : 'transparent' }}>
-                            <div style={{ color: colors.text, fontSize: '13px', fontWeight: '700' }}>🤖 {c.title}</div>
+                            <div style={{ color: colors.text, fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}><Bot size={14} aria-hidden="true" /> {c.title}</div>
                             <div style={{ color: colors.textMuted, fontSize: '11px', marginTop: '4px' }}>{c.count} messages · {c.last ? new Date(c.last).toLocaleDateString() : ''}</div>
                         </div>
                     ))}
@@ -494,7 +497,7 @@ export default function MessagesTab(dash) {
                 <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {thread.length === 0 ? (
                         <div style={{ textAlign: 'center', color: colors.textMuted, fontSize: '13px', padding: '40px 20px', lineHeight: 1.6 }}>
-                            <div style={{ fontSize: '40px', marginBottom: '10px' }}>🤖</div>
+                            <Bot size={40} color={colors.textMuted} style={{ marginBottom: '10px' }} aria-hidden="true" />
                             Ask the AI tutor anything about your courses, concepts, quizzes, or assignments.
                         </div>
                     ) : thread.map(messageBubble)}
@@ -509,7 +512,9 @@ export default function MessagesTab(dash) {
     return (
         <div>
             <div style={styles.tabHeader}>
-                <h2 style={styles.tabTitle}>✉️ Messages & Communication Center</h2>
+                <h2 style={{ ...styles.tabTitle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Inbox size={20} aria-hidden="true" /> Messages &amp; Communication Center
+                </h2>
                 <p style={styles.tabSubtitle}>Chat with instructors and support, join course discussions, track notifications, and ask the AI tutor</p>
             </div>
 
@@ -527,10 +532,14 @@ export default function MessagesTab(dash) {
                             fontWeight: '700',
                             fontSize: '13px',
                             cursor: 'pointer',
-                            transition: 'all 0.2s'
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
                         }}
+                        aria-label={s.label}
                     >
-                        {s.label}
+                        {s.icon}{s.label}
                     </button>
                 ))}
             </div>

@@ -68,7 +68,6 @@ export default function RegisterPage() {
         if (!form.firstName.trim()) return 'First name is required.';
         if (!form.lastName.trim()) return 'Last name is required.';
         if (!form.username.trim()) return 'Username is required.';
-        if (!/^[A-Za-z0-9_@!.\-]{3,20}$/.test(form.username)) return 'Username must be 3-20 characters (letters, numbers, _, @, !, ., -).';
         if (!form.accountEmail.trim()) return 'Email address is required.';
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.accountEmail)) return 'Invalid email format.';
         if (!form.securedPassword) return 'Password is required.';

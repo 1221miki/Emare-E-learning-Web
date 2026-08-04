@@ -1,5 +1,6 @@
 import React from 'react';
 import { assignmentService, uploadService } from '../../../services/api';
+import { ClipboardList, Paperclip, CalendarDays, Target, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 
 export default function AssignmentsTab(dash) {
     const { colors, notifications, assignmentsList, mySubmissions, setMySubmissions, assignmentSubmitText, setAssignmentSubmitText, assignmentFile, setAssignmentFile, submittingAssignmentId, setSubmittingAssignmentId, assignmentMsg, setAssignmentMsg, triggerAssistantPrompt, styles } = dash;
@@ -23,7 +24,7 @@ export default function AssignmentsTab(dash) {
                     fileUrl,
                     courseRef: courseId
                 });
-                setAssignmentMsg('✅ Assignment submitted successfully!');
+                setAssignmentMsg('Assignment submitted successfully!');
                 setAssignmentSubmitText('');
                 setAssignmentFile(null);
                 // Refresh submissions
@@ -32,7 +33,7 @@ export default function AssignmentsTab(dash) {
                     setMySubmissions(subRes.data.data || []);
                 } catch { /* refresh failure is non-fatal */ }
             } catch(err) {
-                setAssignmentMsg('❌ ' + (err.response?.data?.message || 'Submission failed. Please try again.'));
+                setAssignmentMsg((err.response?.data?.message || 'Submission failed. Please try again.'));
             } finally {
                 setSubmittingAssignmentId(null);
             }
@@ -42,13 +43,19 @@ export default function AssignmentsTab(dash) {
 
         return (
             <div>
-                <div style={styles.tabHeader}>
-                    <h2 style={styles.tabTitle}>📝 Assignments & Submissions</h2>
+                <div style={{ ...styles.tabHeader }}>
+                    <h2 style={{ ...styles.tabTitle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <ClipboardList size={20} aria-hidden="true" /> Assignments &amp; Submissions
+                    </h2>
                     <p style={styles.tabSubtitle}>View all your assignments from enrolled courses and submit your work</p>
                 </div>
 
                 {assignmentMsg && (
-                    <div style={{ padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px', fontWeight: '600', background: assignmentMsg.includes('✅') ? `${colors.success}15` : `${colors.danger}15`, color: assignmentMsg.includes('✅') ? colors.success : '#ef4444', border: `1px solid ${assignmentMsg.includes('✅') ? colors.success + '40' : '#ef444440'}` }}>
+                    <div style={{ padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px', fontWeight: '600', background: assignmentMsg.includes('submitted') ? `${colors.success}15` : `${colors.danger}15`, color: assignmentMsg.includes('submitted') ? colors.success : '#ef4444', border: `1px solid ${assignmentMsg.includes('submitted') ? colors.success + '40' : '#ef444440'}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {assignmentMsg.includes('submitted')
+                            ? <CheckCircle2 size={16} aria-hidden="true" />
+                            : <AlertCircle size={16} aria-hidden="true" />
+                        }
                         {assignmentMsg}
                     </div>
                 )}
@@ -56,7 +63,7 @@ export default function AssignmentsTab(dash) {
                 {assignmentsList.length === 0 ? (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '24px', alignItems: 'start' }}>
                         <div style={{ ...styles.panelCard, padding: '32px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+                            <ClipboardList size={48} color={colors.textMuted} style={{ marginBottom: '16px' }} aria-hidden="true" />
                             <h3 style={{ color: colors.text, fontSize: '20px', fontWeight: '800', marginBottom: '12px' }}>No assignments yet</h3>
                             <p style={{ color: colors.textMuted, fontSize: '13px', marginBottom: '24px', lineHeight: '1.6' }}>
                                 Your enrolled courses do not currently have assignment tasks posted. Keep learning, and the system will notify you when new work is available.
@@ -101,14 +108,14 @@ export default function AssignmentsTab(dash) {
                                         <div style={{ flex: 1 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                                                 <h3 style={{ color: colors.text, fontSize: '16px', fontWeight: '700', margin: 0 }}>{asgn.title || 'Assignment Task'}</h3>
-                                                {isSubmitted && <span style={{ background: `${colors.success}15`, color: colors.success, padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700' }}>✓ SUBMITTED</span>}
-                                                {!isSubmitted && isOverdue && <span style={{ background: '#ef444415', color: '#ef4444', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700' }}>⚠ OVERDUE</span>}
-                                                {!isSubmitted && !isOverdue && <span style={{ background: `${colors.warning}15`, color: colors.warning, padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700' }}>⏳ PENDING</span>}
+                                                {isSubmitted && <span style={{ background: `${colors.success}15`, color: colors.success, padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><CheckCircle2 size={12} aria-hidden="true" /> SUBMITTED</span>}
+                                                {!isSubmitted && isOverdue && <span style={{ background: '#ef444415', color: '#ef4444', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={12} aria-hidden="true" /> OVERDUE</span>}
+                                                {!isSubmitted && !isOverdue && <span style={{ background: `${colors.warning}15`, color: colors.warning, padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Clock size={12} aria-hidden="true" /> PENDING</span>}
                                             </div>
                                             <p style={{ color: colors.textMuted, fontSize: '13px', margin: '0 0 6px', lineHeight: '1.5' }}>{asgn.description || asgn.instructions}</p>
                                             <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: colors.textMuted }}>
-                                                {asgn.dueDate && <span>📅 Due: <strong style={{ color: isOverdue ? '#ef4444' : colors.text }}>{new Date(asgn.dueDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong></span>}
-                                                {asgn.totalMarks && <span>🎯 Max Marks: <strong style={{ color: colors.text }}>{asgn.totalMarks}</strong></span>}
+                                                {asgn.dueDate && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><CalendarDays size={13} aria-hidden="true" /> Due: <strong style={{ color: isOverdue ? '#ef4444' : colors.text }}>{new Date(asgn.dueDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong></span>}
+                                                {asgn.totalMarks && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Target size={13} aria-hidden="true" /> Max Marks: <strong style={{ color: colors.text }}>{asgn.totalMarks}</strong></span>}
                                             </div>
                                         </div>
                                     </div>
@@ -125,7 +132,7 @@ export default function AssignmentsTab(dash) {
                                             />
                                             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                                                 <label style={{ cursor: 'pointer', background: `${colors.primary}15`, border: `1px dashed ${colors.primary}`, color: colors.primary, padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    📎 {assignmentFile?.name || 'Attach File (PDF/ZIP/DOC)'}
+                                                    <Paperclip size={15} aria-hidden="true" /> {assignmentFile?.name || 'Attach File (PDF/ZIP/DOC)'}
                                                     <input type="file" style={{ display: 'none' }} onChange={e => setAssignmentFile(e.target.files[0])} />
                                                 </label>
                                                 <button
@@ -145,7 +152,7 @@ export default function AssignmentsTab(dash) {
                                             <div style={{ marginTop: '16px', padding: '16px', borderRadius: '12px', background: `${colors.success}08`, border: `1px solid ${colors.success}30` }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <div>
-                                                        <span style={{ fontSize: '13px', color: colors.success, fontWeight: '700' }}>✓ Submitted on {new Date(mySubmission.createdAt || Date.now()).toLocaleDateString()}</span>
+                                                        <span style={{ fontSize: '13px', color: colors.success, fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}><CheckCircle2 size={14} aria-hidden="true" /> Submitted on {new Date(mySubmission.createdAt || Date.now()).toLocaleDateString()}</span>
                                                         {mySubmission.grade && <span style={{ marginLeft: '16px', fontSize: '13px', color: colors.primary, fontWeight: '700' }}>Grade: {mySubmission.grade}/100</span>}
                                                     </div>
                                                     {mySubmission.feedback && <span style={{ fontSize: '12px', color: colors.textMuted }}>Feedback: {mySubmission.feedback}</span>}

@@ -21,7 +21,7 @@ export default function LearningHistory({ recentlyViewed = [], enrollments = [] 
                 ))}
 
                 <div style={{ marginTop: 8, textAlign: 'center' }}>
-                    <a href="/student/learn" style={{ color: colors.primary, fontWeight: 800 }}>View full history →</a>
+                    <a href="/student/dashboard" style={{ color: colors.primary, fontWeight: 800 }}>View full history →</a>
                 </div>
             </div>
         </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { CheckCircle2, Circle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
 const STORAGE_KEY = 'student_learning_goals';
@@ -44,7 +45,9 @@ export default function LearningGoals() {
                 ) : goals.map(g => (
                     <div key={g.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: colors.bgInput, padding: 10, borderRadius: 10, border: `1px solid ${colors.border}` }}>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                            <button onClick={() => toggle(g.id)} style={{ background: g.completed ? colors.success : 'transparent', color: g.completed ? '#fff' : colors.textMuted, border: `1px solid ${colors.border}`, borderRadius: 8, padding: '6px 8px', cursor: 'pointer' }}>{g.completed ? '✓' : '○'}</button>
+                            <button onClick={() => toggle(g.id)} style={{ background: g.completed ? colors.success : 'transparent', color: g.completed ? '#fff' : colors.textMuted, border: `1px solid ${colors.border}`, borderRadius: 8, padding: '6px 8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} aria-label={g.completed ? 'Mark incomplete' : 'Mark complete'}>
+                            {g.completed ? <CheckCircle2 size={16} aria-hidden="true" /> : <Circle size={16} aria-hidden="true" />}
+                        </button>
                             <div style={{ color: g.completed ? colors.textMuted : colors.text, fontWeight: 700 }}>{g.text}</div>
                         </div>
                         <div style={{ fontSize: 12, color: colors.textMuted }}>{g.completed ? 'Done' : 'Pending'}</div>

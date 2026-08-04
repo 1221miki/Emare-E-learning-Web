@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+    LayoutDashboard, GraduationCap, Heart, ClipboardList, BrainCircuit,
+    BarChart3, Video, MessageSquare, Trophy, Mail, Award, CreditCard,
+    Settings, BookOpen, Library
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/Sidebar';
 import { 
@@ -735,24 +740,27 @@ export default function StudentDashboard() {
             {/* Sidebar Tab Navigation */}
             <Sidebar 
                 navItems={[
-                    { key: 'overview', label: '🏠 Overview' },
-                    { key: 'learning', label: '🎓 My Learning' },
-                    { key: 'wishlist', label: '💖 Wishlist' },
-                    { key: 'assignments', label: '📝 Assignments', badge: assignmentCount > 0 ? `${assignmentCount}` : null },
-                    { key: 'quizzes', label: '🧠 Quizzes', badge: quizCount > 0 ? `${quizCount}` : null },
-                    { key: 'grades', label: '📊 Grades' },
-                    { key: 'live', label: '📡 Live Sessions', badge: liveSessionCount > 0 ? `${liveSessionCount}` : null },
-                    { key: 'discussions', label: '💬 Discussions' },
-                    { key: 'leaderboard', label: '🏆 Leaderboard' },
-                    { key: 'messages', label: '✉️ Messages', badge: unreadMessagesCount > 0 ? `${unreadMessagesCount}` : null },
-                    { key: 'certificates', label: '🎓 Certificates' },
-                    { key: 'payments', label: '💳 Payments' },
-                    { key: 'settings', label: '⚙️ Settings' }
+                    { key: 'overview', label: 'Overview', icon: <LayoutDashboard size={18} aria-hidden="true" /> },
+                    { key: 'learning', label: 'My Learning', icon: <GraduationCap size={18} aria-hidden="true" /> },
+                    { key: 'wishlist', label: 'Wishlist', icon: <Heart size={18} aria-hidden="true" /> },
+                    { key: 'assignments', label: 'Assignments', icon: <ClipboardList size={18} aria-hidden="true" />, badge: assignmentCount > 0 ? `${assignmentCount}` : null },
+                    { key: 'quizzes', label: 'Quizzes', icon: <BrainCircuit size={18} aria-hidden="true" />, badge: quizCount > 0 ? `${quizCount}` : null },
+                    { key: 'grades', label: 'Grades', icon: <BarChart3 size={18} aria-hidden="true" /> },
+                    { key: 'live', label: 'Live Sessions', icon: <Video size={18} aria-hidden="true" />, badge: liveSessionCount > 0 ? `${liveSessionCount}` : null },
+                    { key: 'discussions', label: 'Discussions', icon: <MessageSquare size={18} aria-hidden="true" /> },
+                    { key: 'leaderboard', label: 'Leaderboard', icon: <Trophy size={18} aria-hidden="true" /> },
+                    { key: 'messages', label: 'Messages', icon: <Mail size={18} aria-hidden="true" />, badge: unreadMessagesCount > 0 ? `${unreadMessagesCount}` : null },
+                    { key: 'certificates', label: 'Certificates', icon: <Award size={18} aria-hidden="true" /> },
+                    { key: 'payments', label: 'Payments', icon: <CreditCard size={18} aria-hidden="true" /> },
+                    { key: 'settings', label: 'Settings', icon: <Settings size={18} aria-hidden="true" /> }
                 ]}
                 activeTab={activeTab} 
                 onTabChange={setActiveTab}
-                extraBottomButtons={
-                    <button onClick={() => navigate('/courses')} style={styles.catalogBtn}>📚 Course Catalog</button>
+                    extraBottomButtons={
+                    <button onClick={() => navigate('/courses')} style={styles.catalogBtn}>
+                        <Library size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} aria-hidden="true" />
+                        Course Catalog
+                    </button>
                 }
             />
 
@@ -761,7 +769,7 @@ export default function StudentDashboard() {
                 {/* Header */}
                 <header style={styles.header}>
                     <div>
-                        <h1 style={styles.greeting}>Hello, {user?.fullName?.split(' ')[0]} 👋</h1>
+                        <h1 style={styles.greeting}>Hello, {user?.fullName?.split(' ')[0]}</h1>
                         <p style={styles.subGreeting}>Empower your mind through Emare Digital Hub</p>
                     </div>
                     <div style={styles.avatar}>{user?.fullName?.[0]?.toUpperCase() || 'S'}</div>

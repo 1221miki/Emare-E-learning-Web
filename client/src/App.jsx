@@ -16,7 +16,9 @@ import TermsPage from './pages/TermsPage';
 import CookiePage from './pages/CookiePage';
 import StudentDashboard from './pages/student/StudentDashboard';
 import InstructorDashboard from './pages/instructor/InstructorDashboard';
+import InstructorSettings from './pages/instructor/InstructorSettings';
 import AssignmentBuilder from './pages/instructor/AssignmentBuilder';
+import CourseCreationWizard from './pages/instructor/CourseCreationWizard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import LearningWorkspace from './pages/student/LearningWorkspace';
 import CourseCatalog from './pages/student/CourseCatalog';
@@ -87,6 +89,7 @@ function AppRoutes() {
 
             {/* ── Student Routes ──────────────────────────────── */}
             <Route path="/student/dashboard" element={<PrivateRoute allowedRoles={['Student']}><StudentDashboard /></PrivateRoute>} />
+            <Route path="/student/learn" element={<Navigate to="/student/dashboard" replace />} />
             <Route path="/student/learn/:courseId" element={<PrivateRoute allowedRoles={['Student']}><LearningWorkspace /></PrivateRoute>} />
             <Route path="/student/quiz/:quizId" element={<PrivateRoute allowedRoles={['Student']}><QuizPage /></PrivateRoute>} />
             <Route path="/student/payments" element={<PrivateRoute allowedRoles={['Student']}><PaymentPage /></PrivateRoute>} />
@@ -106,6 +109,8 @@ function AppRoutes() {
 
             {/* ── Instructor Routes ───────────────────────────── */}
             <Route path="/instructor/dashboard" element={<PrivateRoute allowedRoles={['Instructor']}><InstructorDashboard /></PrivateRoute>} />
+            <Route path="/instructor/settings" element={<PrivateRoute allowedRoles={['Instructor']}><InstructorSettings /></PrivateRoute>} />
+            <Route path="/instructor/courses/new" element={<PrivateRoute allowedRoles={['Instructor']}><CourseCreationWizard /></PrivateRoute>} />
             <Route path="/instructor/assignments/new" element={<PrivateRoute allowedRoles={['Instructor']}><AssignmentBuilder /></PrivateRoute>} />
 
             {/* ── Admin Routes ────────────────────────────────── */}

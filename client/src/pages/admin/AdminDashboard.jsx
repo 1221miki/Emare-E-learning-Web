@@ -5,6 +5,7 @@ import Sidebar from '../../components/Sidebar';
 import StatCard from '../../components/StatCard';
 import Modal from '../../components/Modal';
 import { AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { LayoutDashboard, BarChart3, Users, UserCog, Building2, BookOpen, FolderTree, NotebookPen, Video, FileQuestion, ClipboardList, Award, Wallet, Receipt, DollarSign, TicketPercent, FileBarChart, Bell, Megaphone, MessageSquare, MessagesSquare, Bot, LifeBuoy, Settings, ShieldCheck, ClipboardCheck, DatabaseBackup, PlugZap, KeyRound, UserCircle, LogOut, TrendingUp, Clock3, Activity, PlusCircle, FilePen, Upload, Archive, Trash2, UserPlus, UserMinus, ShieldAlert, RotateCcw, CreditCard, PieChart as LucidePieChart, Mail, Eye, EyeOff, AlertTriangle, Palette, Languages, MoonStar, Database, BadgeInfo, CircleCheck, Server, GraduationCap } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function AdminDashboard() {
@@ -951,18 +952,18 @@ export default function AdminDashboard() {
                 </div>
 
                 <div style={s.statsGrid}>
-                    <StatCard label="Total students" value={analytics?.totalStudents || 0} color={colors.primary} icon="🎓" />
-                    <StatCard label="Total instructors" value={analytics?.totalInstructors || 0} color={colors.accent} icon="👩‍🏫" />
-                    <StatCard label="Total visitors" value={analytics?.totalVisitors || 0} color={colors.success} icon="🌐" />
-                    <StatCard label="Total courses" value={analytics?.totalCourses || allCourses.length} color={colors.warning} icon="📚" />
-                    <StatCard label="Published courses" value={analytics?.activeCourses || 0} color={colors.success} icon="✅" />
-                    <StatCard label="Pending courses" value={analytics?.pendingCourses || 0} color={colors.warning} icon="⏳" />
-                    <StatCard label="Draft courses" value={analytics?.draftCourses || 0} color={colors.primary} icon="📝" />
-                    <StatCard label="Archived courses" value={analytics?.archivedCourses || 0} color={colors.danger} icon="🗂️" />
-                    <StatCard label="Active enrollments" value={analytics?.clearedEnrollments || 0} color={colors.success} icon="🔐" />
-                    <StatCard label="Completed courses" value={analytics?.completedCourses || 0} color={colors.accent} icon="🏁" />
-                    <StatCard label="Certificates issued" value={analytics?.certificatesIssued || 0} color={colors.primary} icon="🏅" />
-                    <StatCard label="Revenue (ETB)" value={analytics?.revenueEstimate || 0} color={colors.warning} icon="💰" />
+                    <StatCard label="Total students" value={analytics?.totalStudents || 0} color={colors.primary} icon={<Users size={24} aria-hidden="true" />} />
+                    <StatCard label="Total instructors" value={analytics?.totalInstructors || 0} color={colors.accent} icon={<UserCog size={24} aria-hidden="true" />} />
+                    <StatCard label="Total visitors" value={analytics?.totalVisitors || 0} color={colors.success} icon={<Users size={24} aria-hidden="true" />} />
+                    <StatCard label="Total courses" value={analytics?.totalCourses || allCourses.length} color={colors.warning} icon={<BookOpen size={24} aria-hidden="true" />} />
+                    <StatCard label="Published courses" value={analytics?.activeCourses || 0} color={colors.success} icon={<Upload size={24} aria-hidden="true" />} />
+                    <StatCard label="Pending courses" value={analytics?.pendingCourses || 0} color={colors.warning} icon={<Clock3 size={24} aria-hidden="true" />} />
+                    <StatCard label="Draft courses" value={analytics?.draftCourses || 0} color={colors.primary} icon={<FilePen size={24} aria-hidden="true" />} />
+                    <StatCard label="Archived courses" value={analytics?.archivedCourses || 0} color={colors.danger} icon={<Archive size={24} aria-hidden="true" />} />
+                    <StatCard label="Active enrollments" value={analytics?.clearedEnrollments || 0} color={colors.success} icon={<GraduationCap size={24} aria-hidden="true" />} />
+                    <StatCard label="Completed courses" value={analytics?.completedCourses || 0} color={colors.accent} icon={<Award size={24} aria-hidden="true" />} />
+                    <StatCard label="Certificates issued" value={analytics?.certificatesIssued || 0} color={colors.primary} icon={<Award size={24} aria-hidden="true" />} />
+                    <StatCard label="Revenue (ETB)" value={analytics?.revenueEstimate || 0} color={colors.warning} icon={<Wallet size={24} aria-hidden="true" />} />
                 </div>
 
                 <div style={s.cardGrid}>
@@ -1249,12 +1250,12 @@ export default function AdminDashboard() {
             </div>
 
             <div style={s.statsGrid}>
-                <StatCard label="Total students" value={analytics?.totalStudents || 0} color={colors.primary} icon="👥" />
-                <StatCard label="Total instructors" value={analytics?.totalInstructors || 0} color={colors.accent} icon="👩‍🏫" />
-                <StatCard label="Total courses" value={analytics?.totalCourses || 0} color={colors.warning} icon="📚" />
-                <StatCard label="Completion rate" value={`${analytics?.completionRate || 0}%`} color={colors.success} icon="✅" />
-                <StatCard label="Monthly enrollments" value={analytics?.monthlyEnrollments || 0} color={colors.primary} icon="📈" />
-                <StatCard label="Certificates" value={analytics?.certificatesIssued || 0} color={colors.success} icon="🎓" />
+                    <StatCard label="Total students" value={analytics?.totalStudents || 0} color={colors.primary} icon={<Users size={24} aria-hidden="true" />} />
+                    <StatCard label="Total instructors" value={analytics?.totalInstructors || 0} color={colors.accent} icon={<UserCog size={24} aria-hidden="true" />} />
+                    <StatCard label="Total courses" value={analytics?.totalCourses || 0} color={colors.warning} icon={<BookOpen size={24} aria-hidden="true" />} />
+                    <StatCard label="Completion rate" value={`${analytics?.completionRate || 0}%`} color={colors.success} icon={<TrendingUp size={24} aria-hidden="true" />} />
+                    <StatCard label="Monthly enrollments" value={analytics?.monthlyEnrollments || 0} color={colors.primary} icon={<GraduationCap size={24} aria-hidden="true" />} />
+                    <StatCard label="Certificates" value={analytics?.certificatesIssued || 0} color={colors.success} icon={<Award size={24} aria-hidden="true" />} />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '24px' }}>
@@ -1788,9 +1789,9 @@ export default function AdminDashboard() {
                 <p style={s.sectionSub}>Manage payments, manual clearings, instructor payouts, and refunds.</p>
             </div>
             <div style={s.statsGrid}>
-                <StatCard label="Total Revenue" value={`ETB ${(analytics?.clearedEnrollments || 0) * 1500}`} color={colors.success} icon="💵" />
-                <StatCard label="Pending Payouts" value="ETB 0" color={colors.warning} icon="⏳" />
-                <StatCard label="Refunds Processed" value="0" color={colors.danger} icon="↩️" />
+                <StatCard label="Total Revenue" value={`ETB ${(analytics?.clearedEnrollments || 0) * 1500}`} color={colors.success} icon={<Wallet size={24} aria-hidden="true" />} />
+                <StatCard label="Pending Payouts" value="ETB 0" color={colors.warning} icon={<Clock3 size={24} aria-hidden="true" />} />
+                <StatCard label="Refunds Processed" value="0" color={colors.danger} icon={<RotateCcw size={24} aria-hidden="true" />} />
             </div>
             <div style={s.card}>
                 <h3 style={s.cardTitle}>Recent Transactions</h3>
@@ -2284,19 +2285,19 @@ export default function AdminDashboard() {
     );
 
     const sidebarItems = [
-        { key: 'overview', label: '🏠 Overview' },
-        { key: 'users', label: '👥 User Management' },
-        { key: 'security', label: '🛡️ Security & Roles' },
-        { key: 'courses', label: '📚 Course Management' },
-        { key: 'analytics', label: '📊 Analytics Dashboard' },
-        { key: 'content', label: '💬 Content & Moderation' },
-        { key: 'assessments', label: '📝 Assessments & Certs' },
-        { key: 'finances', label: '💰 Finances & Revenue' },
-        { key: 'cms', label: '📢 CMS & Comms' },
-        { key: 'reports', label: '📊 Reports & Exports' },
-        { key: 'audit', label: '🧾 Audit Logs' },
-        { key: 'calendar', label: '🗓️ Calendar Management' },
-        { key: 'system', label: '⚙️ System Settings' }
+        { key: 'overview', label: 'Overview', icon: <LayoutDashboard size={20} aria-hidden="true" /> },
+        { key: 'users', label: 'User Management', icon: <Users size={20} aria-hidden="true" /> },
+        { key: 'security', label: 'Security & Roles', icon: <ShieldCheck size={20} aria-hidden="true" /> },
+        { key: 'courses', label: 'Course Management', icon: <BookOpen size={20} aria-hidden="true" /> },
+        { key: 'analytics', label: 'Analytics Dashboard', icon: <BarChart3 size={20} aria-hidden="true" /> },
+        { key: 'content', label: 'Content & Moderation', icon: <MessageSquare size={20} aria-hidden="true" /> },
+        { key: 'assessments', label: 'Assessments & Certs', icon: <ClipboardList size={20} aria-hidden="true" /> },
+        { key: 'finances', label: 'Finances & Revenue', icon: <Wallet size={20} aria-hidden="true" /> },
+        { key: 'cms', label: 'CMS & Comms', icon: <Megaphone size={20} aria-hidden="true" /> },
+        { key: 'reports', label: 'Reports & Exports', icon: <FileBarChart size={20} aria-hidden="true" /> },
+        { key: 'audit', label: 'Audit Logs', icon: <ClipboardCheck size={20} aria-hidden="true" /> },
+        { key: 'calendar', label: 'Calendar Management', icon: <Clock3 size={20} aria-hidden="true" /> },
+        { key: 'system', label: 'System Settings', icon: <Settings size={20} aria-hidden="true" /> }
     ];
 
     return (
@@ -2505,9 +2506,10 @@ export default function AdminDashboard() {
                             setNewPassword('');
                             handlePasswordReset(e);
                         }}
-                        style={{...s.primaryBtn, background:'#10b981', marginBottom:'12px'}}
+                        style={{...s.primaryBtn, background:'#10b981', marginBottom:'12px', display: 'inline-flex', alignItems: 'center', gap: '8px'}}
                     >
-                        📧 Send Password Reset Email
+                        <Mail size={18} aria-hidden="true" />
+                        Send Password Reset Email
                     </button>
                     <p style={{textAlign:'center', color:'#999', fontSize:'12px'}}>User receives email with reset link (expires in 15 mins)</p>
 
@@ -2531,15 +2533,20 @@ export default function AdminDashboard() {
                                 type="button" 
                                 onClick={() => setShowResetPassword(!showResetPassword)} 
                                 style={{ ...s.iconBtn, position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)' }}
+                                aria-label={showResetPassword ? 'Hide password' : 'Show password'}
                             >
-                                {showResetPassword ? '🙈' : '👁️'}
+                                {showResetPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
                             </button>
                         </div>
                         <button type="submit" style={{...s.primaryBtn, background:'#f59e0b', opacity: newPassword.length >= 8 ? 1 : 0.5}} disabled={newPassword.length < 8}>
-                            🔄 Force Reset Password
+                            <RotateCcw size={18} aria-hidden="true" />
+                            Force Reset Password
                         </button>
                     </form>
-                    <p style={{fontSize:'12px', color:'#d32f2f', marginTop:'8px'}}>⚠️ Direct reset: User account is immediately changed. A confirmation email will be sent.</p>
+                    <p style={{fontSize:'12px', color:'#d32f2f', marginTop:'8px', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                        <AlertTriangle size={16} aria-hidden="true" />
+                        Direct reset: User account is immediately changed. A confirmation email will be sent.
+                    </p>
                 </div>
             </Modal>
             <Modal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)} title="Create Certificate Template">

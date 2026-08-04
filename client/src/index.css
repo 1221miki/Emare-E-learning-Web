@@ -42,3 +42,19 @@ input:-webkit-autofill:focus {
     transform: translateY(0);
   }
 }
+
+/* Typing Cursor Blink */
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+/* Sidebar dragged to the right side: push main content from the right */
+body.emare-sidebar-right main {
+  margin-left: 0 !important;
+  margin-right: 260px !important;
+}

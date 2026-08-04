@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { paymentService } from '../../../services/api';
+import { History, BookOpen, CreditCard, Receipt, Undo2, DollarSign, CheckCircle2, Clock, Building2, Smartphone, AlertCircle, FileText } from 'lucide-react';
 
 const WARN = '#f59e0b';
 const DANGER = '#ef4444';
 
 const PROVIDER_LABELS = { cbe: 'CBE Bank', telebirr: 'Telebirr', chapa: 'Chapa', dashen: 'Dashen Bank', other: 'Other / Manual' };
-const PROVIDER_ICONS = { cbe: '🏦', telebirr: '📱', chapa: '💳', dashen: '🏦', other: '💵' };
+const PROVIDER_ICONS = { cbe: <Building2 size={16} aria-hidden="true" />, telebirr: <Smartphone size={16} aria-hidden="true" />, chapa: <CreditCard size={16} aria-hidden="true" />, dashen: <Building2 size={16} aria-hidden="true" />, other: <DollarSign size={16} aria-hidden="true" /> };
 
 const STATUS_META = {
     Completed: { color: '#10b981', label: 'Completed' },
@@ -188,28 +189,28 @@ export default function PaymentsTab(dash) {
     };
 
     const sections = [
-        { key: 'history', label: '📒 Payment History' },
-        { key: 'enrollments', label: '📚 My Enrollments' },
-        { key: 'methods', label: '💳 Payment Methods' },
-        { key: 'invoices', label: '🧾 Invoices & Receipts' },
-        { key: 'refunds', label: '↩️ Refund Requests' }
+        { key: 'history', label: 'Payment History', icon: <History size={15} aria-hidden="true" /> },
+        { key: 'enrollments', label: 'My Enrollments', icon: <BookOpen size={15} aria-hidden="true" /> },
+        { key: 'methods', label: 'Payment Methods', icon: <CreditCard size={15} aria-hidden="true" /> },
+        { key: 'invoices', label: 'Invoices & Receipts', icon: <Receipt size={15} aria-hidden="true" /> },
+        { key: 'refunds', label: 'Refund Requests', icon: <Undo2 size={15} aria-hidden="true" /> }
     ];
 
     const renderHistory = () => (
         <div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '20px' }}>
                 <div style={{ ...styles.statCard, borderTop: `3px solid ${colors.success}`, padding: '16px' }}>
-                    <span style={{ fontSize: '20px' }}>💰</span>
+                    <DollarSign size={20} color={colors.success} aria-hidden="true" />
                     <span style={{ ...styles.statValue, color: colors.success, fontSize: '22px', marginTop: '6px' }}>{totalPaid.toLocaleString()} ETB</span>
                     <span style={styles.statLabel}>Total Paid</span>
                 </div>
                 <div style={{ ...styles.statCard, borderTop: `3px solid ${colors.primary}`, padding: '16px' }}>
-                    <span style={{ fontSize: '20px' }}>✅</span>
+                    <CheckCircle2 size={20} color={colors.primary} aria-hidden="true" />
                     <span style={{ ...styles.statValue, color: colors.primary, fontSize: '22px', marginTop: '6px' }}>{clearedCount}</span>
                     <span style={styles.statLabel}>Cleared Courses</span>
                 </div>
                 <div style={{ ...styles.statCard, borderTop: `3px solid ${WARN}`, padding: '16px' }}>
-                    <span style={{ fontSize: '20px' }}>⏳</span>
+                    <Clock size={20} color={WARN} aria-hidden="true" />
                     <span style={{ ...styles.statValue, color: WARN, fontSize: '22px', marginTop: '6px' }}>{pendingCount}</span>
                     <span style={styles.statLabel}>Pending Settlement</span>
                 </div>
@@ -234,7 +235,7 @@ export default function PaymentsTab(dash) {
                     <div style={{ padding: '32px', color: colors.textMuted, fontSize: '13px' }}>Loading payment history...</div>
                 ) : transactions.length === 0 ? (
                     <div style={styles.emptyContent}>
-                        <div style={{ fontSize: '40px', marginBottom: '12px' }}>💳</div>
+                        <CreditCard size={40} color={colors.textMuted} style={{ marginBottom: '12px' }} aria-hidden="true" />
                         <p style={styles.emptyText}>No payment transactions yet. Enroll in a course and complete a payment to see it here.</p>
                     </div>
                 ) : (
@@ -254,7 +255,7 @@ export default function PaymentsTab(dash) {
                                 <tr key={t._id} style={styles.tr}>
                                     <td style={styles.td}>{new Date(t.createdAt || Date.now()).toLocaleDateString()}</td>
                                     <td style={styles.td}>{courseTitle(t.courseRef)}</td>
-                                    <td style={styles.td}>{PROVIDER_ICONS[t.provider] || '💳'} {PROVIDER_LABELS[t.provider] || (t.provider || '—')}</td>
+                                    <td style={styles.td}><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>{PROVIDER_ICONS[t.provider] || <CreditCard size={16} aria-hidden="true" />} {PROVIDER_LABELS[t.provider] || (t.provider || '—')}</span></td>
                                     <td style={{ ...styles.td, fontSize: '12px' }}>{t.metadata?.tx_ref || t.providerTransactionId || '—'}</td>
                                     <td style={{ ...styles.td, fontWeight: '700' }}>{(t.amount || 0).toLocaleString()} {t.currency || 'ETB'}</td>
                                     <td style={styles.td}>{statusBadge(t.status)}</td>
@@ -277,7 +278,7 @@ export default function PaymentsTab(dash) {
                 </p>
                 {rows.length === 0 ? (
                     <div style={styles.emptyContent}>
-                        <div style={{ fontSize: '40px', marginBottom: '12px' }}>📚</div>
+                        <BookOpen size={40} color={colors.textMuted} style={{ marginBottom: '12px' }} aria-hidden="true" />
                         <p style={styles.emptyText}>You are not enrolled in any courses yet. Browse the catalog and enroll to get started.</p>
                         <button onClick={() => navigate('/courses')} style={styles.resumeBtn}>Browse Courses</button>
                     </div>
@@ -299,11 +300,11 @@ export default function PaymentsTab(dash) {
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                                         {cleared ? (
-                                            <span style={{ fontSize: '11px', fontWeight: '800', padding: '4px 10px', borderRadius: '6px', background: `${colors.success}15`, color: colors.success }}>✓ CLEARED</span>
+                                            <span style={{ fontSize: '11px', fontWeight: '800', padding: '4px 10px', borderRadius: '6px', background: `${colors.success}15`, color: colors.success }}>CLEARED</span>
                                         ) : pendingVerification ? (
-                                            <span style={{ fontSize: '11px', fontWeight: '800', padding: '4px 10px', borderRadius: '6px', background: `${WARN}15`, color: WARN }}>⏳ PENDING VERIFICATION</span>
+                                            <span style={{ fontSize: '11px', fontWeight: '800', padding: '4px 10px', borderRadius: '6px', background: `${WARN}15`, color: WARN }}>PENDING VERIFICATION</span>
                                         ) : (
-                                            <span style={{ fontSize: '11px', fontWeight: '800', padding: '4px 10px', borderRadius: '6px', background: `${DANGER}15`, color: DANGER }}>⚠ UNPAID</span>
+                                            <span style={{ fontSize: '11px', fontWeight: '800', padding: '4px 10px', borderRadius: '6px', background: `${DANGER}15`, color: DANGER }}>UNPAID</span>
                                         )}
                                         {!cleared && (
                                             <button onClick={() => navigate('/student/payments')} style={{ ...styles.resumeBtn, fontSize: '12px', padding: '8px 14px' }}>Settle Now</button>
@@ -325,7 +326,7 @@ export default function PaymentsTab(dash) {
                 {methodMsg && <div style={{ ...styles.successAlert }}>{methodMsg}</div>}
                 {methods.length === 0 ? (
                     <div style={styles.emptyContent}>
-                        <div style={{ fontSize: '40px', marginBottom: '12px' }}>💳</div>
+                        <CreditCard size={40} color={colors.textMuted} style={{ marginBottom: '12px' }} aria-hidden="true" />
                         <p style={styles.emptyText}>No saved payment methods yet. Save a bank account or mobile money wallet for faster checkout.</p>
                     </div>
                 ) : (
@@ -333,7 +334,7 @@ export default function PaymentsTab(dash) {
                         {methods.map(m => (
                             <div key={m.id} style={{ padding: '16px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <span style={{ fontSize: '22px' }}>{PROVIDER_ICONS[m.provider] || '💳'}</span>
+                                    <span style={{ display: 'flex', alignItems: 'center' }}>{PROVIDER_ICONS[m.provider] || <CreditCard size={20} aria-hidden="true" />}</span>
                                     <button onClick={() => removeMethod(m.id)} style={{ background: 'transparent', border: `1px solid ${DANGER}40`, color: DANGER, borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>Remove</button>
                                 </div>
                                 <div style={{ color: colors.text, fontSize: '14px', fontWeight: '700' }}>{PROVIDER_LABELS[m.provider] || m.provider}</div>
@@ -375,7 +376,7 @@ export default function PaymentsTab(dash) {
                 <div style={{ padding: '32px', color: colors.textMuted, fontSize: '13px' }}>Loading invoices...</div>
             ) : transactions.length === 0 ? (
                 <div style={styles.emptyContent}>
-                    <div style={{ fontSize: '40px', marginBottom: '12px' }}>🧾</div>
+                    <FileText size={40} color={colors.textMuted} style={{ marginBottom: '12px' }} aria-hidden="true" />
                     <p style={styles.emptyText}>No invoices yet. Completed payments generate a downloadable receipt automatically.</p>
                 </div>
             ) : (
@@ -414,8 +415,10 @@ export default function PaymentsTab(dash) {
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={() => setActiveInvoice(null)}>
                     <div style={{ background: colors.bgCard, borderRadius: '16px', border: `1px solid ${colors.border}`, maxWidth: '520px', width: '100%', maxHeight: '80vh', overflowY: 'auto', padding: '24px' }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                            <h3 style={{ margin: 0, color: colors.text, fontSize: '17px', fontWeight: '800' }}>🧾 Invoice Details</h3>
-                            <button onClick={() => setActiveInvoice(null)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.textMuted, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>✕ Close</button>
+                            <h3 style={{ margin: 0, color: colors.text, fontSize: '17px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Receipt size={18} aria-hidden="true" /> Invoice Details
+                            </h3>
+                            <button onClick={() => setActiveInvoice(null)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.textMuted, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>Close</button>
                         </div>
                         {invoiceLoading ? (
                             <div style={{ padding: '40px 0', color: colors.textMuted, fontSize: '13px', textAlign: 'center' }}>Loading invoice...</div>
@@ -429,8 +432,12 @@ export default function PaymentsTab(dash) {
                                     <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${colors.border}`, paddingTop: '12px' }}><span style={{ color: colors.textMuted, fontSize: '13px' }}>Total Paid</span><span style={{ color: colors.success, fontWeight: '800', fontSize: '16px' }}>{(invoiceData.amount || 0).toLocaleString()} {invoiceData.currency || 'ETB'}</span></div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                    <button onClick={downloadInvoice} style={{ ...styles.resumeBtn, fontSize: '13px' }}>⬇ Download Receipt</button>
-                                    <button onClick={() => window.print()} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', padding: '10px 16px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>🖨 Print / Save as PDF</button>
+                                    <button onClick={downloadInvoice} style={{ ...styles.resumeBtn, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }} aria-label="Download Receipt">
+                                        <FileText size={15} aria-hidden="true" /> Download Receipt
+                                    </button>
+                                    <button onClick={() => window.print()} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', padding: '10px 16px', fontWeight: '700', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }} aria-label="Print or Save as PDF">
+                                        <Receipt size={15} aria-hidden="true" /> Print / Save as PDF
+                                    </button>
                                 </div>
                             </div>
                         ) : (
@@ -471,7 +478,7 @@ export default function PaymentsTab(dash) {
                 <h3 style={{ ...styles.panelCardTitle, fontSize: '16px' }}>Refund History</h3>
                 {combinedRefunds.length === 0 ? (
                     <div style={styles.emptyContent}>
-                        <div style={{ fontSize: '40px', marginBottom: '12px' }}>↩️</div>
+                        <Undo2 size={40} color={colors.textMuted} style={{ marginBottom: '12px' }} aria-hidden="true" />
                         <p style={styles.emptyText}>No refunds yet. Refunded transactions will appear here with their status.</p>
                     </div>
                 ) : (
@@ -495,7 +502,9 @@ export default function PaymentsTab(dash) {
     return (
         <div>
             <div style={styles.tabHeader}>
-                <h2 style={styles.tabTitle}>💳 Tuition & Payments</h2>
+                <h2 style={{ ...styles.tabTitle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CreditCard size={20} aria-hidden="true" /> Tuition &amp; Payments
+                </h2>
                 <p style={styles.tabSubtitle}>Track your transactions, manage payment methods, download receipts, and request refunds</p>
             </div>
 
@@ -513,10 +522,13 @@ export default function PaymentsTab(dash) {
                             fontWeight: '700',
                             fontSize: '13px',
                             cursor: 'pointer',
-                            transition: 'all 0.2s'
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
                         }}
                     >
-                        {s.label}
+                        {s.icon}{s.label}
                     </button>
                 ))}
             </div>
