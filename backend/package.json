@@ -1,0 +1,40 @@
+{
+  "name": "emare-elms-backend",
+  "version": "1.0.0",
+  "description": "Backend API for the Emare E-Learning Management System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "predev": "npx kill-port 5000",
+    "dev": "nodemon server.js",
+    "seed": "node scripts/seedTestAccounts.js"
+  },
+  "dependencies": {
+    "axios": "^1.18.1",
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^1.41.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "googleapis": "^173.0.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb-memory-server": "^11.2.0",
+    "mongoose": "^8.3.2",
+    "multer": "^2.2.0",
+    "multer-storage-cloudinary": "^4.0.0",
+    "nanoid": "^4.0.0",
+    "nodemailer": "^9.0.3",
+    "pdf-parse": "^1.1.1",
+    "pdfkit": "^0.13.0",
+    "qrcode": "^1.5.1",
+    "streamifier": "^0.1.1"
+  },
+  "devDependencies": {
+    "kill-port": "^2.0.1",
+    "nodemon": "^3.1.0"
+  },
+  "author": "Emare ELMS Team",
+  "license": "ISC"
+}
