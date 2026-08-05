@@ -120,7 +120,41 @@ const UserSchema = new mongoose.Schema({
         promotions: { type: Boolean, default: false }
     },
     isPublicProfile: { type: Boolean, default: true },
-    
+
+    // ── Extended Instructor Requirements ──
+    instructorId: { type: String, unique: true, sparse: true },
+    specialization: { type: String, trim: true },
+    yearsOfExperience: { type: Number, default: 0 },
+    skills: { type: String, trim: true },
+    department: { type: String, trim: true },
+    employmentType: { type: String, enum: ['Full-time', 'Part-time', 'Guest Instructor', ''], default: '' },
+    joiningDate: { type: Date },
+    cvResumeUrl: { type: String, default: '' },
+    educationCertificateUrl: { type: String, default: '' },
+    professionalCertificateUrl: { type: String, default: '' },
+    nationalIdUrl: { type: String, default: '' },
+
+    // ── Extended Administrator Requirements ──
+    administratorId: { type: String, unique: true, sparse: true },
+    positionJobTitle: { type: String, trim: true },
+    dateOfAppointment: { type: Date },
+    recoveryEmail: { type: String, trim: true },
+    securityQuestion: { type: String, trim: true },
+    securityAnswer: { type: String, trim: true },
+    employeeIdCardUrl: { type: String, default: '' },
+    appointmentLetterUrl: { type: String, default: '' },
+    permissions: {
+        userManagement: { type: Boolean, default: false },
+        courseManagement: { type: Boolean, default: false },
+        instructorManagement: { type: Boolean, default: false },
+        studentManagement: { type: Boolean, default: false },
+        reportsAnalytics: { type: Boolean, default: false },
+        systemSettings: { type: Boolean, default: false },
+        rolePermissionManagement: { type: Boolean, default: false },
+        contentApproval: { type: Boolean, default: false },
+        announcementManagement: { type: Boolean, default: false }
+    },
+
     // Social Login & Password Recovery Fields
     socialProvider: { type: String, enum: ['google', 'github', 'microsoft', 'facebook', 'local'], default: 'local' },
     socialId: { type: String, trim: true },
