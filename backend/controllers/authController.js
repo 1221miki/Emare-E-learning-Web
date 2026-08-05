@@ -68,7 +68,7 @@ const register = async (req, res, next) => {
             fullName,
             accountEmail: normalizedEmail,
             securedPassword: newPassword,
-            assignedRole: assignedRole || 'Student',
+            assignedRole: 'Student',
             username: username || undefined,
             lastLoginTimestamp: Date.now()
         });

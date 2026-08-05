@@ -92,7 +92,7 @@ The backend seeds default accounts during development. Use these credentials for
 
 - Admin
   - Email: admin@emare.com
-  - Password: admin12345
+  - Password: 45
 - Student
   - Email: student@emare.com
   - Password: student12345
