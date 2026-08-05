@@ -77,9 +77,12 @@ export default function RegisterPage() {
         if (!/[0-9]/.test(form.securedPassword)) return 'Password needs a number.';
         if (!/[!@#$%^&*]/.test(form.securedPassword)) return 'Password needs a special character.';
         if (form.securedPassword !== form.confirmPassword) return 'Passwords do not match.';
+<<<<<<< HEAD
         if (form.assignedRole === 'Instructor') {
             if (!form.professionalTitle.trim()) return 'Professional title required for instructors.';
         }
+=======
+>>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
         return null;
     };
 
@@ -95,12 +98,20 @@ export default function RegisterPage() {
         try {
             const payload = {
                 ...form,
+<<<<<<< HEAD
                 fullName: `${form.firstName} ${form.middleName ? form.middleName + ' ' : ''}${form.lastName}`.trim()
             };
             const user = await register(payload);
             if (user.assignedRole === 'Instructor' && user.status === 'Pending') {
                 navigate('/pending-approval');
             } else if (user.assignedRole === 'Admin') {
+=======
+                assignedRole: 'Student',
+                fullName: `${form.firstName} ${form.middleName ? form.middleName + ' ' : ''}${form.lastName}`.trim()
+            };
+            const user = await register(payload);
+            if (user.assignedRole === 'Admin') {
+>>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
                 navigate('/admin/dashboard');
             } else if (user.assignedRole === 'Instructor') {
                 navigate('/instructor/dashboard');
@@ -122,7 +133,11 @@ export default function RegisterPage() {
         const emailPrefill = form.accountEmail || `${provider.toLowerCase()}.student@emare.edu`;
         setSocialName(namePrefill);
         setSocialEmail(emailPrefill);
+<<<<<<< HEAD
         setSocialRole(form.assignedRole || 'Student');
+=======
+        setSocialRole('Student');
+>>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
         setSocialError('');
         setShowSocialModal(true);
     };
@@ -136,7 +151,11 @@ export default function RegisterPage() {
                 provider: socialProvider.toLowerCase(),
                 email: socialEmail,
                 name: socialName,
+<<<<<<< HEAD
                 role: socialRole,
+=======
+                role: 'Student',
+>>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
             };
 
             const user = await socialAuth(mockData);
@@ -182,6 +201,7 @@ export default function RegisterPage() {
                 <div style={styles.header}>
                     <div style={styles.logo}>E</div>
                     <h1 style={styles.title}>Create your Emare account</h1>
+<<<<<<< HEAD
                     <p style={styles.subtitle}>Join Emare and access student and instructor learning experiences.</p>
                 </div>
 
@@ -260,6 +280,9 @@ export default function RegisterPage() {
                             ⏳ Instructor accounts require admin approval before activation.
                         </div>
                     )}
+=======
+                    <p style={styles.subtitle}>Join Emare to start your learning journey.</p>
+>>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
                 </div>
 
                 {error && <div style={styles.errorBox}>{error}</div>}
@@ -332,6 +355,7 @@ export default function RegisterPage() {
                         <div />
                     </div>
 
+<<<<<<< HEAD
                     {/* ── Student-specific fields ── */}
                     {form.assignedRole === 'Student' && (<>
                         <h3 style={styles.sectionHeader}>🎓 Academic Details</h3>
@@ -405,6 +429,39 @@ export default function RegisterPage() {
 
                     <button type="submit" style={loading ? { ...styles.btn, opacity: 0.7, gridColumn: '1 / -1' } : { ...styles.btn, gridColumn: '1 / -1' }} disabled={loading}>
                         {loading ? 'Creating Account...' : `Create ${form.assignedRole} Account →`}
+=======
+                    {/* ── Academic Details ── */}
+                    <h3 style={styles.sectionHeader}>🎓 Academic Details</h3>
+                    <div style={styles.fieldGroup}>
+                        <label style={styles.label}>Education Level</label>
+                        <input name="educationLevel" type="text" placeholder="e.g., Bachelor" value={form.educationLevel} onChange={handleChange} style={styles.input} />
+                    </div>
+                    <div style={styles.fieldGroup}>
+                        <label style={styles.label}>Institution / University (Optional)</label>
+                        <input name="institution" type="text" placeholder="University name" value={form.institution} onChange={handleChange} style={styles.input} />
+                    </div>
+                    <div style={styles.fieldGroup}>
+                        <label style={styles.label}>Field of Study</label>
+                        <input name="fieldOfStudy" type="text" placeholder="Computer Science" value={form.fieldOfStudy} onChange={handleChange} style={styles.input} />
+                    </div>
+                    <div style={styles.fieldGroup}>
+                        <label style={styles.label}>Learning Interests</label>
+                        <input name="learningInterests" type="text" placeholder="AI, Data Science, Cloud..." value={form.learningInterests} onChange={handleChange} style={styles.input} />
+                    </div>
+                    <div style={styles.fieldGroup}>
+                        <label style={styles.label}>Preferred Language</label>
+                        <select name="preferredLanguage" value={form.preferredLanguage} onChange={handleChange} style={styles.input}>
+                            <option value="">Select</option>
+                            <option value="English">English</option>
+                            <option value="Amharic">Amharic</option>
+                            <option value="Afaan Oromo">Afaan Oromo</option>
+                            <option value="Tigrinya">Tigrinya</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" style={loading ? { ...styles.btn, opacity: 0.7, gridColumn: '1 / -1' } : { ...styles.btn, gridColumn: '1 / -1' }} disabled={loading}>
+                        {loading ? 'Creating Account...' : 'Create Account →'}
+>>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
                     </button>
                 </form>
 
@@ -465,6 +522,7 @@ export default function RegisterPage() {
                                 />
                             </div>
 
+<<<<<<< HEAD
                             <div style={styles.fieldGroup}>
                                 <label style={styles.label}>Register As</label>
                                 <select 
@@ -477,6 +535,8 @@ export default function RegisterPage() {
                                 </select>
                             </div>
 
+=======
+>>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
                             <button type="submit" style={socialLoading ? { ...styles.btn, opacity: 0.7 } : styles.btn} disabled={socialLoading}>
                                 {socialLoading ? `Authorizing ${socialProvider}...` : `Continue with ${socialProvider} →`}
                             </button>

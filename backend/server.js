@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 require('dotenv').config({ path: require('path').join(__dirname, '.env'), override: true });
+=======
+require('dotenv').config({ path: '../.env', override: true });
+>>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
 // Ensure critical runtime files exist to prevent startup crashes from accidental deletions
 try { require('./utils/ensureFiles'); } catch (err) { console.warn('ensureFiles initialization failed:', err && err.message); }
 const express = require('express');
@@ -146,7 +150,11 @@ app.use(errorHandler);
 
 // ── Start Server ───────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
+<<<<<<< HEAD
 app.listen(PORT, '0.0.0.0', () => {
+=======
+app.listen(PORT, () => {
+>>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
     const ENV = (process.env.NODE_ENV || 'development').toUpperCase();
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
@@ -162,4 +170,9 @@ app.listen(PORT, '0.0.0.0', () => {
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
 `);
+<<<<<<< HEAD
 });
+=======
+});
+// trigger restart
+>>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9

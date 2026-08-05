@@ -68,7 +68,11 @@ const register = async (req, res, next) => {
             fullName,
             accountEmail: normalizedEmail,
             securedPassword: newPassword,
+<<<<<<< HEAD
             assignedRole: assignedRole || 'Student',
+=======
+            assignedRole: 'Student',
+>>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
             username: username || undefined,
             lastLoginTimestamp: Date.now()
         });
