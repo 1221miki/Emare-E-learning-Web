@@ -81,7 +81,16 @@ const getUserById = async (req, res, next) => {
 // ─────────────────────────────────────────────
 const createUser = async (req, res, next) => {
     try {
-        const { fullName, accountEmail, securedPassword, assignedRole, contactPhone, isActive, requirePasswordChange, sendWelcomeEmail } = req.body;
+        const { 
+            fullName, accountEmail, securedPassword, assignedRole, contactPhone, isActive, requirePasswordChange, sendWelcomeEmail,
+            username, gender, dateOfBirth, avatarUrl,
+            // Instructor specific
+            specialization, yearsOfExperience, skills, biography, department, employmentType, joiningDate,
+            cvResumeUrl, educationCertificateUrl, professionalCertificateUrl, nationalIdUrl,
+            // Admin specific
+            positionJobTitle, dateOfAppointment, recoveryEmail, securityQuestion, securityAnswer,
+            employeeIdCardUrl, appointmentLetterUrl, permissions
+        } = req.body;
 
         // Security check: Only allow Admin and Instructor roles
         if (!assignedRole || !['Admin', 'Instructor'].includes(assignedRole)) {
@@ -96,6 +105,11 @@ const createUser = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
         }
 
+        // Auto-generate IDs
+        const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+        const instructorId = assignedRole === 'Instructor' ? `INST-${Date.now()}-${randomSuffix}` : undefined;
+        const administratorId = assignedRole === 'Admin' ? `ADM-${Date.now()}-${randomSuffix}` : undefined;
+
         const user = await User.create({
             fullName,
             accountEmail: accountEmail.toLowerCase(),
@@ -103,7 +117,34 @@ const createUser = async (req, res, next) => {
             assignedRole,
             contactPhone: contactPhone || '',
             isActive: isActive !== false,
-            requirePasswordChange: !!requirePasswordChange
+            requirePasswordChange: !!requirePasswordChange,
+            username: username || undefined,
+            gender: gender || '',
+            dateOfBirth: dateOfBirth || undefined,
+            avatarUrl: avatarUrl || '',
+            // Instructor specific
+            instructorId,
+            specialization: specialization || '',
+            yearsOfExperience: Number(yearsOfExperience) || 0,
+            skills: skills || '',
+            biography: biography || '',
+            department: department || '',
+            employmentType: employmentType || '',
+            joiningDate: joiningDate || undefined,
+            cvResumeUrl: cvResumeUrl || '',
+            educationCertificateUrl: educationCertificateUrl || '',
+            professionalCertificateUrl: professionalCertificateUrl || '',
+            nationalIdUrl: nationalIdUrl || '',
+            // Admin specific
+            administratorId,
+            positionJobTitle: positionJobTitle || '',
+            dateOfAppointment: dateOfAppointment || undefined,
+            recoveryEmail: recoveryEmail || '',
+            securityQuestion: securityQuestion || '',
+            securityAnswer: securityAnswer || '',
+            employeeIdCardUrl: employeeIdCardUrl || '',
+            appointmentLetterUrl: appointmentLetterUrl || '',
+            permissions: permissions || undefined
         });
 
         if (sendWelcomeEmail && typeof sendAccountCreatedEmail === 'function') {

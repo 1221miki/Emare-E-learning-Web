@@ -44,7 +44,19 @@ export default function AdminDashboard() {
     const [newPassword, setNewPassword] = useState('');
     const [notificationMsg, setNotificationMsg] = useState('');
     const [userFilter, setUserFilter] = useState('All');
-    const [createForm, setCreateForm] = useState({ fullName: '', accountEmail: '', securedPassword: '', assignedRole: 'Instructor', contactPhone: '', isActive: true, requirePasswordChange: true, sendWelcomeEmail: true });
+    const [createForm, setCreateForm] = useState({
+        fullName: '', accountEmail: '', securedPassword: '', confirmPassword: '', assignedRole: 'Instructor', contactPhone: '', isActive: true, requirePasswordChange: true, sendWelcomeEmail: true,
+        username: '', gender: '', dateOfBirth: '', avatarUrl: '',
+        // Instructor fields
+        specialization: '', yearsOfExperience: '', skills: '', biography: '', department: '', employmentType: '', joiningDate: '',
+        cvResumeUrl: '', educationCertificateUrl: '', professionalCertificateUrl: '', nationalIdUrl: '',
+        // Admin fields
+        positionJobTitle: '', dateOfAppointment: '', recoveryEmail: '', securityQuestion: '', securityAnswer: '',
+        employeeIdCardUrl: '', appointmentLetterUrl: '',
+        permissions: { userManagement: false, courseManagement: false, instructorManagement: false, studentManagement: false, reportsAnalytics: false, systemSettings: false, rolePermissionManagement: false, contentApproval: false, announcementManagement: false }
+    });
+    const [createFormStep, setCreateFormStep] = useState(1);
+    const [isUploadingCreateFile, setIsUploadingCreateFile] = useState(false);
     const [editForm, setEditForm] = useState({ fullName: '', accountEmail: '' });
     const [showCreatePassword, setShowCreatePassword] = useState(false);
     const [showResetPassword, setShowResetPassword] = useState(false);
@@ -491,8 +503,30 @@ export default function AdminDashboard() {
         }
     };
 
+    const handleCreateFileUpload = async (fieldName, file) => {
+        if (!file) return;
+        setIsUploadingCreateFile(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await uploadService.uploadFile(formData);
+            if (res?.data?.success) {
+                setCreateForm(prev => ({ ...prev, [fieldName]: res.data.data.url }));
+                showNotification('File uploaded successfully');
+            }
+        } catch (err) {
+            alert('File upload failed. Please try again.');
+        } finally {
+            setIsUploadingCreateFile(false);
+        }
+    };
+
     const handleCreateUser = async (e) => {
         e.preventDefault();
+        if (createForm.securedPassword !== createForm.confirmPassword) {
+            alert('Passwords do not match.');
+            return;
+        }
         try {
             const payload = {
                 fullName: createForm.fullName.trim(),
@@ -502,14 +536,44 @@ export default function AdminDashboard() {
                 contactPhone: createForm.contactPhone,
                 isActive: createForm.isActive,
                 requirePasswordChange: createForm.requirePasswordChange,
-                sendWelcomeEmail: createForm.sendWelcomeEmail
+                sendWelcomeEmail: createForm.sendWelcomeEmail,
+                username: createForm.username,
+                gender: createForm.gender,
+                dateOfBirth: createForm.dateOfBirth || undefined,
+                avatarUrl: createForm.avatarUrl
             };
-
+            if (createForm.assignedRole === 'Instructor') {
+                Object.assign(payload, {
+                    specialization: createForm.specialization, yearsOfExperience: createForm.yearsOfExperience,
+                    skills: createForm.skills, biography: createForm.biography, department: createForm.department,
+                    employmentType: createForm.employmentType, joiningDate: createForm.joiningDate || undefined,
+                    cvResumeUrl: createForm.cvResumeUrl, educationCertificateUrl: createForm.educationCertificateUrl,
+                    professionalCertificateUrl: createForm.professionalCertificateUrl, nationalIdUrl: createForm.nationalIdUrl
+                });
+            }
+            if (createForm.assignedRole === 'Admin') {
+                Object.assign(payload, {
+                    positionJobTitle: createForm.positionJobTitle, department: createForm.department,
+                    employmentType: createForm.employmentType, dateOfAppointment: createForm.dateOfAppointment || undefined,
+                    recoveryEmail: createForm.recoveryEmail, securityQuestion: createForm.securityQuestion,
+                    securityAnswer: createForm.securityAnswer, employeeIdCardUrl: createForm.employeeIdCardUrl,
+                    appointmentLetterUrl: createForm.appointmentLetterUrl, permissions: createForm.permissions
+                });
+            }
             const response = await userService.createUser(payload);
             if (response?.data?.success) {
                 showNotification(`${createForm.assignedRole} account created successfully`);
                 setIsCreateModalOpen(false);
-                setCreateForm({ fullName: '', accountEmail: '', securedPassword: '', assignedRole: 'Instructor', contactPhone: '', isActive: true, requirePasswordChange: true, sendWelcomeEmail: true });
+                setCreateFormStep(1);
+                setCreateForm({
+                    fullName: '', accountEmail: '', securedPassword: '', confirmPassword: '', assignedRole: 'Instructor', contactPhone: '', isActive: true, requirePasswordChange: true, sendWelcomeEmail: true,
+                    username: '', gender: '', dateOfBirth: '', avatarUrl: '',
+                    specialization: '', yearsOfExperience: '', skills: '', biography: '', department: '', employmentType: '', joiningDate: '',
+                    cvResumeUrl: '', educationCertificateUrl: '', professionalCertificateUrl: '', nationalIdUrl: '',
+                    positionJobTitle: '', dateOfAppointment: '', recoveryEmail: '', securityQuestion: '', securityAnswer: '',
+                    employeeIdCardUrl: '', appointmentLetterUrl: '',
+                    permissions: { userManagement: false, courseManagement: false, instructorManagement: false, studentManagement: false, reportsAnalytics: false, systemSettings: false, rolePermissionManagement: false, contentApproval: false, announcementManagement: false }
+                });
                 setShowCreatePassword(false);
                 fetchData();
             }
@@ -2473,54 +2537,279 @@ export default function AdminDashboard() {
                 )}
             </Modal>
 
-            <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Create New Account">
-                <form onSubmit={handleCreateUser} style={{display:'flex', flexDirection:'column', gap:'16px'}}>
-                    <div>
-                        <label style={s.label}>Full name</label>
-                        <input type="text" value={createForm.fullName} onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })} placeholder="Enter full name" style={s.input} required />
+            <Modal isOpen={isCreateModalOpen} onClose={() => { setIsCreateModalOpen(false); setCreateFormStep(1); }} title={`Create New ${createForm.assignedRole} Account`} maxWidth="720px">
+                <form onSubmit={handleCreateUser} style={{display:'flex', flexDirection:'column', gap:'0'}}>
+                    {/* Step indicators */}
+                    <div style={{ display: 'flex', gap: '4px', marginBottom: '20px' }}>
+                        {[1, 2, 3].map(step => (
+                            <div key={step} style={{ flex: 1, height: '4px', borderRadius: '2px', background: createFormStep >= step ? colors.primary : colors.bgInput, transition: 'background 0.3s' }} />
+                        ))}
                     </div>
-                    <div>
-                        <label style={s.label}>Email address</label>
-                        <input type="email" value={createForm.accountEmail} onChange={(e) => setCreateForm({ ...createForm, accountEmail: e.target.value })} placeholder="Enter email" style={s.input} required />
-                    </div>
-                    <div>
-                        <label style={s.label}>Phone Number (Optional)</label>
-                        <input type="tel" value={createForm.contactPhone} onChange={(e) => setCreateForm({ ...createForm, contactPhone: e.target.value })} placeholder="Enter phone number" style={s.input} />
-                    </div>
-                    <div>
-                        <label style={s.label}>Temporary password</label>
-                        <div style={{ position: 'relative' }}>
-                            <input type={showCreatePassword ? 'text' : 'password'} value={createForm.securedPassword} onChange={(e) => setCreateForm({ ...createForm, securedPassword: e.target.value })} placeholder="Minimum 8 characters" style={{ ...s.input, paddingRight: '44px' }} required minLength={8} />
-                            <button type="button" onClick={() => setShowCreatePassword(!showCreatePassword)} style={{ ...s.iconBtn, position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)' }}>{showCreatePassword ? '🙈' : '👁️'}</button>
+                    <p style={{ ...s.sectionSub, marginBottom: '16px', fontSize: '12px' }}>Step {createFormStep} of 3 — {createFormStep === 1 ? 'Personal & Account Info' : createFormStep === 2 ? (createForm.assignedRole === 'Instructor' ? 'Professional Info' : 'Employment & Security') : 'Documents & Settings'}</p>
+
+                    {/* ─── STEP 1: Personal & Account ─── */}
+                    {createFormStep === 1 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            <div>
+                                <label style={s.label}>Role *</label>
+                                <select value={createForm.assignedRole} onChange={(e) => setCreateForm({ ...createForm, assignedRole: e.target.value })} style={s.select}>
+                                    <option value="Instructor">Instructor</option>
+                                    <option value="Admin">Administrator</option>
+                                </select>
+                                <p style={{...s.sectionSub, marginTop: '4px', fontSize: '11px'}}>Students can only be created via public Sign Up.</p>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div>
+                                    <label style={s.label}>Full Name *</label>
+                                    <input type="text" value={createForm.fullName} onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })} placeholder="Enter full name" style={s.input} required />
+                                </div>
+                                <div>
+                                    <label style={s.label}>Username *</label>
+                                    <input type="text" value={createForm.username} onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })} placeholder="Enter username" style={s.input} required />
+                                </div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div>
+                                    <label style={s.label}>Email Address *</label>
+                                    <input type="email" value={createForm.accountEmail} onChange={(e) => setCreateForm({ ...createForm, accountEmail: e.target.value })} placeholder="Enter email" style={s.input} required />
+                                </div>
+                                <div>
+                                    <label style={s.label}>Phone Number *</label>
+                                    <input type="tel" value={createForm.contactPhone} onChange={(e) => setCreateForm({ ...createForm, contactPhone: e.target.value })} placeholder="Enter phone number" style={s.input} required />
+                                </div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div>
+                                    <label style={s.label}>Gender *</label>
+                                    <select value={createForm.gender} onChange={(e) => setCreateForm({ ...createForm, gender: e.target.value })} style={s.select} required>
+                                        <option value="">Select gender</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Non-binary">Non-binary</option>
+                                        <option value="Prefer not to say">Prefer not to say</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={s.label}>Date of Birth {createForm.assignedRole === 'Instructor' ? '(Optional)' : ''}</label>
+                                    <input type="date" value={createForm.dateOfBirth} onChange={(e) => setCreateForm({ ...createForm, dateOfBirth: e.target.value })} style={s.input} />
+                                </div>
+                            </div>
+                            <div>
+                                <label style={s.label}>Profile Picture (Optional)</label>
+                                <input type="file" accept="image/*" onChange={(e) => handleCreateFileUpload('avatarUrl', e.target.files?.[0])} style={s.input} disabled={isUploadingCreateFile} />
+                                {createForm.avatarUrl && <p style={{ fontSize: '11px', color: colors.success, marginTop: '4px' }}>✓ Uploaded</p>}
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div>
+                                    <label style={s.label}>Password *</label>
+                                    <div style={{ position: 'relative' }}>
+                                        <input type={showCreatePassword ? 'text' : 'password'} value={createForm.securedPassword} onChange={(e) => setCreateForm({ ...createForm, securedPassword: e.target.value })} placeholder="Min 8 characters" style={{ ...s.input, paddingRight: '44px' }} required minLength={8} />
+                                        <button type="button" onClick={() => setShowCreatePassword(!showCreatePassword)} style={{ ...s.iconBtn, position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)' }}>{showCreatePassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style={s.label}>Confirm Password *</label>
+                                    <input type="password" value={createForm.confirmPassword} onChange={(e) => setCreateForm({ ...createForm, confirmPassword: e.target.value })} placeholder="Re-enter password" style={s.input} required minLength={8} />
+                                    {createForm.confirmPassword && createForm.securedPassword !== createForm.confirmPassword && <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>Passwords do not match</p>}
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div>
-                        <label style={s.label}>Role</label>
-                        <select value={createForm.assignedRole} onChange={(e) => setCreateForm({ ...createForm, assignedRole: e.target.value })} style={s.select}>
-                            <option value="Instructor">Instructor</option>
-                            <option value="Admin">Administrator</option>
-                        </select>
-                        <p style={{...s.sectionSub, marginTop: '4px', fontSize: '12px'}}>Students can only be created via public Sign Up.</p>
-                    </div>
-                    <div>
-                        <label style={s.label}>Account Status</label>
-                        <select value={createForm.isActive ? 'Active' : 'Inactive'} onChange={(e) => setCreateForm({ ...createForm, isActive: e.target.value === 'Active' })} style={s.select}>
-                            <option value="Active">Active</option>
-                            <option value="Inactive">Inactive</option>
-                        </select>
-                    </div>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <input type="checkbox" id="requirePasswordChange" checked={createForm.requirePasswordChange} onChange={(e) => setCreateForm({ ...createForm, requirePasswordChange: e.target.checked })} />
-                        <label htmlFor="requirePasswordChange" style={{...s.label, margin: 0, cursor: 'pointer'}}>Require Password Change on First Login</label>
-                    </div>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
-                        <input type="checkbox" id="sendWelcomeEmail" checked={createForm.sendWelcomeEmail} onChange={(e) => setCreateForm({ ...createForm, sendWelcomeEmail: e.target.checked })} />
-                        <label htmlFor="sendWelcomeEmail" style={{...s.label, margin: 0, cursor: 'pointer'}}>Send Welcome Email</label>
-                    </div>
-                    
-                    <div style={{display: 'flex', gap: '12px', marginTop: '8px'}}>
-                        <button type="submit" style={{...s.primaryBtn, flex: 1}}>Create Account</button>
-                        <button type="button" onClick={() => setIsCreateModalOpen(false)} style={{...s.secondaryBtn, flex: 1}}>Cancel</button>
+                    )}
+
+                    {/* ─── STEP 2: Professional / Employment ─── */}
+                    {createFormStep === 2 && createForm.assignedRole === 'Instructor' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            <p style={{ color: colors.primary, fontWeight: '700', fontSize: '15px', margin: '0 0 4px' }}>📋 Professional Information</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div>
+                                    <label style={s.label}>Highest Qualification *</label>
+                                    <input type="text" value={createForm.specialization} onChange={(e) => setCreateForm({ ...createForm, specialization: e.target.value })} placeholder="e.g. MSc Computer Science" style={s.input} required />
+                                </div>
+                                <div>
+                                    <label style={s.label}>Specialization / Expertise *</label>
+                                    <input type="text" value={createForm.skills} onChange={(e) => setCreateForm({ ...createForm, skills: e.target.value })} placeholder="e.g. Web Development, AI" style={s.input} required />
+                                </div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div>
+                                    <label style={s.label}>Years of Teaching Experience *</label>
+                                    <input type="number" min="0" value={createForm.yearsOfExperience} onChange={(e) => setCreateForm({ ...createForm, yearsOfExperience: e.target.value })} placeholder="0" style={s.input} required />
+                                </div>
+                                <div>
+                                    <label style={s.label}>Department / Training Category *</label>
+                                    <input type="text" value={createForm.department} onChange={(e) => setCreateForm({ ...createForm, department: e.target.value })} placeholder="e.g. Software Engineering" style={s.input} required />
+                                </div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div>
+                                    <label style={s.label}>Employment Type</label>
+                                    <select value={createForm.employmentType} onChange={(e) => setCreateForm({ ...createForm, employmentType: e.target.value })} style={s.select}>
+                                        <option value="">Select type</option>
+                                        <option value="Full-time">Full-time</option>
+                                        <option value="Part-time">Part-time</option>
+                                        <option value="Guest Instructor">Guest Instructor</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={s.label}>Joining Date</label>
+                                    <input type="date" value={createForm.joiningDate} onChange={(e) => setCreateForm({ ...createForm, joiningDate: e.target.value })} style={s.input} />
+                                </div>
+                            </div>
+                            <div>
+                                <label style={s.label}>Short Biography (Optional)</label>
+                                <textarea value={createForm.biography} onChange={(e) => setCreateForm({ ...createForm, biography: e.target.value })} placeholder="Brief biography about the instructor..." rows="3" style={{ ...s.input, resize: 'vertical' }} />
+                            </div>
+                        </div>
+                    )}
+
+                    {createFormStep === 2 && createForm.assignedRole === 'Admin' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            <p style={{ color: colors.primary, fontWeight: '700', fontSize: '15px', margin: '0 0 4px' }}>🏢 Employment Information</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div>
+                                    <label style={s.label}>Position / Job Title *</label>
+                                    <input type="text" value={createForm.positionJobTitle} onChange={(e) => setCreateForm({ ...createForm, positionJobTitle: e.target.value })} placeholder="e.g. System Administrator" style={s.input} required />
+                                </div>
+                                <div>
+                                    <label style={s.label}>Department *</label>
+                                    <input type="text" value={createForm.department} onChange={(e) => setCreateForm({ ...createForm, department: e.target.value })} placeholder="e.g. IT Department" style={s.input} required />
+                                </div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div>
+                                    <label style={s.label}>Employment Type *</label>
+                                    <select value={createForm.employmentType} onChange={(e) => setCreateForm({ ...createForm, employmentType: e.target.value })} style={s.select} required>
+                                        <option value="">Select type</option>
+                                        <option value="Full-time">Full-time</option>
+                                        <option value="Part-time">Part-time</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={s.label}>Date of Appointment *</label>
+                                    <input type="date" value={createForm.dateOfAppointment} onChange={(e) => setCreateForm({ ...createForm, dateOfAppointment: e.target.value })} style={s.input} required />
+                                </div>
+                            </div>
+                            <p style={{ color: colors.primary, fontWeight: '700', fontSize: '15px', margin: '12px 0 4px' }}>🔐 Security Information</p>
+                            <div>
+                                <label style={s.label}>Recovery Email (Optional)</label>
+                                <input type="email" value={createForm.recoveryEmail} onChange={(e) => setCreateForm({ ...createForm, recoveryEmail: e.target.value })} placeholder="Recovery email address" style={s.input} />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div>
+                                    <label style={s.label}>Security Question (Optional)</label>
+                                    <input type="text" value={createForm.securityQuestion} onChange={(e) => setCreateForm({ ...createForm, securityQuestion: e.target.value })} placeholder="e.g. Your first school?" style={s.input} />
+                                </div>
+                                <div>
+                                    <label style={s.label}>Security Answer (Optional)</label>
+                                    <input type="text" value={createForm.securityAnswer} onChange={(e) => setCreateForm({ ...createForm, securityAnswer: e.target.value })} placeholder="Answer" style={s.input} />
+                                </div>
+                            </div>
+                            <p style={{ color: colors.primary, fontWeight: '700', fontSize: '15px', margin: '12px 0 4px' }}>🛡️ Permissions</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                {Object.entries(createForm.permissions).map(([key, val]) => (
+                                    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <input type="checkbox" id={`perm-${key}`} checked={val} onChange={(e) => setCreateForm({ ...createForm, permissions: { ...createForm.permissions, [key]: e.target.checked } })} />
+                                        <label htmlFor={`perm-${key}`} style={{ ...s.label, margin: 0, cursor: 'pointer', fontSize: '13px' }}>{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</label>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ─── STEP 3: Documents & Settings ─── */}
+                    {createFormStep === 3 && createForm.assignedRole === 'Instructor' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            <p style={{ color: colors.primary, fontWeight: '700', fontSize: '15px', margin: '0 0 4px' }}>📁 Document Uploads</p>
+                            <div>
+                                <label style={s.label}>Curriculum Vitae (CV/Resume) *</label>
+                                <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => handleCreateFileUpload('cvResumeUrl', e.target.files?.[0])} style={s.input} disabled={isUploadingCreateFile} />
+                                {createForm.cvResumeUrl && <p style={{ fontSize: '11px', color: colors.success, marginTop: '4px' }}>✓ CV Uploaded</p>}
+                            </div>
+                            <div>
+                                <label style={s.label}>Educational Certificate(s) *</label>
+                                <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleCreateFileUpload('educationCertificateUrl', e.target.files?.[0])} style={s.input} disabled={isUploadingCreateFile} />
+                                {createForm.educationCertificateUrl && <p style={{ fontSize: '11px', color: colors.success, marginTop: '4px' }}>✓ Education Certificate Uploaded</p>}
+                            </div>
+                            <div>
+                                <label style={s.label}>Professional Certificate(s) (Optional)</label>
+                                <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleCreateFileUpload('professionalCertificateUrl', e.target.files?.[0])} style={s.input} disabled={isUploadingCreateFile} />
+                                {createForm.professionalCertificateUrl && <p style={{ fontSize: '11px', color: colors.success, marginTop: '4px' }}>✓ Professional Certificate Uploaded</p>}
+                            </div>
+                            <div>
+                                <label style={s.label}>National ID / Passport (Optional)</label>
+                                <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleCreateFileUpload('nationalIdUrl', e.target.files?.[0])} style={s.input} disabled={isUploadingCreateFile} />
+                                {createForm.nationalIdUrl && <p style={{ fontSize: '11px', color: colors.success, marginTop: '4px' }}>✓ National ID Uploaded</p>}
+                            </div>
+                            <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: '14px', marginTop: '4px' }}>
+                                <label style={s.label}>Account Status</label>
+                                <select value={createForm.isActive ? 'Active' : 'Inactive'} onChange={(e) => setCreateForm({ ...createForm, isActive: e.target.value === 'Active' })} style={s.select}>
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Pending Approval</option>
+                                </select>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <input type="checkbox" id="requirePasswordChangeI" checked={createForm.requirePasswordChange} onChange={(e) => setCreateForm({ ...createForm, requirePasswordChange: e.target.checked })} />
+                                <label htmlFor="requirePasswordChangeI" style={{...s.label, margin: 0, cursor: 'pointer'}}>Require Password Change on First Login</label>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <input type="checkbox" id="sendWelcomeEmailI" checked={createForm.sendWelcomeEmail} onChange={(e) => setCreateForm({ ...createForm, sendWelcomeEmail: e.target.checked })} />
+                                <label htmlFor="sendWelcomeEmailI" style={{...s.label, margin: 0, cursor: 'pointer'}}>Send Welcome Email</label>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <input type="checkbox" id="termsI" required />
+                                <label htmlFor="termsI" style={{...s.label, margin: 0, cursor: 'pointer'}}>Accept Terms and Conditions *</label>
+                            </div>
+                        </div>
+                    )}
+
+                    {createFormStep === 3 && createForm.assignedRole === 'Admin' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            <p style={{ color: colors.primary, fontWeight: '700', fontSize: '15px', margin: '0 0 4px' }}>📁 Required Documents (Optional)</p>
+                            <div>
+                                <label style={s.label}>Employee ID Card</label>
+                                <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleCreateFileUpload('employeeIdCardUrl', e.target.files?.[0])} style={s.input} disabled={isUploadingCreateFile} />
+                                {createForm.employeeIdCardUrl && <p style={{ fontSize: '11px', color: colors.success, marginTop: '4px' }}>✓ Employee ID Uploaded</p>}
+                            </div>
+                            <div>
+                                <label style={s.label}>Appointment Letter</label>
+                                <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleCreateFileUpload('appointmentLetterUrl', e.target.files?.[0])} style={s.input} disabled={isUploadingCreateFile} />
+                                {createForm.appointmentLetterUrl && <p style={{ fontSize: '11px', color: colors.success, marginTop: '4px' }}>✓ Appointment Letter Uploaded</p>}
+                            </div>
+                            <div>
+                                <label style={s.label}>National ID / Passport</label>
+                                <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleCreateFileUpload('nationalIdUrl', e.target.files?.[0])} style={s.input} disabled={isUploadingCreateFile} />
+                                {createForm.nationalIdUrl && <p style={{ fontSize: '11px', color: colors.success, marginTop: '4px' }}>✓ National ID Uploaded</p>}
+                            </div>
+                            <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: '14px', marginTop: '4px' }}>
+                                <label style={s.label}>Account Status</label>
+                                <select value={createForm.isActive ? 'Active' : 'Inactive'} onChange={(e) => setCreateForm({ ...createForm, isActive: e.target.value === 'Active' })} style={s.select}>
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Pending Approval</option>
+                                </select>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <input type="checkbox" id="requirePasswordChangeA" checked={createForm.requirePasswordChange} onChange={(e) => setCreateForm({ ...createForm, requirePasswordChange: e.target.checked })} />
+                                <label htmlFor="requirePasswordChangeA" style={{...s.label, margin: 0, cursor: 'pointer'}}>Require Password Change on First Login</label>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <input type="checkbox" id="sendWelcomeEmailA" checked={createForm.sendWelcomeEmail} onChange={(e) => setCreateForm({ ...createForm, sendWelcomeEmail: e.target.checked })} />
+                                <label htmlFor="sendWelcomeEmailA" style={{...s.label, margin: 0, cursor: 'pointer'}}>Send Welcome Email</label>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Navigation buttons */}
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '20px', borderTop: `1px solid ${colors.border}`, paddingTop: '16px' }}>
+                        {createFormStep > 1 && (
+                            <button type="button" onClick={() => setCreateFormStep(createFormStep - 1)} style={{...s.secondaryBtn, flex: 1}}>← Back</button>
+                        )}
+                        {createFormStep < 3 && (
+                            <button type="button" onClick={() => setCreateFormStep(createFormStep + 1)} style={{...s.primaryBtn, flex: 1}}>Next →</button>
+                        )}
+                        {createFormStep === 3 && (
+                            <button type="submit" style={{...s.primaryBtn, flex: 1}} disabled={isUploadingCreateFile}>{isUploadingCreateFile ? 'Uploading...' : 'Create Account'}</button>
+                        )}
+                        <button type="button" onClick={() => { setIsCreateModalOpen(false); setCreateFormStep(1); }} style={{...s.secondaryBtn, flex: 1}}>Cancel</button>
                     </div>
                 </form>
             </Modal>
