@@ -449,19 +449,19 @@ export default function QuizManagementDashboard() {
                 {/* ── Navigation Tabs ────────────────────────────────────── */}
                 <div style={s.tabsRow}>
                     <button style={s.tabBtn(activeTab === 'overview')} onClick={() => setActiveTab('overview')}>
-                        📊 Overview Dashboard
+                        ▥ Overview Dashboard
                     </button>
                     <button style={s.tabBtn(activeTab === 'builder')} onClick={() => setActiveTab('builder')}>
-                        ❓ Question Builder ({selectedQuiz ? selectedQuiz.title.substring(0, 20) + '...' : 'Select Quiz'})
+                        ? Question Builder ({selectedQuiz ? selectedQuiz.title.substring(0, 20) + '...' : 'Select Quiz'})
                     </button>
                     <button style={s.tabBtn(activeTab === 'settings')} onClick={() => setActiveTab('settings')}>
-                        ⚙️ Quiz Settings
+                        ◈️ Quiz Settings
                     </button>
                     <button style={s.tabBtn(activeTab === 'results')} onClick={() => setActiveTab('results')}>
-                        👨‍🎓 Student Results
+                        ‍◈ Student Results
                     </button>
                     <button style={s.tabBtn(activeTab === 'analytics')} onClick={() => setActiveTab('analytics')}>
-                        📈 Quiz Analytics
+                        ↗ Quiz Analytics
                     </button>
                 </div>
 
@@ -580,7 +580,7 @@ export default function QuizManagementDashboard() {
                                                         ⏱️ {quiz.timeLimit} mins · Pass: <strong style={{ color: colors.text }}>{quiz.passingScore}%</strong>
                                                     </td>
                                                     <td style={{ padding: '16px', fontWeight: 600, color: colors.text }}>
-                                                        👥 {quiz.attemptsCount} attempts
+                                                        ◈ {quiz.attemptsCount} attempts
                                                     </td>
                                                     <td style={{ padding: '16px' }}>
                                                         <div style={{ fontWeight: 700, color: quiz.avgScore >= 80 ? '#22c55e' : quiz.avgScore >= 60 ? '#eab308' : '#ef4444' }}>
@@ -597,7 +597,7 @@ export default function QuizManagementDashboard() {
                                                                 style={{ ...s.btnSecondary, padding: '8px 12px', fontSize: '12px' }}
                                                                 onClick={() => { setSelectedQuiz(quiz); setActiveTab('builder'); }}
                                                             >
-                                                                ❓ Questions
+                                                                ? Questions
                                                             </button>
                                                             <button 
                                                                 title="Edit Quiz Details" 
@@ -755,10 +755,10 @@ export default function QuizManagementDashboard() {
                                             {q.type === 'tf' && (
                                                 <div style={{ paddingLeft: '44px', display: 'flex', gap: '16px' }}>
                                                     <div style={{ padding: '8px 16px', borderRadius: '8px', border: q.correctAnswer === 'True' ? '2px solid #22c55e' : `1px solid ${colors.border}`, background: q.correctAnswer === 'True' ? 'rgba(34,197,94,0.08)' : colors.bgCard, fontWeight: 700, color: colors.text }}>
-                                                        True {q.correctAnswer === 'True' && '✅'}
+                                                        True {q.correctAnswer === 'True' && ''}
                                                     </div>
                                                     <div style={{ padding: '8px 16px', borderRadius: '8px', border: q.correctAnswer === 'False' ? '2px solid #22c55e' : `1px solid ${colors.border}`, background: q.correctAnswer === 'False' ? 'rgba(34,197,94,0.08)' : colors.bgCard, fontWeight: 700, color: colors.text }}>
-                                                        False {q.correctAnswer === 'False' && '✅'}
+                                                        False {q.correctAnswer === 'False' && ''}
                                                     </div>
                                                 </div>
                                             )}
@@ -960,7 +960,7 @@ export default function QuizManagementDashboard() {
                             <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: colors.text }}>
                                 {quizForm.id ? 'Edit Quiz Information' : 'Create New Quiz'}
                             </h3>
-                            <button onClick={() => setShowQuizModal(false)} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', fontSize: '20px' }}>✕</button>
+                            <button onClick={() => setShowQuizModal(false)} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', fontSize: '20px' }}></button>
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1058,7 +1058,7 @@ export default function QuizManagementDashboard() {
                             <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: colors.text }}>
                                 {editingQuestion ? 'Edit Question' : 'Add New Question'}
                             </h3>
-                            <button onClick={() => setShowQuestionModal(false)} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', fontSize: '20px' }}>✕</button>
+                            <button onClick={() => setShowQuestionModal(false)} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', fontSize: '20px' }}></button>
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1192,13 +1192,13 @@ export default function QuizManagementDashboard() {
                                     <div style={{ fontSize: '12px', color: colors.textMuted }}>{selectedResult.quizTitle}</div>
                                 </div>
                             </div>
-                            <button onClick={() => setSelectedResult(null)} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', fontSize: '20px' }}>✕</button>
+                            <button onClick={() => setSelectedResult(null)} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', fontSize: '20px' }}></button>
                         </div>
 
                         <div style={{ padding: '16px', borderRadius: '14px', background: selectedResult.passed ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${selectedResult.passed ? '#22c55e' : '#ef4444'}`, marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                                 <div style={{ fontSize: '12px', fontWeight: 700, color: selectedResult.passed ? '#22c55e' : '#ef4444' }}>RESULT STATUS</div>
-                                <div style={{ fontSize: '20px', fontWeight: 900, color: colors.text }}>{selectedResult.passed ? 'PASSED ✅' : 'FAILED ❌'}</div>
+                                <div style={{ fontSize: '20px', fontWeight: 900, color: colors.text }}>{selectedResult.passed ? 'PASSED ' : 'FAILED '}</div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
                                 <div style={{ fontSize: '20px', fontWeight: 900, color: colors.text }}>{selectedResult.score} / {selectedResult.totalMarks} ({selectedResult.percentage}%)</div>

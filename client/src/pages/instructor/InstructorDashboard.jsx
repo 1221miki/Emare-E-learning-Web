@@ -856,7 +856,7 @@ export default function InstructorDashboard() {
                                         <td style={s.td}>{course.language || 'English'}</td>
                                         <td style={s.td}>{course.price > 0 ? `${course.price} ETB` : 'Free'}</td>
                                         <td style={s.td}>{course.totalEnrollments || 0}</td>
-                                        <td style={s.td}>{course.averageRating ? `${course.averageRating.toFixed(1)} ⭐` : '—'}</td>
+                                        <td style={s.td}>{course.averageRating ? `${course.averageRating.toFixed(1)} ` : '—'}</td>
                                         <td style={s.td}><span style={{ ...s.badge, background: statusLabel(course.publicationState) === 'Published' ? 'rgba(16,185,129,0.15)' : statusLabel(course.publicationState) === 'Draft' ? 'rgba(245,158,11,0.15)' : statusLabel(course.publicationState) === 'Pending Review' ? 'rgba(59,130,246,0.15)' : 'rgba(100,116,139,0.15)', color: statusLabel(course.publicationState) === 'Published' ? '#10b981' : statusLabel(course.publicationState) === 'Draft' ? '#f59e0b' : statusLabel(course.publicationState) === 'Pending Review' ? '#2563eb' : '#64748b' }}>{statusLabel(course.publicationState)}</span></td>
                                         <td style={s.td}>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>

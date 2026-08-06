@@ -5,11 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-<<<<<<< HEAD
-    "start": "npx -y kill-port 5173 >nul 2>&1 & vite --port 5173 --strictPort",
-=======
     "start": "vite --port 5173 --strictPort",
->>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
@@ -21,24 +17,15 @@
     "@babel/parser": "^8.0.4",
     "@tailwindcss/forms": "^0.5.11",
     "axios": "^1.6.8",
-<<<<<<< HEAD
     "es-toolkit": "^1.50.0",
-=======
->>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
     "lucide-react": "^0.469.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.7.0",
     "react-is": "^19.2.8",
     "react-qr-code": "^2.1.0",
-<<<<<<< HEAD
-    "react-router": "^6.28.1",
     "react-router-dom": "^6.28.1",
     "recharts": "^3.10.1"
-=======
-    "react-router-dom": "^6.22.3",
-    "recharts": "^3.9.2"
->>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
   },
   "browserslist": {
     "production": [
@@ -69,11 +56,5 @@
     "tailwindcss": "^3.4.4",
     "vite": "7.3.6",
     "vitest": "^3.2.7"
-<<<<<<< HEAD
-  },
-  "allowScripts": {
-    "esbuild@0.28.1": true
-=======
->>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
   }
 }

@@ -43,6 +43,8 @@ const getDatabaseMetrics = async () => {
     };
 };
 
+const { audit } = require('../utils/auditLogger');
+
 // Get settings
 exports.getSettings = async (req, res) => {
     try {
@@ -60,14 +62,76 @@ exports.getSettings = async (req, res) => {
 exports.updateSettings = async (req, res) => {
     try {
         let settings = await SystemSettings.findOne();
-        if (!settings) {
-            settings = await SystemSettings.create(req.body);
-        } else {
-            settings = await SystemSettings.findOneAndUpdate({}, req.body, { new: true, runValidators: true });
+        const updateData = { ...req.body };
+        const adminName = req.user?.fullName || req.user?.username || 'Admin User';
+        const adminId = req.user?._id;
+
+        // Build log entries for updated fields
+        if (settings) {
+            const logs = settings.settingLogs || [];
+            const metaMap = settings.settingMeta ? new Map(settings.settingMeta) : new Map();
+
+            Object.keys(updateData).forEach(key => {
+                if (key !== 'settingLogs' && key !== 'settingMeta' && settings[key] !== undefined && settings[key] !== updateData[key]) {
+                    logs.unshift({
+                        key,
+                        oldValue: settings[key],
+                        newValue: updateData[key],
+                        updatedBy: adminName,
+                        updatedById: adminId,
+                        updatedAt: new Date()
+                    });
+                    metaMap.set(key, {
+                        updatedBy: adminName,
+                        updatedAt: new Date()
+                    });
+                }
+            });
+
+            // Keep recent 200 history logs
+            updateData.settingLogs = logs.slice(0, 200);
+            updateData.settingMeta = metaMap;
         }
+
+        if (!settings) {
+            settings = await SystemSettings.create(updateData);
+        } else {
+            settings = await SystemSettings.findOneAndUpdate({}, updateData, { new: true, runValidators: true });
+        }
+
+        // Audit log entry
+        audit.system({
+            req,
+            user: req.user,
+            action: 'SETTINGS_UPDATED',
+            severity: 'info',
+            details: `Admin ${adminName} updated system configuration settings.`
+        });
+
         res.status(200).json({ success: true, data: settings });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error('Update settings error:', error);
+        res.status(500).json({ success: false, message: error.message || 'Server error' });
+    }
+};
+
+// Reset to factory defaults
+exports.resetToDefaults = async (req, res) => {
+    try {
+        await SystemSettings.deleteMany({});
+        const defaultSettings = await SystemSettings.create({});
+
+        audit.system({
+            req,
+            user: req.user,
+            action: 'SETTINGS_RESET_DEFAULTS',
+            severity: 'warning',
+            details: `Admin ${req.user?.fullName || 'Admin'} reset all system settings to factory defaults.`
+        });
+
+        res.status(200).json({ success: true, message: 'All system settings reset to factory defaults.', data: defaultSettings });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to reset system settings.' });
     }
 };
 

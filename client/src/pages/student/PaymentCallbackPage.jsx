@@ -161,7 +161,7 @@ export default function PaymentCallbackPage() {
                                 top: '50%', left: '50%',
                                 transform: 'translate(-50%, -50%)',
                                 fontSize: '28px'
-                            }}>💳</div>
+                            }}>◈</div>
                         </div>
 
                         <h2 style={{
@@ -232,7 +232,7 @@ export default function PaymentCallbackPage() {
                             border: `3px solid ${successGreen}44`,
                             animation: 'chapaCallbackPulse 2s ease-in-out infinite'
                         }}>
-                            <span style={{ fontSize: '42px' }}>✅</span>
+                            <span style={{ fontSize: '42px' }}></span>
                         </div>
 
                         <h2 style={{
@@ -246,7 +246,7 @@ export default function PaymentCallbackPage() {
                             color: successGreen, fontSize: '15px',
                             marginBottom: '8px', fontWeight: '600'
                         }}>
-                            You have been enrolled successfully 🎉
+                            You have been enrolled successfully 
                         </p>
                         <p style={{
                             color: textMuted, fontSize: '14px',
@@ -266,7 +266,7 @@ export default function PaymentCallbackPage() {
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                                 <span style={{ color: textMuted, fontSize: '13px', fontWeight: '600' }}>Status</span>
-                                <span style={{ color: successGreen, fontWeight: '700', fontSize: '13px' }}>✓ Completed</span>
+                                <span style={{ color: successGreen, fontWeight: '700', fontSize: '13px' }}> Completed</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <span style={{ color: textMuted, fontSize: '13px', fontWeight: '600' }}>Reference</span>
@@ -293,7 +293,7 @@ export default function PaymentCallbackPage() {
                                 transition: 'all 0.2s'
                             }}
                         >
-                            🎓 Start Learning
+                            ◈ Start Learning
                         </button>
                     </div>
                 )}
@@ -309,7 +309,7 @@ export default function PaymentCallbackPage() {
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             border: `3px solid ${errorRed}44`
                         }}>
-                            <span style={{ fontSize: '42px' }}>❌</span>
+                            <span style={{ fontSize: '42px' }}></span>
                         </div>
 
                         <h2 style={{
@@ -362,7 +362,7 @@ export default function PaymentCallbackPage() {
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                🔄 Try Verification Again
+                                ↻ Try Verification Again
                             </button>
                             <button
                                 onClick={() => navigate('/courses')}
@@ -390,7 +390,7 @@ export default function PaymentCallbackPage() {
                     marginTop: '32px', opacity: 0.6,
                     lineHeight: 1.4
                 }}>
-                    🔒 Secured by Chapa Payment Gateway · Emare ICT Hub
+                    ▣ Secured by Chapa Payment Gateway · Emare ICT Hub
                 </p>
             </div>
 

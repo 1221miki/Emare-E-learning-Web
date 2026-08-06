@@ -43,7 +43,7 @@ export default function LeaderboardPage() {
             <main style={{ marginLeft: user && user.assignedRole === 'Student' ? '260px' : '0', padding: '60px', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <div style={{ maxWidth: '800px', width: '100%' }}>
                     <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                        <h1 style={{ color: colors.text, fontSize: '40px', fontWeight: '900', margin: '0 0 10px' }}>Global Leaderboard 🏆</h1>
+                        <h1 style={{ color: colors.text, fontSize: '40px', fontWeight: '900', margin: '0 0 10px' }}>Global Leaderboard </h1>
                         <p style={{ color: colors.textMuted, fontSize: '18px' }}>Top 50 Students by Gamification XP</p>
                     </div>
 

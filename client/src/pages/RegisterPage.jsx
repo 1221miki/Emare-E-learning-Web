@@ -77,12 +77,7 @@ export default function RegisterPage() {
         if (!/[0-9]/.test(form.securedPassword)) return 'Password needs a number.';
         if (!/[!@#$%^&*]/.test(form.securedPassword)) return 'Password needs a special character.';
         if (form.securedPassword !== form.confirmPassword) return 'Passwords do not match.';
-<<<<<<< HEAD
-        if (form.assignedRole === 'Instructor') {
-            if (!form.professionalTitle.trim()) return 'Professional title required for instructors.';
-        }
-=======
->>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
+        // Only students can self-register; instructors are created by admin
         return null;
     };
 
@@ -98,23 +93,11 @@ export default function RegisterPage() {
         try {
             const payload = {
                 ...form,
-<<<<<<< HEAD
-                fullName: `${form.firstName} ${form.middleName ? form.middleName + ' ' : ''}${form.lastName}`.trim()
-            };
-            const user = await register(payload);
-            if (user.assignedRole === 'Instructor' && user.status === 'Pending') {
-                navigate('/pending-approval');
-            } else if (user.assignedRole === 'Admin') {
-=======
-                assignedRole: 'Student',
                 fullName: `${form.firstName} ${form.middleName ? form.middleName + ' ' : ''}${form.lastName}`.trim()
             };
             const user = await register(payload);
             if (user.assignedRole === 'Admin') {
->>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
                 navigate('/admin/dashboard');
-            } else if (user.assignedRole === 'Instructor') {
-                navigate('/instructor/dashboard');
             } else {
                 navigate('/student/dashboard');
             }
@@ -133,11 +116,7 @@ export default function RegisterPage() {
         const emailPrefill = form.accountEmail || `${provider.toLowerCase()}.student@emare.edu`;
         setSocialName(namePrefill);
         setSocialEmail(emailPrefill);
-<<<<<<< HEAD
         setSocialRole(form.assignedRole || 'Student');
-=======
-        setSocialRole('Student');
->>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
         setSocialError('');
         setShowSocialModal(true);
     };
@@ -151,21 +130,13 @@ export default function RegisterPage() {
                 provider: socialProvider.toLowerCase(),
                 email: socialEmail,
                 name: socialName,
-<<<<<<< HEAD
                 role: socialRole,
-=======
-                role: 'Student',
->>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
             };
 
             const user = await socialAuth(mockData);
 
-            if (user.assignedRole === 'Instructor' && user.status === 'Pending') {
-                navigate('/pending-approval');
-            } else if (user.assignedRole === 'Admin') {
+            if (user.assignedRole === 'Admin') {
                 navigate('/admin/dashboard');
-            } else if (user.assignedRole === 'Instructor') {
-                navigate('/instructor/dashboard');
             } else {
                 navigate('/student/dashboard');
             }
@@ -201,89 +172,10 @@ export default function RegisterPage() {
                 <div style={styles.header}>
                     <div style={styles.logo}>E</div>
                     <h1 style={styles.title}>Create your Emare account</h1>
-<<<<<<< HEAD
-                    <p style={styles.subtitle}>Join Emare and access student and instructor learning experiences.</p>
+                    <p style={styles.subtitle}>Join Emare and start your learning journey today.</p>
                 </div>
 
-                {/* ── ROLE SELECTION ── */}
-                <div style={{ gridColumn: '1 / -1', marginBottom: '28px' }}>
-                    <p style={{ color: '#94a3b8', fontSize: '14px', fontWeight: '700', textAlign: 'center', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                        I want to join as...
-                    </p>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                        {/* Student Card */}
-                        <button
-                            type="button"
-                            onClick={() => setForm(prev => ({ ...prev, assignedRole: 'Student' }))}
-                            style={{
-                                background: form.assignedRole === 'Student'
-                                    ? 'linear-gradient(135deg, rgba(59,130,246,0.25), rgba(139,92,246,0.2))'
-                                    : 'rgba(255,255,255,0.04)',
-                                border: form.assignedRole === 'Student'
-                                    ? '2px solid #3b82f6'
-                                    : '2px solid rgba(255,255,255,0.1)',
-                                borderRadius: '16px',
-                                padding: '24px 20px',
-                                cursor: 'pointer',
-                                textAlign: 'center',
-                                transition: 'all 0.25s ease',
-                                transform: form.assignedRole === 'Student' ? 'scale(1.02)' : 'scale(1)',
-                                boxShadow: form.assignedRole === 'Student' ? '0 0 0 3px rgba(59,130,246,0.2)' : 'none'
-                            }}
-                        >
-                            <div style={{ fontSize: '42px', marginBottom: '10px' }}>🎓</div>
-                            <div style={{ color: '#fff', fontWeight: '800', fontSize: '17px', marginBottom: '6px' }}>Student</div>
-                            <div style={{ color: '#94a3b8', fontSize: '13px', lineHeight: 1.5 }}>
-                                Learn new skills, take courses, and earn certificates.
-                            </div>
-                            {form.assignedRole === 'Student' && (
-                                <div style={{ marginTop: '12px', background: '#3b82f6', color: '#fff', borderRadius: '20px', padding: '4px 14px', fontSize: '12px', fontWeight: '700', display: 'inline-block' }}>
-                                    ✓ Selected
-                                </div>
-                            )}
-                        </button>
-
-                        {/* Instructor Card */}
-                        <button
-                            type="button"
-                            onClick={() => setForm(prev => ({ ...prev, assignedRole: 'Instructor' }))}
-                            style={{
-                                background: form.assignedRole === 'Instructor'
-                                    ? 'linear-gradient(135deg, rgba(16,185,129,0.25), rgba(5,150,105,0.2))'
-                                    : 'rgba(255,255,255,0.04)',
-                                border: form.assignedRole === 'Instructor'
-                                    ? '2px solid #10b981'
-                                    : '2px solid rgba(255,255,255,0.1)',
-                                borderRadius: '16px',
-                                padding: '24px 20px',
-                                cursor: 'pointer',
-                                textAlign: 'center',
-                                transition: 'all 0.25s ease',
-                                transform: form.assignedRole === 'Instructor' ? 'scale(1.02)' : 'scale(1)',
-                                boxShadow: form.assignedRole === 'Instructor' ? '0 0 0 3px rgba(16,185,129,0.2)' : 'none'
-                            }}
-                        >
-                            <div style={{ fontSize: '42px', marginBottom: '10px' }}>👨‍💻</div>
-                            <div style={{ color: '#fff', fontWeight: '800', fontSize: '17px', marginBottom: '6px' }}>Instructor</div>
-                            <div style={{ color: '#94a3b8', fontSize: '13px', lineHeight: 1.5 }}>
-                                Create courses, teach students, and share expertise.
-                            </div>
-                            {form.assignedRole === 'Instructor' && (
-                                <div style={{ marginTop: '12px', background: '#10b981', color: '#fff', borderRadius: '20px', padding: '4px 14px', fontSize: '12px', fontWeight: '700', display: 'inline-block' }}>
-                                    ✓ Selected
-                                </div>
-                            )}
-                        </button>
-                    </div>
-                    {form.assignedRole === 'Instructor' && (
-                        <div style={{ marginTop: '12px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '10px', padding: '10px 16px', color: '#fbbf24', fontSize: '13px', textAlign: 'center' }}>
-                            ⏳ Instructor accounts require admin approval before activation.
-                        </div>
-                    )}
-=======
-                    <p style={styles.subtitle}>Join Emare to start your learning journey.</p>
->>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
-                </div>
+                {/* Students only register here — instructors are created by admin */}
 
                 {error && <div style={styles.errorBox}>{error}</div>}
 
@@ -355,10 +247,9 @@ export default function RegisterPage() {
                         <div />
                     </div>
 
-<<<<<<< HEAD
                     {/* ── Student-specific fields ── */}
                     {form.assignedRole === 'Student' && (<>
-                        <h3 style={styles.sectionHeader}>🎓 Academic Details</h3>
+                        <h3 style={styles.sectionHeader}>◈ Academic Details</h3>
                         <div style={styles.fieldGroup}>
                             <label style={styles.label}>Education Level</label>
                             <input name="educationLevel" type="text" placeholder="e.g., Bachelor" value={form.educationLevel} onChange={handleChange} style={styles.input} />
@@ -389,7 +280,7 @@ export default function RegisterPage() {
 
                     {/* ── Instructor-specific fields ── */}
                     {form.assignedRole === 'Instructor' && (<>
-                        <h3 style={styles.sectionHeader}>👨‍💻 Instructor Profile</h3>
+                        <h3 style={styles.sectionHeader}>‍▧ Instructor Profile</h3>
                         <div style={styles.fieldGroup}>
                             <label style={styles.label}>Professional Title <span style={{ color: '#ef4444' }}>*</span></label>
                             <input name="professionalTitle" type="text" required placeholder="e.g., Senior Software Engineer" value={form.professionalTitle} onChange={handleChange} style={styles.input} />
@@ -429,39 +320,6 @@ export default function RegisterPage() {
 
                     <button type="submit" style={loading ? { ...styles.btn, opacity: 0.7, gridColumn: '1 / -1' } : { ...styles.btn, gridColumn: '1 / -1' }} disabled={loading}>
                         {loading ? 'Creating Account...' : `Create ${form.assignedRole} Account →`}
-=======
-                    {/* ── Academic Details ── */}
-                    <h3 style={styles.sectionHeader}>🎓 Academic Details</h3>
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Education Level</label>
-                        <input name="educationLevel" type="text" placeholder="e.g., Bachelor" value={form.educationLevel} onChange={handleChange} style={styles.input} />
-                    </div>
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Institution / University (Optional)</label>
-                        <input name="institution" type="text" placeholder="University name" value={form.institution} onChange={handleChange} style={styles.input} />
-                    </div>
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Field of Study</label>
-                        <input name="fieldOfStudy" type="text" placeholder="Computer Science" value={form.fieldOfStudy} onChange={handleChange} style={styles.input} />
-                    </div>
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Learning Interests</label>
-                        <input name="learningInterests" type="text" placeholder="AI, Data Science, Cloud..." value={form.learningInterests} onChange={handleChange} style={styles.input} />
-                    </div>
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Preferred Language</label>
-                        <select name="preferredLanguage" value={form.preferredLanguage} onChange={handleChange} style={styles.input}>
-                            <option value="">Select</option>
-                            <option value="English">English</option>
-                            <option value="Amharic">Amharic</option>
-                            <option value="Afaan Oromo">Afaan Oromo</option>
-                            <option value="Tigrinya">Tigrinya</option>
-                        </select>
-                    </div>
-
-                    <button type="submit" style={loading ? { ...styles.btn, opacity: 0.7, gridColumn: '1 / -1' } : { ...styles.btn, gridColumn: '1 / -1' }} disabled={loading}>
-                        {loading ? 'Creating Account...' : 'Create Account →'}
->>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
                     </button>
                 </form>
 
@@ -490,7 +348,7 @@ export default function RegisterPage() {
                                     Register with {socialProvider}
                                 </h3>
                             </div>
-                            <button onClick={() => setShowSocialModal(false)} style={styles.closeBtn}>✕</button>
+                            <button onClick={() => setShowSocialModal(false)} style={styles.closeBtn}></button>
                         </div>
 
                         {socialError && <div style={styles.errorBox}>{socialError}</div>}
@@ -522,7 +380,6 @@ export default function RegisterPage() {
                                 />
                             </div>
 
-<<<<<<< HEAD
                             <div style={styles.fieldGroup}>
                                 <label style={styles.label}>Register As</label>
                                 <select 
@@ -534,9 +391,6 @@ export default function RegisterPage() {
                                     <option value="Instructor">Instructor</option>
                                 </select>
                             </div>
-
-=======
->>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
                             <button type="submit" style={socialLoading ? { ...styles.btn, opacity: 0.7 } : styles.btn} disabled={socialLoading}>
                                 {socialLoading ? `Authorizing ${socialProvider}...` : `Continue with ${socialProvider} →`}
                             </button>

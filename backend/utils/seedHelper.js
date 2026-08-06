@@ -335,31 +335,58 @@ const categoryCoursesData = [
 
 const seedCategoryCoursesHelper = async () => {
     try {
+        const bcrypt = require('bcryptjs');
+
+        // Find or upsert instructor using native driver
         let instructor = await User.findOne({ assignedRole: 'Instructor' });
         if (!instructor) {
-            instructor = await User.create({
-                fullName: 'Demo Instructor',
-                accountEmail: 'instructor@emare.com',
-                securedPassword: 'instructor12345',
-                assignedRole: 'Instructor',
-                isActive: true
-            });
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash('instructor12345', salt);
+            await User.collection.updateOne(
+                { accountEmail: 'instructor@emare.com' },
+                {
+                    $set: {
+                        fullName: 'Demo Instructor',
+                        securedPassword: hashedPassword,
+                        assignedRole: 'Instructor',
+                        isActive: true,
+                        updatedAt: new Date(),
+                    },
+                    $setOnInsert: {
+                        accountEmail: 'instructor@emare.com',
+                        creationTimestamp: new Date(),
+                    }
+                },
+                { upsert: true }
+            );
+            instructor = await User.findOne({ accountEmail: 'instructor@emare.com' });
         }
 
         for (const item of categoryCoursesData) {
-            let category = await Category.findOne({ name: item.categoryName });
-            if (!category) {
-                category = await Category.create({
-                    name: item.categoryName,
-                    icon: item.categoryIcon,
-                    description: item.categoryDescription
-                });
-            }
+            // Upsert category via native driver
+            const categorySlug = item.categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            await Category.collection.updateOne(
+                { name: item.categoryName },
+                {
+                    $set: {
+                        icon: item.categoryIcon,
+                        description: item.categoryDescription,
+                        slug: categorySlug,
+                        updatedAt: new Date(),
+                    },
+                    $setOnInsert: {
+                        name: item.categoryName,
+                        isActive: true,
+                        courseCount: 0,
+                        createdAt: new Date(),
+                    }
+                },
+                { upsert: true }
+            );
+            const category = await Category.findOne({ name: item.categoryName });
 
-            let course = await Course.findOne({ courseTitle: item.courseTitle });
-
+            // Build course payload — courseTitle is the filter key, kept only in $setOnInsert
             const coursePayload = {
-                courseTitle: item.courseTitle,
                 subtitle: item.subtitle,
                 descriptionText: item.descriptionText,
                 technicalCategory: item.technicalCategory,
@@ -369,6 +396,7 @@ const seedCategoryCoursesHelper = async () => {
                 publicationState: item.publicationState,
                 creatorRef: instructor._id,
                 assignedInstructorRef: instructor._id,
+                updatedAt: new Date(),
                 curriculumTree: item.chapters.map(ch => ({
                     chapterTitle: ch.chapterTitle,
                     lessons: ch.lessons.map(l => ({
@@ -382,14 +410,28 @@ const seedCategoryCoursesHelper = async () => {
                 }))
             };
 
-            if (course) {
-                await Course.updateOne({ _id: course._id }, { $set: coursePayload });
-            } else {
-                await Course.create(coursePayload);
-            }
+            // Upsert course via native driver
+            await Course.collection.updateOne(
+                { courseTitle: item.courseTitle },
+                {
+                    $set: coursePayload,
+                    $setOnInsert: {
+                        // courseTitle NOT repeated here — it's the filter key
+                        creationTimestamp: new Date(),
+                        totalEnrollments: 0,
+                        averageRating: 0,
+                        totalReviews: 0,
+                    }
+                },
+                { upsert: true }
+            );
 
+            // Update category course count via native driver
             const count = await Course.countDocuments({ technicalCategory: item.technicalCategory });
-            await Category.updateOne({ _id: category._id }, { $set: { courseCount: count } });
+            await Category.collection.updateOne(
+                { _id: category._id },
+                { $set: { courseCount: count, updatedAt: new Date() } }
+            );
         }
         console.log('✅ All 8 Category courses seeded/updated in database with exact 24 PDF Drive links!');
     } catch (err) {

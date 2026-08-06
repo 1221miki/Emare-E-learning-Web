@@ -79,7 +79,7 @@ export default function InstructorProfilePage() {
         <div style={s.page}>
             <Navbar />
             <div style={{ ...s.container, textAlign: 'center' }}>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>👤</div>
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>◉</div>
                 <h2 style={{ color: colors.text }}>Instructor not found</h2>
                 <button onClick={() => navigate('/courses')} style={{ background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', marginTop: '16px' }}>
                     Browse Courses
@@ -119,7 +119,7 @@ export default function InstructorProfilePage() {
                             {[
                                 { val: courses.length, lbl: 'Courses' },
                                 { val: `${totalStudents.toLocaleString()}+`, lbl: 'Students' },
-                                { val: `★ ${avgRating}`, lbl: 'Rating' },
+                                { val: ` ${avgRating}`, lbl: 'Rating' },
                                 { val: instructor.workExperience || '5+', lbl: 'Yrs Experience' }
                             ].map((st, i) => (
                                 <div key={i} style={s.stat}>
@@ -135,7 +135,7 @@ export default function InstructorProfilePage() {
                         {/* Skill Tags */}
                         <div style={s.tagRow}>
                             {(instructor.teachingLanguages || 'English').split(',').map((lang, i) => (
-                                <span key={i} style={s.tag}>🌐 {lang.trim()}</span>
+                                <span key={i} style={s.tag}>◉ {lang.trim()}</span>
                             ))}
                             {instructor.socialMediaLinks?.linkedin && (
                                 <a href={instructor.socialMediaLinks.linkedin} target="_blank" rel="noopener noreferrer" style={{ ...s.tag, textDecoration: 'none', color: '#0077b5', background: '#0077b515', borderColor: '#0077b530' }}>
@@ -149,7 +149,7 @@ export default function InstructorProfilePage() {
                 {/* Qualifications */}
                 {instructor.qualifications && (
                     <div style={s.infoSection}>
-                        <h3 style={s.infoTitle}>🎓 Qualifications</h3>
+                        <h3 style={s.infoTitle}>◈ Qualifications</h3>
                         <p style={s.infoText}>{instructor.qualifications}</p>
                     </div>
                 )}
@@ -157,16 +157,16 @@ export default function InstructorProfilePage() {
                 {/* Work Experience */}
                 {instructor.workExperience && (
                     <div style={s.infoSection}>
-                        <h3 style={s.infoTitle}>💼 Work Experience</h3>
+                        <h3 style={s.infoTitle}>◈ Work Experience</h3>
                         <p style={s.infoText}>{instructor.workExperience}</p>
                     </div>
                 )}
 
                 {/* Published Courses */}
-                <h2 style={s.sectionTitle}>📚 Published Courses ({courses.length})</h2>
+                <h2 style={s.sectionTitle}>▧ Published Courses ({courses.length})</h2>
                 {courses.length === 0 ? (
                     <div style={s.emptyState}>
-                        <div style={{ fontSize: '48px', marginBottom: '12px' }}>📭</div>
+                        <div style={{ fontSize: '48px', marginBottom: '12px' }}></div>
                         <p style={{ margin: 0 }}>No published courses yet.</p>
                     </div>
                 ) : (
@@ -182,13 +182,13 @@ export default function InstructorProfilePage() {
                                 <div style={s.courseImg}>
                                     {course.thumbnailUrl
                                         ? <img src={course.thumbnailUrl} alt={course.courseTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        : '🎓'}
+                                        : '◈'}
                                 </div>
                                 <div style={s.courseBody}>
                                     <span style={{ ...s.badge, background: `${colors.primary}15`, color: colors.primary }}>{course.technicalCategory || 'Tech'}</span>
                                     <h3 style={s.courseTitle}>{course.courseTitle}</h3>
                                     <div style={s.courseMeta}>
-                                        <span>★ {course.averageRating || '4.8'}</span>
+                                        <span> {course.averageRating || '4.8'}</span>
                                         <span>·</span>
                                         <span>{course.level || 'Beginner'}</span>
                                         <span>·</span>

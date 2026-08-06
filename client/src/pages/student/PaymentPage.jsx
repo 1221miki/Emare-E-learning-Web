@@ -7,7 +7,7 @@ const defaultPaymentMethods = [
         id: 'cbe',
         label: 'CBE Bank',
         subtitle: 'Bank Transfer',
-        icon: '🏦',
+        icon: '◈',
         accountName: 'Emare ICT Hub',
         accountNumber: '10001234567',
         branch: 'Addis Ababa',
@@ -18,7 +18,7 @@ const defaultPaymentMethods = [
         id: 'telebirr',
         label: 'Telebirr',
         subtitle: 'Mobile Payment',
-        icon: '📱',
+        icon: '▢',
         accountName: 'Emare ICT Hub',
         accountNumber: '0912 345 678',
         branch: 'Telebirr Wallet',
@@ -29,7 +29,7 @@ const defaultPaymentMethods = [
         id: 'chapa',
         label: 'Chapa',
         subtitle: 'Online Gateway',
-        icon: '💳',
+        icon: '◈',
         accountName: 'Emare ELMS',
         accountNumber: 'chapa@emare',
         branch: 'Online Payments',
@@ -40,7 +40,7 @@ const defaultPaymentMethods = [
         id: 'dashen',
         label: 'Dashen Bank',
         subtitle: 'Bank Transfer',
-        icon: '🏦',
+        icon: '◈',
         accountName: 'Emare ICT Hub',
         accountNumber: '2000456789',
         branch: 'Addis Ababa',
@@ -213,7 +213,7 @@ export default function PaymentPage() {
             id: `custom-${Date.now()}`,
             label: 'New Payment Method',
             subtitle: 'Added by student',
-            icon: '➕',
+            icon: '+',
             accountName: 'Add your preferred method',
             accountNumber: 'Add details',
             branch: 'Personal',
@@ -318,15 +318,15 @@ export default function PaymentPage() {
         <div style={styles.page}>
             <Sidebar
                 navItems={[
-                    { label: '🏠 Dashboard', path: '/student/dashboard' },
-                    { label: '📚 My Courses', path: '/student/dashboard?tab=my_courses' },
-                    { label: '🎥 Learning', path: '/student/dashboard?tab=learning' },
-                    { label: '📝 Assignments', path: '/student/dashboard?tab=assignments' },
-                    { label: '💬 Messages', path: '/student/dashboard?tab=messages' },
-                    { label: '🏆 Leaderboard', path: '/student/dashboard?tab=leaderboard' },
-                    { label: '🎓 Certificates', path: '/student/dashboard?tab=certificates' },
-                    { label: '💳 Payments', path: '/student/payments' },
-                    { label: '⚙ Settings', path: '/student/dashboard?tab=settings' }
+                    { label: '◈ Dashboard', path: '/student/dashboard' },
+                    { label: '▧ My Courses', path: '/student/dashboard?tab=my_courses' },
+                    { label: '▶ Learning', path: '/student/dashboard?tab=learning' },
+                    { label: '▤ Assignments', path: '/student/dashboard?tab=assignments' },
+                    { label: '◈ Messages', path: '/student/dashboard?tab=messages' },
+                    { label: ' Leaderboard', path: '/student/dashboard?tab=leaderboard' },
+                    { label: '◈ Certificates', path: '/student/dashboard?tab=certificates' },
+                    { label: '◈ Payments', path: '/student/payments' },
+                    { label: '◈ Settings', path: '/student/dashboard?tab=settings' }
                 ]}
                 activeTab="/student/payments"
             />
@@ -455,7 +455,7 @@ export default function PaymentPage() {
                             <div style={styles.qrCard}>
                                 <div style={styles.qrLabel}>Secure checkout</div>
                                 <div style={styles.qrBox}>
-                                    <div style={{ fontSize: '44px' }}>🧾</div>
+                                    <div style={{ fontSize: '44px' }}>▤</div>
                                 </div>
                             </div>
                         </div>
@@ -537,7 +537,7 @@ export default function PaymentPage() {
                                     </div>
                                 ) : (
                                     <div style={styles.dropContent}>
-                                        <div style={styles.dropIcon}>📤</div>
+                                        <div style={styles.dropIcon}>↑</div>
                                         <div style={styles.dropText}>Drag & drop receipt here</div>
                                         <div style={styles.dropSmall}>or browse files (PNG, JPG, PDF)</div>
                                         <input type="file" accept="image/*,.pdf" onChange={(e) => handleFileChange(e.target.files?.[0])} style={styles.fileInput} />

@@ -134,7 +134,7 @@ export default function QuizPage() {
                             Passing threshold: {result.passingThreshold}%
                         </p>
                         <div style={{...styles.badge, background: result.passed ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: result.passed ? '#10b981' : '#ef4444', marginBottom:'24px', fontSize:'16px', padding:'8px 16px'}}>
-                            {result.passed ? 'PASSED ✓' : 'FAILED ✗'}
+                            {result.passed ? 'PASSED ' : 'FAILED '}
                         </div>
                         <button onClick={() => navigate('/student/dashboard')} style={styles.primaryBtn}>Return to Dashboard</button>
                     </div>

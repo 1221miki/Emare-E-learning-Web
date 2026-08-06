@@ -87,21 +87,21 @@ export default function ContactPage() {
                         <h2 style={s.sTitle}>Contact Information</h2>
                         <div style={s.infoCard}>
                             <div style={s.infoItem}>
-                                <span style={s.icon}>📍</span>
+                                <span style={s.icon}>◉</span>
                                 <div>
                                     <div style={s.infoLabel}>Location</div>
                                     <div style={s.infoValue}>Debre Birhan, Ethiopia</div>
                                 </div>
                             </div>
                             <div style={s.infoItem}>
-                                <span style={s.icon}>✉️</span>
+                                <span style={s.icon}>️</span>
                                 <div>
                                     <div style={s.infoLabel}>Email Us</div>
                                     <div style={s.infoValue}>info@emare.edu.et</div>
                                 </div>
                             </div>
                             <div style={s.infoItem}>
-                                <span style={s.icon}>📞</span>
+                                <span style={s.icon}></span>
                                 <div>
                                     <div style={s.infoLabel}>Call Us</div>
                                     <div style={s.infoValue}>+251 911 000 000</div>

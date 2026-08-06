@@ -258,7 +258,7 @@ export default function LearningWorkspace() {
                                     }}
                                 >
                                     <IconCheck />
-                                    {isCompleted ? 'Completed ✓' : 'Mark Complete'}
+                                    {isCompleted ? 'Completed ' : 'Mark Complete'}
                                 </button>
                                 <button
                                     onClick={goNextLesson}
@@ -456,7 +456,7 @@ export default function LearningWorkspace() {
                                                     <div style={{ display: 'flex', gap: 6, marginTop: 2, alignItems: 'center' }}>
                                                         {lesson.durationMinutes && <span style={{ fontSize: 11, color: muted }}>{lesson.durationMinutes}m</span>}
                                                         {(lesson.notesPdfUrl || lesson.resourceLink) && (
-                                                            <span style={{ fontSize: 10, color: green, fontWeight: 600 }}>📄 PDF</span>
+                                                            <span style={{ fontSize: 10, color: green, fontWeight: 600 }}>▤ PDF</span>
                                                         )}
                                                         {lesson.isFreePreview && (
                                                             <span style={{ fontSize: 10, background: `${accent}20`, color: accent, borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>Free</span>

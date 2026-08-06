@@ -88,7 +88,7 @@ export default function ProfilePage() {
                                 </span>
                             </div>
                             <button onClick={() => window.location.href = '/student/dashboard'} style={{ background: `${colors.primary}15`, border: `1px solid ${colors.primary}30`, color: colors.primary, padding: '8px 16px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
-                                ⚙️ Edit Profile Settings
+                                ◈️ Edit Profile Settings
                             </button>
                         </div>
                         <p style={{ color: colors.textMuted, fontSize: '14px', margin: '0 0 16px', lineHeight: '1.5' }}>
@@ -103,7 +103,7 @@ export default function ProfilePage() {
                             </span>
                             {profile?.twoFactorEnabled || user.twoFactorEnabled ? (
                                 <span style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', padding: '4px 10px', borderRadius: '99px', fontSize: '12px', fontWeight: '700' }}>
-                                    🛡️ 2FA Active
+                                    ▣️ 2FA Active
                                 </span>
                             ) : null}
                         </div>
@@ -155,17 +155,17 @@ export default function ProfilePage() {
                             <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
                                 {(profile?.socialMediaLinks?.website || user.socialMediaLinks?.website) && (
                                     <a href={profile?.socialMediaLinks?.website || user.socialMediaLinks?.website} target="_blank" rel="noreferrer" style={{ background: `${colors.primary}15`, color: colors.primary, padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', textDecoration: 'none' }}>
-                                        🌐 Website
+                                        ◉ Website
                                     </a>
                                 )}
                                 {(profile?.socialMediaLinks?.linkedin || user.socialMediaLinks?.linkedin) && (
                                     <a href={profile?.socialMediaLinks?.linkedin || user.socialMediaLinks?.linkedin} target="_blank" rel="noreferrer" style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', textDecoration: 'none' }}>
-                                        💼 LinkedIn
+                                        ◈ LinkedIn
                                     </a>
                                 )}
                                 {(profile?.githubUrl || user.githubUrl) && (
                                     <a href={profile?.githubUrl || user.githubUrl} target="_blank" rel="noreferrer" style={{ background: 'rgba(15,23,42,0.15)', color: colors.text, padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', textDecoration: 'none' }}>
-                                        💻 GitHub
+                                        ▧ GitHub
                                     </a>
                                 )}
                             </div>
@@ -179,7 +179,7 @@ export default function ProfilePage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px' }}>
                     {/* XP Card */}
                     <div style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '16px', padding: '32px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>✨</div>
+                        <div style={{ fontSize: '48px', marginBottom: '16px' }}></div>
                         <div style={{ color: colors.text, fontSize: '36px', fontWeight: '900', margin: '0 0 8px' }}>{user.gamificationPoints || 1250}</div>
                         <div style={{ color: colors.textMuted, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '700' }}>Total XP Earned</div>
                     </div>
@@ -190,7 +190,7 @@ export default function ProfilePage() {
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
                             {(user.earnedBadges?.length ? user.earnedBadges : ['Fast Learner', 'Quiz Master', '7-Day Streak']).map((badge, idx) => (
                                 <div key={idx} style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', color: '#eab308', padding: '12px 20px', borderRadius: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span>🎖️</span> {badge}
+                                    <span>️</span> {badge}
                                 </div>
                             ))}
                         </div>

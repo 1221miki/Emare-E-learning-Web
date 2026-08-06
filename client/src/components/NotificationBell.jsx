@@ -44,9 +44,9 @@ export default function NotificationBell() {
     };
 
     const typeIcons = {
-        enrollment: '📚', payment: '💳', grade: '📝', quiz: '❓',
-        announcement: '📢', certificate: '🏆', badge: '🎖️',
-        review: '⭐', assignment: '📄', system: '⚙️'
+        enrollment: '▧', payment: '◈', grade: '▤', quiz: '?',
+        announcement: '◈', certificate: '', badge: '️',
+        review: '', assignment: '▤', system: '◈️'
     };
 
     return (
@@ -55,7 +55,7 @@ export default function NotificationBell() {
                 background: 'transparent', border: 'none', cursor: 'pointer',
                 fontSize: '26px', position: 'relative', padding: '8px'
             }}>
-                🔔
+                ◈
                 {unreadCount > 0 && (
                     <span style={{
                         position: 'absolute', top: '2px', right: '2px',
@@ -105,7 +105,7 @@ export default function NotificationBell() {
                                 }}
                             >
                                 <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                                    <span style={{ fontSize: '20px', flexShrink: 0 }}>{typeIcons[n.type] || '🔔'}</span>
+                                    <span style={{ fontSize: '20px', flexShrink: 0 }}>{typeIcons[n.type] || '◈'}</span>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ fontWeight: '700', fontSize: '13px', color: colors.text, marginBottom: '2px' }}>{n.title}</div>
                                         <div style={{ fontSize: '12px', color: colors.textMuted, lineHeight: 1.4 }}>{n.message}</div>

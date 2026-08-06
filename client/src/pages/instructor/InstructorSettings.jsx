@@ -33,7 +33,7 @@ function Toast({ message, type }) {
     const border = type === 'error' ? '#fca5a5' : '#a7f3d0';
     return (
         <div style={{ padding: '14px 18px', borderRadius: 14, background: bg, color, border: `1px solid ${border}`, marginBottom: 20, fontWeight: 600, fontSize: 14 }}>
-            {type === 'error' ? '❌ ' : '✅ '}{message}
+            {type === 'error' ? ' ' : ' '}{message}
         </div>
     );
 }
@@ -240,11 +240,11 @@ export default function InstructorSettings() {
     };
 
     const tabs = [
-        { key: 'profile', label: '👤 Profile' },
-        { key: 'security', label: '🔒 Security' },
-        { key: 'preferences', label: '🎨 Preferences' },
-        { key: 'notifications', label: '🔔 Notifications' },
-        { key: 'subscription', label: '💳 Subscription' },
+        { key: 'profile', label: '◉ Profile' },
+        { key: 'security', label: '▣ Security' },
+        { key: 'preferences', label: '◆ Preferences' },
+        { key: 'notifications', label: '◈ Notifications' },
+        { key: 'subscription', label: '◈ Subscription' },
     ];
 
     return (
@@ -253,7 +253,7 @@ export default function InstructorSettings() {
             <main style={s.main}>
                 {/* Header */}
                 <div style={{ marginBottom: 28 }}>
-                    <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: c.text }}>⚙️ Profile & Account Settings</h1>
+                    <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: c.text }}>◈️ Profile & Account Settings</h1>
                     <p style={{ margin: '6px 0 0', color: c.textMuted }}>Manage your instructor profile, preferences, security and notifications.</p>
                 </div>
 
@@ -287,7 +287,7 @@ export default function InstructorSettings() {
                                 </div>
                                 <input type="file" accept="image/*" ref={photoInputRef} style={{ display: 'none' }} onChange={handlePhotoChange} />
                                 <button onClick={() => photoInputRef.current?.click()} style={s.btn('primary')} disabled={saving}>
-                                    📷 Change Photo
+                                    ◇ Change Photo
                                 </button>
                                 <div style={{ textAlign: 'center' }}>
                                     <div style={{ fontWeight: 700, color: c.text, fontSize: 15 }}>{profile.fullName || 'Instructor'}</div>
@@ -357,7 +357,7 @@ export default function InstructorSettings() {
                         {/* Save */}
                         <div style={{ display: 'flex', gap: 12 }}>
                             <button onClick={saveProfile} style={s.btn('primary')} disabled={saving}>
-                                {saving ? '⏳ Saving...' : '💾 Save Profile'}
+                                {saving ? '⏳ Saving...' : '▣ Save Profile'}
                             </button>
                             <button onClick={() => setProfile(p => ({ ...p }))} style={s.btn('ghost')}>Cancel</button>
                         </div>
@@ -369,7 +369,7 @@ export default function InstructorSettings() {
                     <div style={s.gap(24)}>
                         {/* Password Change */}
                         <div style={s.card}>
-                            <h2 style={s.sectionTitle}>🔑 Change Password</h2>
+                            <h2 style={s.sectionTitle}>◈ Change Password</h2>
                             <p style={s.subText}>Choose a strong password with uppercase, lowercase, numbers and special characters.</p>
                             <div style={{ ...s.gap(16), marginTop: 20, maxWidth: 480 }}>
                                 <div style={s.field}>
@@ -383,7 +383,7 @@ export default function InstructorSettings() {
                                             placeholder="••••••••"
                                         />
                                         <button onClick={() => updateSecurity('showCurrent', !security.showCurrent)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, fontSize: 16 }}>
-                                            {security.showCurrent ? '🙈' : '👁️'}
+                                            {security.showCurrent ? '◎' : '◎️'}
                                         </button>
                                     </div>
                                 </div>
@@ -398,7 +398,7 @@ export default function InstructorSettings() {
                                             placeholder="Min. 8 chars"
                                         />
                                         <button onClick={() => updateSecurity('showNew', !security.showNew)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, fontSize: 16 }}>
-                                            {security.showNew ? '🙈' : '👁️'}
+                                            {security.showNew ? '◎' : '◎️'}
                                         </button>
                                     </div>
                                     {/* Password strength bar */}
@@ -439,7 +439,7 @@ export default function InstructorSettings() {
                                     )}
                                 </div>
                                 <button onClick={savePassword} style={s.btn('primary')} disabled={saving || !security.currentPassword || !security.newPassword}>
-                                    {saving ? '⏳ Updating...' : '🔐 Update Password'}
+                                    {saving ? '⏳ Updating...' : '▣ Update Password'}
                                 </button>
                             </div>
                         </div>
@@ -458,7 +458,7 @@ export default function InstructorSettings() {
                                 </div>
                                 {security.is2FAEnabled && (
                                     <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: '#eff6ff', border: '1px solid #bfdbfe' }}>
-                                        <div style={{ fontSize: 13, color: '#1d4ed8', fontWeight: 600 }}>✅ 2FA is active. Your account is protected.</div>
+                                        <div style={{ fontSize: 13, color: '#1d4ed8', fontWeight: 600 }}> 2FA is active. Your account is protected.</div>
                                         <button style={{ ...s.btn('ghost'), marginTop: 12, fontSize: 13, padding: '8px 16px' }}>Setup New App →</button>
                                     </div>
                                 )}
@@ -469,11 +469,11 @@ export default function InstructorSettings() {
                                 <p style={s.subText}>Get alerted when someone logs into your account.</p>
                                 <div style={{ ...s.gap(14), marginTop: 20 }}>
                                     <div style={s.toggleRow}>
-                                        <span style={{ color: c.text, fontWeight: 600 }}>📧 Email Alerts</span>
+                                        <span style={{ color: c.text, fontWeight: 600 }}> Email Alerts</span>
                                         <Toggle checked={security.loginNotifEmail} onChange={v => updateSecurity('loginNotifEmail', v)} />
                                     </div>
                                     <div style={{ ...s.toggleRow, borderBottom: 'none' }}>
-                                        <span style={{ color: c.text, fontWeight: 600 }}>📱 SMS Alerts</span>
+                                        <span style={{ color: c.text, fontWeight: 600 }}>▢ SMS Alerts</span>
                                         <Toggle checked={security.loginNotifSMS} onChange={v => updateSecurity('loginNotifSMS', v)} />
                                     </div>
                                 </div>
@@ -482,18 +482,18 @@ export default function InstructorSettings() {
 
                         {/* Danger Zone */}
                         <div style={{ ...s.card, border: '1px solid #fca5a5' }}>
-                            <h3 style={{ ...s.sectionTitle, fontSize: 17, color: '#ef4444' }}>⚠️ Danger Zone</h3>
+                            <h3 style={{ ...s.sectionTitle, fontSize: 17, color: '#ef4444' }}>️ Danger Zone</h3>
                             <p style={s.subText}>These actions are irreversible. Please proceed with caution.</p>
                             <div style={{ display: 'flex', gap: 14, marginTop: 18, flexWrap: 'wrap' }}>
                                 <button style={s.btn('ghost')} onClick={() => showToast('Account data export requested. You will receive it by email within 24 hours.')}>
-                                    📁 Export My Data (PDF/JSON)
+                                    ▤ Export My Data (PDF/JSON)
                                 </button>
                                 <button style={s.btn('danger')} onClick={() => {
                                     if (window.confirm('Are you sure you want to permanently delete your account? This cannot be undone.')) {
                                         showToast('Account deletion request submitted. You will receive a confirmation email.', 'error');
                                     }
                                 }}>
-                                    🗑️ Delete Account
+                                    ️ Delete Account
                                 </button>
                             </div>
                         </div>
@@ -505,15 +505,15 @@ export default function InstructorSettings() {
                     <div style={s.gap(24)}>
                         {/* Theme */}
                         <div style={s.card}>
-                            <h2 style={s.sectionTitle}>🎨 Display & Appearance</h2>
+                            <h2 style={s.sectionTitle}>◆ Display & Appearance</h2>
                             <p style={s.subText}>Customize your workspace theme, language and time preferences.</p>
                             <div style={{ ...s.gap(20), marginTop: 20 }}>
                                 <div style={s.field}>
                                     <label style={s.label}>Dashboard Theme</label>
                                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                                         {[
-                                            { val: 'light', label: '☀️ Light Mode' },
-                                            { val: 'dark', label: '🌙 Dark Mode' },
+                                            { val: 'light', label: '️ Light Mode' },
+                                            { val: 'dark', label: ' Dark Mode' },
                                         ].map(t => (
                                             <button key={t.val} onClick={() => switchTheme(t.val)} style={{
                                                 padding: '12px 24px', borderRadius: 14, cursor: 'pointer', fontWeight: 700, fontSize: 14,
@@ -568,7 +568,7 @@ export default function InstructorSettings() {
                         {/* Communication Tools */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
                             <div style={s.card}>
-                                <h3 style={{ ...s.sectionTitle, fontSize: 17 }}>🔧 Communication & Live Tools</h3>
+                                <h3 style={{ ...s.sectionTitle, fontSize: 17 }}>◈ Communication & Live Tools</h3>
                                 <div style={{ ...s.gap(14), marginTop: 20 }}>
                                     <div style={s.field}>
                                         <label style={s.label}>Preferred Communication Tool</label>
@@ -582,9 +582,9 @@ export default function InstructorSettings() {
                                         <label style={s.label}>Live Class Integrations</label>
                                         <div style={{ ...s.gap(10), marginTop: 10 }}>
                                             {[
-                                                { key: 'zoom', label: '📹 Zoom' },
-                                                { key: 'teams', label: '💼 Microsoft Teams' },
-                                                { key: 'meet', label: '🎥 Google Meet' },
+                                                { key: 'zoom', label: '▶ Zoom' },
+                                                { key: 'teams', label: '◈ Microsoft Teams' },
+                                                { key: 'meet', label: '▶ Google Meet' },
                                             ].map(tool => (
                                                 <div key={tool.key} style={s.toggleRow}>
                                                     <span style={{ color: c.text, fontWeight: 600 }}>{tool.label}</span>
@@ -597,7 +597,7 @@ export default function InstructorSettings() {
                             </div>
 
                             <div style={s.card}>
-                                <h3 style={{ ...s.sectionTitle, fontSize: 17 }}>📋 Teaching Preferences</h3>
+                                <h3 style={{ ...s.sectionTitle, fontSize: 17 }}>▤ Teaching Preferences</h3>
                                 <div style={{ ...s.gap(14), marginTop: 20 }}>
                                     {[
                                         { key: 'autoAccept', label: 'Auto-Accept Course Requests', desc: 'Automatically approve student enrollment requests' },
@@ -619,7 +619,7 @@ export default function InstructorSettings() {
 
                         <div style={{ display: 'flex', gap: 12 }}>
                             <button onClick={savePreferences} style={s.btn('primary')} disabled={saving}>
-                                {saving ? '⏳ Saving...' : '💾 Save Preferences'}
+                                {saving ? '⏳ Saving...' : '▣ Save Preferences'}
                             </button>
                         </div>
                     </div>
@@ -629,21 +629,21 @@ export default function InstructorSettings() {
                 {active === 'notifications' && (
                     <div style={s.gap(24)}>
                         <div style={s.card}>
-                            <h2 style={s.sectionTitle}>🔔 Notification Preferences</h2>
+                            <h2 style={s.sectionTitle}>◈ Notification Preferences</h2>
                             <p style={s.subText}>Choose how you want to be notified about activity in your courses.</p>
 
                             {/* Table header */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 120px', gap: 14, marginTop: 24, padding: '10px 0', borderBottom: `2px solid ${c.border}` }}>
                                 <div style={{ fontWeight: 700, color: c.textMuted, fontSize: 13 }}>Event</div>
-                                <div style={{ fontWeight: 700, color: c.textMuted, fontSize: 13, textAlign: 'center' }}>📧 Email</div>
-                                <div style={{ fontWeight: 700, color: c.textMuted, fontSize: 13, textAlign: 'center' }}>📱 In-App</div>
+                                <div style={{ fontWeight: 700, color: c.textMuted, fontSize: 13, textAlign: 'center' }}> Email</div>
+                                <div style={{ fontWeight: 700, color: c.textMuted, fontSize: 13, textAlign: 'center' }}>▢ In-App</div>
                             </div>
 
                             {[
-                                { label: '🎓 New Student Enrollment', desc: 'When a student enrolls in your course', emailKey: 'newEnrollEmail', appKey: 'newEnrollApp' },
-                                { label: '📝 Quiz Submission', desc: 'When a student submits a quiz', emailKey: 'quizEmail', appKey: 'quizApp' },
-                                { label: '📅 Assignment Deadlines', desc: 'Reminders 24h before assignments due', emailKey: 'assignEmail', appKey: 'assignApp' },
-                                { label: '💬 Student Messages', desc: 'New messages from enrolled students', emailKey: 'msgEmail', appKey: 'msgApp' },
+                                { label: '◈ New Student Enrollment', desc: 'When a student enrolls in your course', emailKey: 'newEnrollEmail', appKey: 'newEnrollApp' },
+                                { label: '▤ Quiz Submission', desc: 'When a student submits a quiz', emailKey: 'quizEmail', appKey: 'quizApp' },
+                                { label: '▦ Assignment Deadlines', desc: 'Reminders 24h before assignments due', emailKey: 'assignEmail', appKey: 'assignApp' },
+                                { label: '◈ Student Messages', desc: 'New messages from enrolled students', emailKey: 'msgEmail', appKey: 'msgApp' },
                             ].map(row => (
                                 <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '1fr 120px 120px', gap: 14, padding: '16px 0', borderBottom: `1px solid ${c.border}`, alignItems: 'center' }}>
                                     <div>
@@ -661,7 +661,7 @@ export default function InstructorSettings() {
                         </div>
 
                         <div style={s.card}>
-                            <h3 style={{ ...s.sectionTitle, fontSize: 17 }}>📊 Summary Delivery</h3>
+                            <h3 style={{ ...s.sectionTitle, fontSize: 17 }}>▥ Summary Delivery</h3>
                             <p style={s.subText}>How often do you want a digest of your course activity?</p>
                             <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
                                 {['Real-time', 'Daily Digest', 'Weekly Summary', 'Never'].map(opt => (
@@ -678,7 +678,7 @@ export default function InstructorSettings() {
 
                         <div style={{ display: 'flex', gap: 12 }}>
                             <button onClick={saveNotifications} style={s.btn('primary')} disabled={saving}>
-                                {saving ? '⏳ Saving...' : '💾 Save Notifications'}
+                                {saving ? '⏳ Saving...' : '▣ Save Notifications'}
                             </button>
                         </div>
                     </div>
@@ -692,11 +692,11 @@ export default function InstructorSettings() {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
                                 <div>
                                     <div style={{ color: '#93c5fd', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>CURRENT PLAN</div>
-                                    <h2 style={{ color: '#fff', fontSize: 28, fontWeight: 900, margin: 0 }}>⭐ {subscription.plan}</h2>
+                                    <h2 style={{ color: '#fff', fontSize: 28, fontWeight: 900, margin: 0 }}> {subscription.plan}</h2>
                                     <p style={{ color: '#bfdbfe', marginTop: 8, fontSize: 14 }}>Renews on {subscription.renewDate} · {subscription.billingMethod}</p>
                                 </div>
                                 <div style={{ background: '#22c55e', color: '#fff', fontWeight: 800, padding: '8px 22px', borderRadius: 999, fontSize: 14 }}>
-                                    ✅ {subscription.status}
+                                     {subscription.status}
                                 </div>
                             </div>
                         </div>
@@ -706,14 +706,14 @@ export default function InstructorSettings() {
                             <h3 style={{ ...s.sectionTitle, fontSize: 17 }}>What's included in Premium</h3>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 20 }}>
                                 {[
-                                    '✅ Unlimited course creation',
-                                    '✅ Advanced analytics dashboard',
-                                    '✅ Student progress tracking',
-                                    '✅ Certificate generation',
-                                    '✅ Live session integrations',
-                                    '✅ Priority support',
-                                    '✅ AI-powered course assistant',
-                                    '✅ Revenue sharing program',
+                                    ' Unlimited course creation',
+                                    ' Advanced analytics dashboard',
+                                    ' Student progress tracking',
+                                    ' Certificate generation',
+                                    ' Live session integrations',
+                                    ' Priority support',
+                                    ' AI-powered course assistant',
+                                    ' Revenue sharing program',
                                 ].map(f => (
                                     <div key={f} style={{ color: c.text, fontWeight: 600, fontSize: 14, padding: '10px 0', borderBottom: `1px solid ${c.border}` }}>
                                         {f}
@@ -725,7 +725,7 @@ export default function InstructorSettings() {
                         {/* Billing Actions */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
                             <div style={s.card}>
-                                <h3 style={{ ...s.sectionTitle, fontSize: 17 }}>💳 Billing Method</h3>
+                                <h3 style={{ ...s.sectionTitle, fontSize: 17 }}>◈ Billing Method</h3>
                                 <p style={s.subText}>{subscription.billingMethod}</p>
                                 <div style={{ display: 'flex', gap: 12, marginTop: 20, flexWrap: 'wrap' }}>
                                     <button style={s.btn('primary')} onClick={() => showToast('Redirecting to billing management...')}>Update Payment</button>

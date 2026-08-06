@@ -393,9 +393,9 @@ export default function CourseCreationWizard() {
                                     <div key={lessonIndex} style={styles.lessonRow}>
                                         <div>
                                             <div style={{ color: colors.text, fontWeight: 700 }}>{lesson.lessonTitle}</div>
-                                            <div style={{ color: colors.textMuted, fontSize: 12 }}>🎬 {lesson.videoUrl}</div>
+                                            <div style={{ color: colors.textMuted, fontSize: 12 }}>▶ {lesson.videoUrl}</div>
                                             {(lesson.notesPdfUrl || lesson.resourceLink) && (
-                                                <div style={{ color: '#10b981', fontSize: 12, marginTop: 2 }}>📄 PDF/Drive: {lesson.notesPdfUrl || lesson.resourceLink}</div>
+                                                <div style={{ color: '#10b981', fontSize: 12, marginTop: 2 }}>▤ PDF/Drive: {lesson.notesPdfUrl || lesson.resourceLink}</div>
                                             )}
                                         </div>
                                         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>

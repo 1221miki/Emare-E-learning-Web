@@ -316,6 +316,7 @@ export const auditService = {
 export const systemService = {
     getSettings: () => API.get('/system/settings'),
     updateSettings: (data) => API.put('/system/settings', data),
+    resetToDefaults: () => API.post('/system/settings/reset-defaults'),
     createBackup: () => API.post('/system/backup'),
     restoreDatabase: (data) => API.post('/system/database/restore', data),
     optimizeDatabase: () => API.post('/system/database/optimize'),

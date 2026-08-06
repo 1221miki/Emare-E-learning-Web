@@ -242,23 +242,23 @@ export default function LiveSessionsPage() {
                                     
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
                                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', color: colors.textMuted, fontSize: '14px' }}>
-                                            <span>📅</span> {new Date(s.startTime).toLocaleDateString()}
+                                            <span>▦</span> {new Date(s.startTime).toLocaleDateString()}
                                         </div>
                                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', color: colors.textMuted, fontSize: '14px' }}>
                                             <span>⏰</span> {new Date(s.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ({s.durationMinutes} mins)
                                         </div>
                                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', color: colors.textMuted, fontSize: '14px' }}>
-                                            <span>👨‍🏫</span> Instructor: {s.instructorRef?.fullName || 'TBD'}
+                                            <span>‍◈</span> Instructor: {s.instructorRef?.fullName || 'TBD'}
                                         </div>
                                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', color: colors.textMuted, fontSize: '14px' }}>
-                                            <span>📡</span> Platform: <span style={{ color: colors.text, fontWeight: '700' }}>{s.platform || 'Zoom'}</span>
+                                            <span>◉</span> Platform: <span style={{ color: colors.text, fontWeight: '700' }}>{s.platform || 'Zoom'}</span>
                                         </div>
                                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', color: colors.textMuted, fontSize: '14px' }}>
-                                            <span>✅</span> Attendance: <span style={{ color: colors.text, fontWeight: '700' }}>{s.attendance?.length || 0}</span>
+                                            <span></span> Attendance: <span style={{ color: colors.text, fontWeight: '700' }}>{s.attendance?.length || 0}</span>
                                         </div>
                                         {s.meetingPassword && (
                                             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', color: colors.textMuted, fontSize: '14px' }}>
-                                                <span>🔒</span> Pwd: <span style={{ fontFamily: 'monospace', color: colors.text, background: colors.bgInput, padding: '2px 6px', borderRadius: '4px' }}>{s.meetingPassword}</span>
+                                                <span>▣</span> Pwd: <span style={{ fontFamily: 'monospace', color: colors.text, background: colors.bgInput, padding: '2px 6px', borderRadius: '4px' }}>{s.meetingPassword}</span>
                                             </div>
                                         )}
                                     </div>

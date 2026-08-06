@@ -45,12 +45,12 @@ export default function AboutPage() {
             <section style={s.section}>
                 <div style={s.grid2}>
                     <div style={s.card}>
-                        <span style={{ fontSize: '36px' }}>🎯</span>
+                        <span style={{ fontSize: '36px' }}>◎</span>
                         <h3 style={s.cardTitle}>Our Mission</h3>
                         <p style={s.cardText}>To democratize technology education in Ethiopia by providing affordable, industry-relevant courses taught by experienced professionals, empowering students to build the skills they need to thrive in the digital economy.</p>
                     </div>
                     <div style={s.card}>
-                        <span style={{ fontSize: '36px' }}>🔭</span>
+                        <span style={{ fontSize: '36px' }}>⊕</span>
                         <h3 style={s.cardTitle}>Our Vision</h3>
                         <p style={s.cardText}>To become East Africa's leading e-learning platform, producing world-class tech talent and fostering innovation through quality education accessible to every Ethiopian learner regardless of location.</p>
                     </div>
@@ -61,10 +61,10 @@ export default function AboutPage() {
                 <h2 style={s.sTitle}>Why Choose Emare?</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
                     {[
-                        { icon: '📚', title: 'Expert-Led Courses', desc: 'Learn from industry professionals with real-world experience.' },
-                        { icon: '🏆', title: 'Verified Certificates', desc: 'Earn certificates that employers trust and recognize.' },
-                        { icon: '💡', title: 'Hands-On Projects', desc: 'Build real applications and portfolio-worthy projects.' },
-                        { icon: '🌍', title: 'Local Relevance', desc: 'Content designed for Ethiopian and African tech markets.' }
+                        { icon: '▧', title: 'Expert-Led Courses', desc: 'Learn from industry professionals with real-world experience.' },
+                        { icon: '', title: 'Verified Certificates', desc: 'Earn certificates that employers trust and recognize.' },
+                        { icon: '', title: 'Hands-On Projects', desc: 'Build real applications and portfolio-worthy projects.' },
+                        { icon: '◉', title: 'Local Relevance', desc: 'Content designed for Ethiopian and African tech markets.' }
                     ].map((v, i) => (
                         <div key={i} style={s.card}>
                             <span style={{ fontSize: '32px' }}>{v.icon}</span>

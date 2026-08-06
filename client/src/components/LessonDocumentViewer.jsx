@@ -20,7 +20,7 @@ export default function LessonDocumentViewer({ file, onClose }) {
                     <span style={{ color: colors.textMuted, fontSize: '12px' }}>{extension.toUpperCase()} · {file.fileSize || 'View online'}</span>
                 </div>
                 {onClose && (
-                    <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: colors.textMuted, cursor: 'pointer', fontSize: '18px' }}>✕</button>
+                    <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: colors.textMuted, cursor: 'pointer', fontSize: '18px' }}></button>
                 )}
             </div>
             <div style={{ width: '100%', height: 'calc(100% - 72px)', minHeight: '320px', background: '#000' }}>

@@ -5,20 +5,20 @@ import Navbar from '../components/Navbar';
 import { useTheme } from '../context/ThemeContext';
 
 const TRACK_ICONS = {
-    'Web Development': '🌐',
-    'Full Stack MERN': '🚀',
-    'UI/UX Design': '🎨',
-    'Data Science': '📊',
-    'Artificial Intelligence': '🤖',
-    'Cyber Security': '🔒',
-    'Mobile Development': '📱',
-    'Programming Languages': '💻',
-    'Cloud & DevOps': '☁️',
-    'Database Engineering': '🗄️',
-    'Digital Marketing': '📣',
-    'Graphic Design': '🖌️',
-    'Office Productivity': '📋',
-    'Soft Skills': '🤝'
+    'Web Development': '◉',
+    'Full Stack MERN': '▶',
+    'UI/UX Design': '◆',
+    'Data Science': '▥',
+    'Artificial Intelligence': '⊡',
+    'Cyber Security': '▣',
+    'Mobile Development': '▢',
+    'Programming Languages': '▧',
+    'Cloud & DevOps': '◇️',
+    'Database Engineering': '▤️',
+    'Digital Marketing': '◈',
+    'Graphic Design': '◆️',
+    'Office Productivity': '▤',
+    'Soft Skills': '⊞'
 };
 
 const TRACK_COLORS = {
@@ -172,7 +172,7 @@ export default function CareerTracksPage() {
                     <h3 style={{ fontSize: '13px', fontWeight: '800', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 16px 16px' }}>Select a Division</h3>
                     {tracks.map(track => {
                         const isActive = selectedTrack?._id === track._id;
-                        const icon = TRACK_ICONS[track.name] || '📚';
+                        const icon = TRACK_ICONS[track.name] || '▧';
                         const color = TRACK_COLORS[track.name] || colors.primary;
                         
                         return (
@@ -196,7 +196,7 @@ export default function CareerTracksPage() {
                         <>
                             <div style={s.trackHeader}>
                                 <h2 style={s.trackTitle}>
-                                    <span style={{ fontSize: '42px' }}>{TRACK_ICONS[selectedTrack.name] || '📚'}</span>
+                                    <span style={{ fontSize: '42px' }}>{TRACK_ICONS[selectedTrack.name] || '▧'}</span>
                                     {selectedTrack.name}
                                 </h2>
                                 <p style={s.trackDesc}>{selectedTrack.description || 'Master the essential skills required for this career path through our comprehensive, project-based courses.'}</p>
@@ -215,7 +215,7 @@ export default function CareerTracksPage() {
                                             <img src={course.thumbnailUrl} alt={course.courseTitle} style={s.courseImg} />
                                         ) : (
                                             <div style={{ ...s.courseImg, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `linear-gradient(135deg, ${currentTrackColor}20, ${currentTrackColor}40)` }}>
-                                                <span style={{ fontSize: '64px' }}>{TRACK_ICONS[selectedTrack.name] || '📚'}</span>
+                                                <span style={{ fontSize: '64px' }}>{TRACK_ICONS[selectedTrack.name] || '▧'}</span>
                                             </div>
                                         )}
                                         
@@ -225,13 +225,13 @@ export default function CareerTracksPage() {
                                             
                                             <div style={s.courseMeta}>
                                                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    ⭐ {course.averageRating || '4.8'}
+                                                     {course.averageRating || '4.8'}
                                                 </span>
                                                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                     ⏱️ {course.estimatedDurationHours || '10'}h
                                                 </span>
                                                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    📈 {course.level || 'Beginner'}
+                                                    ↗ {course.level || 'Beginner'}
                                                 </span>
                                             </div>
 
@@ -248,7 +248,7 @@ export default function CareerTracksPage() {
                                 ))}
                                 {coursesForTrack(selectedTrack.name).length === 0 && (
                                     <div style={{ gridColumn: '1 / -1', padding: '60px', textAlign: 'center', background: colors.bgCard, borderRadius: '16px', border: `1px dashed ${colors.border}` }}>
-                                        <span style={{ fontSize: '48px', display: 'block', marginBottom: '16px' }}>🚧</span>
+                                        <span style={{ fontSize: '48px', display: 'block', marginBottom: '16px' }}>▣</span>
                                         <h3 style={{ fontSize: '20px', color: colors.text, margin: '0 0 8px' }}>Courses Coming Soon</h3>
                                         <p style={{ color: colors.textMuted }}>We are currently building the curriculum for the {selectedTrack.name} track.</p>
                                     </div>

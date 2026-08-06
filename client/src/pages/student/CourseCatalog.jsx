@@ -14,32 +14,32 @@ function useQuery() {
 
 const SORT_OPTIONS = [
     { value: 'newest', label: '🆕 Newest First' },
-    { value: 'popular', label: '🔥 Most Popular' },
-    { value: 'rating', label: '⭐ Highest Rated' },
-    { value: 'price_low', label: '💰 Price: Low → High' },
-    { value: 'price_high', label: '💎 Price: High → Low' },
-    { value: 'duration_short', label: '⚡ Shortest First' },
-    { value: 'duration_long', label: '📚 Longest First' }
+    { value: 'popular', label: ' Most Popular' },
+    { value: 'rating', label: ' Highest Rated' },
+    { value: 'price_low', label: '◈ Price: Low → High' },
+    { value: 'price_high', label: '◆ Price: High → Low' },
+    { value: 'duration_short', label: '↯ Shortest First' },
+    { value: 'duration_long', label: '▧ Longest First' }
 ];
 
 const EMOJI_MAP = {
-    'Web Coding': '🌐',
-    'Creative Media': '🎨',
-    'Robotics Hardware': '🤖',
-    'Network Engineering': '🔌',
-    'Mobile Development': '📱',
-    'Data Science': '📊',
-    'Cybersecurity': '🛡️',
-    'Cyber Security': '🛡️',
-    'Cloud Computing': '☁️',
-    'Artificial Intelligence': '🧠',
-    'Business & Management': '💼',
-    'Business & Marketing': '💼',
-    'Databases': '🗄️',
-    'DevOps & CI/CD': '⚙️',
-    'Graphic Design': '🖌️'
+    'Web Coding': '◉',
+    'Creative Media': '◆',
+    'Robotics Hardware': '⊡',
+    'Network Engineering': '◈',
+    'Mobile Development': '▢',
+    'Data Science': '▥',
+    'Cybersecurity': '▣️',
+    'Cyber Security': '▣️',
+    'Cloud Computing': '◇️',
+    'Artificial Intelligence': '◎',
+    'Business & Management': '◈',
+    'Business & Marketing': '◈',
+    'Databases': '▤️',
+    'DevOps & CI/CD': '◈️',
+    'Graphic Design': '◆️'
 };
-const EMOJIS = ['🎓', '💻', '📊', '🔬', '🎨', '🚀', '🧠', '⚙️', '📱', '🌐'];
+const EMOJIS = ['◈', '▧', '▥', '◎', '◆', '▶', '◎', '◈️', '▢', '◉'];
 
 export default function CourseCatalog() {
     const { isAuthenticated, isSuspended } = useAuth();
@@ -140,11 +140,11 @@ export default function CourseCatalog() {
         } catch (e) { console.error(e); }
     };
 
-    const getEmoji = (c) => EMOJI_MAP[c.technicalCategory] || EMOJIS[(c._id?.charCodeAt(0) || 0) % EMOJIS.length] || '🎓';
+    const getEmoji = (c) => EMOJI_MAP[c.technicalCategory] || EMOJIS[(c._id?.charCodeAt(0) || 0) % EMOJIS.length] || '◈';
 
     const renderStars = (r) => {
         const arr = [];
-        for (let i = 1; i <= 5; i++) arr.push(<span key={i} style={{ color: i <= Math.round(r) ? '#fbbf24' : `${colors.border}`, fontSize: '11px' }}>★</span>);
+        for (let i = 1; i <= 5; i++) arr.push(<span key={i} style={{ color: i <= Math.round(r) ? '#fbbf24' : `${colors.border}`, fontSize: '11px' }}></span>);
         return arr;
     };
 
@@ -207,7 +207,7 @@ export default function CourseCatalog() {
             >
                 <div style={{ ...(isList ? s.thumbList : s.thumb), background: bg, position: 'relative' }}>
                     {!course.thumbnailUrl && <span>{getEmoji(course)}</span>}
-                    {!isList && <button style={{ ...s.wishBtn, color: inWish ? '#ef4444' : '#fff' }} onClick={e => toggleWishlist(e, course._id)}>{inWish ? '❤️' : '🤍'}</button>}
+                    {!isList && <button style={{ ...s.wishBtn, color: inWish ? '#ef4444' : '#fff' }} onClick={e => toggleWishlist(e, course._id)}>{inWish ? '️' : ''}</button>}
                     {course.previewVideoUrl && !isList && (
                         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.15)', opacity: 0, transition: 'opacity 0.2s' }}
                             onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
@@ -230,10 +230,10 @@ export default function CourseCatalog() {
                         <span>{course.totalEnrollments || 0} students</span>
                     </div>
                     <div style={{ display: 'flex', gap: '10px', fontSize: '10px', color: colors.textMuted, marginBottom: '6px', flexWrap: 'wrap' }}>
-                        <span>📚 {course.level || 'Beginner'}</span>
+                        <span>▧ {course.level || 'Beginner'}</span>
                         <span>⏱ {course.estimatedDurationHours || 5}h</span>
-                        <span>🗣 {course.language || 'English'}</span>
-                        {course.hasCertificate !== false && <span style={{ color: colors.success, fontWeight: '600' }}>🏆 Cert</span>}
+                        <span>◈ {course.language || 'English'}</span>
+                        {course.hasCertificate !== false && <span style={{ color: colors.success, fontWeight: '600' }}> Cert</span>}
                     </div>
                     {isList && course.descriptionText && <p style={{ color: colors.textMuted, fontSize: '11px', margin: '0 0 6px', lineHeight: 1.4 }}>{course.descriptionText.substring(0, 130)}...</p>}
                     <div style={s.cFoot}>
@@ -243,7 +243,7 @@ export default function CourseCatalog() {
                             if (isSuspended) return;
                             if (!isAuthenticated) setGuestModal({ open: true, action: `enroll in "${course.courseTitle}"` }); else navigate(`/courses/${course._id}`);
                         }}>
-                            {isSuspended ? 'Account Suspended' : (isAuthenticated ? 'View →' : '🔐 Login')}
+                            {isSuspended ? 'Account Suspended' : (isAuthenticated ? 'View →' : '▣ Login')}
                         </button>
                     </div>
                 </div>
@@ -257,25 +257,25 @@ export default function CourseCatalog() {
             {/* Hero */}
             <div style={s.hero}>
                 <div style={s.heroDeco} />
-                <h1 style={s.heroTitle}>📚 Course Catalog</h1>
+                <h1 style={s.heroTitle}>▧ Course Catalog</h1>
                 <p style={s.heroSub}>Discover world-class tech courses curated for African learners. Learn at your pace, earn certificates.</p>
                 <div style={s.heroStats}>
                     <div><span style={s.statNum}>{courses.length}+</span><span style={s.statLabel}>Total Courses</span></div>
                     <div><span style={s.statNum}>{categories.length - 1}+</span><span style={s.statLabel}>Categories</span></div>
                     <div><span style={s.statNum}>{courses.filter(c => c.price === 0).length}</span><span style={s.statLabel}>Free Courses</span></div>
-                    <div><span style={s.statNum}>⭐ 4.8</span><span style={s.statLabel}>Avg Rating</span></div>
+                    <div><span style={s.statNum}> 4.8</span><span style={s.statLabel}>Avg Rating</span></div>
                 </div>
                 <div style={s.searchWrap}>
-                    <span style={{ padding: '13px 14px', fontSize: '16px', color: colors.textMuted }}>🔍</span>
+                    <span style={{ padding: '13px 14px', fontSize: '16px', color: colors.textMuted }}>⌕</span>
                     <input type="text" placeholder="Search courses, topics, instructors..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={s.searchInput} id="catalog-search" />
-                    {searchQuery && <button style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: '0 12px', fontSize: '16px' }} onClick={() => setSearchQuery('')}>✕</button>}
+                    {searchQuery && <button style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: '0 12px', fontSize: '16px' }} onClick={() => setSearchQuery('')}></button>}
                     <button style={{ background: `linear-gradient(135deg,${colors.primary},${colors.accent})`, color: '#fff', border: 'none', padding: '13px 24px', fontWeight: '800', cursor: 'pointer', fontSize: '13px' }}>Search</button>
                 </div>
             </div>
 
             {/* Section Tabs */}
             <div style={s.sectionTabs}>
-                {[{ key: 'all', label: '🗂 All Courses' }, { key: 'featured', label: '⭐ Featured' }, { key: 'trending', label: '🔥 Trending' }, { key: 'newest', label: '🆕 Newest' }, { key: 'certificates', label: '🏆 With Certificate' }].map(t => (
+                {[{ key: 'all', label: '▤ All Courses' }, { key: 'featured', label: ' Featured' }, { key: 'trending', label: ' Trending' }, { key: 'newest', label: '🆕 Newest' }, { key: 'certificates', label: ' With Certificate' }].map(t => (
                     <button key={t.key} style={tabStyle(activeSection === t.key)} onClick={() => setActiveSection(t.key)}>{t.label}</button>
                 ))}
             </div>
@@ -285,7 +285,7 @@ export default function CourseCatalog() {
                 <aside style={s.sidebar}>
                     <div style={s.filterCard}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-                            <h3 style={{ fontSize: '14px', fontWeight: '800', color: colors.text, margin: 0 }}>⚙️ Filters</h3>
+                            <h3 style={{ fontSize: '14px', fontWeight: '800', color: colors.text, margin: 0 }}>◈️ Filters</h3>
                             {hasActiveFilters && <button style={{ background: 'none', border: 'none', color: colors.primary, cursor: 'pointer', fontSize: '11px', fontWeight: '700' }} onClick={clearFilters}>Clear All</button>}
                         </div>
 
@@ -358,17 +358,17 @@ export default function CourseCatalog() {
                         <div style={{ marginBottom: 0 }}>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '6px 0' }}>
                                 <input type="checkbox" checked={filterCertificate} onChange={e => setFilterCertificate(e.target.checked)} style={{ width: '15px', height: '15px', accentColor: colors.primary }} />
-                                <span style={{ color: colors.text, fontSize: '12px', fontWeight: '600' }}>🏆 Certificate Only</span>
+                                <span style={{ color: colors.text, fontSize: '12px', fontWeight: '600' }}> Certificate Only</span>
                             </label>
                         </div>
                     </div>
 
                     {!isAuthenticated && (
                         <div style={{ background: `linear-gradient(135deg,${colors.primary}10,${colors.accent}08)`, border: `1px solid ${colors.primary}20`, borderRadius: '14px', padding: '18px', marginTop: '14px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎓</div>
+                            <div style={{ fontSize: '32px', marginBottom: '8px' }}>◈</div>
                             <h4 style={{ color: colors.text, fontSize: '13px', fontWeight: '800', margin: '0 0 5px' }}>Ready to Learn?</h4>
                             <p style={{ color: colors.textMuted, fontSize: '11px', margin: '0 0 12px', lineHeight: 1.5 }}>Join EMARE for expert-led courses, certificates, and community.</p>
-                            <button style={{ background: `linear-gradient(135deg,${colors.primary},${colors.accent})`, color: '#fff', border: 'none', borderRadius: '10px', padding: '9px 14px', fontWeight: '800', cursor: 'pointer', width: '100%', fontSize: '12px' }} onClick={() => navigate('/register')}>Register Free 🚀</button>
+                            <button style={{ background: `linear-gradient(135deg,${colors.primary},${colors.accent})`, color: '#fff', border: 'none', borderRadius: '10px', padding: '9px 14px', fontWeight: '800', cursor: 'pointer', width: '100%', fontSize: '12px' }} onClick={() => navigate('/register')}>Register Free ▶</button>
                         </div>
                     )}
                 </aside>
@@ -378,7 +378,7 @@ export default function CourseCatalog() {
                     {!isAuthenticated && (
                         <div style={s.guestBanner}>
                             <div>
-                                <span style={{ fontWeight: '700', color: colors.text, fontSize: '13px' }}>👋 Browsing as Guest</span>
+                                <span style={{ fontWeight: '700', color: colors.text, fontSize: '13px' }}>◈ Browsing as Guest</span>
                                 <p style={{ color: colors.textMuted, fontSize: '11px', margin: '2px 0 0' }}>Login or register to enroll, track progress, and earn certificates.</p>
                             </div>
                             <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
@@ -391,15 +391,15 @@ export default function CourseCatalog() {
                     {/* Active filter tags */}
                     {hasActiveFilters && (
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                            {filterCategory !== 'All' && <span style={s.filterTag}>{filterCategory} <span style={{ cursor: 'pointer' }} onClick={() => setFilterCategory('All')}>✕</span></span>}
-                            {filterLevel !== 'All' && <span style={s.filterTag}>{filterLevel} <span style={{ cursor: 'pointer' }} onClick={() => setFilterLevel('All')}>✕</span></span>}
-                            {filterLanguage !== 'All' && <span style={s.filterTag}>{filterLanguage} <span style={{ cursor: 'pointer' }} onClick={() => setFilterLanguage('All')}>✕</span></span>}
-                            {filterPrice !== 'All' && <span style={s.filterTag}>{filterPrice} <span style={{ cursor: 'pointer' }} onClick={() => setFilterPrice('All')}>✕</span></span>}
-                            {filterRating > 0 && <span style={s.filterTag}>⭐ {filterRating}+ <span style={{ cursor: 'pointer' }} onClick={() => setFilterRating(0)}>✕</span></span>}
-                            {filterDuration !== 'All' && <span style={s.filterTag}>⏱ {filterDuration}h <span style={{ cursor: 'pointer' }} onClick={() => setFilterDuration('All')}>✕</span></span>}
-                            {filterInstructor !== 'All' && <span style={s.filterTag}>👤 {filterInstructor} <span style={{ cursor: 'pointer' }} onClick={() => setFilterInstructor('All')}>✕</span></span>}
-                            {filterCertificate && <span style={s.filterTag}>🏆 Cert <span style={{ cursor: 'pointer' }} onClick={() => setFilterCertificate(false)}>✕</span></span>}
-                            {searchQuery && <span style={s.filterTag}>"{searchQuery}" <span style={{ cursor: 'pointer' }} onClick={() => setSearchQuery('')}>✕</span></span>}
+                            {filterCategory !== 'All' && <span style={s.filterTag}>{filterCategory} <span style={{ cursor: 'pointer' }} onClick={() => setFilterCategory('All')}></span></span>}
+                            {filterLevel !== 'All' && <span style={s.filterTag}>{filterLevel} <span style={{ cursor: 'pointer' }} onClick={() => setFilterLevel('All')}></span></span>}
+                            {filterLanguage !== 'All' && <span style={s.filterTag}>{filterLanguage} <span style={{ cursor: 'pointer' }} onClick={() => setFilterLanguage('All')}></span></span>}
+                            {filterPrice !== 'All' && <span style={s.filterTag}>{filterPrice} <span style={{ cursor: 'pointer' }} onClick={() => setFilterPrice('All')}></span></span>}
+                            {filterRating > 0 && <span style={s.filterTag}> {filterRating}+ <span style={{ cursor: 'pointer' }} onClick={() => setFilterRating(0)}></span></span>}
+                            {filterDuration !== 'All' && <span style={s.filterTag}>⏱ {filterDuration}h <span style={{ cursor: 'pointer' }} onClick={() => setFilterDuration('All')}></span></span>}
+                            {filterInstructor !== 'All' && <span style={s.filterTag}>◉ {filterInstructor} <span style={{ cursor: 'pointer' }} onClick={() => setFilterInstructor('All')}></span></span>}
+                            {filterCertificate && <span style={s.filterTag}> Cert <span style={{ cursor: 'pointer' }} onClick={() => setFilterCertificate(false)}></span></span>}
+                            {searchQuery && <span style={s.filterTag}>"{searchQuery}" <span style={{ cursor: 'pointer' }} onClick={() => setSearchQuery('')}></span></span>}
                         </div>
                     )}
 
@@ -415,7 +415,7 @@ export default function CourseCatalog() {
                             </select>
                             <div style={{ display: 'flex', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', overflow: 'hidden' }}>
                                 <button onClick={() => setViewMode('grid')} style={{ padding: '7px 10px', border: 'none', cursor: 'pointer', fontSize: '14px', background: viewMode === 'grid' ? colors.primary : 'transparent', color: viewMode === 'grid' ? '#fff' : colors.textMuted }}>⊞</button>
-                                <button onClick={() => setViewMode('list')} style={{ padding: '7px 10px', border: 'none', cursor: 'pointer', fontSize: '14px', background: viewMode === 'list' ? colors.primary : 'transparent', color: viewMode === 'list' ? '#fff' : colors.textMuted }}>☰</button>
+                                <button onClick={() => setViewMode('list')} style={{ padding: '7px 10px', border: 'none', cursor: 'pointer', fontSize: '14px', background: viewMode === 'list' ? colors.primary : 'transparent', color: viewMode === 'list' ? '#fff' : colors.textMuted }}></button>
                             </div>
                         </div>
                     </div>
@@ -429,7 +429,7 @@ export default function CourseCatalog() {
                         </div>
                     ) : filtered.length === 0 ? (
                         <div style={s.emptyBox}>
-                            <div style={{ fontSize: '52px', marginBottom: '14px' }}>🔍</div>
+                            <div style={{ fontSize: '52px', marginBottom: '14px' }}>⌕</div>
                             <h3 style={{ color: colors.text, margin: '0 0 8px', fontSize: '18px', fontWeight: '800' }}>No courses found</h3>
                             <p style={{ color: colors.textMuted, marginBottom: '20px' }}>Try adjusting your filters or search query</p>
                             <button style={{ background: `linear-gradient(135deg,${colors.primary},${colors.accent})`, color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }} onClick={clearFilters}>Clear All Filters</button>

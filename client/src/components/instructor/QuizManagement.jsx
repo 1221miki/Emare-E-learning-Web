@@ -215,7 +215,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
             {/* Toast */}
             {quizToast && (
                 <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 2000, background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', padding: '14px 24px', borderRadius: '12px', fontWeight: 700, boxShadow: '0 8px 32px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px' }}>
-                    ✅ {quizToast}
+                     {quizToast}
                 </div>
             )}
 
@@ -229,7 +229,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
             <div style={{ ...s.panelCard, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
                 <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: '240px', flexWrap: 'wrap' }}>
                     <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-                        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: colors.textMuted, fontSize: '14px' }}>🔍</span>
+                        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: colors.textMuted, fontSize: '14px' }}>⌕</span>
                         <input
                             style={{ ...s.input, paddingLeft: '36px', width: '100%' }}
                             placeholder="Search quizzes..."
@@ -347,9 +347,9 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
                     <div style={{ ...s.modal, maxWidth: '760px', maxHeight: '90vh', overflow: 'auto' }}>
                         <div style={s.modalHeader}>
                             <h3 style={s.modalTitle}>
-                                {editingQuiz ? '✏️ Edit Quiz' : '🆕 Create New Quiz'}
+                                {editingQuiz ? '️ Edit Quiz' : '🆕 Create New Quiz'}
                             </h3>
-                            <button onClick={() => setShowQuizCreateModal(false)} style={s.closeBtn}>✕</button>
+                            <button onClick={() => setShowQuizCreateModal(false)} style={s.closeBtn}></button>
                         </div>
                         <div style={s.modalBody}>
                             {/* Quiz Details */}
@@ -470,15 +470,15 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', paddingLeft: '38px' }}>
                                                 {q.options.map((opt, oIdx) => (
                                                     <div key={oIdx} style={oIdx === q.correctAnswerIndex ? qs.correctOption : qs.normalOption}>
-                                                        <strong>{String.fromCharCode(65 + oIdx)}.</strong> {opt} {oIdx === q.correctAnswerIndex && ' ✓'}
+                                                        <strong>{String.fromCharCode(65 + oIdx)}.</strong> {opt} {oIdx === q.correctAnswerIndex && ' '}
                                                     </div>
                                                 ))}
                                             </div>
                                         )}
                                         {q.type === 'tf' && (
                                             <div style={{ paddingLeft: '38px', display: 'flex', gap: '8px' }}>
-                                                <span style={q.correctAnswerIndex === 0 ? qs.correctOption : qs.normalOption}>True {q.correctAnswerIndex === 0 && '✓'}</span>
-                                                <span style={q.correctAnswerIndex === 1 ? qs.correctOption : qs.normalOption}>False {q.correctAnswerIndex === 1 && '✓'}</span>
+                                                <span style={q.correctAnswerIndex === 0 ? qs.correctOption : qs.normalOption}>True {q.correctAnswerIndex === 0 && ''}</span>
+                                                <span style={q.correctAnswerIndex === 1 ? qs.correctOption : qs.normalOption}>False {q.correctAnswerIndex === 1 && ''}</span>
                                             </div>
                                         )}
                                         {q.type === 'short' && q.correctAnswers?.length > 0 && (
@@ -493,7 +493,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
                                 {showQuestionForm && (
                                     <div style={{ background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '14px', padding: '20px', marginTop: '16px' }}>
                                         <h4 style={{ margin: '0 0 16px', color: '#818cf8', fontSize: '14px', fontWeight: 700 }}>
-                                            {editingQuestionIdx !== null ? '✏️ Edit Question' : '➕ New Question'}
+                                            {editingQuestionIdx !== null ? '️ Edit Question' : '+ New Question'}
                                         </h4>
 
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

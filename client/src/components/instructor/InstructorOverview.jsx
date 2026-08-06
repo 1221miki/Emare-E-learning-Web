@@ -184,7 +184,7 @@ export default function InstructorOverview({ user, analytics = {}, courses = [],
                             </div>
                             <div>
                                 <p style={{ ...styles.eyebrow, color: colors.primary }}>Emare ICT Hub · Instructor</p>
-                                <h2 style={{ ...styles.welcomeTitle, color: colors.text }}>Welcome back, {user?.fullName?.split(' ')[0] || 'Instructor'} 👋</h2>
+                                <h2 style={{ ...styles.welcomeTitle, color: colors.text }}>Welcome back, {user?.fullName?.split(' ')[0] || 'Instructor'} ◈</h2>
                                 <p style={{ ...styles.welcomeSubtitle, color: colors.textMuted }}>
                                     {user?.fullName || 'Instructor'} · {user?.assignedRole || 'Instructor'}
                                 </p>

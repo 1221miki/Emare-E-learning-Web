@@ -74,7 +74,7 @@ describe('OverviewTab', () => {
         renderTab();
         const streakCard = screen.getByText('7-Day Streak').closest('div');
         expect(streakCard).not.toBeNull();
-        expect(within(streakCard).getByText('🔒 LOCKED')).toBeInTheDocument();
+        expect(within(streakCard).getByText('▣ LOCKED')).toBeInTheDocument();
     });
 
     it('shows the real Learning Activity Snapshot grid', () => {

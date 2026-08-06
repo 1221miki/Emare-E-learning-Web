@@ -57,7 +57,7 @@ export default function CertificatesPage() {
                                 borderRadius: '16px', padding: '30px', position: 'relative', overflow: 'hidden',
                                 boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
                             }}>
-                                <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '100px', opacity: 0.1 }}>🏆</div>
+                                <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '100px', opacity: 0.1 }}></div>
                                 
                                 <div style={{ color: '#fbbf24', fontSize: '12px', fontWeight: '800', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px' }}>
                                     Certificate of Completion
