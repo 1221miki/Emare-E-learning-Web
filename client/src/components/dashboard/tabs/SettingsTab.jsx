@@ -277,7 +277,7 @@ export default function SettingsTab(dash) {
                                     <input type="password" style={styles.input} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="••••••••" />
                                     {newPassword && (
                                         <span style={{ fontSize: '12px', fontWeight: '700', color: newPassword.length < 8 ? DANGER : newPassword.length < 12 ? WARN : colors.success }}>
-                                            {newPassword.length < 8 ? 'Too short — use at least 8 characters' : newPassword.length < 12 ? 'Decent — add more characters for a stronger password' : 'Strong password length ✓'}
+                                            {newPassword.length < 8 ? 'Too short — use at least 8 characters' : newPassword.length < 12 ? 'Decent — add more characters for a stronger password' : 'Strong password length '}
                                         </span>
                                     )}
                                 </div>

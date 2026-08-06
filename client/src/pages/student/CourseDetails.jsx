@@ -102,10 +102,10 @@ export default function CourseDetails() {
                     <div style={{ width: '360px', background: colors.bgCard, borderRadius: '24px', border: `1px solid ${colors.border}`, padding: '28px' }}>
                         <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '18px' }}>What you get</h3>
                         <ul style={{ listStyle: 'none', margin: 0, padding: 0, color: colors.textMuted, display: 'grid', gap: '12px' }}>
-                            <li>✔ Full course access after payment</li>
-                            <li>✔ Video lessons, quizzes and PDF downloads</li>
-                            <li>✔ Progress tracking and completion certificate</li>
-                            <li>✔ Secure checkout via Chapa</li>
+                            <li> Full course access after payment</li>
+                            <li> Video lessons, quizzes and PDF downloads</li>
+                            <li> Progress tracking and completion certificate</li>
+                            <li> Secure checkout via Chapa</li>
                         </ul>
                         <Link to="/courses" style={{ display: 'inline-block', marginTop: '24px', color: '#4338ca', fontWeight: '700', textDecoration: 'none' }}>Browse more courses</Link>
                     </div>

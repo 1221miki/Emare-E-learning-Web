@@ -395,7 +395,7 @@ function SecurityTab({ user }) {
                                 const pass = i === 0 ? newPwd.length >= 8 : i === 1 ? /[A-Z]/.test(newPwd) : i === 2 ? /\d/.test(newPwd) : /[^A-Za-z0-9]/.test(newPwd);
                                 return (
                                     <span key={r} style={{ background: pass ? 'rgba(16,185,129,0.12)' : 'rgba(51,65,85,0.3)', border: `1px solid ${pass ? 'rgba(16,185,129,0.3)' : 'rgba(51,65,85,0.4)'}`, color: pass ? '#34d399' : '#475569', borderRadius: '20px', padding: '3px 8px', fontSize: '11px', fontWeight: '600' }}>
-                                        {pass ? '✓ ' : ''}{r}
+                                        {pass ? ' ' : ''}{r}
                                     </span>
                                 );
                             })}

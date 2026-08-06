@@ -205,7 +205,7 @@ export default function ProfessionalCourseCard({ enrollment, course }) {
                 </div>
 
                 <div style={s.stars}>
-                    {'★'.repeat(Math.floor(rating))}{'☆'.repeat(5 - Math.floor(rating))} 
+                    {''.repeat(Math.floor(rating))}{''.repeat(5 - Math.floor(rating))} 
                     <span style={{ color: colors.textMuted, marginLeft: '4px' }}>({rating})</span>
                 </div>
 

@@ -8,10 +8,10 @@ const LEVELS = ['All', 'Beginner', 'Intermediate', 'Advanced'];
 const LANGUAGES = ['All', 'English', 'Amharic', 'Oromo'];
 const SORT_OPTIONS = [
     { value: 'newest', label: '🆕 Newest First' },
-    { value: 'popular', label: '🔥 Most Popular' },
-    { value: 'rating', label: '⭐ Highest Rated' },
-    { value: 'price_low', label: '💰 Price: Low → High' },
-    { value: 'price_high', label: '💎 Price: High → Low' }
+    { value: 'popular', label: ' Most Popular' },
+    { value: 'rating', label: ' Highest Rated' },
+    { value: 'price_low', label: '◈ Price: Low → High' },
+    { value: 'price_high', label: '◆ Price: High → Low' }
 ];
 
 function useQuery() {
@@ -162,7 +162,7 @@ export default function SearchPage() {
 
             {/* Search Hero */}
             <div style={s.hero}>
-                <h1 style={s.heroTitle}>🔍 Search the Platform</h1>
+                <h1 style={s.heroTitle}>⌕ Search the Platform</h1>
                 <form style={s.searchForm} onSubmit={handleSearch}>
                     <input
                         autoFocus
@@ -183,7 +183,7 @@ export default function SearchPage() {
                 {/* Filters Sidebar */}
                 <aside style={s.sidebar}>
                     <div style={s.filterCard}>
-                        <h3 style={s.filterTitle}>⚙️ Filters</h3>
+                        <h3 style={s.filterTitle}>◈️ Filters</h3>
 
                         <div style={s.filterGroup}>
                             <span style={s.filterLabel}>Price</span>
@@ -228,7 +228,7 @@ export default function SearchPage() {
 
                         {(filterLevel !== 'All' || filterLanguage !== 'All' || filterPrice !== 'All' || filterCategory !== 'All') && (
                             <button style={s.clearBtn} onClick={() => { setFilterLevel('All'); setFilterLanguage('All'); setFilterPrice('All'); setFilterCategory('All'); }}>
-                                ✕ Clear All Filters
+                                 Clear All Filters
                             </button>
                         )}
                     </div>
@@ -239,9 +239,9 @@ export default function SearchPage() {
                     {/* Tabs */}
                     <div style={s.tabs}>
                         {[
-                            { key: 'courses', label: `📚 Courses (${filteredCourses.length})` },
-                            { key: 'instructors', label: `👨‍🏫 Instructors (${filteredInstructors.length})` },
-                            { key: 'categories', label: `🗂️ Categories (${filteredCategories.length})` }
+                            { key: 'courses', label: `▧ Courses (${filteredCourses.length})` },
+                            { key: 'instructors', label: `‍◈ Instructors (${filteredInstructors.length})` },
+                            { key: 'categories', label: `▤️ Categories (${filteredCategories.length})` }
                         ].map(t => (
                             <button key={t.key} style={{
                                 ...s.tab,
@@ -271,7 +271,7 @@ export default function SearchPage() {
                             {activeTab === 'courses' && (
                                 filteredCourses.length === 0 ? (
                                     <div style={s.empty}>
-                                        <div style={{ fontSize: '48px', marginBottom: '12px' }}>🔍</div>
+                                        <div style={{ fontSize: '48px', marginBottom: '12px' }}>⌕</div>
                                         <p style={{ marginBottom: '16px' }}>No courses match your search.</p>
                                         <button style={s.clearBtn} onClick={() => { setSearchInput(''); setFilterLevel('All'); setFilterLanguage('All'); setFilterPrice('All'); }}>Clear Search</button>
                                     </div>
@@ -285,14 +285,14 @@ export default function SearchPage() {
                                                 <div style={s.courseImg}>
                                                     {c.thumbnailUrl
                                                         ? <img src={c.thumbnailUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                        : '🎓'}
+                                                        : '◈'}
                                                 </div>
                                                 <div style={s.courseBody}>
                                                     <span style={{ ...s.badge, background: `${colors.primary}15`, color: colors.primary }}>{c.technicalCategory || 'Tech'}</span>
                                                     <h3 style={s.courseTitle}>{c.courseTitle}</h3>
                                                     <p style={{ color: colors.textMuted, fontSize: '13px', margin: '0 0 8px' }}>By {c.creatorRef?.fullName || 'Instructor'}</p>
                                                     <div style={s.courseMeta}>
-                                                        <span>★ {c.averageRating || '4.8'}</span>
+                                                        <span> {c.averageRating || '4.8'}</span>
                                                         <span>· {c.level || 'Beginner'}</span>
                                                         <span>· {c.estimatedDurationHours || 5}h</span>
                                                         <span>· {c.language || 'English'}</span>
@@ -314,7 +314,7 @@ export default function SearchPage() {
                             {activeTab === 'instructors' && (
                                 filteredInstructors.length === 0 ? (
                                     <div style={s.empty}>
-                                        <div style={{ fontSize: '48px', marginBottom: '12px' }}>👤</div>
+                                        <div style={{ fontSize: '48px', marginBottom: '12px' }}>◉</div>
                                         <p>No instructors found matching your search.</p>
                                     </div>
                                 ) : (
@@ -344,7 +344,7 @@ export default function SearchPage() {
                             {activeTab === 'categories' && (
                                 filteredCategories.length === 0 ? (
                                     <div style={s.empty}>
-                                        <div style={{ fontSize: '48px', marginBottom: '12px' }}>🗂️</div>
+                                        <div style={{ fontSize: '48px', marginBottom: '12px' }}>▤️</div>
                                         <p>No categories found.</p>
                                     </div>
                                 ) : (
@@ -354,7 +354,7 @@ export default function SearchPage() {
                                                 onClick={() => navigate(`/categories`)}
                                                 onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
                                                 onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
-                                                <div style={{ fontSize: '36px', marginBottom: '10px' }}>📚</div>
+                                                <div style={{ fontSize: '36px', marginBottom: '10px' }}>▧</div>
                                                 <h3 style={{ color: colors.text, fontSize: '15px', fontWeight: '700', margin: '0 0 4px' }}>{cat.name}</h3>
                                                 <p style={{ color: colors.textMuted, fontSize: '12px', margin: 0 }}>Browse courses →</p>
                                             </div>

@@ -30,48 +30,48 @@ export default function LandingPage() {
 
     const handleNewsletter = (e) => {
         e.preventDefault();
-        setNewsletterMsg('🎉 Thank you! You have been subscribed to our newsletter.');
+        setNewsletterMsg(' Thank you! You have been subscribed to our newsletter.');
         setNewsletterEmail('');
     };
 
     // ── DATA MOCKS FOR 21 SECTIONS ──────────────────────────────────────────────
 
     const stats = [
-        { value: `${allCourses.length}+`, label: 'Total Courses', icon: '📚' },
-        { value: '25,000+', label: 'Total Students', icon: '🎓' },
-        { value: '150+', label: 'Total Instructors', icon: '👨‍🏫' },
-        { value: '12,000+', label: 'Certificates Issued', icon: '🏅' },
+        { value: `${allCourses.length}+`, label: 'Total Courses', icon: '▧' },
+        { value: '25,000+', label: 'Total Students', icon: '◈' },
+        { value: '150+', label: 'Total Instructors', icon: '‍◈' },
+        { value: '12,000+', label: 'Certificates Issued', icon: '' },
         { value: '1M+', label: 'Learning Hours', icon: '⏱️' },
-        { value: '15+', label: 'Countries Reached', icon: '🌍' }
+        { value: '15+', label: 'Countries Reached', icon: '◉' }
     ];
 
     const categories = [
-        { name: 'Programming', icon: '💻', color: '#3b82f6' },
-        { name: 'Networking', icon: '🔗', color: '#8b5cf6' },
-        { name: 'AI', icon: '🤖', color: '#10b981' },
-        { name: 'Cybersecurity', icon: '🔒', color: '#f59e0b' },
-        { name: 'Web Development', icon: '🌐', color: '#06b6d4' },
-        { name: 'Mobile Development', icon: '📱', color: '#ec4899' },
-        { name: 'Data Science', icon: '📊', color: '#14b8a6' },
-        { name: 'Graphic Design', icon: '🎨', color: '#a855f7' },
-        { name: 'Business', icon: '💼', color: '#84cc16' }
+        { name: 'Programming', icon: '▧', color: '#3b82f6' },
+        { name: 'Networking', icon: '', color: '#8b5cf6' },
+        { name: 'AI', icon: '⊡', color: '#10b981' },
+        { name: 'Cybersecurity', icon: '▣', color: '#f59e0b' },
+        { name: 'Web Development', icon: '◉', color: '#06b6d4' },
+        { name: 'Mobile Development', icon: '▢', color: '#ec4899' },
+        { name: 'Data Science', icon: '▥', color: '#14b8a6' },
+        { name: 'Graphic Design', icon: '◆', color: '#a855f7' },
+        { name: 'Business', icon: '◈', color: '#84cc16' }
     ];
 
     const learningPaths = [
-        { name: 'Full Stack Developer', icon: '🚀', courses: 6, duration: '6 Months' },
-        { name: 'UI/UX Designer', icon: '🎨', courses: 4, duration: '4 Months' },
-        { name: 'AI Engineer', icon: '🧠', courses: 8, duration: '8 Months' },
-        { name: 'Cybersecurity Specialist', icon: '🛡️', courses: 5, duration: '5 Months' },
-        { name: 'Data Analyst', icon: '📈', courses: 4, duration: '3 Months' }
+        { name: 'Full Stack Developer', icon: '▶', courses: 6, duration: '6 Months' },
+        { name: 'UI/UX Designer', icon: '◆', courses: 4, duration: '4 Months' },
+        { name: 'AI Engineer', icon: '◎', courses: 8, duration: '8 Months' },
+        { name: 'Cybersecurity Specialist', icon: '▣️', courses: 5, duration: '5 Months' },
+        { name: 'Data Analyst', icon: '↗', courses: 4, duration: '3 Months' }
     ];
 
     const whyChooseUs = [
-        { title: 'Expert Instructors', desc: 'Learn from industry professionals.', icon: '👨‍🏫' },
-        { title: 'Hands-on Projects', desc: 'Build real-world applications.', icon: '🛠️' },
+        { title: 'Expert Instructors', desc: 'Learn from industry professionals.', icon: '‍◈' },
+        { title: 'Hands-on Projects', desc: 'Build real-world applications.', icon: '◈️' },
         { title: 'Flexible Learning', desc: 'Study at your own pace, anytime.', icon: '⏰' },
-        { title: 'Certificates', desc: 'Earn verifiable digital certificates.', icon: '📜' },
-        { title: 'Career Support', desc: 'Resume reviews and interview prep.', icon: '🤝' },
-        { title: 'Community', desc: 'Join thousands of active learners.', icon: '🌐' }
+        { title: 'Certificates', desc: 'Earn verifiable digital certificates.', icon: '▤' },
+        { title: 'Career Support', desc: 'Resume reviews and interview prep.', icon: '⊞' },
+        { title: 'Community', desc: 'Join thousands of active learners.', icon: '◉' }
     ];
 
     const topInstructors = [
@@ -109,14 +109,14 @@ export default function LandingPage() {
     const renderCourseCard = (course, tag, tagColor) => (
         <div key={course._id} onClick={() => navigate(`/courses/${course._id}`)} style={p.courseCard}>
             <div style={p.courseImage}>
-                {course.thumbnailUrl ? <img src={course.thumbnailUrl} alt={course.courseTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '48px' }}>🎓</span>}
+                {course.thumbnailUrl ? <img src={course.thumbnailUrl} alt={course.courseTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '48px' }}>◈</span>}
             </div>
             <div style={p.courseBody}>
                 <span style={{...p.courseBadge, color: tagColor, background: `${tagColor}15`}}>{tag}</span>
                 <h3 style={p.courseTitle}>{course.courseTitle}</h3>
                 <p style={p.courseInstructor}>By {course.creatorRef?.fullName || 'Emare Instructor'}</p>
                 <div style={p.courseMeta}>
-                    <span style={{ color: '#fbbf24' }}>★ {course.averageRating || '4.8'}</span>
+                    <span style={{ color: '#fbbf24' }}> {course.averageRating || '4.8'}</span>
                     <span style={{ color: colors.textMuted }}>({course.totalReviews || 120})</span>
                     <span style={{ color: colors.textMuted }}>· {course.estimatedDurationHours || 5}h</span>
                     <span style={{ color: colors.textMuted }}>· {course.level || 'Beginner'}</span>
@@ -220,7 +220,7 @@ export default function LandingPage() {
             {/* 3. Hero Section */}
             <section style={p.hero}>
                 <div style={p.heroContent}>
-                    <span style={p.sectionBadge}>🚀 Empowering Africa's Tech Future</span>
+                    <span style={p.sectionBadge}>▶ Empowering Africa's Tech Future</span>
                     <h1 style={p.heroTitle}>Welcome to Emare ICT Hub</h1>
                     <h2 style={p.heroSubtitleAnimated}>
                         <TypingText 
@@ -353,7 +353,7 @@ export default function LandingPage() {
                             <h3 style={{ color: colors.text, fontSize: '17px', fontWeight: '700', margin: '0 0 4px' }}>{inst.name}</h3>
                             <p style={{ color: colors.textMuted, fontSize: '13px', margin: '0 0 12px' }}>{inst.skills}</p>
                             <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', fontSize: '13px' }}>
-                                <span style={{ color: '#fbbf24' }}>★ {inst.rating}</span>
+                                <span style={{ color: '#fbbf24' }}> {inst.rating}</span>
                                 <span style={{ color: colors.textMuted }}>{inst.students} students</span>
                             </div>
                         </div>
@@ -370,7 +370,7 @@ export default function LandingPage() {
                 <div style={p.grid3}>
                     {testimonials.map((t, i) => (
                         <div key={i} style={p.testimonialCard}>
-                            <div style={{ color: '#fbbf24', fontSize: '20px', marginBottom: '16px' }}>{'★'.repeat(t.rating)}</div>
+                            <div style={{ color: '#fbbf24', fontSize: '20px', marginBottom: '16px' }}>{''.repeat(t.rating)}</div>
                             <p style={{ color: colors.text, fontSize: '15px', lineHeight: 1.6, margin: '0 0 24px', fontStyle: 'italic' }}>"{t.text}"</p>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: colors.primary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800' }}>{t.avatar}</div>
@@ -431,7 +431,7 @@ export default function LandingPage() {
                                 <p style={{ margin: 0, color: colors.textMuted, fontSize: '14px' }}>Instructor: {live.instructor}</p>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                                <div style={{ color: colors.primary, fontWeight: '700' }}>📅 {live.date}</div>
+                                <div style={{ color: colors.primary, fontWeight: '700' }}>▦ {live.date}</div>
                                 <button style={p.primaryBtn}>Reserve Seat</button>
                             </div>
                         </div>
@@ -446,7 +446,7 @@ export default function LandingPage() {
                     <h2 style={p.sectionTitle}>Student Success Stories</h2>
                 </div>
                 <div style={{ maxWidth: '1000px', margin: '0 auto', background: colors.bgCard, borderRadius: '24px', overflow: 'hidden', border: `1px solid ${colors.border}`, display: 'flex' }}>
-                    <div style={{ flex: 1, background: colors.bgInput, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '64px' }}>🎥</div>
+                    <div style={{ flex: 1, background: colors.bgInput, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '64px' }}>▶</div>
                     <div style={{ flex: 1, padding: '40px' }}>
                         <div style={{ fontSize: '40px', color: colors.primary, marginBottom: '20px' }}>"</div>
                         <h3 style={{ fontSize: '24px', color: colors.text, margin: '0 0 16px', lineHeight: 1.4 }}>I transitioned from a high school graduate to a Junior Developer in 6 months using Emare ICT Hub.</h3>
@@ -484,7 +484,7 @@ export default function LandingPage() {
                 <div style={p.grid3}>
                     {blogArticles.map((b, i) => (
                         <div key={i} style={p.blogCard}>
-                            <div style={{ height: '160px', background: colors.bgInput, borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>📝</div>
+                            <div style={{ height: '160px', background: colors.bgInput, borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>▤</div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', color: colors.textMuted, fontSize: '12px', marginBottom: '12px' }}>
                                 <span>{b.date}</span>
                                 <span>By {b.author}</span>
@@ -581,9 +581,9 @@ export default function LandingPage() {
                         <Link to="/terms" style={p.footerLink}>Terms &amp; Conditions</Link>
                         <Link to="/cookies" style={p.footerLink}>Cookie Policy</Link>
                         <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-                            <div style={{ width: '32px', height: '32px', background: colors.bgInput, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>📘</div>
-                            <div style={{ width: '32px', height: '32px', background: colors.bgInput, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>🐦</div>
-                            <div style={{ width: '32px', height: '32px', background: colors.bgInput, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>📸</div>
+                            <div style={{ width: '32px', height: '32px', background: colors.bgInput, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}></div>
+                            <div style={{ width: '32px', height: '32px', background: colors.bgInput, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>◇</div>
+                            <div style={{ width: '32px', height: '32px', background: colors.bgInput, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>◇</div>
                         </div>
                     </div>
                 </div>

@@ -21,6 +21,28 @@ button:focus, input:focus, select:focus, textarea:focus {
   outline-offset: 2px;
 }
 
+/* Global Dropdown Select & Option Text Visibility Rules */
+select {
+  color-scheme: dark;
+}
+
+option {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+  padding: 8px 12px;
+}
+
+[data-theme='light'] select,
+.light select {
+  color-scheme: light;
+}
+
+[data-theme='light'] option,
+.light option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
 a { color: inherit; }
 
 input:-webkit-autofill,

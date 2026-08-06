@@ -96,7 +96,7 @@ export default function LoginPage() {
         }
         try {
             await requestPasswordReset(forgotEmail.trim().toLowerCase());
-            setForgotSuccess('✅ Check your email for password reset instructions. The link expires in 15 minutes.');
+            setForgotSuccess(' Check your email for password reset instructions. The link expires in 15 minutes.');
             setForgotStep(2);
         } catch (err) {
             setForgotError(err.response?.data?.message || 'Failed to request password reset.');
@@ -236,7 +236,7 @@ export default function LoginPage() {
                                     Sign in with {socialProvider}
                                 </h3>
                             </div>
-                            <button onClick={() => setShowSocialModal(false)} style={styles.closeBtn}>✕</button>
+                            <button onClick={() => setShowSocialModal(false)} style={styles.closeBtn}></button>
                         </div>
 
                         {socialError && <div style={styles.errorBox}>{socialError}</div>}
@@ -294,13 +294,13 @@ export default function LoginPage() {
                     <div style={styles.modalContent}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <h3 style={{ color: '#fff', margin: 0, fontSize: '18px', fontWeight: '800' }}>
-                                {forgotStep === 1 ? '🔐 Reset Password' : '🔑 Set New Password'}
+                                {forgotStep === 1 ? '▣ Reset Password' : '◈ Set New Password'}
                             </h3>
                             <button 
                                 onClick={() => setShowForgotModal(false)}
                                 style={styles.closeBtn}
                             >
-                                ✕
+                                
                             </button>
                         </div>
 
@@ -334,10 +334,10 @@ export default function LoginPage() {
                                     A password reset link has been sent to <strong style={{ color: '#f1f5f9' }}>{forgotEmail}</strong>
                                 </p>
                                 <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '20px' }}>
-                                    📧 Check your inbox and click the link to reset your password. The link expires in 15 minutes.
+                                     Check your inbox and click the link to reset your password. The link expires in 15 minutes.
                                 </p>
                                 <p style={{ color: '#64748b', fontSize: '12px', marginBottom: '20px' }}>
-                                    💡 Can't find the email? Check your spam or junk folder.
+                                     Can't find the email? Check your spam or junk folder.
                                 </p>
                                 <button 
                                     type="button" 

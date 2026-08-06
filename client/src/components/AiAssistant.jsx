@@ -614,7 +614,7 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
             <div id="ai-assistant-root" style={s.chatBox}>
                 <div style={s.header}>
                     <div>
-                        <h3 style={s.title}><span>🤖</span> Emare AI Tutor</h3>
+                        <h3 style={s.title}><span>⊡</span> Emare AI Tutor</h3>
                         <div style={s.subtitle}>Smart AI guidance for lessons, assignments, quizzes, and projects.</div>
                         <div style={s.headerMeta}>{assistantCourseLabel} • {Math.max(messages.length - 1, 0)} conversation{messages.length - 1 === 1 ? '' : 's'}</div>
                     </div>
@@ -643,10 +643,10 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
 
                 <div style={s.actionBar}>
                     <button type="button" style={s.actionButton} onClick={handleAttachClick} disabled={uploadingFile}>
-                        {uploadingFile ? 'Uploading PDF...' : '📎 Attach PDF'}
+                        {uploadingFile ? 'Uploading PDF...' : '◈ Attach PDF'}
                     </button>
-                    <button type="button" style={s.actionButton} onClick={handleVoiceToggle}>{voiceListening ? '🎙 Stop' : '🎙 Voice input'}</button>
-                    <button type="button" style={s.actionButton} onClick={handleCopyResponse}>📋 Copy response</button>
+                    <button type="button" style={s.actionButton} onClick={handleVoiceToggle}>{voiceListening ? '◈ Stop' : '◈ Voice input'}</button>
+                    <button type="button" style={s.actionButton} onClick={handleCopyResponse}>▤ Copy response</button>
                 </div>
 
                 <div style={s.msgArea}>
@@ -662,7 +662,7 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
                                         <span>{m.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                     </div>
                                 </div>
-                                {isUser && <div style={s.avatar(true)}>👤</div>}
+                                {isUser && <div style={s.avatar(true)}>◉</div>}
                             </div>
                         );
                     })}
@@ -677,7 +677,7 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
                             <span style={{ fontSize: '12px', color: colors.textMuted }}>Rate answer:</span>
                             {[1, 2, 3, 4, 5].map((value) => (
                                 <span key={value} style={s.ratingStar(selectedRating >= value)} onClick={() => setSelectedRating(value)}>
-                                    ★
+                                    
                                 </span>
                             ))}
                         </div>
@@ -726,7 +726,7 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
                     onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                     aria-label="Open AI assistant"
                 >
-                    🤖
+                    ⊡
                 </button>
             )}
 

@@ -131,7 +131,7 @@ export default function CategoriesPage() {
                 <h1 style={s.heroTitle}>Explore All Categories</h1>
                 <p style={s.heroSub}>Find the perfect course in your area of interest</p>
                 <div style={s.searchBar}>
-                    <span style={{ padding: '16px 16px 16px 20px', fontSize: '18px' }}>🔍</span>
+                    <span style={{ padding: '16px 16px 16px 20px', fontSize: '18px' }}>⌕</span>
                     <input
                         type="text"
                         placeholder="Search categories..."
@@ -211,7 +211,7 @@ export default function CategoriesPage() {
                 {/* Selected Category Detail Panel */}
                 {selectedCat && (
                     <div style={s.detailPanel}>
-                        <button style={s.closeBtn} onClick={() => setSelectedCat(null)}>✕ Close</button>
+                        <button style={s.closeBtn} onClick={() => setSelectedCat(null)}> Close</button>
                         <h2 style={s.detailTitle}>{SelectedIcon ? <SelectedIcon size={20} style={{ verticalAlign: 'middle', marginRight: '8px' }} /> : null}{selectedCat.name}</h2>
                         <p style={s.detailSub}>
                             {coursesForCat(selectedCat.name).length} courses available in this category
@@ -246,12 +246,12 @@ export default function CategoriesPage() {
                                         <div style={s.courseCardImg}>
                                             {c.thumbnailUrl
                                                 ? <img src={c.thumbnailUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                : '🎓'}
+                                                : '◈'}
                                         </div>
                                         <div style={s.courseCardBody}>
                                             <h4 style={s.courseCardTitle}>{c.courseTitle}</h4>
                                             <div style={s.courseCardMeta}>
-                                                <span>★ {c.averageRating || '4.8'}</span>
+                                                <span> {c.averageRating || '4.8'}</span>
                                                 <span>·</span>
                                                 <span>{c.level || 'Beginner'}</span>
                                                 <span>·</span>

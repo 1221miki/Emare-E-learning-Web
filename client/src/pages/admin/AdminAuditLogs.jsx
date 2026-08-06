@@ -228,7 +228,7 @@ export default function AdminAuditLogs() {
                                     Audit Log System
                                 </h1>
                                 <p style={{ margin: 0, fontSize: 13, color: muted }}>
-                                    Immutable security trail · Read-only · {usingMock ? '⚠️ Demo data' : 'Live data'}
+                                    Immutable security trail · Read-only · {usingMock ? '️ Demo data' : 'Live data'}
                                 </p>
                             </div>
                         </div>
@@ -293,7 +293,7 @@ export default function AdminAuditLogs() {
                         {/* Search */}
                         <div>
                             <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                🔍 Search
+                                ⌕ Search
                             </label>
                             <div style={{ position: 'relative' }}>
                                 <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: muted }} />
@@ -313,7 +313,7 @@ export default function AdminAuditLogs() {
 
                         {/* Category */}
                         <div>
-                            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>📁 Category</label>
+                            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>▤ Category</label>
                             <select value={category} onChange={e => handleFilter('category', e.target.value)}
                                 style={{ width: '100%', padding: '9px 12px', background: inputBg, border: `1px solid ${border}`, borderRadius: 10, color: colors.text, fontSize: 13, cursor: 'pointer' }}>
                                 {CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
@@ -322,7 +322,7 @@ export default function AdminAuditLogs() {
 
                         {/* Severity */}
                         <div>
-                            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>⚡ Severity</label>
+                            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>↯ Severity</label>
                             <select value={severity} onChange={e => handleFilter('severity', e.target.value)}
                                 style={{ width: '100%', padding: '9px 12px', background: inputBg, border: `1px solid ${border}`, borderRadius: 10, color: colors.text, fontSize: 13, cursor: 'pointer' }}>
                                 {SEVERITY.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
@@ -331,14 +331,14 @@ export default function AdminAuditLogs() {
 
                         {/* Date From */}
                         <div>
-                            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>📅 From</label>
+                            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>▦ From</label>
                             <input type="date" value={dateFrom} onChange={e => handleFilter('dateFrom', e.target.value)}
                                 style={{ width: '100%', padding: '9px 12px', background: inputBg, border: `1px solid ${border}`, borderRadius: 10, color: colors.text, fontSize: 13, boxSizing: 'border-box' }} />
                         </div>
 
                         {/* Date To */}
                         <div>
-                            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>📅 To</label>
+                            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>▦ To</label>
                             <input type="date" value={dateTo} onChange={e => handleFilter('dateTo', e.target.value)}
                                 style={{ width: '100%', padding: '9px 12px', background: inputBg, border: `1px solid ${border}`, borderRadius: 10, color: colors.text, fontSize: 13, boxSizing: 'border-box' }} />
                         </div>

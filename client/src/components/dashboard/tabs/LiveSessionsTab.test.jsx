@@ -14,7 +14,7 @@ describe('LiveSessionsTab', () => {
     it('shows an empty state when no sessions exist', () => {
         renderTab([]);
         expect(screen.getByText('No upcoming live sessions scheduled.')).toBeInTheDocument();
-        expect(screen.queryByText('🔴 Join Now')).not.toBeInTheDocument();
+        expect(screen.queryByText('● Join Now')).not.toBeInTheDocument();
     });
 
     it('shows the past-sessions empty state on the past filter', () => {

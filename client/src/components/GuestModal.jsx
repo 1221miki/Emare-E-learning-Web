@@ -21,11 +21,11 @@ export default function GuestModal({ isOpen, onClose, action = 'access this feat
                 onClick={e => e.stopPropagation()}>
 
                 {/* Close */}
-                <button onClick={onClose} style={{ ...s.closeBtn, background: colors.bgInput, color: colors.textMuted }}>✕</button>
+                <button onClick={onClose} style={{ ...s.closeBtn, background: colors.bgInput, color: colors.textMuted }}></button>
 
                 {/* Icon */}
                 <div style={s.iconWrap}>
-                    <div style={s.lockIcon}>🔐</div>
+                    <div style={s.lockIcon}>▣</div>
                 </div>
 
                 {/* Content */}
@@ -37,10 +37,10 @@ export default function GuestModal({ isOpen, onClose, action = 'access this feat
                 {/* Perks */}
                 <div style={s.perks}>
                     {[
-                        { icon: '🎓', text: 'Enroll in 100+ courses' },
-                        { icon: '📊', text: 'Track your learning progress' },
-                        { icon: '🏆', text: 'Earn verifiable certificates' },
-                        { icon: '💬', text: 'Join course discussions' }
+                        { icon: '◈', text: 'Enroll in 100+ courses' },
+                        { icon: '▥', text: 'Track your learning progress' },
+                        { icon: '', text: 'Earn verifiable certificates' },
+                        { icon: '◈', text: 'Join course discussions' }
                     ].map((p, i) => (
                         <div key={i} style={{ ...s.perkItem, borderColor: colors.border }}>
                             <span style={s.perkIcon}>{p.icon}</span>
@@ -55,7 +55,7 @@ export default function GuestModal({ isOpen, onClose, action = 'access this feat
                         style={s.registerBtn}
                         onClick={() => { onClose(); navigate('/register'); }}
                     >
-                        🚀 Register Free
+                        ▶ Register Free
                     </button>
                     <button
                         style={{ ...s.loginBtn, border: `1px solid ${colors.border}`, color: colors.text, background: colors.bgInput }}

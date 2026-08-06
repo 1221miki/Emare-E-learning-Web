@@ -127,8 +127,8 @@ export default function Navbar() {
         <div style={s.wrapper}>
             {/* 1. Top Announcement Bar */}
             <div style={s.announcementBar}>
-                <span>🎉 <strong>New Promotion:</strong> Get 50% off all Advanced AI Courses until August! <Link to="/courses" style={{color: '#fff', textDecoration: 'underline', marginLeft: '8px'}}>Claim Offer</Link></span>
-                <button onClick={() => setShowAnnouncement(false)} style={s.closeAnnouncement}>✕</button>
+                <span> <strong>New Promotion:</strong> Get 50% off all Advanced AI Courses until August! <Link to="/courses" style={{color: '#fff', textDecoration: 'underline', marginLeft: '8px'}}>Claim Offer</Link></span>
+                <button onClick={() => setShowAnnouncement(false)} style={s.closeAnnouncement}></button>
             </div>
 
             {/* 2. Main Navigation Bar */}
@@ -153,7 +153,7 @@ export default function Navbar() {
                     {/* Language Switcher */}
                     <div style={s.langDropdownContainer} ref={dropdownRef}>
                         <button onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)} style={s.langBtn}>
-                            🌐 {currentLanguageName}
+                            ◉ {currentLanguageName}
                         </button>
                         <div style={s.langDropdown}>
                             {languages.map((lang, index) => {
@@ -166,7 +166,7 @@ export default function Navbar() {
                                         onMouseEnter={(e) => e.currentTarget.style.background = `${colors.primary}15`}
                                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                     >
-                                        <span style={s.checkMark}>{isActive ? '✓' : ''}</span>
+                                        <span style={s.checkMark}>{isActive ? '' : ''}</span>
                                         {lang.name}
                                     </button>
                                 );
@@ -176,7 +176,7 @@ export default function Navbar() {
 
                     {/* Dark Mode Toggle */}
                     <button onClick={toggleTheme} style={s.iconBtn} title="Toggle Theme">
-                        {theme === 'dark' ? '☀️' : '🌙'}
+                        {theme === 'dark' ? '️' : ''}
                     </button>
                     
                     {isAuthenticated ? (

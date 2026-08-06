@@ -398,7 +398,7 @@ export default function MessagesTab(dash) {
                             <h4 style={{ color: colors.text, fontSize: '15px', fontWeight: '700', margin: '12px 0 6px' }}>{d.title}</h4>
                             <p style={{ color: colors.textMuted, fontSize: '13px', margin: '0 0 10px', lineHeight: 1.5 }}>{d.body}</p>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12px', color: colors.textMuted, flexWrap: 'wrap' }}>
-                                <span>{d.upvotes || 0} 👍 · {d.replies?.length || 0} replies · {new Date(d.createdAt).toLocaleDateString()}</span>
+                                <span>{d.upvotes || 0}  · {d.replies?.length || 0} replies · {new Date(d.createdAt).toLocaleDateString()}</span>
                                 <button onClick={async () => { try { const res = await discussionService.upvote(d._id); setDiscussions(prev => prev.map(x => x._id === d._id ? { ...x, upvotes: res.data.data?.upvotes ?? (x.upvotes + 1) } : x)); } catch { /* ignore */ } }} style={{ background: 'transparent', border: 'none', color: colors.primary, cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}>▲ Upvote</button>
                             </div>
                             {expandedDisc === d._id && (

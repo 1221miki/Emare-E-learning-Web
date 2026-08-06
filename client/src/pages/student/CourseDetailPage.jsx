@@ -144,12 +144,12 @@ export default function CourseDetailPage() {
                         
                         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '32px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ color: '#fbbf24', fontSize: '18px' }}>★</span>
+                                <span style={{ color: '#fbbf24', fontSize: '18px' }}></span>
                                 <span style={{ fontWeight: '700', fontSize: '16px' }}>{course.averageRating || 0}</span>
                                 <span style={{ color: colors.textMuted, fontSize: '14px' }}>({course.totalReviews || 0} reviews)</span>
                             </div>
-                            <div style={{ color: colors.textMuted, fontSize: '14px' }}>👥 {course.totalEnrollments || 0} students</div>
-                            <div style={{ color: colors.textMuted, fontSize: '14px' }}>🗣️ {course.language || 'English'}</div>
+                            <div style={{ color: colors.textMuted, fontSize: '14px' }}>◈ {course.totalEnrollments || 0} students</div>
+                            <div style={{ color: colors.textMuted, fontSize: '14px' }}>◈️ {course.language || 'English'}</div>
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -175,28 +175,28 @@ export default function CourseDetailPage() {
                             {course.price === 0 ? '🆓 Free' : `${course.price} ETB`}
                         </div>
                         {!isAuthenticated && (
-                            <p style={{ color: colors.textMuted, fontSize: '12px', margin: '0 0 16px', lineHeight: 1.5 }}>🔐 Login required to enroll and access full content.</p>
+                            <p style={{ color: colors.textMuted, fontSize: '12px', margin: '0 0 16px', lineHeight: 1.5 }}>▣ Login required to enroll and access full content.</p>
                         )}
                         <button onClick={handleEnroll} disabled={enrolling} style={{ width: '100%', padding: '16px', background: isEnrolled ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: enrolling ? 'wait' : 'pointer', marginBottom: '12px', transition: 'transform 0.1s', boxShadow: isEnrolled ? '0 8px 20px rgba(16,185,129,0.3)' : '0 8px 20px rgba(59,130,246,0.3)', opacity: enrolling ? 0.7 : 1 }}>
-                            {!isAuthenticated ? '🔐 Login to Enroll' : isEnrolled ? '✅ Already Enrolled' : enrolling ? '⏳ Processing...' : '🚀 Enroll Now'}
+                            {!isAuthenticated ? '▣ Login to Enroll' : isEnrolled ? ' Already Enrolled' : enrolling ? '⏳ Processing...' : '▶ Enroll Now'}
                         </button>
                         {isEnrolled && (
                             <button onClick={() => navigate(`/student/learn/${course._id}`)} style={{ width: '100%', padding: '14px', background: '#fff', color: '#0f172a', border: `1px solid ${colors.border}`, borderRadius: '12px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', marginBottom: '12px' }}>
-                                🎓 Start Learning
+                                ◈ Start Learning
                             </button>
                         )}
                         <button onClick={handleToggleWishlist} style={{ width: '100%', padding: '14px', background: isAuthenticated ? 'transparent' : 'rgba(255,255,255,0.05)', color: colors.text, border: `1px solid ${colors.border}`, borderRadius: '12px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}>
-                            {inWishlist ? '❤️ In Wishlist' : '🤍 Save to Wishlist'}
+                            {inWishlist ? '️ In Wishlist' : ' Save to Wishlist'}
                         </button>
                         <ul style={{ listStyle: 'none', padding: 0, margin: '24px 0 0', color: colors.textMuted, fontSize: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             <li>⏱️ {course.estimatedDurationHours} hours of on-demand video</li>
                             {course.resources?.length > 0 ? (
-                                <li>📄 Resources available: {course.resources.length}</li>
+                                <li>▤ Resources available: {course.resources.length}</li>
                             ) : (
-                                <li>📄 Downloadable resources</li>
+                                <li>▤ Downloadable resources</li>
                             )}
-                            <li>🏆 Certificate of completion</li>
-                            <li>♾️ Full lifetime access</li>
+                            <li> Certificate of completion</li>
+                            <li>️ Full lifetime access</li>
                         </ul>
                     </div>
                 </div>
@@ -229,7 +229,7 @@ export default function CourseDetailPage() {
                             <ul style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: 0, margin: 0, listStyle: 'none' }}>
                                 {course.learningObjectives.map((obj, i) => (
                                     <li key={i} style={{ color: colors.textMuted, fontSize: '15px', display: 'flex', gap: '8px' }}>
-                                        <span style={{ color: colors.primary }}>✓</span> {obj}
+                                        <span style={{ color: colors.primary }}></span> {obj}
                                     </li>
                                 ))}
                             </ul>
@@ -295,7 +295,7 @@ export default function CourseDetailPage() {
                     {/* Reviews */}
                     <section style={{ marginBottom: '48px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                            <h2 style={{ color: colors.text, fontSize: '24px', fontWeight: '800' }}>⭐ Student Reviews ({reviews.length})</h2>
+                            <h2 style={{ color: colors.text, fontSize: '24px', fontWeight: '800' }}> Student Reviews ({reviews.length})</h2>
                             {isAuthenticated ? (
                                 <button onClick={() => setShowReviewForm(!showReviewForm)} style={{ background: 'transparent', border: `1px solid ${colors.primary}`, color: colors.primary, padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
                                     {showReviewForm ? 'Cancel' : 'Write a Review'}
@@ -303,7 +303,7 @@ export default function CourseDetailPage() {
                             ) : (
                                 <button style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}
                                     onClick={() => setGuestModal({ open: true, action: 'write a review for this course' })}>
-                                    🔐 Login to Review
+                                    ▣ Login to Review
                                 </button>
                             )}
                         </div>
@@ -337,7 +337,7 @@ export default function CourseDetailPage() {
                                             <div>
                                                 <div style={{ color: colors.text, fontWeight: '700', fontSize: '15px' }}>{review.studentRef?.fullName}</div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <span style={{ color: '#fbbf24', fontSize: '13px' }}>{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span>
+                                                    <span style={{ color: '#fbbf24', fontSize: '13px' }}>{''.repeat(review.rating)}{''.repeat(5 - review.rating)}</span>
                                                     <span style={{ color: colors.textMuted, fontSize: '12px' }}>{new Date(review.createdAt).toLocaleDateString()}</span>
                                                 </div>
                                             </div>

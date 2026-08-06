@@ -87,8 +87,8 @@ export default function WishlistPage() {
                                     <h3 style={{ color: colors.text, fontSize: '18px', margin: '0 0 10px' }}>{item.courseRef.courseTitle}</h3>
                                     
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '20px', color: '#fbbf24', fontSize: '14px' }}>
-                                        {'★'.repeat(Math.round(item.courseRef.averageRating || 0))}
-                                        {'☆'.repeat(5 - Math.round(item.courseRef.averageRating || 0))}
+                                        {''.repeat(Math.round(item.courseRef.averageRating || 0))}
+                                        {''.repeat(5 - Math.round(item.courseRef.averageRating || 0))}
                                         <span style={{ color: colors.textMuted, fontSize: '12px', marginLeft: '4px' }}>
                                             ({item.courseRef.averageRating || 0})
                                         </span>
@@ -112,7 +112,7 @@ export default function WishlistPage() {
                                             }}
                                             title="Remove from Wishlist"
                                         >
-                                            ✕
+                                            
                                         </button>
                                     </div>
                                 </div>

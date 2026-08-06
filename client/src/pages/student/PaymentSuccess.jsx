@@ -144,7 +144,7 @@ export default function PaymentSuccess() {
                     background: 'linear-gradient(135deg, #10b981, #059669)',
                     WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
                 }}>
-                    Payment Successful! 🎉
+                    Payment Successful! 
                 </h1>
                 <p style={{ color: muted, fontSize: 15, marginBottom: 32, lineHeight: 1.7 }}>
                     Your enrollment is confirmed. You now have full access<br />to all course content, videos, quizzes and resources.
@@ -156,10 +156,10 @@ export default function PaymentSuccess() {
                     marginBottom: 28, textAlign: 'left'
                 }}>
                     {[
-                        { icon: '✅', label: 'Payment Status', value: 'Cleared' },
-                        { icon: '🎓', label: 'Enrollment', value: 'Active' },
-                        { icon: '📋', label: 'Transaction Ref', value: txRef ? txRef.slice(0, 18) + '…' : 'N/A' },
-                        { icon: '📅', label: 'Date', value: new Date().toLocaleDateString('en-ET', { day: 'numeric', month: 'short', year: 'numeric' }) }
+                        { icon: '', label: 'Payment Status', value: 'Cleared' },
+                        { icon: '◈', label: 'Enrollment', value: 'Active' },
+                        { icon: '▤', label: 'Transaction Ref', value: txRef ? txRef.slice(0, 18) + '…' : 'N/A' },
+                        { icon: '▦', label: 'Date', value: new Date().toLocaleDateString('en-ET', { day: 'numeric', month: 'short', year: 'numeric' }) }
                     ].map((item) => (
                         <div key={item.label} style={{
                             padding: '14px 16px',
@@ -219,7 +219,7 @@ export default function PaymentSuccess() {
                         onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
                         onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
                     >
-                        🚀 Start Learning Now
+                        ▶ Start Learning Now
                     </button>
                     <button
                         onClick={() => navigate('/student/dashboard')}
@@ -234,12 +234,12 @@ export default function PaymentSuccess() {
                         onMouseEnter={e => { e.currentTarget.style.borderColor = green; e.currentTarget.style.color = green; }}
                         onMouseLeave={e => { e.currentTarget.style.borderColor = dark ? 'rgba(255,255,255,0.1)' : colors.border; e.currentTarget.style.color = muted; }}
                     >
-                        📊 View My Dashboard
+                        ▥ View My Dashboard
                     </button>
                 </div>
 
                 <p style={{ color: muted, fontSize: 11, marginTop: 24, opacity: 0.6, lineHeight: 1.4 }}>
-                    🔒 Transaction secured by Chapa Payment Gateway · Emare ICT Hub
+                    ▣ Transaction secured by Chapa Payment Gateway · Emare ICT Hub
                 </p>
             </div>
 

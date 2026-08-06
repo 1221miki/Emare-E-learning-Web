@@ -65,7 +65,7 @@ export default function CourseSelector({ courses = [], selectedCourse, onSelect,
                     )}
                     {selectedCourse.averageRating > 0 && (
                         <span style={{ background: 'rgba(245,158,11,0.12)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: '600' }}>
-                            ★ {selectedCourse.averageRating.toFixed(1)}
+                             {selectedCourse.averageRating.toFixed(1)}
                         </span>
                     )}
                     <span style={{

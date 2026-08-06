@@ -45,7 +45,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = '48
                 {/* Header */}
                 <div style={styles.header}>
                     <h3 style={styles.title}>{title}</h3>
-                    <button onClick={onClose} style={styles.closeBtn}>✕</button>
+                    <button onClick={onClose} style={styles.closeBtn}></button>
                 </div>
 
                 {/* Body */}

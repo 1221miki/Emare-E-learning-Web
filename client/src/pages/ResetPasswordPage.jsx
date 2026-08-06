@@ -113,7 +113,7 @@ export default function ResetPasswordPage() {
             <div style={styles.card}>
                 {/* Header */}
                 <div style={styles.header}>
-                    <div style={styles.logo}>🔐</div>
+                    <div style={styles.logo}>▣</div>
                     <h1 style={styles.title}>Reset Password</h1>
                     <p style={styles.subtitle}>Set a strong new password for your account</p>
                 </div>
@@ -213,19 +213,19 @@ export default function ResetPasswordPage() {
                             </p>
                             <ul style={{ fontSize: '12px', margin: 0, paddingLeft: '20px', color: '#666' }}>
                                 <li style={{ color: newPassword.length >= 8 ? '#4caf50' : '#d32f2f' }}>
-                                    {newPassword.length >= 8 ? '✓' : '✗'} At least 8 characters
+                                    {newPassword.length >= 8 ? '' : ''} At least 8 characters
                                 </li>
                                 <li style={{ color: /[A-Z]/.test(newPassword) ? '#4caf50' : '#d32f2f' }}>
-                                    {/[A-Z]/.test(newPassword) ? '✓' : '✗'} Uppercase letter (A-Z)
+                                    {/[A-Z]/.test(newPassword) ? '' : ''} Uppercase letter (A-Z)
                                 </li>
                                 <li style={{ color: /[a-z]/.test(newPassword) ? '#4caf50' : '#d32f2f' }}>
-                                    {/[a-z]/.test(newPassword) ? '✓' : '✗'} Lowercase letter (a-z)
+                                    {/[a-z]/.test(newPassword) ? '' : ''} Lowercase letter (a-z)
                                 </li>
                                 <li style={{ color: /[0-9]/.test(newPassword) ? '#4caf50' : '#d32f2f' }}>
-                                    {/[0-9]/.test(newPassword) ? '✓' : '✗'} Number (0-9)
+                                    {/[0-9]/.test(newPassword) ? '' : ''} Number (0-9)
                                 </li>
                                 <li style={{ color: /[!@#$%^&*]/.test(newPassword) ? '#4caf50' : '#d32f2f' }}>
-                                    {/[!@#$%^&*]/.test(newPassword) ? '✓' : '✗'} Special character (!@#$%^&*)
+                                    {/[!@#$%^&*]/.test(newPassword) ? '' : ''} Special character (!@#$%^&*)
                                 </li>
                             </ul>
                         </div>

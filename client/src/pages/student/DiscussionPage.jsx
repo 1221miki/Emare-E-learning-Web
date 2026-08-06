@@ -294,7 +294,7 @@ export default function DiscussionPage() {
                                             <div style={{ padding: '24px', borderBottom: `1px solid ${colors.border}` }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
                                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                                                        {thread.isPinned && <span style={{ background: 'rgba(234,179,8,0.1)', color: '#eab308', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>📌 Pinned</span>}
+                                                        {thread.isPinned && <span style={{ background: 'rgba(234,179,8,0.1)', color: '#eab308', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>◈ Pinned</span>}
                                                         <span style={{ background: thread.isResolved ? 'rgba(34,197,94,0.12)' : 'rgba(59,130,246,0.12)', color: thread.isResolved ? '#16a34a' : colors.primary, padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>
                                                             {thread.isResolved ? 'Resolved' : 'Open'}
                                                         </span>

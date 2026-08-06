@@ -91,7 +91,7 @@ export default function MockCheckoutPage() {
                     textTransform: 'uppercase',
                     letterSpacing: '1.5px'
                 }}>
-                    💳 Chapa Sandbox Gateway
+                    ◈ Chapa Sandbox Gateway
                 </div>
 
                 {status === 'pending' && (
@@ -140,7 +140,7 @@ export default function MockCheckoutPage() {
                                     boxShadow: '0 4px 16px rgba(16,185,129,0.25)'
                                 }}
                             >
-                                {loading ? '⏳ Processing Payment...' : '✅ Complete Payment'}
+                                {loading ? '⏳ Processing Payment...' : ' Complete Payment'}
                             </button>
                             <button
                                 onClick={handleCancel}
@@ -165,7 +165,7 @@ export default function MockCheckoutPage() {
 
                 {status === 'success' && (
                     <div style={{ padding: '20px 0' }}>
-                        <div style={{ fontSize: '64px', marginBottom: '16px' }}>✅</div>
+                        <div style={{ fontSize: '64px', marginBottom: '16px' }}></div>
                         <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '8px' }}>Payment Approved!</h2>
                         <p style={{ color: textMuted, fontSize: '14px', marginBottom: '28px', lineHeight: 1.5 }}>
                             Your transaction has been verified successfully.<br/>Redirecting you back to your dashboard...
@@ -180,7 +180,7 @@ export default function MockCheckoutPage() {
 
                 {status === 'failed' && (
                     <div style={{ padding: '20px 0' }}>
-                        <div style={{ fontSize: '64px', marginBottom: '16px' }}>❌</div>
+                        <div style={{ fontSize: '64px', marginBottom: '16px' }}></div>
                         <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '8px' }}>Payment Failed</h2>
                         <p style={{ color: '#ef4444', fontSize: '14px', marginBottom: '28px', lineHeight: 1.5 }}>
                             {errorMsg || 'We could not verify your payment transaction.'}
@@ -199,7 +199,7 @@ export default function MockCheckoutPage() {
                                     cursor: 'pointer'
                                 }}
                             >
-                                🔄 Try Again
+                                ↻ Try Again
                             </button>
                             <button
                                 onClick={handleCancel}
@@ -222,7 +222,7 @@ export default function MockCheckoutPage() {
 
                 {/* Footer */}
                 <p style={{ color: textMuted, fontSize: '11px', marginTop: '32px', opacity: 0.7 }}>
-                    🔒 This is a mock gateway for development only. No real charges are made.
+                    ▣ This is a mock gateway for development only. No real charges are made.
                 </p>
             </div>
 
