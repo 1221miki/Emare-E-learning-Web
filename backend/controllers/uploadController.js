@@ -4,11 +4,52 @@ const cloudinary = require('../config/cloudinary');
 const streamifier = require('streamifier');
 const pdfParse = require('pdf-parse');
 
+// Helper: Normalize extracted PDF text and fix missing spaces
+const normalizePdfText = (text) => {
+    if (!text) return '';
+
+    const stopwords = new Set(['a','an','the','and','or','to','of','in','on','for','with','by','at','from','about','as','is','that','this','it','its','was','are','be','has','have','had','my','your','our','their','its','i','me','you','he','she','we','they']);
+    const isMergeable = (parts) => {
+        const joined = parts.join('');
+        if (parts.some((segment) => stopwords.has(segment))) return false;
+        if (joined.length < 6) return false;
+        if (!/[aeiouy]/i.test(joined)) return false;
+        if (parts.every((segment) => segment.length === 1)) return false;
+        return true;
+    };
+
+    let normalized = text.replace(/\u00A0/g, ' ');
+    normalized = normalized.replace(/\r?\n/g, ' ');
+
+    // Insert spaces before camel-cased words, e.g. "LearningManagement" => "Learning Management"
+    normalized = normalized.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+    normalized = normalized.replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
+
+    // Add spaces between digits and letters
+    normalized = normalized.replace(/([0-9])([A-Za-z])/g, '$1 $2');
+    normalized = normalized.replace(/([A-Za-z])([0-9])/g, '$1 $2');
+
+    // Merge small broken fragments like "au tom ate".
+    normalized = normalized.replace(/\b([a-z]{1,4})\s+([a-z]{1,4})\s+([a-z]{1,4})\s+([a-z]{1,4})\b/gi, (match, a, b, c, d) => {
+        if (isMergeable([a, b, c, d])) return `${a}${b}${c}${d}`;
+        return match;
+    });
+    normalized = normalized.replace(/\b([a-z]{1,4})\s+([a-z]{1,4})\s+([a-z]{1,4})\b/gi, (match, a, b, c) => {
+        if (isMergeable([a, b, c])) return `${a}${b}${c}`;
+        return match;
+    });
+
+    normalized = normalized.replace(/\s+/g, ' ').trim();
+    return normalized;
+};
+
 // Helper: Extract text from PDF buffer
 const extractPdfText = async (buffer) => {
     try {
         const data = await pdfParse(buffer);
-        return (data.text || '').trim().slice(0, 18000);
+        const rawText = data.text || '';
+        const fixedText = normalizePdfText(rawText);
+        return fixedText.slice(0, 18000);
     } catch (err) {
         console.warn('PDF parse failed:', err.message);
         return '';

@@ -4,10 +4,48 @@ import { Video, CalendarDays, Clock, User, RadioTower, Film, Tv } from 'lucide-r
 export default function LiveSessionsTab(dash) {
     const { colors, allLiveSessions, liveFilter, setLiveFilter, styles } = dash;
         const now = new Date();
-        const upcoming = allLiveSessions.filter(s => new Date(s.startTime) > now);
-        const past = allLiveSessions.filter(s => new Date(s.startTime) <= now);
+        const getSessionEnd = (session) => {
+            const startTime = new Date(session.startTime);
+            const duration = Number(session.durationMinutes) || 0;
+            return new Date(startTime.getTime() + duration * 60000);
+        };
+
+        const isValidMeetingLink = (link) => {
+            return typeof link === 'string' && link.trim().startsWith('http');
+        };
+
+        const getMeetingLink = (session) => {
+            const link = session.meetingLink?.trim();
+            if (isValidMeetingLink(link)) return link;
+            if (session.platform === 'Jitsi Meet') {
+                const slug = (session.title || 'emare-live-session')
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/(^-|-$)/g, '')
+                    .slice(0, 24) || 'emare-live-session';
+                return `https://meet.jit.si/${slug}`;
+            }
+            return null;
+        };
+
+        const upcoming = allLiveSessions.filter((s) => {
+            const endTime = getSessionEnd(s);
+            return endTime > now;
+        });
+
+        const past = allLiveSessions.filter((s) => {
+            const endTime = getSessionEnd(s);
+            return endTime <= now;
+        });
+
         const displayed = liveFilter === 'upcoming' ? upcoming : past;
-        const finalSessions = displayed;
+        const finalSessions = displayed.sort((a, b) => {
+            const aStart = new Date(a.startTime).getTime();
+            const bStart = new Date(b.startTime).getTime();
+            return liveFilter === 'upcoming'
+                ? aStart - bStart
+                : bStart - aStart;
+        });
 
         return (
             <div>
@@ -54,7 +92,9 @@ export default function LiveSessionsTab(dash) {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         {finalSessions.map((session) => {
                             const sessionDate = new Date(session.startTime);
-                            const isLive = Math.abs(Date.now() - sessionDate.getTime()) < 3600000;
+                            const endTime = getSessionEnd(session);
+                            const isLive = now >= sessionDate && now <= endTime;
+                            const meetingLink = getMeetingLink(session);
                             return (
                                 <div key={session._id} style={{ ...styles.panelCard, marginBottom: 0, padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', borderLeft: `4px solid ${isLive ? '#ef4444' : colors.accent}` }}>
                                     <div style={{ flex: 1 }}>
@@ -70,9 +110,9 @@ export default function LiveSessionsTab(dash) {
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        {session.meetingLink && (
-                                            <button onClick={() => window.open(session.meetingLink === '#' ? '/live-sessions' : session.meetingLink, '_blank')} style={{ ...styles.resumeBtn, padding: '10px 20px', background: isLive ? '#ef4444' : `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, display: 'flex', alignItems: 'center', gap: '6px' }} aria-label={isLive ? 'Join live session' : 'View session details'}>
-                                                {isLive ? <><RadioTower size={16} aria-hidden="true" /> Join Now</> : <><Video size={16} aria-hidden="true" /> View Details</>}
+                                        {meetingLink && (
+                                            <button onClick={() => window.location.assign(meetingLink)} style={{ ...styles.resumeBtn, padding: '10px 20px', background: isLive ? '#ef4444' : `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, display: 'flex', alignItems: 'center', gap: '6px' }} aria-label={isLive ? 'Join live session now' : 'Open meeting link'}>
+                                                {isLive ? <><RadioTower size={16} aria-hidden="true" /> Join Now</> : <><Video size={16} aria-hidden="true" /> Open Meeting</>}
                                             </button>
                                         )}
                                     </div>

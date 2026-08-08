@@ -5,7 +5,7 @@ import { userService, uploadService } from '../../services/api';
 import Sidebar from '../../components/Sidebar';
 
 export default function ProfilePage() {
-    const { user } = useAuth();
+    const { user, updateUser } = useAuth();
     const { colors } = useTheme();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -41,8 +41,9 @@ export default function ProfilePage() {
             const uploadRes = await uploadService.uploadFile(formData);
             const newAvatarUrl = uploadRes.data.data.url;
             
-            await userService.update(user.id, { avatarUrl: newAvatarUrl });
+            await userService.updateProfile({ avatarUrl: newAvatarUrl });
             setProfile(prev => ({ ...prev, avatarUrl: newAvatarUrl }));
+            updateUser({ avatarUrl: newAvatarUrl });
             
             alert("Avatar updated successfully!");
         } catch (err) {

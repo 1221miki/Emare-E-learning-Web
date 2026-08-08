@@ -218,3 +218,89 @@ exports.assignmentAssistant = async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 };
+
+// @desc    Summarize text or uploaded PDF content
+// @route   POST /api/ai/summarize
+// @access  Private/Student
+exports.summarize = async (req, res) => {
+    try {
+        const { text = '', courseContext = {}, conversationId } = req.body;
+        if (!text) return res.status(400).json({ success: false, message: 'Text is required to summarize.' });
+
+        const sessionId = resolveConversationId(conversationId, 'summarize');
+        const answer = await aiService.summarizeText(text, courseContext);
+
+        await AiHistory.create({
+            userRef: req.user.id,
+            conversationId: sessionId,
+            question: 'Summarize content',
+            answer,
+            courseContext,
+            conversationTitle: 'AI Summary',
+            type: 'summarize'
+        });
+
+        await saveConversationMeta({ conversationId: sessionId, userRef: req.user.id, courseContext, lastMessage: 'Summarize content', title: 'AI Summary' });
+
+        res.status(200).json({ success: true, data: { answer, conversationId: sessionId } });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// @desc    Generate microlearning module
+// @route   POST /api/ai/microlesson
+// @access  Private/Student
+exports.generateMicroLesson = async (req, res) => {
+    try {
+        const { topicContext = {}, conversationId } = req.body;
+        const sessionId = resolveConversationId(conversationId, 'microlesson');
+
+        const answer = await aiService.generateMicroLesson(topicContext);
+
+        await AiHistory.create({
+            userRef: req.user.id,
+            conversationId: sessionId,
+            question: 'Generate microlesson',
+            answer,
+            courseContext: topicContext,
+            conversationTitle: 'AI Microlesson',
+            type: 'microlesson'
+        });
+
+        await saveConversationMeta({ conversationId: sessionId, userRef: req.user.id, courseContext: topicContext, lastMessage: 'Generate microlesson', title: 'AI Microlesson' });
+
+        res.status(200).json({ success: true, data: { answer, conversationId: sessionId } });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// @desc    Generate flashcards from content
+// @route   POST /api/ai/flashcards
+// @access  Private/Student
+exports.generateFlashcards = async (req, res) => {
+    try {
+        const { content = '', conversationId } = req.body;
+        if (!content) return res.status(400).json({ success: false, message: 'Content is required to generate flashcards.' });
+
+        const sessionId = resolveConversationId(conversationId, 'flashcards');
+        const cards = await aiService.generateFlashcards(content);
+
+        await AiHistory.create({
+            userRef: req.user.id,
+            conversationId: sessionId,
+            question: 'Generate flashcards',
+            answer: JSON.stringify(cards),
+            courseContext: {},
+            conversationTitle: 'AI Flashcards',
+            type: 'flashcards'
+        });
+
+        await saveConversationMeta({ conversationId: sessionId, userRef: req.user.id, courseContext: {}, lastMessage: 'Generate flashcards', title: 'AI Flashcards' });
+
+        res.status(200).json({ success: true, data: { cards, conversationId: sessionId } });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};

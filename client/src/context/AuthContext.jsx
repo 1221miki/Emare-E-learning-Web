@@ -42,10 +42,17 @@ export const AuthProvider = ({ children }) => {
 
     const register = useCallback(async (formData) => {
         const { data } = await authService.register(formData);
-        localStorage.setItem('elms_token', data.token);
-        localStorage.setItem('elms_user', JSON.stringify(data.data));
-        setUser(data.data);
-        return data.data;
+        return data;
+    }, []);
+
+    const verifyEmail = useCallback(async (payload) => {
+        const { data } = await authService.verifyEmail(payload);
+        return data;
+    }, []);
+
+    const resendVerification = useCallback(async (payload) => {
+        const { data } = await authService.resendVerification(payload);
+        return data;
     }, []);
 
     const socialAuth = useCallback(async (providerData) => {
@@ -76,15 +83,26 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     }, []);
 
+    const updateUser = useCallback((updates) => {
+        setUser((prevUser) => {
+            const updatedUser = { ...prevUser, ...updates };
+            localStorage.setItem('elms_user', JSON.stringify(updatedUser));
+            return updatedUser;
+        });
+    }, []);
+
     const value = {
         user,
         loading,
         login,
         register,
+        verifyEmail,
+        resendVerification,
         socialAuth,
         requestPasswordReset,
         resetPassword,
         logout,
+        updateUser,
         isAuthenticated: !!user,
         isAdmin: user?.assignedRole === 'Admin',
         isInstructor: user?.assignedRole === 'Instructor',

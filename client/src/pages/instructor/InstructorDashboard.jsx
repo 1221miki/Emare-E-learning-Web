@@ -20,7 +20,7 @@ import StudentManagement from '../../components/instructor/StudentManagement';
 import AssignmentManagement from '../../components/instructor/assignments/AssignmentManagement';
 import InstructorSettings from '../../components/instructor/InstructorSettings';
 import QuizManagement from '../../components/instructor/QuizManagement';
-import { LayoutDashboard, BookOpen, NotebookPen, ClipboardList, FileQuestion, Video, Users, GraduationCap, Award, BarChart3, MessagesSquare, MessageCircle, Megaphone, CalendarDays, Wallet, Star, Settings, Upload, FilePen, FileText, Archive, PlusCircle, AlertTriangle, X, Link2, Trash2, ArrowUp, ArrowDown, Edit3, PauseCircle } from 'lucide-react';
+import { LayoutDashboard, BookOpen, NotebookPen, ClipboardList, FileQuestion, Video, Users, GraduationCap, Award, BarChart3, MessagesSquare, MessageCircle, Megaphone, CalendarDays, Star, Settings, Upload, FilePen, FileText, Archive, PlusCircle, AlertTriangle, X, Link2, Trash2, ArrowUp, ArrowDown, Edit3, PauseCircle } from 'lucide-react';
 
 
 export default function InstructorDashboard() {
@@ -1189,71 +1189,6 @@ export default function InstructorDashboard() {
         </div>
     );
 
-    // ── 9. Earnings Tab ────────────────────────────────────────
-    const renderEarnings = () => {
-        const COURSE_PRICE_MAP = {
-            'Graphic Design & UI/UX Essentials': 130,
-            'DevOps, Docker & CI/CD Pipelines': 190,
-            'SQL & MongoDB Complete Guide': 110,
-            'Data Science & Python Analytics': 140,
-            'Cybersecurity & Ethical Hacking Essentials': 160,
-            'Cloud Computing & AWS Architecture': 180,
-            'Business & Management Fundamentals': 120,
-            'Artificial Intelligence & Machine Learning Fundamentals': 150
-        };
-        const DEFAULT_PRICES = [120, 130, 140, 150, 160, 170, 180, 190, 200];
-
-        const coursesWithPrices = courses.map((c, i) => {
-            const price = (c.price && c.price >= 100 && c.price <= 200) ? c.price : (COURSE_PRICE_MAP[c.courseTitle] || DEFAULT_PRICES[i % DEFAULT_PRICES.length]);
-            const enrollments = c.totalEnrollments || (4 + ((i * 3) % 12));
-            return { ...c, price, enrollments, totalRevenue: enrollments * price };
-        });
-
-        const calculatedTotalEarnings = coursesWithPrices.reduce((acc, c) => acc + c.totalRevenue, 0);
-        const calculatedPaidStudents = coursesWithPrices.reduce((acc, c) => acc + c.enrollments, 0);
-
-        return (
-            <div>
-                <div style={s.tabHeader}>
-                    <h2 style={s.tabTitle}>Earnings & Payments</h2>
-                    <p style={s.tabSubtitle}>Track your revenue and manage payout information</p>
-                </div>
-                <div style={{ ...s.statsGrid, gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                    <div style={{ ...s.statCard, borderTop: '3px solid #10b981' }}>
-                        <span style={{ ...s.statValue, color: '#10b981' }}>{calculatedTotalEarnings.toLocaleString()} ETB</span>
-                        <span style={s.statLabel}>Total Revenue</span>
-                    </div>
-                    <div style={{ ...s.statCard, borderTop: '3px solid #3b82f6' }}>
-                        <span style={{ ...s.statValue, color: '#3b82f6' }}>{calculatedPaidStudents}</span>
-                        <span style={s.statLabel}>Total Paid Students</span>
-                    </div>
-                    <div style={{ ...s.statCard, borderTop: '3px solid #f59e0b' }}>
-                        <span style={{ ...s.statValue, color: '#f59e0b' }}>{(calculatedTotalEarnings * 0.15).toLocaleString(undefined, { maximumFractionDigits: 0 })} ETB</span>
-                        <span style={s.statLabel}>Pending Payout</span>
-                    </div>
-                </div>
-                <div style={s.panelCard}>
-                    <h3 style={s.panelTitle}>Revenue Per Course (Prices 100 - 200 ETB)</h3>
-                    {coursesWithPrices.length === 0 ? (
-                        <p style={s.emptyText}>No courses with earnings data.</p>
-                    ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {coursesWithPrices.map(c => (
-                                <div key={c._id || c.courseTitle} style={s.recentItem}>
-                                    <div>
-                                        <h4 style={{ color: colors.text, margin: 0, fontSize: '14px', fontWeight: '600' }}>{c.courseTitle}</h4>
-                                        <span style={{ color: colors.textMuted, fontSize: '12px' }}>{c.enrollments} enrollments × <strong style={{ color: '#60a5fa' }}>{c.price} ETB</strong></span>
-                                    </div>
-                                    <span style={{ color: '#10b981', fontSize: '16px', fontWeight: '800' }}>{c.totalRevenue.toLocaleString()} ETB</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
-    };
-
     // ── 10. Settings Tab ───────────────────────────────────────
     const renderSettings = () => (
         <InstructorSettings user={user} />
@@ -1271,7 +1206,6 @@ export default function InstructorDashboard() {
         { key: 'quizzes', label: 'Quizzes', icon: <FileQuestion size={20} aria-hidden="true" /> },
         { key: 'live', label: 'Live Classes', icon: <Video size={20} aria-hidden="true" /> },
         { key: 'analytics', label: 'Analytics', icon: <BarChart3 size={20} aria-hidden="true" /> },
-        { key: 'earnings', label: 'Earnings', icon: <Wallet size={20} aria-hidden="true" /> },
         { key: 'messages', label: 'Messages', icon: <MessagesSquare size={20} aria-hidden="true" /> },
         { key: 'reviews', label: 'Reviews', icon: <Star size={20} aria-hidden="true" /> },
         { key: 'settings', label: 'Settings', icon: <Settings size={20} aria-hidden="true" />, path: '/instructor/settings' }
@@ -1310,7 +1244,6 @@ export default function InstructorDashboard() {
                         {activeTab === 'quizzes' && renderQuizzes()}
                         {activeTab === 'live' && renderLiveClasses()}
                         {activeTab === 'analytics' && renderAnalytics()}
-                        {activeTab === 'earnings' && renderEarnings()}
                         {activeTab === 'messages' && renderMessages()}
                         {activeTab === 'reviews' && renderReviews()}
                         {activeTab === 'settings' && renderSettings()}

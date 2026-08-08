@@ -39,4 +39,36 @@ describe('LiveSessionsTab', () => {
         expect(screen.getByText(/Dr. Ada Smith/)).toBeInTheDocument();
         expect(screen.getByText(/60 min/)).toBeInTheDocument();
     });
+
+    it('keeps an ongoing session in upcoming while finished sessions move to past', () => {
+        const now = Date.now();
+        const ongoingStart = new Date(now - 30 * 60000).toISOString();
+        const finishedStart = new Date(now - 120 * 60000).toISOString();
+        const sessions = [
+            {
+                _id: 'ongoing',
+                title: 'Ongoing Session',
+                startTime: ongoingStart,
+                durationMinutes: 60,
+                instructorRef: { fullName: 'Live Host' },
+                meetingLink: 'https://meet.example.com/ongoing',
+            },
+            {
+                _id: 'finished',
+                title: 'Finished Session',
+                startTime: finishedStart,
+                durationMinutes: 30,
+                instructorRef: { fullName: 'Past Host' },
+                meetingLink: 'https://meet.example.com/finished',
+            }
+        ];
+
+        renderTab(sessions, 'upcoming');
+        expect(screen.getByText('Ongoing Session')).toBeInTheDocument();
+        expect(screen.queryByText('Finished Session')).not.toBeInTheDocument();
+
+        renderTab(sessions, 'past');
+        expect(screen.getByText('Finished Session')).toBeInTheDocument();
+        expect(screen.queryByText('Ongoing Session')).not.toBeInTheDocument();
+    });
 });
