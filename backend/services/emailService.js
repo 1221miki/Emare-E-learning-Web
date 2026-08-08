@@ -5,45 +5,108 @@ const nodemailer = require('nodemailer');
  * Supports both production and development/testing modes
  */
 
+let emailConfigured = false;
+
+const invalidCredentialPatterns = ['your-email', 'your-gmail-app-password', 'example.com', 'changeme', 'password'];
+const hasRealEmailCredentials = (user, pass) => {
+    if (!user || !pass) return false;
+    const lowerUser = user.toLowerCase();
+    const lowerPass = pass.toLowerCase();
+    return !invalidCredentialPatterns.some(pattern => lowerUser.includes(pattern) || lowerPass.includes(pattern));
+};
+
 // Create transporter based on environment
 const createTransporter = () => {
-    // Production: Use Gmail or custom SMTP
-    if (process.env.NODE_ENV === 'production') {
+    // If explicit SMTP settings are provided, use them.
+    const smtpHost = process.env.MAIL_HOST || process.env.SMTP_HOST || process.env.EMAIL_HOST;
+    const smtpPort = Number(process.env.MAIL_PORT || process.env.SMTP_PORT || process.env.EMAIL_PORT || 587);
+    const smtpSecure = process.env.MAIL_SECURE === 'true' || process.env.SMTP_SECURE === 'true' || smtpPort === 465;
+    const smtpUser = process.env.MAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
+    const smtpPass = process.env.MAIL_PASS || process.env.SMTP_PASS || process.env.EMAIL_PASSWORD;
+
+    // Direct SMTP connection (faster than service lookup)
+    if (smtpHost && hasRealEmailCredentials(smtpUser, smtpPass)) {
+        emailConfigured = true;
         return nodemailer.createTransport({
-            service: 'gmail',
+            host: smtpHost,
+            port: smtpPort,
+            secure: smtpSecure,
+            auth: {
+                user: smtpUser,
+                pass: smtpPass
+            },
+            pool: {
+                maxConnections: 10,
+                maxMessages: 200,
+                rateDelta: 500,
+                rateLimit: 10
+            },
+            socketTimeout: 5000,
+            connectionTimeout: 3000,
+            greetingTimeout: 3000
+        });
+    }
+
+    // Support direct email account login for common services such as Gmail
+    if (hasRealEmailCredentials(process.env.EMAIL_USER, process.env.EMAIL_PASSWORD)) {
+        emailConfigured = true;
+        return nodemailer.createTransport({
+            service: process.env.EMAIL_SERVICE || 'gmail',
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASSWORD
-            }
+            },
+            pool: {
+                maxConnections: 10,
+                maxMessages: 200,
+                rateDelta: 500,
+                rateLimit: 10
+            },
+            socketTimeout: 5000,
+            connectionTimeout: 3000,
+            greetingTimeout: 3000
         });
     }
 
-    // Development: Use Ethereal (test email service) or console logging
-    if (process.env.MAIL_HOST) {
-        return nodemailer.createTransport({
-            host: process.env.MAIL_HOST,
-            port: process.env.MAIL_PORT || 587,
-            secure: process.env.MAIL_SECURE === 'true',
-            auth: {
-                user: process.env.MAIL_USER,
-                pass: process.env.MAIL_PASS
-            }
-        });
-    }
-
-    // Fallback: Console logging for development
+    // Fallback: Log email content for debugging when SMTP is not configured.
+    // In development mode this allows registration to proceed while still warning that email delivery is not available.
     return {
         sendMail: async (options) => {
-            console.log('📧 [DEV MODE] Email would be sent:');
-            console.log(`   To: ${options.to}`);
-            console.log(`   Subject: ${options.subject}`);
-            console.log(`   Body: ${options.html}`);
-            return { messageId: `dev_${Date.now()}` };
+            console.warn('📧 [DEV MODE] SMTP is not configured. Email not sent.');
+            console.warn(`   To: ${options.to}`);
+            console.warn(`   Subject: ${options.subject}`);
+            console.warn(`   Body: ${options.html}`);
+            return {
+                success: true,
+                messageId: `dev_${Date.now()}`,
+                warning: 'SMTP not configured - email logged to console.',
+                fallback: true
+            };
         }
     };
 };
 
 const transporter = createTransporter();
+
+const logEmailTransportStatus = () => {
+    // Run verify in background without blocking
+    if (typeof transporter.verify === 'function') {
+        setImmediate(() => {
+            transporter.verify((error, success) => {
+                if (error) {
+                    console.warn('📧 Email transporter verification failed:', error.message || error);
+                } else {
+                    console.log('📧 Email transporter is configured and ready.');
+                }
+            });
+        });
+    } else {
+        console.warn('📧 Email service is running in fallback mode.');
+    }
+};
+
+// Non-blocking startup log
+setTimeout(logEmailTransportStatus, 100);
 
 /**
  * Send Password Reset Email with Reset Link
@@ -221,6 +284,84 @@ const sendPasswordResetConfirmationEmail = async (user, newPassword) => {
         return { success: true, messageId: info.messageId };
     } catch (error) {
         console.error(`❌ Failed to send password confirmation email to ${user.accountEmail}:`, error.message);
+        return { success: false, error: error.message };
+    }
+};
+
+const sendEmailVerification = async (user, verificationCode) => {
+    const htmlTemplate = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: Arial, sans-serif; background: #f4f4f4; }
+          .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 8px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .logo { font-size: 32px; color: #6366f1; font-weight: bold; }
+          .content { line-height: 1.6; color: #333; }
+          .code-box { background: #f9fafb; border: 1px solid #d1d5db; padding: 20px; border-radius: 8px; text-align: center; font-size: 24px; letter-spacing: 4px; font-weight: 700; }
+          .button { 
+            display: inline-block; 
+            background: #6366f1; 
+            color: white; 
+            padding: 12px 30px; 
+            border-radius: 4px; 
+            text-decoration: none; 
+            margin: 20px 0; 
+          }
+          .footer { text-align: center; color: #999; font-size: 12px; margin-top: 30px; }
+          .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">Emare ELMS</div>
+            <p style="color: #666; margin: 10px 0;">E-Learning Management System</p>
+          </div>
+
+          <div class="content">
+            <p>Hi ${user.fullName || user.accountEmail},</p>
+            <p>Welcome to Emare ELMS! Please verify your email address by entering the code below.</p>
+
+            <div class="code-box">${verificationCode}</div>
+
+            <p>Enter this code on the verification page to activate your account.</p>
+            <div class="warning">
+              <strong>⏰ This code expires in 15 minutes.</strong>
+            </div>
+
+            <p>If you did not create an account with this email, please ignore this message.</p>
+
+            <p style="margin-top: 30px;">
+              Best regards,<br>
+              <strong>The Emare ELMS Team</strong>
+            </p>
+          </div>
+
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Emare ICT Hub. All rights reserved.</p>
+            <p>Do not reply to this email. This is an automated message.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+    `;
+
+    try {
+        const info = await transporter.sendMail({
+            from: process.env.EMAIL_FROM || 'noreply@emare.com',
+            to: user.accountEmail,
+            subject: '🔒 Verify your Emare ELMS email address',
+            html: htmlTemplate,
+            text: `Hi ${user.fullName || user.accountEmail},\n\nYour verification code is: ${verificationCode}\n\nThis code expires in 15 minutes.\n\nBest regards,\nThe Emare ELMS Team`
+        });
+
+        console.log(`✅ Email verification sent to ${user.accountEmail} (Message ID: ${info.messageId})`);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
+        console.error(`❌ Failed to send verification email to ${user.accountEmail}:`, error.message);
         return { success: false, error: error.message };
     }
 };
@@ -485,5 +626,7 @@ module.exports = {
     sendPasswordResetConfirmationEmail,
     sendAdminPasswordResetEmail,
     sendAccountCreatedEmail,
-    sendCourseEnrollmentEmail
+    sendEmailVerification,
+    sendCourseEnrollmentEmail,
+    isEmailConfigured: () => emailConfigured
 };

@@ -22,6 +22,18 @@ const UserSchema = new mongoose.Schema({
         minlength: [8, 'Password must be at least 8 characters long'],
         select: false // Prevents password leaking in routine queries
     },
+    isEmailVerified: {
+        type: Boolean,
+        default: false
+    },
+    emailVerificationToken: {
+        type: String,
+        select: false
+    },
+    emailVerificationExpire: {
+        type: Date,
+        select: false
+    },
     assignedRole: {
         type: String,
         enum: ['Student', 'Instructor', 'Admin'],

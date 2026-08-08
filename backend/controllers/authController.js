@@ -5,7 +5,9 @@ const {
     sendPasswordResetEmail, 
     sendPasswordResetConfirmationEmail,
     sendAdminPasswordResetEmail,
-    sendAccountCreatedEmail
+    sendAccountCreatedEmail,
+    sendEmailVerification,
+    isEmailConfigured
 } = require('../services/emailService');
 const { audit, resolveIp } = require('../utils/auditLogger');
 
@@ -63,6 +65,10 @@ const register = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
         }
 
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const hashedVerificationCode = crypto.createHash('sha256').update(verificationCode).digest('hex');
+        const verificationExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
+
         // Create new user - password is hashed via pre-save hook in User model
         const user = await User.create({
             fullName,
@@ -70,7 +76,9 @@ const register = async (req, res, next) => {
             securedPassword: newPassword,
             assignedRole: assignedRole || 'Student',
             username: username || undefined,
-            lastLoginTimestamp: Date.now()
+            isEmailVerified: false,
+            emailVerificationToken: hashedVerificationCode,
+            emailVerificationExpire: verificationExpire
         });
 
         // Audit: new account registered
@@ -78,7 +86,28 @@ const register = async (req, res, next) => {
             description: `New ${user.assignedRole} account registered: ${user.fullName} (${user.accountEmail}).`,
             targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
 
-        sendTokenResponse(user, 201, res);
+        // Send response immediately without waiting for email (fire-and-forget)
+        const responsePayload = {
+            success: true,
+            message: 'Registration successful. Please verify your email with the OTP sent to your inbox.'
+        };
+        if (!isEmailConfigured() && process.env.NODE_ENV !== 'production') {
+            responsePayload.verificationCode = verificationCode;
+            responsePayload.warning = 'SMTP is not configured. Use the code returned here to verify your account.';
+        }
+
+        res.status(201).json(responsePayload);
+
+        // Send verification email in background (non-blocking)
+        sendEmailVerification(user, verificationCode).then(emailResult => {
+            if (emailResult.success) {
+                console.log(`✅ Verification email sent to ${user.accountEmail}`);
+            } else {
+                console.error(`❌ Failed to send verification email to ${user.accountEmail}: ${emailResult.error}`);
+            }
+        }).catch(error => {
+            console.error(`❌ Verification email error for ${user.accountEmail}:`, error.message);
+        });
     } catch (err) {
         next(err);
     }
@@ -116,6 +145,10 @@ const login = async (req, res, next) => {
                 description: `Login blocked for deactivated account (${normalizedEmail}) from IP ${resolveIp(req)}.`,
                 targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
             return res.status(401).json({ success: false, message: 'Your account is deactivated. Please contact an administrator.' });
+        }
+
+        if (user.isEmailVerified === false) {
+            return res.status(401).json({ success: false, message: 'Please verify your email before logging in.' });
         }
 
         // Validate password using bcrypt instance method
@@ -264,6 +297,100 @@ const socialLogin = async (req, res, next) => {
 // @route   POST /api/auth/forgot-password
 // @access  Public
 // ─────────────────────────────────────────────
+const resendVerificationCode = async (req, res, next) => {
+    try {
+        const { accountEmail } = req.body;
+        const normalizedEmail = (accountEmail || '').trim().toLowerCase();
+
+        if (!normalizedEmail) {
+            return res.status(400).json({ success: false, message: 'Email is required to resend verification code.' });
+        }
+
+        const user = await User.findOne({ accountEmail: normalizedEmail });
+        if (!user) {
+            return res.status(400).json({ success: false, message: 'No account found with that email.' });
+        }
+
+        if (user.isEmailVerified) {
+            return res.status(400).json({ success: false, message: 'Email is already verified.' });
+        }
+
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const hashedVerificationCode = crypto.createHash('sha256').update(verificationCode).digest('hex');
+        const verificationExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+        user.emailVerificationToken = hashedVerificationCode;
+        user.emailVerificationExpire = verificationExpire;
+        await user.save({ validateBeforeSave: false });
+
+        // Send response immediately (non-blocking)
+        const responsePayload = {
+            success: true,
+            message: 'A new verification code was sent. It expires in 15 minutes.'
+        };
+        if (!isEmailConfigured() && process.env.NODE_ENV !== 'production') {
+            responsePayload.verificationCode = verificationCode;
+            responsePayload.warning = 'SMTP is not configured. Use the code returned here to verify your account.';
+        }
+
+        res.status(200).json(responsePayload);
+
+        // Send verification email in background (non-blocking)
+        sendEmailVerification(user, verificationCode).then(emailResult => {
+            if (emailResult.success) {
+                console.log(`✅ Resend verification email sent to ${user.accountEmail}`);
+            } else {
+                console.error(`❌ Failed to resend verification email to ${user.accountEmail}: ${emailResult.error}`);
+            }
+        }).catch(error => {
+            console.error(`❌ Resend verification email error for ${user.accountEmail}:`, error.message);
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const verifyEmail = async (req, res, next) => {
+    try {
+        const { accountEmail, verificationCode } = req.body;
+        const normalizedEmail = (accountEmail || '').trim().toLowerCase();
+        const code = (verificationCode || '').trim();
+
+        if (!normalizedEmail || !code) {
+            return res.status(400).json({ success: false, message: 'Email and verification code are required.' });
+        }
+
+        const user = await User.findOne({ accountEmail: normalizedEmail })
+            .select('+emailVerificationToken +emailVerificationExpire +isEmailVerified');
+
+        if (!user) {
+            return res.status(400).json({ success: false, message: 'Invalid verification details.' });
+        }
+
+        if (user.isEmailVerified === true) {
+            return res.status(400).json({ success: false, message: 'Email is already verified. Please log in.' });
+        }
+
+        if (!user.emailVerificationToken || !user.emailVerificationExpire || user.emailVerificationExpire.getTime() < Date.now()) {
+            return res.status(400).json({ success: false, message: 'Verification code is expired. Please request a new one.' });
+        }
+
+        const hashedCode = crypto.createHash('sha256').update(code).digest('hex');
+        if (hashedCode !== user.emailVerificationToken) {
+            return res.status(400).json({ success: false, message: 'Invalid verification code.' });
+        }
+
+        user.isEmailVerified = true;
+        user.emailVerificationToken = undefined;
+        user.emailVerificationExpire = undefined;
+        await user.save({ validateBeforeSave: false });
+
+        res.status(200).json({ success: true, message: 'Email verified successfully. You may now log in.' });
+    } catch (err) {
+        next(err);
+    }
+};
+
 const forgotPassword = async (req, res, next) => {
     try {
         const { accountEmail } = req.body;
@@ -376,5 +503,5 @@ const resetPassword = async (req, res, next) => {
     }
 };
 
-module.exports = { register, login, logout, getMe, socialLogin, forgotPassword, resetPassword };
+module.exports = { register, login, logout, getMe, socialLogin, forgotPassword, resetPassword, verifyEmail, resendVerificationCode };
 

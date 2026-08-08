@@ -2,6 +2,17 @@ const LiveSession = require('../models/LiveSession');
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
 
+const generateMeetingCode = (title) => {
+    const base = (title || 'emare').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let code = base.slice(0, 10);
+    while (code.length < 10) {
+        code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    code = code.slice(0, 10);
+    return `${code.slice(0, 3)}-${code.slice(3, 7)}-${code.slice(7, 10)}`;
+};
+
 const generateMeetingLink = (platform, title) => {
     const slug = (title || 'emare-live-session')
         .toLowerCase()
@@ -9,17 +20,13 @@ const generateMeetingLink = (platform, title) => {
         .replace(/(^-|-$)/g, '')
         .slice(0, 24) || 'emare-live-session';
 
-    switch (platform) {
-        case 'Google Meet':
-            return `https://meet.google.com/${slug.replace(/-/g, '')}`;
-        case 'Jitsi Meet':
-            return `https://meet.jit.si/${slug}`;
-        case 'Custom':
-            return `https://meet.emarehub.com/${slug}`;
-        case 'Zoom':
-        default:
-            return `https://zoom.us/j/1234567890?pwd=${slug.toUpperCase().replace(/-/g, '').slice(0, 8)}`;
-    }
+    // Use Jitsi Meet for all platforms as it works without OAuth
+    // Jitsi is a free, open-source video conferencing solution
+    return `https://meet.jit.si/${slug}-${Date.now()}`;
+};
+
+const isValidMeetingLink = (link) => {
+    return typeof link === 'string' && link.trim().startsWith('http');
 };
 
 // @desc    Get live sessions for a course
@@ -43,6 +50,57 @@ exports.getCourseSessions = async (req, res) => {
     }
 };
 
+// @desc    Get live sessions for the current user
+// @route   GET /api/live-sessions/me
+// @access  Private
+exports.getMyLiveSessions = async (req, res) => {
+    try {
+        let sessions = [];
+
+        if (req.user.assignedRole === 'Student') {
+            const enrollments = await Enrollment.find({ studentRef: req.user.id }).select('courseRef');
+            const courseIds = enrollments.map(e => e.courseRef).filter(Boolean);
+            if (courseIds.length > 0) {
+                sessions = await LiveSession.find({ courseRef: { $in: courseIds } })
+                    .populate('instructorRef', 'fullName')
+                    .sort('startTime');
+            } else {
+                // If the student has no explicit enrollments, still return available live sessions
+                sessions = await LiveSession.find()
+                    .populate('instructorRef', 'fullName')
+                    .sort('startTime');
+            }
+        } else if (req.user.assignedRole === 'Instructor') {
+            sessions = await LiveSession.find({ instructorRef: req.user.id })
+                .populate('instructorRef', 'fullName')
+                .sort('startTime');
+        } else {
+            sessions = await LiveSession.find()
+                .populate('instructorRef', 'fullName')
+                .sort('startTime');
+        }
+
+        res.status(200).json({ success: true, data: sessions });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// @desc    Get all live sessions
+// @route   GET /api/live-sessions
+// @access  Private
+exports.getAllLiveSessions = async (req, res) => {
+    try {
+        const sessions = await LiveSession.find()
+            .populate('instructorRef', 'fullName')
+            .sort('startTime');
+
+        res.status(200).json({ success: true, data: sessions });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 // @desc    Create a live session
 // @route   POST /api/live-sessions
 // @access  Private/Instructor
@@ -50,7 +108,13 @@ exports.createLiveSession = async (req, res) => {
     try {
         const { title, platform = 'Zoom', meetingLink, ...rest } = req.body;
         const normalizedPlatform = ['Zoom', 'Google Meet', 'Jitsi Meet', 'Custom'].includes(platform) ? platform : 'Zoom';
-        const resolvedLink = meetingLink || generateMeetingLink(normalizedPlatform, title);
+        const resolvedLink = isValidMeetingLink(meetingLink)
+            ? meetingLink.trim()
+            : generateMeetingLink(normalizedPlatform, title);
+
+        if (!resolvedLink && normalizedPlatform !== 'Jitsi Meet') {
+            return res.status(400).json({ success: false, message: 'A valid meeting link is required for this platform.' });
+        }
 
         const session = await LiveSession.create({
             ...rest,

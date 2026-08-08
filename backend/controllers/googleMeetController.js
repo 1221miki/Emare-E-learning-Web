@@ -22,40 +22,25 @@ exports.createGoogleMeetEvent = async (req, res) => {
 
         if (!title || !startTime) return res.status(400).json({ success: false, message: 'Missing title or startTime' });
 
-        // If no Google credentials available, return 501 so client can fallback
-        if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.GOOGLE_REFRESH_TOKEN) {
-            return res.status(501).json({ success: false, message: 'Google Meet integration not configured on server' });
-        }
+        // Generate a working Jitsi Meet link (no OAuth required, actually joinable)
+        const slug = (title || 'emare-live-session')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '')
+            .slice(0, 24) || 'emare-live-session';
+        
+        const meetLink = `https://meet.jit.si/${slug}-${Date.now()}`;
 
-        const auth = createOAuth2Client();
-        const calendar = google.calendar({ version: 'v3', auth });
-
-        const start = new Date(startTime).toISOString();
-        const end = new Date(new Date(startTime).getTime() + durationMinutes * 60000).toISOString();
-
-        const event = {
-            summary: title,
-            description: description || '',
-            start: { dateTime: start },
-            end: { dateTime: end },
-            attendees: (attendees || []).filter(Boolean).map(email => ({ email })),
-            conferenceData: { createRequest: { requestId: `emare-${Date.now()}` } }
-        };
-
-        const created = await calendar.events.insert({
-            calendarId: 'primary',
-            resource: event,
-            conferenceDataVersion: 1,
-            sendUpdates: 'none'
+        console.log(`✅ Generated Jitsi Meet link (joinable): ${meetLink}`);
+        return res.status(200).json({ 
+            success: true, 
+            data: { 
+                meetLink,
+                message: 'Meeting link generated successfully. You can now join the meeting!'
+            } 
         });
-
-        const meetLink = (created.data.conferenceData && created.data.conferenceData.entryPoints)
-            ? (created.data.conferenceData.entryPoints.find(e => e.entryPointType === 'video') || {}).uri
-            : (created.data.hangoutLink || '');
-
-        res.status(200).json({ success: true, data: { event: created.data, meetLink } });
     } catch (err) {
-        console.error('Google Meet creation error:', err);
-        res.status(500).json({ success: false, message: err.message || 'Failed to create Google Meet event' });
+        console.error('Meeting link generation error:', err);
+        res.status(500).json({ success: false, message: err.message || 'Failed to create meeting link' });
     }
 };
