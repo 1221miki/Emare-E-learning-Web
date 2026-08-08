@@ -8,7 +8,6 @@ export default function Navbar() {
     const { theme, toggleTheme, colors } = useTheme();
     const navigate = useNavigate();
 
-    const [showAnnouncement, setShowAnnouncement] = useState(true);
     const [currentLang, setCurrentLang] = useState('en');
     const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -17,11 +16,7 @@ export default function Navbar() {
         { code: 'en', name: 'English' },
         { code: 'am', name: 'አማርኛ' },
         { code: 'om', name: 'Afaan Oromoo' },
-        { code: 'ti', name: 'ትግርኛ' },
-        { code: 'so', name: 'Soomaali' },
-        { code: 'aa', name: 'Qafaraf' },
-        { code: 'sid', name: 'Sidaamu Afoo' },
-        { code: 'wal', name: 'Wolaytta Doonaa' }
+        { code: 'ti', name: 'ትግርኛ' }
     ];
 
     const currentLanguageName = languages.find(l => l.code === currentLang)?.name || 'Language';
@@ -64,40 +59,21 @@ export default function Navbar() {
 
     const s = {
         wrapper: {
-            position: 'sticky',
+            position: 'fixed',
             top: 0,
+            left: 0,
             zIndex: 1000,
             display: 'flex',
             flexDirection: 'column',
             width: '100%'
         },
-        announcementBar: {
-            display: showAnnouncement ? 'flex' : 'none',
-            justifyContent: 'center',
-            alignItems: 'center',
-            background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`,
-            color: '#fff',
-            padding: '8px 24px',
-            fontSize: '13px',
-            fontWeight: '600',
-            position: 'relative',
-            zIndex: 1001
-        },
-        closeAnnouncement: {
-            position: 'absolute',
-            right: '24px',
-            background: 'transparent',
-            border: 'none',
-            color: '#fff',
-            cursor: 'pointer',
-            fontSize: '16px',
-            fontWeight: '700'
-        },
+
         navbar: { 
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center', 
             padding: '16px 5%', 
+            width: '100%',
             background: theme === 'dark' ? 'rgba(9,13,22,0.95)' : 'rgba(255,255,255,0.95)',
             backdropFilter: 'blur(12px)',
             WebkitBackdropFilter: 'blur(12px)',
@@ -125,13 +101,7 @@ export default function Navbar() {
 
     return (
         <div style={s.wrapper}>
-            {/* 1. Top Announcement Bar */}
-            <div style={s.announcementBar}>
-                <span> <strong>New Promotion:</strong> Get 50% off all Advanced AI Courses until August! <Link to="/courses" style={{color: '#fff', textDecoration: 'underline', marginLeft: '8px'}}>Claim Offer</Link></span>
-                <button onClick={() => setShowAnnouncement(false)} style={s.closeAnnouncement}></button>
-            </div>
 
-            {/* 2. Main Navigation Bar */}
             <nav style={s.navbar}>
                 <div style={s.logoBox}>
                     <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -142,11 +112,11 @@ export default function Navbar() {
                 
                 <div style={s.navCenter}>
                     <Link to="/" style={s.navLink}>Home</Link>
-                    <Link to="/courses" style={s.navLink}>Courses</Link>
+                    <Link to="/about" style={s.navLink}>About</Link>
+                    <Link to="/developers" style={s.navLink}>Emare Developers</Link>
+                    <Link to="/courses" style={s.navLink}>Course Catalogs</Link>
                     <Link to="/career-tracks" style={s.navLink}>Career Tracks</Link>
                     <Link to="/search" style={s.navLink}>Search</Link>
-                    <Link to="/live-sessions" style={s.navLink}>Live Classes</Link>
-                    <Link to="/leaderboard" style={s.navLink}>Community</Link>
                 </div>
 
                 <div style={s.navRight}>
@@ -176,7 +146,7 @@ export default function Navbar() {
 
                     {/* Dark Mode Toggle */}
                     <button onClick={toggleTheme} style={s.iconBtn} title="Toggle Theme">
-                        {theme === 'dark' ? '️' : ''}
+                        {theme === 'dark' ? '☀️' : '🌙'}
                     </button>
                     
                     {isAuthenticated ? (

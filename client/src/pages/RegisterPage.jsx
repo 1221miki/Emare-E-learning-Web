@@ -17,7 +17,6 @@ export default function RegisterPage() {
         confirmPassword: '',
         profilePicture: null,
         gender: '',
-        dateOfBirth: '',
         country: '',
         region: '',
         city: '',
@@ -54,14 +53,20 @@ export default function RegisterPage() {
     const [socialLoading, setSocialLoading] = useState(false);
     const [socialError, setSocialError] = useState('');
 
+    const sanitizePhoneInput = (value) => {
+        return value.replace(/\D/g, '').slice(0, 10);
+    };
+
     const handleChange = e => {
         const { name, value, files } = e.target;
         if (files) {
             setForm(prev => ({ ...prev, [name]: files[0] }));
         } else {
-            setForm(prev => ({ ...prev, [name]: value }));
+            setForm(prev => ({ ...prev, [name]: name === 'phoneNumber' ? sanitizePhoneInput(value) : value }));
         }
     };
+
+    const normalizePhoneNumber = (phone) => phone.replace(/[-\s]/g, '').trim();
 
     const validateForm = () => {
         if (!form.firstName.trim()) return 'First name is required.';
@@ -76,6 +81,12 @@ export default function RegisterPage() {
         if (!/[0-9]/.test(form.securedPassword)) return 'Password needs a number.';
         if (!/[!@#$%^&*]/.test(form.securedPassword)) return 'Password needs a special character.';
         if (form.securedPassword !== form.confirmPassword) return 'Passwords do not match.';
+        if (form.phoneNumber.trim()) {
+            const normalizedPhone = normalizePhoneNumber(form.phoneNumber);
+            if (!(/^(09\d{8}|07\d{8})$/.test(normalizedPhone))) {
+                return 'Phone number must be exactly 10 digits and start with 09 or 07.';
+            }
+        }
         // Only students can self-register; instructors are created by admin
         return null;
     };
@@ -194,12 +205,7 @@ export default function RegisterPage() {
                             <option value="Other">Other</option>
                         </select>
                     </div>
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Date of Birth</label>
-                        <input name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={handleChange} style={styles.input} />
-                    </div>
 
-                    
                     <h3 style={styles.sectionHeader}>Security & Contact</h3>
                     <div style={styles.fieldGroup}>
                         <label style={styles.label}>Username</label>
@@ -231,34 +237,8 @@ export default function RegisterPage() {
 
                     <div style={styles.fieldGroup}>
                         <label style={styles.label}>Verified Phone Number (Optional)</label>
-                        <input name="phoneNumber" type="tel" placeholder="+1234567890" value={form.phoneNumber} onChange={handleChange} style={styles.input} />
+                        <input name="phoneNumber" type="tel" placeholder="09xxxxxxxx or +2519xxxxxxxx" value={form.phoneNumber} onChange={handleChange} style={styles.input} />
                     </div>
-                    <div style={styles.fieldGroup}>
-                        <label style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: 8 }}><input type="checkbox" style={{ marginRight: 8 }} /> Enable 2FA</label>
-                        <div />
-                    </div>
-
-                    {/* ── Student-specific fields ── */}
-                    {form.assignedRole === 'Student' && (<>
-                        <h3 style={styles.sectionHeader}>◈ Academic Details</h3>
-                        <div style={styles.fieldGroup}>
-                            <label style={styles.label}>Education Level</label>
-                            <input name="educationLevel" type="text" placeholder="e.g., Bachelor" value={form.educationLevel} onChange={handleChange} style={styles.input} />
-                        </div>
-                        <div style={styles.fieldGroup}>
-                            <label style={styles.label}>Institution / University (Optional)</label>
-                            <input name="institution" type="text" placeholder="University name" value={form.institution} onChange={handleChange} style={styles.input} />
-                        </div>
-                        <div style={styles.fieldGroup}>
-                            <label style={styles.label}>Field of Study</label>
-                            <input name="fieldOfStudy" type="text" placeholder="Computer Science" value={form.fieldOfStudy} onChange={handleChange} style={styles.input} />
-                        </div>
-                        <div style={styles.fieldGroup}>
-                            <label style={styles.label}>Learning Interests</label>
-                            <input name="learningInterests" type="text" placeholder="AI, Data Science, Cloud..." value={form.learningInterests} onChange={handleChange} style={styles.input} />
-                        </div>
-                    </>)}
-
                     {/* ── Instructor-specific fields ── */}
                     {form.assignedRole === 'Instructor' && (<>
                         <h3 style={styles.sectionHeader}>‍▧ Instructor Profile</h3>
@@ -384,30 +364,30 @@ export default function RegisterPage() {
 }
 
 const styles = {
-    page: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)', padding: '20px', position: 'relative' },
-    backButton: { position: 'absolute', top: '24px', left: '24px', display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', textDecoration: 'none', fontSize: '14px', fontWeight: '600', transition: 'color 0.2s', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' },
-    card: { background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '40px', width: '100%', maxWidth: '920px', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' },
-    header: { textAlign: 'center', marginBottom: '32px' },
-    logo: { width: '60px', height: '60px', borderRadius: '16px', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: '900', color: '#fff', marginBottom: '16px' },
-    title: { color: '#fff', fontSize: '26px', fontWeight: '800', margin: '0 0 6px' },
-    subtitle: { color: '#94a3b8', fontSize: '14px', margin: 0 },
-    errorBox: { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', padding: '12px 16px', borderRadius: '10px', fontSize: '14px', marginBottom: '20px' },
-    form: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px' },
-    fieldGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
-    label: { color: '#cbd5e1', fontSize: '13px', fontWeight: '600', letterSpacing: '0.5px' },
-    input: { background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: '#fff', fontSize: '15px', padding: '12px 16px', outline: 'none', transition: 'border-color 0.2s' },
+    page: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)', padding: '16px', position: 'relative' },
+    backButton: { position: 'absolute', top: '20px', left: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', textDecoration: 'none', fontSize: '13px', fontWeight: '600', transition: 'color 0.2s', padding: '7px 11px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' },
+    card: { background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px', padding: '32px', width: '100%', maxWidth: '780px', boxShadow: '0 20px 45px rgba(0,0,0,0.45)' },
+    header: { textAlign: 'center', marginBottom: '28px' },
+    logo: { width: '54px', height: '54px', borderRadius: '16px', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', fontWeight: '900', color: '#fff', marginBottom: '14px' },
+    title: { color: '#fff', fontSize: '22px', fontWeight: '800', margin: '0 0 6px' },
+    subtitle: { color: '#94a3b8', fontSize: '13px', margin: 0 },
+    errorBox: { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', marginBottom: '18px' },
+    form: { display: 'grid', gridTemplateColumns: '1fr', gap: '12px' },
+    fieldGroup: { display: 'flex', flexDirection: 'column', gap: '5px' },
+    label: { color: '#cbd5e1', fontSize: '12px', fontWeight: '700', letterSpacing: '0.4px' },
+    input: { background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', color: '#fff', fontSize: '14px', padding: '10px 14px', outline: 'none', transition: 'border-color 0.2s' },
     passwordWrapper: { position: 'relative', display: 'flex', alignItems: 'center', width: '100%' },
-    eyeIcon: { position: 'absolute', right: '12px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0', fontSize: '16px' },
-    textarea: { background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: '#fff', fontSize: '15px', padding: '12px 16px', outline: 'none', resize: 'vertical' },
-    btn: { marginTop: '8px', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff', border: 'none', borderRadius: '10px', padding: '14px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s', boxShadow: '0 4px 15px rgba(59,130,246,0.4)' },
-    footerText: { textAlign: 'center', color: '#64748b', fontSize: '14px', marginTop: '24px' },
+    eyeIcon: { position: 'absolute', right: '12px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0', fontSize: '15px' },
+    textarea: { background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', color: '#fff', fontSize: '14px', padding: '10px 14px', outline: 'none', resize: 'vertical' },
+    btn: { marginTop: '8px', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s', boxShadow: '0 4px 12px rgba(59,130,246,0.4)' },
+    footerText: { textAlign: 'center', color: '#94a3b8', fontSize: '13px', marginTop: '20px' },
     link: { color: '#60a5fa', textDecoration: 'none', fontWeight: '600' },
-    socialContainer: { textAlign: 'center', marginTop: '24px' },
-    socialText: { color: '#94a3b8', marginBottom: '12px', fontSize: '13px' },
-    socialButtons: { display: 'flex', justifyContent: 'center', gap: '14px' },
-    socialBtn: { background: '#ffffff', borderRadius: '50%', width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', transition: 'transform 0.2s' },
-    sectionHeader: { gridColumn: '1 / -1', color: '#fff', fontSize: '14px', fontWeight: '800', marginTop: '8px', marginBottom: '8px' },
+    socialContainer: { textAlign: 'center', marginTop: '20px' },
+    socialText: { color: '#94a3b8', marginBottom: '10px', fontSize: '12px' },
+    socialButtons: { display: 'flex', justifyContent: 'center', gap: '12px' },
+    socialBtn: { background: '#ffffff', borderRadius: '50%', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.25)', transition: 'transform 0.2s' },
+    sectionHeader: { gridColumn: '1 / -1', color: '#fff', fontSize: '13px', fontWeight: '800', marginTop: '6px', marginBottom: '6px' },
     modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' },
-    modalContent: { background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '32px', width: '100%', maxWidth: '440px', boxShadow: '0 25px 50px rgba(0,0,0,0.6)' },
+    modalContent: { background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '28px', width: '100%', maxWidth: '420px', boxShadow: '0 25px 50px rgba(0,0,0,0.6)' },
     closeBtn: { background: 'none', border: 'none', color: '#94a3b8', fontSize: '20px', cursor: 'pointer' }
 };

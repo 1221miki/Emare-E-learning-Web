@@ -81,6 +81,10 @@ export default function LandingPage() {
         { name: 'Ms. Kalkidan', skills: 'UI/UX Design', rating: 4.7, students: '10k', avatar: 'K' }
     ];
 
+    const emareTeam = [
+        { name: 'Emare Developers', title: 'Built with dedication and late-night focus', desc: 'Our team worked through the night, often before 9:00 hours, to bring this learning platform to life for Ethiopian students. Every release reflects the passion and persistence of the people behind Emare.', icon: '⚙️' }
+    ];
+
     const testimonials = [
         { name: 'Abeba Tsehay', role: 'Completed: Web Dev Bootcamp', text: 'Emare ICT Hub transformed my career. The courses are practical and the instructors are world-class!', avatar: 'A', rating: 5 },
         { name: 'Yonas Kebede', role: 'Completed: Data Analyst Path', text: 'The hands-on projects helped me build a strong portfolio. Highly recommend this platform.', avatar: 'Y', rating: 5 },
@@ -297,90 +301,6 @@ export default function LandingPage() {
                 </div>
                 <div style={p.grid4}>
                     {featuredList.map(c => renderCourseCard(c, 'FEATURED', colors.primary))}
-                </div>
-            </section>
-
-            {/* 7. Learning Paths */}
-            <section style={p.section}>
-                <div style={p.sectionHeader}>
-                    <span style={p.sectionBadge}>Career Goals</span>
-                    <h2 style={p.sectionTitle}>Curated Learning Paths</h2>
-                    <p style={p.sectionSubtitle}>Follow a structured path to land your dream job.</p>
-                </div>
-                <div style={p.grid3}>
-                    {learningPaths.map((path, i) => (
-                        <div key={i} style={p.pathCard}>
-                            <div style={{ fontSize: '48px' }}>{path.icon}</div>
-                            <div>
-                                <h3 style={{ margin: '0 0 4px', color: colors.text, fontSize: '18px' }}>{path.name}</h3>
-                                <p style={{ margin: 0, color: colors.textMuted, fontSize: '13px' }}>{path.courses} Courses · {path.duration}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
-            {/* 8. Why Choose Emare ICT Hub */}
-            <section style={{ ...p.section, background: colors.bgCard }}>
-                <div style={p.sectionHeader}>
-                    <span style={p.sectionBadge}>Benefits</span>
-                    <h2 style={p.sectionTitle}>Why Choose Emare ICT Hub</h2>
-                </div>
-                <div style={p.grid3}>
-                    {whyChooseUs.map((w, i) => (
-                        <div key={i} style={p.categoryCard}>
-                            <span style={{ fontSize: '40px', display: 'block', marginBottom: '16px' }}>{w.icon}</span>
-                            <h3 style={{ color: colors.text, fontSize: '18px', margin: '0 0 8px' }}>{w.title}</h3>
-                            <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>{w.desc}</p>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
-            {/* 9. Top Instructors */}
-            <section style={p.section}>
-                <div style={p.sectionHeader}>
-                    <span style={p.sectionBadge}>Experts</span>
-                    <h2 style={p.sectionTitle}>Learn from the Best</h2>
-                </div>
-                <div style={p.grid4}>
-                    {topInstructors.map((inst, i) => (
-                        <div key={i} style={{ ...p.instructorCard, cursor: 'pointer', transition: 'all 0.2s' }}
-                            onClick={() => navigate('/search?tab=instructors')}
-                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.1)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
-                            <div style={p.instructorAvatar}>{inst.avatar}</div>
-                            <h3 style={{ color: colors.text, fontSize: '17px', fontWeight: '700', margin: '0 0 4px' }}>{inst.name}</h3>
-                            <p style={{ color: colors.textMuted, fontSize: '13px', margin: '0 0 12px' }}>{inst.skills}</p>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', fontSize: '13px' }}>
-                                <span style={{ color: '#fbbf24' }}> {inst.rating}</span>
-                                <span style={{ color: colors.textMuted }}>{inst.students} students</span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
-            {/* 10. Student Testimonials */}
-            <section style={{ ...p.section, background: colors.bgCard }}>
-                <div style={p.sectionHeader}>
-                    <span style={p.sectionBadge}>Success Stories</span>
-                    <h2 style={p.sectionTitle}>Student Testimonials</h2>
-                </div>
-                <div style={p.grid3}>
-                    {testimonials.map((t, i) => (
-                        <div key={i} style={p.testimonialCard}>
-                            <div style={{ color: '#fbbf24', fontSize: '20px', marginBottom: '16px' }}>{''.repeat(t.rating)}</div>
-                            <p style={{ color: colors.text, fontSize: '15px', lineHeight: 1.6, margin: '0 0 24px', fontStyle: 'italic' }}>"{t.text}"</p>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: colors.primary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800' }}>{t.avatar}</div>
-                                <div>
-                                    <div style={{ color: colors.text, fontWeight: '700', fontSize: '15px' }}>{t.name}</div>
-                                    <div style={{ color: colors.textMuted, fontSize: '12px' }}>{t.role}</div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
                 </div>
             </section>
 

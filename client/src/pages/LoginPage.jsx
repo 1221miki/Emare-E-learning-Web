@@ -162,9 +162,10 @@ export default function LoginPage() {
                                 type={showPassword ? "text" : "password"}
                                 required
                                 placeholder="••••••••"
+                                className="login-password-input"
                                 value={form.securedPassword}
                                 onChange={handleChange}
-                                style={{ ...styles.input, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }}
+                                style={{ ...styles.input, ...styles.loginPasswordInput, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }}
                             />
                             <button 
                                 type="button" 
@@ -390,5 +391,6 @@ const styles = {
     socialBtn: { background: '#ffffff', borderRadius: '50%', width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', fontSize: '18px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', transition: 'transform 0.2s' },
     modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' },
     modalContent: { background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '32px', width: '100%', maxWidth: '440px', boxShadow: '0 25px 50px rgba(0,0,0,0.6)' },
-    closeBtn: { background: 'none', border: 'none', color: '#94a3b8', fontSize: '20px', cursor: 'pointer' }
+    closeBtn: { background: 'none', border: 'none', color: '#94a3b8', fontSize: '20px', cursor: 'pointer' },
+    loginPasswordInput: { MozAppearance: 'textfield', WebkitAppearance: 'none', appearance: 'none' }
 };

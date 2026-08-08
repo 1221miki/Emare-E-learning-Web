@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import EmareTeamSection from '../components/EmareTeamSection';
 import { useTheme } from '../context/ThemeContext';
 
 export default function TermsPage() {
@@ -40,6 +41,8 @@ export default function TermsPage() {
                     </div>
                 </div>
             </div>
+
+            <EmareTeamSection />
 
             <footer style={s.footer}>
                 <p>© {new Date().getFullYear()} Emare ICT Hub, Debre Birhan.</p>

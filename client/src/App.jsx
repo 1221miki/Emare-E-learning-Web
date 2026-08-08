@@ -15,6 +15,7 @@ import HelpPage from './pages/HelpPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import CookiePage from './pages/CookiePage';
+import DevelopersPage from './pages/DevelopersPage';
 import StudentDashboard from './pages/student/StudentDashboard';
 import InstructorDashboard from './pages/instructor/InstructorDashboard';
 import InstructorSettings from './pages/instructor/InstructorSettings';
@@ -67,6 +68,7 @@ function AppRoutes() {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/about" element={<AboutPage />} />
+            <Route path="/developers" element={<DevelopersPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/help" element={<HelpPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
