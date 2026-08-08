@@ -5,78 +5,53 @@ import { useTheme } from '../context/ThemeContext';
 
 export default function AboutPage() {
     const { colors } = useTheme();
-    const team = [
-        { name: 'Emare ICT Hub', role: 'Founded in Debre Birhan', avatar: 'E', desc: 'Providing world-class ICT training to Ethiopian learners since establishment.' }
-    ];
 
     const s = {
         page: { minHeight: '100vh', fontFamily: "'Outfit', 'Inter', sans-serif" },
-        badge: { display: 'inline-block', padding: '6px 16px', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', borderRadius: '20px', fontWeight: '700', fontSize: '13px', marginBottom: '20px', border: '1px solid rgba(59,130,246,0.2)' },
-        heroTitle: { fontSize: '48px', fontWeight: '900', margin: '0 0 20px', lineHeight: 1.15, background: 'linear-gradient(135deg, #fff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
-        heroSub: { color: colors.textMuted, fontSize: '17px', lineHeight: 1.7, maxWidth: '650px', margin: '0 auto 40px' },
-        videoContainer: { maxWidth: '800px', margin: '0 auto', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(59,130,246,0.3)', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' },
-        videoFrame: { width: '100%', height: '100%', display: 'block' },
-        section: { padding: '80px 5%', maxWidth: '1200px', margin: '0 auto' },
-        hero: { padding: '100px 5% 60px', textAlign: 'center' },
-        sTitle: { color: colors.text, fontSize: '28px', fontWeight: '800', marginBottom: '40px', textAlign: 'center' },
-        grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' },
-        card: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '16px', padding: '32px', border: '1px solid rgba(30,41,59,0.5)' },
-        cardTitle: { color: colors.text, fontSize: '20px', fontWeight: '700', margin: '12px 0 10px' },
-        cardText: { color: colors.textMuted, fontSize: '14px', lineHeight: 1.7, margin: 0 },
-        footer: { padding: '24px', textAlign: 'center', borderTop: '1px solid rgba(30,41,59,0.4)', color: '#475569', fontSize: '13px' },
-        fLink: { color: colors.textMuted, textDecoration: 'none' }
+        wrapper: { maxWidth: '1200px', margin: '0 auto', padding: '100px 5%' },
+        hero: { display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '40px', alignItems: 'center' },
+        left: { display: 'flex', flexDirection: 'column', gap: '28px' },
+        badge: { display: 'inline-block', padding: '8px 22px', background: 'rgba(59,130,246,0.12)', color: '#60a5fa', borderRadius: '999px', fontWeight: '700', fontSize: '13px', letterSpacing: '0.12em', textTransform: 'uppercase', border: '1px solid rgba(59,130,246,0.24)' },
+        title: { fontSize: '54px', fontWeight: '900', lineHeight: '1.03', margin: '0', color: colors.text, maxWidth: '700px' },
+        description: { fontSize: '17px', lineHeight: '1.9', color: colors.textMuted, maxWidth: '760px' },
+        card: { background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '28px', padding: '42px 36px', boxShadow: `0 30px 80px rgba(0,0,0,0.08)`, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '16px' },
+        icon: { width: '88px', height: '88px', borderRadius: '24px', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '36px' },
+        cardTitle: { fontSize: '28px', fontWeight: '900', margin: '0', color: colors.text },
+        cardSubtitle: { fontSize: '13px', fontWeight: '700', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.primary, margin: '0' },
+        cardUrl: { fontSize: '13px', color: colors.textMuted, letterSpacing: '0.12em', marginTop: '6px' },
+        footer: { padding: '24px 0 40px', textAlign: 'center', color: colors.textMuted, fontSize: '13px' },
+        fLink: { color: colors.textMuted, textDecoration: 'none' },
+        mobileStack: { display: 'grid', gap: '32px' }
     };
 
     return (
         <div style={{ ...s.page, background: colors.bg, color: colors.text }}>
             <Navbar />
+            <div style={s.wrapper}>
+                <div style={s.hero}>
+                    <div style={s.left}>
+                        <span style={s.badge}>About Us</span>
+                        <h1 style={s.title}>Digital Innovation and System Development Center</h1>
+                        <p style={s.description}>
+                            Emare ICT Hub is designed to become a leading platform for digital skills development, technology entrepreneurship, and innovation in Debre Birhan City. This center offers a comprehensive ecosystem for tech growth, providing accessible digital tools, training, mentorship, and collaboration opportunities to local tech professionals, startups, and businesses.
+                        </p>
+                        <p style={s.description}>
+                            Crucially, Emare ICT Hub also features its own high-skilled development team, focused on creating and delivering cutting-edge systems and solutions. This internal capacity allows us to drive innovation from within and support the wider community. With the growing importance of technology in driving economic development, the Emare ICT Hub will be a vital player in fostering a tech-savvy community, empowering young innovators, and creating job opportunities through digital literacy.
+                        </p>
+                    </div>
 
-
-            <div style={s.hero}>
-                <span style={s.badge}>About Us</span>
-                <h1 style={s.heroTitle}>Empowering Ethiopia's<br />Tech Future</h1>
-                <p style={s.heroSub}>Emare ICT Hub is a premier e-learning platform based in Debre Birhan, Ethiopia. We provide accessible, high-quality technology education to learners across the country.</p>
-                
-                <div style={s.videoContainer}>
-                    <iframe width="100%" height="100%" src="https://www.youtube.com/embed/prLv5uwUtuY?start=3" title="About Emare" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={s.videoFrame}></iframe>
+                    <div style={s.card}>
+                        <div style={s.icon}>💻</div>
+                        <div style={s.cardTitle}>EMARE ICT HUB</div>
+                        <div style={s.cardSubtitle}>FOSTERING DIGITAL GROWTH</div>
+                        <div style={s.cardUrl}>www.emareicthub.com</div>
+                    </div>
                 </div>
             </div>
-
-            <section style={s.section}>
-                <div style={s.grid2}>
-                    <div style={s.card}>
-                        <span style={{ fontSize: '36px' }}>◎</span>
-                        <h3 style={s.cardTitle}>Our Mission</h3>
-                        <p style={s.cardText}>To democratize technology education in Ethiopia by providing affordable, industry-relevant courses taught by experienced professionals, empowering students to build the skills they need to thrive in the digital economy.</p>
-                    </div>
-                    <div style={s.card}>
-                        <span style={{ fontSize: '36px' }}>⊕</span>
-                        <h3 style={s.cardTitle}>Our Vision</h3>
-                        <p style={s.cardText}>To become East Africa's leading e-learning platform, producing world-class tech talent and fostering innovation through quality education accessible to every Ethiopian learner regardless of location.</p>
-                    </div>
-                </div>
-            </section>
-
-            <section style={{ ...s.section, background: colors.bgCard }}>
-                <h2 style={s.sTitle}>Why Choose Emare?</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
-                    {[
-                        { icon: '▧', title: 'Expert-Led Courses', desc: 'Learn from industry professionals with real-world experience.' },
-                        { icon: '', title: 'Verified Certificates', desc: 'Earn certificates that employers trust and recognize.' },
-                        { icon: '', title: 'Hands-On Projects', desc: 'Build real applications and portfolio-worthy projects.' },
-                        { icon: '◉', title: 'Local Relevance', desc: 'Content designed for Ethiopian and African tech markets.' }
-                    ].map((v, i) => (
-                        <div key={i} style={s.card}>
-                            <span style={{ fontSize: '32px' }}>{v.icon}</span>
-                            <h3 style={{ ...s.cardTitle, fontSize: '16px' }}>{v.title}</h3>
-                            <p style={{ ...s.cardText, fontSize: '13px' }}>{v.desc}</p>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
             <footer style={s.footer}>
-                <p>© {new Date().getFullYear()} Emare ICT Hub, Debre Birhan. <Link to="/privacy" style={s.fLink}>Privacy</Link> · <Link to="/terms" style={s.fLink}>Terms</Link> · <Link to="/contact" style={s.fLink}>Contact</Link></p>
+                <p>
+                    © {new Date().getFullYear()} Emare ICT Hub, Debre Birhan. <Link to="/privacy" style={s.fLink}>Privacy</Link> · <Link to="/terms" style={s.fLink}>Terms</Link> · <Link to="/contact" style={s.fLink}>Contact</Link>
+                </p>
             </footer>
         </div>
     );

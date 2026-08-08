@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { categoryService, courseService } from '../services/api';
 import Navbar from '../components/Navbar';
+import EmareTeamSection from '../components/EmareTeamSection';
 import { useTheme } from '../context/ThemeContext';
 import { BookOpen, Wifi, Cpu, Shield, Globe, Smartphone, BarChart3, Palette, Briefcase, Cloud, Database, Terminal, ArrowRight } from 'lucide-react';
 import { categoryMatchesCourse } from '../utils/categoryMatching';
@@ -279,6 +280,7 @@ export default function CategoriesPage() {
                     </div>
                 )}
             </div>
+            <EmareTeamSection />
         </div>
     );
 }
