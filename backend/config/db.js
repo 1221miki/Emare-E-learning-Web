@@ -18,7 +18,7 @@ async function canWrite() {
 }
 
 const connectDB = async () => {
-    const configuredUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/emare-elms';
+    const configuredUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/emare-elms';
 
     // ── 1. Try the configured URI ──────────────────────────────────────────────
     try {
@@ -28,11 +28,15 @@ const connectDB = async () => {
         // Check if this endpoint actually supports writes
         const writable = await canWrite();
         if (!writable) {
-            console.warn('⚠️  Connected MongoDB endpoint is read-only (Atlas SQL / Data Federation).');
-            console.warn('    Writes are not supported on this endpoint.');
-            console.log('🔄 Falling back to In-Memory MongoDB for full read/write support...');
-            await mongoose.disconnect();
-            throw new Error('READ_ONLY_ENDPOINT');
+            console.error('❌ Connected MongoDB endpoint is read-only (Atlas SQL / Data Federation).');
+            console.error('   Writes are not supported on this endpoint.');
+            if (process.env.USE_IN_MEMORY_DB === 'true') {
+                console.warn('🔄 Falling back to In-Memory MongoDB because USE_IN_MEMORY_DB=true.');
+                await mongoose.disconnect();
+                throw new Error('READ_ONLY_ENDPOINT');
+            }
+            console.error('❌ Aborting startup because this database cannot persist registered users.');
+            process.exit(1);
         }
 
         await seedDefaultData();
@@ -41,7 +45,12 @@ const connectDB = async () => {
         if (err.message !== 'READ_ONLY_ENDPOINT') {
             console.warn(`⚠️  Could not connect to configured MongoDB: ${err.message}`);
         }
-        console.log('🔄 Starting In-Memory MongoDB for development...');
+        if (process.env.USE_IN_MEMORY_DB === 'true') {
+            console.log('🔄 Starting In-Memory MongoDB for development...');
+        } else {
+            console.error('❌ No writable MongoDB available. Set a valid MONGODB_URI or enable USE_IN_MEMORY_DB=true for local development.');
+            process.exit(1);
+        }
     }
 
     // ── 2. Fallback: mongodb-memory-server ────────────────────────────────────
@@ -88,6 +97,9 @@ async function seedDefaultData() {
                             suspensionReason: '',
                             suspensionDate: null,
                             suspensionEndDate: null,
+                            isEmailVerified: true,
+                            emailVerificationToken: undefined,
+                            emailVerificationExpire: undefined,
                         }
                     }
                 );
@@ -103,6 +115,7 @@ async function seedDefaultData() {
                     suspensionReason: '',
                     suspensionDate: null,
                     suspensionEndDate: null,
+                    isEmailVerified: true,
                     creationTimestamp: new Date(),
                     updatedAt: new Date(),
                 });
