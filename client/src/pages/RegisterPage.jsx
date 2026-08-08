@@ -28,7 +28,6 @@ export default function RegisterPage() {
         institution: '',
         fieldOfStudy: '',
         learningInterests: '',
-        preferredLanguage: '',
         // Instructor specific
         professionalTitle: '',
         biography: '',
@@ -95,12 +94,8 @@ export default function RegisterPage() {
                 ...form,
                 fullName: `${form.firstName} ${form.middleName ? form.middleName + ' ' : ''}${form.lastName}`.trim()
             };
-            const user = await register(payload);
-            if (user.assignedRole === 'Admin') {
-                navigate('/admin/dashboard');
-            } else {
-                navigate('/student/dashboard');
-            }
+            const response = await register(payload);
+            navigate(`/verify-email?email=${encodeURIComponent(form.accountEmail.trim().toLowerCase())}`);
         } catch (err) {
             setError(err.response?.data?.message || 'Registration failed. Please try again.');
         } finally {
@@ -204,11 +199,7 @@ export default function RegisterPage() {
                         <input name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={handleChange} style={styles.input} />
                     </div>
 
-                    <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
-                        <label style={styles.label}>Profile Picture Upload</label>
-                        <input name="profilePicture" type="file" accept="image/*" onChange={handleChange} style={styles.input} />
-                    </div>
-
+                    
                     <h3 style={styles.sectionHeader}>Security & Contact</h3>
                     <div style={styles.fieldGroup}>
                         <label style={styles.label}>Username</label>
@@ -265,16 +256,6 @@ export default function RegisterPage() {
                         <div style={styles.fieldGroup}>
                             <label style={styles.label}>Learning Interests</label>
                             <input name="learningInterests" type="text" placeholder="AI, Data Science, Cloud..." value={form.learningInterests} onChange={handleChange} style={styles.input} />
-                        </div>
-                        <div style={styles.fieldGroup}>
-                            <label style={styles.label}>Preferred Language</label>
-                            <select name="preferredLanguage" value={form.preferredLanguage} onChange={handleChange} style={styles.input}>
-                                <option value="">Select</option>
-                                <option value="English">English</option>
-                                <option value="Amharic">Amharic</option>
-                                <option value="Afaan Oromo">Afaan Oromo</option>
-                                <option value="Tigrinya">Tigrinya</option>
-                            </select>
                         </div>
                     </>)}
 

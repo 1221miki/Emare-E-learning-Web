@@ -39,7 +39,9 @@ export const authService = {
     getMe: () => API.get('/auth/me'),
     socialLogin: (data) => API.post('/auth/social-login', data),
     forgotPassword: (data) => API.post('/auth/forgot-password', data),
-    resetPassword: (data) => API.post('/auth/reset-password', data)
+    resetPassword: (data) => API.post('/auth/reset-password', data),
+    verifyEmail: (data) => API.post('/auth/verify-email', data),
+    resendVerification: (data) => API.post('/auth/resend-verification', data)
 };
 
 // ── Course API Calls ───────────────────────────────────────
@@ -261,6 +263,8 @@ export const leaderboardService = {
 // ── Live Sessions API Calls ────────────────────────────────
 export const liveSessionService = {
     getCourseSessions: (courseId) => API.get(`/live-sessions/course/${courseId}`),
+    getMySessions: () => API.get('/live-sessions/me'),
+    getAllSessions: () => API.get('/live-sessions'),
     createSession: (data) => API.post('/live-sessions', data),
     markAttendance: (id) => API.put(`/live-sessions/${id}/attendance`),
     createGoogleMeet: (data) => API.post('/live-sessions/google/create', data),
@@ -285,6 +289,10 @@ export const aiService = {
     recommendCourses: (data) => API.post('/ai/recommend-courses', data),
     generateQuiz: (data) => API.post('/ai/generate-quiz', data),
     assignmentAssistant: (data) => API.post('/ai/assignment-assistant', data)
+    ,
+    summarize: (data) => API.post('/ai/summarize', data),
+    generateMicroLesson: (data) => API.post('/ai/microlesson', data),
+    generateFlashcards: (data) => API.post('/ai/flashcards', data)
 };
 
 // ── Upload & Media API Calls (Phase 6) ─────────────────────

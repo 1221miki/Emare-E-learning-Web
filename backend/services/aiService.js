@@ -9,8 +9,8 @@ const axios = require('axios');
 
 class AIService {
     constructor() {
-        this.provider = process.env.AI_PROVIDER || 'mock';
         this.apiKey = process.env.AI_API_KEY || '';
+        this.provider = process.env.AI_PROVIDER || (this.apiKey ? 'openai' : 'mock');
         this.model = process.env.AI_MODEL || 'gpt-4o-mini';
     }
 
@@ -21,14 +21,19 @@ class AIService {
      * @returns {Promise<string>}
      */
     async generateChatResponse(prompt, context = {}, conversationHistory = []) {
+        const pdfInstruction = context.pdfText ? `A PDF document is attached. For questions directly about the attached PDF, course document, or lesson material in the PDF, use only the attached PDF content to answer. For unrelated questions, answer normally using the available course context and general knowledge. Do not answer a different question than the user asked. If the question is clearly about the PDF but the PDF does not contain enough information, respond exactly: "I could not find enough information in the attached document to answer that question."` : null;
         if (this.provider === 'openai' && this.apiKey) {
             try {
-                return await this._callOpenAI(prompt, context, conversationHistory);
+                return await this._callOpenAI(prompt, context, conversationHistory, pdfInstruction);
             } catch (error) {
                 console.error('AIProvider error:', error.message || error);
-                return `${this._getMockResponse(prompt, context)}\n\n(Note: This response is a fallback because the external AI service was unavailable.)`;
+                const pdfFallback = this._getPdfFallbackResponse(prompt, context);
+                return pdfFallback ? pdfFallback : `${this._getMockResponse(prompt, context)}\n\n(Note: This response is a fallback because the external AI service was unavailable.)`;
             }
         }
+
+        const pdfFallback = this._getPdfFallbackResponse(prompt, context);
+        if (pdfFallback) return pdfFallback;
 
         return this._getMockResponse(prompt, context);
     }
@@ -72,12 +77,14 @@ class AIService {
     async _callOpenAI(prompt, context, conversationHistory = [], instruction = null) {
         const messages = this._buildConversationMessages(prompt, context, conversationHistory, instruction);
 
+        const isPdfOnly = typeof instruction === 'string' && instruction.includes('attached PDF content');
         const response = await axios.post('https://api.openai.com/v1/chat/completions', {
             model: this.model,
             messages,
-            temperature: 0.45,
-            max_tokens: 900,
-            top_p: 0.95,
+            temperature: 0.0,
+            n: 1,
+            max_tokens: 1200,
+            top_p: 0.8,
             frequency_penalty: 0.0,
             presence_penalty: 0.0
         }, {
@@ -104,39 +111,18 @@ Your mission is to help students learn effectively, complete courses successfull
 You are not a generic chatbot.
 You are a personalized tutor and course assistant.
 
-Always:
-- Provide a clear simple explanation first.
-- Follow with a detailed technical explanation.
-- Give practical examples.
-- Give real-world examples.
-- Use Markdown formatting.
-- Organize content with headings and bullet points.
-- Use tables when useful.
-- Provide code blocks when needed.
-- Highlight important notes.
-- If the answer is long, divide it into sections.
-- Mention common mistakes and best practices when relevant.
-- Encourage curiosity and critical thinking.
-- Be encouraging, patient, and professional.
-- Do not criticize the student.
+Priority rules:
+- Answer only the user's current question.
+- Give one direct answer. Do not provide multiple unrelated answers.
+- Do not answer a different question than the user asked.
+- Keep responses concise unless the user asks for more detail.
+- If the user asks for a summary, explanation, or example, provide it after a short direct answer.
 - Do not invent facts.
-- If you are uncertain, state that you are unsure.
-
-Response structure should include when appropriate:
-1. Simple explanation
-2. Detailed explanation
-3. Real-life example
-4. Key points
-5. Quick summary
-6. Practice question
-7. Suggested next topic
+- If you are uncertain, say you are unsure.
 
 Platform Context:
 You are integrated into the Emare ICT Hub E-Learning Management System.
 Use available student and course data to personalize answers while respecting privacy and only using information made available for the current student.
-
-If lessons are unfinished, remind the student politely about their progress.
-If the user asks for exam prep, quizzes, notes, flashcards, or course guidance, provide supportive learning guidance.
 `;
 
         const contextSummary = this._summarizeContext(context);
@@ -176,11 +162,28 @@ Use these details when they are available.`;
         const courseContextNote = context?.courseName ? `Use the course name "${context.courseName}" and the lesson details to relate your explanation to the student's enrolled course.` : '';
 
         const messages = [
-            { role: 'system', content: instruction || defaultInstruction },
+            { role: 'system', content: `You are a focused AI tutor. Answer only the user's current question. Do not introduce unrelated topics, do not answer a different question, and do not provide multiple alternative answers unless the user explicitly asks for alternatives. If the question is unclear, ask one concise clarification question. Keep responses direct and relevant.` },
+            { role: 'system', content: defaultInstruction },
             { role: 'system', content: requiredContext },
             { role: 'system', content: systemContext },
             { role: 'system', content: contextSummary }
         ];
+
+        if (typeof context.pdfText === 'string' && context.pdfText.trim()) {
+            messages.unshift({
+                role: 'system',
+                content: `IMPORTANT: A PDF is attached. Use the attached document only when answering questions directly related to it. Do not use unrelated PDF content or course material if it is not relevant to the user's current question. If the PDF does not contain enough information for a direct answer, respond exactly: "I could not find enough information in the attached document to answer that question."`
+            });
+        }
+
+        if (instruction) {
+            messages.unshift({ role: 'system', content: instruction });
+        }
+
+        const priorityContextMessages = this._buildPriorityContextMessages(context);
+        if (priorityContextMessages.length) {
+            messages.push(...priorityContextMessages);
+        }
 
         if (technicalNotes) {
             messages.push({ role: 'system', content: technicalNotes });
@@ -189,20 +192,6 @@ Use these details when they are available.`;
         if (courseContextNote) {
             messages.push({ role: 'system', content: courseContextNote });
         }
-
-        const historyMessages = Array.isArray(conversationHistory)
-            ? conversationHistory.slice(-6).flatMap((entry) => [
-                { role: 'user', content: entry.question },
-                { role: 'assistant', content: entry.answer }
-            ])
-            : [];
-
-        const previousMessages = Array.isArray(context.previousMessages)
-            ? context.previousMessages.slice(-6).map((message) => ({
-                role: message.role === 'assistant' ? 'assistant' : 'user',
-                content: message.text || message.content || ''
-            }))
-            : [];
 
         const extraContextMessages = [];
         if (typeof context.selectedText === 'string' && context.selectedText.trim()) {
@@ -215,7 +204,7 @@ Use these details when they are available.`;
             extraContextMessages.push({ role: 'system', content: `Uploaded PDF content: ${context.pdfText.trim().slice(0, 1200)}${context.pdfText.length > 1200 ? '... (truncated)' : ''}` });
         }
 
-        return [...messages, ...extraContextMessages, ...historyMessages, ...previousMessages, { role: 'user', content: prompt }];
+        return [...messages, ...extraContextMessages, { role: 'user', content: prompt }];
     }
 
     _summarizeContext(context = {}) {
@@ -241,6 +230,45 @@ Use these details when they are available.`;
         }
 
         return `Course metadata available:\n- ${lines.join('\n- ')}`;
+    }
+
+    _buildPriorityContextMessages(context = {}) {
+        const messages = [];
+        if (typeof context.pdfText === 'string' && context.pdfText.trim()) {
+            messages.push({
+                role: 'system',
+                content: `The student has attached a PDF document. For any question related to this PDF or course material, use the attached PDF content as the highest priority source. Base your answer on the PDF text first; only use external knowledge when needed to clarify or expand the explanation.`
+            });
+            messages.push({
+                role: 'system',
+                content: `Attached PDF content:\n${context.pdfText.trim().slice(0, 15000)}${context.pdfText.length > 15000 ? '... (truncated)' : ''}`
+            });
+            messages.push({
+                role: 'system',
+                content: `If the user asks about the PDF or related topic, answer directly and clearly from the PDF. Mention the document where relevant and include direct explanations, examples, or summaries based on the PDF content.`
+            });
+        }
+        if (typeof context.uploadedNotes === 'string' && context.uploadedNotes.trim()) {
+            messages.push({
+                role: 'system',
+                content: `Use the uploaded notes as a primary reference for answering questions about the course or lesson. If a related question is asked, reference these notes directly.`
+            });
+            messages.push({
+                role: 'system',
+                content: `Uploaded Notes:\n${context.uploadedNotes.trim().slice(0, 15000)}${context.uploadedNotes.length > 15000 ? '... (truncated)' : ''}`
+            });
+        }
+        if (typeof context.selectedText === 'string' && context.selectedText.trim()) {
+            messages.push({
+                role: 'system',
+                content: `Treat the selected text as the most relevant passage. Use it to answer the user's question accurately, and base examples or explanations on it whenever appropriate.`
+            });
+            messages.push({
+                role: 'system',
+                content: `Selected Text:\n${context.selectedText.trim().slice(0, 5000)}${context.selectedText.length > 5000 ? '... (truncated)' : ''}`
+            });
+        }
+        return messages;
     }
 
     _buildTechnicalSpecializationNotes(prompt) {
@@ -501,6 +529,64 @@ Common Mistakes:
 - Not testing edge cases or validating inputs.`;
     }
 
+    /**
+     * Summarize a given text or uploaded PDF content into concise notes
+     * @param {string} text
+     * @param {Object} context
+     */
+    async summarizeText(text = '', context = {}) {
+        if (!text || text.trim().length === 0) return 'No text provided to summarize.';
+        if (this.provider === 'openai' && this.apiKey) {
+            const instruction = `You are an expert summarizer. Produce a concise, bullet-point summary, key takeaways, and 3 practice questions for the provided text.`;
+            return await this._callOpenAI(`Summarize the following content and provide key takeaways and 3 practice questions:\n\n${text}`, context, [], instruction);
+        }
+
+        // Mock fallback
+        const lines = text.split('\n').slice(0, 6).join(' ');
+        return `Summary:\n- ${lines}\n\nKey Takeaways:\n- Review the main ideas above.\n\nPractice Questions:\n1) What is the main point?\n2) Name a supporting detail.\n3) How would you apply this idea?`;
+    }
+
+    /**
+     * Generate a microlearning module (short lesson) from topic or content
+     * @param {Object} topicContext
+     */
+    async generateMicroLesson(topicContext = {}) {
+        if (this.provider === 'openai' && this.apiKey) {
+            const instruction = `Create a 3-5 minute microlearning module: learning objective, 3 short sections, 2 quick questions, and suggested further reading.`;
+            const prompt = `Create a short micro-lesson for: ${topicContext.topic || topicContext.title || 'a topic'}. Include objectives, 3 concise sections, 2 quick quiz questions with answers, and 2 resources.`;
+            return await this._callOpenAI(prompt, topicContext, [], instruction);
+        }
+
+        return `Microlesson: ${topicContext.topic || 'Topic'}\n1. Quick intro\n2. Key idea\n3. Short example\n\nQuiz:\n1) Q? A.\n2) Q? A.`;
+    }
+
+    /**
+     * Generate flashcards (question -> answer) from content
+     * @param {string} content
+     */
+    async generateFlashcards(content = '') {
+        if (!content || content.trim().length === 0) return [];
+        if (this.provider === 'openai' && this.apiKey) {
+            const instruction = `Extract 6-10 concise Q&A flashcards from the provided content. Output as JSON array: [{"q":"..","a":".."}]`;
+            const response = await this._callOpenAI(`Create flashcards from the following content:\n\n${content}`, {}, [], instruction);
+            // Try to parse JSON from the response if provided
+            try {
+                const jsonStart = response.indexOf('[');
+                const jsonText = jsonStart >= 0 ? response.slice(jsonStart) : response;
+                const parsed = JSON.parse(jsonText);
+                if (Array.isArray(parsed)) return parsed;
+            } catch (e) {
+                // ignore parse errors and return simple split
+            }
+            // Fallback simple split
+            const lines = content.split('\n').filter(Boolean).slice(0, 6);
+            return lines.map((l, i) => ({ q: `Q${i + 1}: ${l.slice(0, 40)}?`, a: `A: ${l.slice(0, 80)}` }));
+        }
+
+        const lines = content.split('\n').filter(Boolean).slice(0, 6);
+        return lines.map((l, i) => ({ q: `Q${i + 1}: ${l.slice(0, 40)}?`, a: `A: ${l.slice(0, 80)}` }));
+    }
+
     _isExplainRequest(prompt) {
         const explanationKeywords = ['explain', 'how', 'what does', 'what is', 'describe', 'why', 'how it', 'how does', 'how to', 'meaning of', 'explain it'];
         return explanationKeywords.some((kw) => prompt.includes(kw));
@@ -538,8 +624,12 @@ Common Mistakes:
     }
 
     _getGeneralExplanation(topic, context) {
-        const topicKey = topic.toLowerCase().trim().replace(/^(a|an|the)\s+/, '');
+        let topicKey = topic.toLowerCase().trim().replace(/^(a|an|the)\s+/, '');
+        topicKey = topicKey.replace(/defination/g, 'definition');
+        topicKey = topicKey.replace(/^(definition of |what is the definition of |meaning of )/, '').trim();
+
         const definitions = {
+            function: `A function is a reusable block of code that performs a specific task. In Python, functions are defined with the def keyword, for example:\n\n\`python\`\ndef greet(name):\n    return f"Hello, {name}!"\n\`\`\`\n\nThis lets you call greet('Alice') anytime to produce a greeting without writing the same instructions again.`,
             python: `Python is a high-level, interpreted programming language known for its simple, readable syntax. It supports procedural, object-oriented, and functional programming styles. Python is widely used in web development, data science, automation, scripting, and artificial intelligence. For example:\n\n\`python\`\nprint('Hello, world!')\n\`\`\`\n\nIndentation is meaningful in Python and defines the structure of code blocks such as loops and functions.`,
             javascript: `JavaScript is a programming language that runs in web browsers and on servers with Node.js. It is used to make web pages interactive, manage browser behavior, and build full-stack applications. JavaScript supports event-driven programming, functions as first-class values, and asynchronous operations using promises or async/await.`,
 
@@ -648,17 +738,18 @@ Common Mistakes:
             return this._applyStudentContext(this._getCodeExplanation(p, context), context);
         }
 
-        if (/^(what is|who is|where is|when is|why is|how is|how are|define|describe|explain|tell me about)\b/.test(p)) {
-            const topic = p.replace(/^(what is|who is|where is|when is|why is|how is|how are|define|describe|explain|tell me about)\s+/, '').replace(/[?]+$/, '').trim();
-            return this._getGeneralExplanation(topic || p, context);
+        const promptQuestion = this._extractPromptQuestion(p);
+        if (/^(what is|who is|where is|when is|why is|how is|how are|define|describe|explain|tell me about)\b/.test(promptQuestion)) {
+            const topic = promptQuestion.replace(/^(what is|who is|where is|when is|why is|how is|how are|define|describe|explain|tell me about)\s+/, '').replace(/[?]+$/, '').trim();
+            return this._getGeneralExplanation(topic || promptQuestion, context);
         }
 
-        if (p.includes('summary')) {
-            const answer = `Here is a summary for ${lessonTag}: We reviewed the key ideas, focused on practical examples, and reinforced the core concepts so you can apply them confidently. ${assignmentHint}`;
+        if (p.includes('summary') || p.includes('summarize') || p.includes('summarise') || p.includes('summarizing')) {
+            const answer = `Here is a summary for ${lessonTag}: This lesson covered the key concepts of ${courseName} with focus on practical examples and core ideas. Use the main ideas from the lesson to build a strong understanding and apply them to your coursework. ${assignmentHint}`;
             return this._applyStudentContext(answer, context);
         }
 
-        if (p.includes('quiz') || p.includes('practice')) {
+        if (p.includes('review') || p.includes('quiz') || p.includes('practice') || p.includes('drill')) {
             const answer = `Let's review ${courseName} together. I can generate a short practice quiz or help you drill the concepts from ${lessonTag}. ${assignmentHint}`;
             return this._applyStudentContext(answer, context);
         }
@@ -673,8 +764,54 @@ Common Mistakes:
             return this._applyStudentContext(answer, context);
         }
 
-        const answer = `I can answer your academic questions directly. Describe the topic, concept, or example you want explained, and I will respond clearly with a longer, student-friendly answer.`;
+        const pdfFallback = this._getPdfFallbackResponse(prompt, context);
+        if (pdfFallback) {
+            return pdfFallback;
+        }
+
+        const questionText = prompt.trim().replace(/\s+/g, ' ');
+        const answer = `I received your request: "${questionText}". Based on the information available, here is a direct response:`;
         return this._applyStudentContext(answer, context);
+    }
+
+    _getPdfFallbackResponse(prompt, context) {
+        const pdfText = (context?.pdfText || '').replace(/\u00A0/g, ' ').trim();
+        if (!pdfText) return null;
+
+        const question = this._extractPromptQuestion(prompt);
+        const normalized = question.toLowerCase().replace(/defination/g, 'definition');
+        const isFunctionDefinitionQuestion = /(?:what is|what's|define|definition of|defination of|explain).*\bfunction\b/.test(normalized);
+
+        if (isFunctionDefinitionQuestion) {
+            const sentences = pdfText.match(/[^.?!]*\bfunction\b[^.?!]*[.?!]/gi) || [];
+            const excerpt = sentences.slice(0, 2).join(' ').trim();
+            const exampleMatch = pdfText.match(/def\s+[A-Za-z_][A-Za-z0-9_]*\([^)]*\):[\s\S]{0,120}/i);
+            const example = exampleMatch ? `\n\nExample from the PDF:\n${exampleMatch[0].trim()}` : '';
+            const answer = excerpt
+                ? `According to the attached PDF, a function is a reusable block of code that performs a specific task.\n\n${excerpt}${example}`
+                : `According to the attached PDF, a function is a reusable block of code that performs a specific task.${example}`;
+            return this._applyStudentContext(answer, context);
+        }
+
+        if (!normalized || !/(objective|purpose|goal|summary|main point|main purpose|primary aim|what is this document|what is the document|what does this document|what does this report|document|pdf|attached pdf|purpose of this|report|project report|department|university|submission)/.test(normalized)) {
+            return null;
+        }
+
+        const sentenceMatch = pdfText.match(/[^.?!]*\b(objective|purpose|goal|summary|aim|introduction|project report|submitted by|university|department|report|submission)\b[^.?!]*[.?!]/i);
+        const candidate = sentenceMatch ? sentenceMatch[0].trim() : pdfText;
+        const sentences = candidate.match(/[^.?!]+[.?!]/g) || [candidate];
+        const excerpt = sentences.slice(0, 2).join(' ').trim();
+
+        const answer = `Based on the attached PDF, the objective of this document is:\n\n${excerpt}\n\nIf you want, I can also summarize another section or clarify a specific part of the document.`;
+        return this._applyStudentContext(answer, context);
+    }
+
+    _extractPromptQuestion(prompt) {
+        const match = prompt.match(/question:\s*(.*)$/i);
+        if (match && match[1]) {
+            return match[1].trim();
+        }
+        return prompt.trim();
     }
 }
 

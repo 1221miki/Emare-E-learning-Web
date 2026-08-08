@@ -25,8 +25,11 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
     const [uploadingFile, setUploadingFile] = useState(false);
     const [voiceListening, setVoiceListening] = useState(false);
     const [selectedRating, setSelectedRating] = useState(null);
+    const [editingMessageIndex, setEditingMessageIndex] = useState(null);
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
+    const recognitionRef = useRef(null);
+    const voiceActiveRef = useRef(false);
 
     const assistantCourseLabel = context.courseName || 'General Study';
     const storageKey = useMemo(() => `emare-ai-${assistantCourseLabel.replace(/\s+/g, '-').toLowerCase()}`, [assistantCourseLabel]);
@@ -128,16 +131,28 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
         }
     };
 
-    const handleSend = async (e, questionOverride) => {
+    const handleSend = async (e, questionOverride, userMessage) => {
         if (e) e.preventDefault?.();
         const query = (questionOverride || input).trim();
         if (!query) return;
         setError('');
-        addMessage({
-            sender: 'user',
-            text: query,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        });
+
+        const messageText = (userMessage || query).trim();
+        if (editingMessageIndex !== null && questionOverride == null) {
+            setMessages((prev) => prev.map((msg, idx) => idx === editingMessageIndex ? {
+                ...msg,
+                text: messageText,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            } : msg));
+            setEditingMessageIndex(null);
+        } else {
+            addMessage({
+                sender: 'user',
+                text: messageText,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+        }
+
         if (!questionOverride) setInput('');
         setIsTyping(true);
 
@@ -258,18 +273,125 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
         setTimeout(() => setError(''), 2400);
     };
 
+    const handleEditMessage = (index) => {
+        const message = messages[index];
+        if (!message || message.sender !== 'user') return;
+        setInput(message.text);
+        setEditingMessageIndex(index);
+        setError('Editing previous query. Make your changes and press Update.');
+        setTimeout(() => setError(''), 3000);
+    };
+
     const handleAskPdfQuestion = () => {
-        if (!attachedFile) return;
-        const prompt = `Please answer my next question using only the attached PDF document titled "${attachedFile.name}". Use the PDF content to support your response.`;
-        setInput(prompt);
-        handleSend(null, prompt);
+        if (!attachedFile && !pdfText) {
+            setError('Attach a PDF first.');
+            setTimeout(() => setError(''), 2400);
+            return;
+        }
+        const question = input.trim();
+        if (!question) {
+            setError('Type your question about the attached PDF first.');
+            setTimeout(() => setError(''), 2400);
+            return;
+        }
+
+        const prompt = `Please answer the following question using only the attached PDF document titled "${attachedFile?.name || 'uploaded document'}". Do not use external knowledge unless the answer is directly present in the PDF. Question: ${question}`;
+        setInput('');
+        handleSend(null, prompt, question);
+    };
+
+    const stopVoiceRecognition = () => {
+        voiceActiveRef.current = false;
+        setVoiceListening(false);
+        if (recognitionRef.current) {
+            try {
+                recognitionRef.current.onend = null;
+                recognitionRef.current.stop();
+            } catch (err) {
+                console.warn('Voice recognition stop failed:', err);
+            }
+        }
     };
 
     const handleVoiceToggle = () => {
-        setVoiceListening((prev) => !prev);
-        setError(voiceListening ? 'Voice input disabled.' : 'Voice input enabled (mock mode).');
-        setTimeout(() => setError(''), 2200);
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            setError('Voice input is not supported in this browser. Please use Chrome, Edge, or another browser with Web Speech support.');
+            setTimeout(() => setError(''), 4200);
+            return;
+        }
+
+        if (voiceListening) {
+            stopVoiceRecognition();
+            setError('Voice input stopped.');
+            setTimeout(() => setError(''), 1800);
+            return;
+        }
+
+        try {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 1;
+
+            recognition.onstart = () => {
+                voiceActiveRef.current = true;
+                setVoiceListening(true);
+                setError('Microphone on. Listening for your voice...');
+            };
+
+            recognition.onresult = (event) => {
+                let transcript = '';
+                for (let i = 0; i < event.results.length; i += 1) {
+                    transcript += event.results[i][0]?.transcript || '';
+                }
+
+                const cleaned = transcript.trim();
+                if (cleaned) {
+                    setInput((prev) => {
+                        const next = prev ? `${prev} ${cleaned}` : cleaned;
+                        return next;
+                    });
+                    setError('Voice captured. Review and send when ready.');
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.warn('Speech recognition error:', event.error, event.message);
+                const fallbackMessage = event.error === 'not-allowed'
+                    ? 'Microphone access was denied. Please allow microphone permission and try again.'
+                    : event.error === 'no-speech'
+                        ? 'No speech was detected. Please try again.'
+                        : `Voice input error: ${event.error}.`;
+                setError(fallbackMessage);
+                stopVoiceRecognition();
+            };
+
+            recognition.onend = () => {
+                if (!voiceActiveRef.current) {
+                    setVoiceListening(false);
+                    return;
+                }
+                setVoiceListening(false);
+                voiceActiveRef.current = false;
+            };
+
+            recognitionRef.current = recognition;
+            recognition.start();
+        } catch (err) {
+            console.warn('Could not start speech recognition:', err);
+            setError('Could not access the microphone. Please check browser permissions and try again.');
+            setTimeout(() => setError(''), 4000);
+        }
     };
+
+    useEffect(() => {
+        return () => {
+            stopVoiceRecognition();
+        };
+    }, []);
 
     const handleRegenerate = () => {
         const lastQuestion = [...messages].reverse().find((m) => m.sender === 'user');
@@ -305,8 +427,9 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
             zIndex: 10
         },
         chatBox: {
-            width: '380px',
-            minHeight: '560px',
+            width: '520px',
+            minHeight: '680px',
+            height: 'min(95vh, 820px)',
             background: colors.bgCard,
             border: `1px solid ${colors.border}`,
             borderRadius: '22px',
@@ -318,7 +441,7 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
             transformOrigin: 'bottom right',
             animation: 'scaleIn 0.2s ease',
             fontFamily: "'Inter', sans-serif",
-            maxHeight: 'calc(100vh - 72px)'
+            maxHeight: '95vh'
         },
         header: {
             background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`,
@@ -416,12 +539,23 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
         },
         msgArea: {
             flex: 1,
-            padding: '18px',
+            padding: '18px 18px 28px',
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
             gap: '14px',
-            background: colors.bg
+            background: colors.bg,
+            minHeight: '320px'
+        },
+        editBtn: {
+            marginTop: '6px',
+            padding: '6px 10px',
+            borderRadius: '12px',
+            border: '1px solid rgba(0,0,0,0.12)',
+            background: colors.bgInput,
+            color: colors.text,
+            fontSize: '11px',
+            cursor: 'pointer'
         },
         msgRow: (isUser) => ({
             display: 'flex',
@@ -448,8 +582,10 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
             color: isUser ? '#fff' : colors.text,
             border: isUser ? 'none' : `1px solid ${colors.border}`,
             whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
             fontSize: '14px',
-            lineHeight: 1.6
+            lineHeight: 1.6,
+            position: 'relative'
         }),
         msgMeta: {
             marginTop: '6px',
@@ -459,10 +595,24 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
             justifyContent: 'space-between',
             gap: '12px'
         },
+        pdfBadge: {
+            marginTop: '8px',
+            alignSelf: 'flex-start',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 10px',
+            borderRadius: '14px',
+            background: colors.primary,
+            color: '#fff',
+            fontSize: '11px',
+            fontWeight: 700
+        },
         helperBar: {
             padding: '14px 18px 10px',
             borderTop: `1px solid ${colors.border}`,
-            background: colors.bgCard
+            background: colors.bgCard,
+            overflow: 'hidden'
         },
         helperText: {
             fontSize: '12px',
@@ -552,12 +702,15 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
             gap: '10px',
             padding: '14px 16px 18px',
             background: colors.bgCard,
-            borderTop: `1px solid ${colors.border}`
+            borderTop: `1px solid ${colors.border}`,
+            position: 'sticky',
+            bottom: 0,
+            zIndex: 5
         },
         textarea: {
             width: '100%',
-            minHeight: '90px',
-            resize: 'none',
+            minHeight: '120px',
+            resize: 'vertical',
             borderRadius: '18px',
             border: `1px solid ${colors.border}`,
             background: colors.bgInput,
@@ -566,6 +719,12 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
             fontSize: '14px',
             outline: 'none',
             lineHeight: 1.6
+        },
+        inputHint: {
+            fontSize: '12px',
+            color: colors.textMuted,
+            marginBottom: '8px',
+            padding: '0 4px'
         },
         inputRow: {
             display: 'flex',
@@ -617,6 +776,12 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
                         <h3 style={s.title}><span>⊡</span> Emare AI Tutor</h3>
                         <div style={s.subtitle}>Smart AI guidance for lessons, assignments, quizzes, and projects.</div>
                         <div style={s.headerMeta}>{assistantCourseLabel} • {Math.max(messages.length - 1, 0)} conversation{messages.length - 1 === 1 ? '' : 's'}</div>
+                        {(attachedFile || pdfText) && (
+                            <div style={{ marginTop: '10px', fontSize: '12px', color: colors.primary, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontWeight: 700 }}>Priority context:</span>
+                                <span>{attachedFile ? 'Attached PDF content' : 'Course content'}</span>
+                            </div>
+                        )}
                     </div>
                     <button onClick={() => setIsOpen(false)} style={s.closeBtn} aria-label="Close AI assistant">×</button>
                 </div>
@@ -657,6 +822,12 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
                                 {!isUser && <div style={s.avatar(false)}>AI</div>}
                                 <div>
                                     <div style={s.msgBubble(isUser)}>{m.text}</div>
+                                    {!isUser && (attachedFile || pdfText) && (
+                                        <div style={s.pdfBadge}>PDF Verified</div>
+                                    )}
+                                    {isUser && (
+                                        <button type="button" style={s.editBtn} onClick={() => handleEditMessage(i)}>Edit</button>
+                                    )}
                                     <div style={s.msgMeta}>
                                         <span>{isUser ? 'You' : 'Emare AI'}</span>
                                         <span>{m.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -682,7 +853,17 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
                             ))}
                         </div>
                     </div>
-                    <div style={s.helperText}>{error || (lastResponse ? 'Use the actions or ask another question.' : 'Ask the AI anything about your course.')}</div>
+                    <div style={s.helperText}>
+                        {error || (lastResponse ? 'Use the actions or type any statement or question to begin.' : 'Ask the AI anything about your course, or describe what you need help with.')}
+                        <div style={{ marginTop: '8px', color: colors.textMuted, fontSize: '11px' }}>
+                            Tip: You can type statements, course topics, or questions. Attach a PDF or paste notes to make responses more accurate.
+                        </div>
+                        {attachedFile && (
+                            <div style={{ marginTop: '8px', color: colors.primary, fontSize: '11px' }}>
+                                Attached PDF is being used as priority context for answers.
+                            </div>
+                        )}
+                    </div>
                     {attachedFile && (
                         <div style={s.pdfPreviewCard}>
                             <div style={s.pdfPreviewHeader}>
@@ -694,6 +875,49 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
                                 <div style={s.pdfPreviewMeta}>{attachedFile.type} • {(attachedFile.size / 1024).toFixed(1)} KB</div>
                                 <div style={s.pdfPreviewActions}>
                                     <button type="button" style={s.pdfActionBtn} onClick={handleAskPdfQuestion}>Ask PDF question</button>
+                                    <button type="button" style={s.pdfActionBtn} onClick={async () => {
+                                        if (!attachedFile && !pdfText) return setError('Attach a PDF first.');
+                                        setIsTyping(true);
+                                        try {
+                                            const content = pdfText || '';
+                                            const res = await aiService.summarize({ text: content, courseContext: context });
+                                            const summary = res.data?.data?.answer || res.data?.data || res.data?.answer || res.data;
+                                            addMessage({ sender: 'ai', text: `Summary:\n\n${summary}`, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+                                            setLastResponse(summary);
+                                        } catch (err) {
+                                            console.warn('Summarize failed', err);
+                                            setError('Failed to summarize PDF.');
+                                        } finally { setIsTyping(false); }
+                                    }}>Generate Summary</button>
+                                    <button type="button" style={s.pdfActionBtn} onClick={async () => {
+                                        if (!attachedFile && !pdfText) return setError('Attach a PDF first.');
+                                        setIsTyping(true);
+                                        try {
+                                            const content = pdfText || '';
+                                            const res = await aiService.generateFlashcards({ content });
+                                            const cards = res.data?.data?.cards || res.data?.data?.cards || res.data?.data || res.data?.cards || res.data;
+                                            const text = Array.isArray(cards) ? cards.map((c, i) => `${i+1}. Q: ${c.q}\nA: ${c.a}`).join('\n\n') : JSON.stringify(cards, null, 2);
+                                            addMessage({ sender: 'ai', text: `Flashcards generated:\n\n${text}`, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+                                            setLastResponse(text);
+                                        } catch (err) {
+                                            console.warn('Flashcards failed', err);
+                                            setError('Failed to generate flashcards.');
+                                        } finally { setIsTyping(false); }
+                                    }}>Generate Flashcards</button>
+                                    <button type="button" style={s.pdfActionBtn} onClick={async () => {
+                                        if (!attachedFile && !pdfText) return setError('Attach a PDF first.');
+                                        setIsTyping(true);
+                                        try {
+                                            const topicContext = { topic: attachedFile?.name || context.courseName || 'Uploaded content' };
+                                            const res = await aiService.generateMicroLesson(topicContext);
+                                            const lesson = res.data?.data?.answer || res.data?.data || res.data?.answer || res.data;
+                                            addMessage({ sender: 'ai', text: `Microlesson:\n\n${lesson}`, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+                                            setLastResponse(lesson);
+                                        } catch (err) {
+                                            console.warn('Microlesson failed', err);
+                                            setError('Failed to generate microlesson.');
+                                        } finally { setIsTyping(false); }
+                                    }}>Generate Microlesson</button>
                                     {pdfUrl && (
                                         <a href={pdfUrl} target="_blank" rel="noreferrer" style={s.pdfActionLink}>Open PDF</a>
                                     )}
@@ -704,16 +928,17 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
                 </div>
 
                 <form onSubmit={handleSend} style={s.inputForm}>
+                    <div style={s.inputHint}>Type anything: topic, notes, or simple chat. The AI will respond even without a formal question.</div>
                     <textarea
-                        rows={3}
-                        placeholder="Ask a question about your course, assignment, quiz, or project... (Shift+Enter for new line)"
+                        rows={4}
+                        placeholder="Type your topic, course note, or question here. You don't need to ask in question form."
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
                         style={s.textarea}
                     />
                     <div style={s.inputRow}>
-                        <button type="submit" style={s.sendBtn}>{isTyping ? 'Sending...' : 'Send'}</button>
+                        <button type="submit" style={s.sendBtn}>{isTyping ? 'Sending...' : editingMessageIndex !== null ? 'Update' : 'Send'}</button>
                     </div>
                 </form>
             </div>

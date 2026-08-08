@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FaEye, FaEyeSlash, FaGoogle, FaGithub, FaMicrosoft, FaFacebook, FaArrowLeft } from 'react-icons/fa';
 
 export default function LoginPage() {
     const { login, socialAuth, requestPasswordReset, resetPassword } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [form, setForm] = useState({ accountEmail: '', securedPassword: '' });
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState(location.state?.success || '');
     const [loading, setLoading] = useState(false);
     const [socialLoading, setSocialLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -126,6 +128,7 @@ export default function LoginPage() {
                     <p style={styles.subtitle}>Sign in to your account</p>
                 </div>
 
+                {success && <div style={styles.successBox}>{success}</div>}
                 {error && <div style={styles.errorBox}>{error}</div>}
 
                 <form onSubmit={handleSubmit} style={styles.form}>

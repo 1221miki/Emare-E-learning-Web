@@ -123,7 +123,6 @@ export default function InstructorOverview({ user, analytics = {}, courses = [],
     };
 
     const studentGrowthPct = analytics.studentGrowthPct ?? 0;
-    const revenueGrowthPct = analytics.revenueGrowthPct ?? 0;
 
     const statCards = [
         {
@@ -142,15 +141,6 @@ export default function InstructorOverview({ user, analytics = {}, courses = [],
             hint: `${analytics.clearedStudents || 0} tuition cleared`,
             trend: studentGrowthPct,
             onClick: onManageStudents
-        },
-        {
-            label: 'Total Revenue',
-            value: `${formatETB(analytics.totalEarnings)} ETB`,
-            icon: <Wallet size={22} />,
-            gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)',
-            hint: 'Lifetime earnings',
-            trend: revenueGrowthPct,
-            onClick: onViewAnalytics
         },
         {
             label: 'Pending Reviews',
@@ -248,35 +238,7 @@ export default function InstructorOverview({ user, analytics = {}, courses = [],
 
             {/* ═══════════════ 3. CHARTS ═══════════════ */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>
-                {/* Revenue Chart */}
-                <div style={{ ...styles.chartCard, background: colors.bgCard, border: `1px solid ${colors.border}` }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                        <div>
-                            <h3 style={{ ...styles.chartTitle, color: colors.text }}>Revenue Overview</h3>
-                            <p style={{ ...styles.chartSubtitle, color: colors.textMuted }}>Monthly revenue · ETB (Birr)</p>
-                        </div>
-                        <span style={{ ...styles.chartBadge, color: revenueGrowthPct >= 0 ? '#059669' : '#dc2626', background: revenueGrowthPct >= 0 ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)' }}>
-                            <TrendingUp size={14} /> {revenueGrowthPct >= 0 ? '+' : ''}{revenueGrowthPct}%
-                        </span>
-                    </div>
-                    <div style={{ width: '100%', height: '240px' }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={stats.revenueTrend} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
-                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0.02} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid stroke={isDark ? 'rgba(148,163,184,0.12)' : 'rgba(100,116,139,0.12)'} vertical={false} />
-                                <XAxis dataKey="name" tick={axisTick} axisLine={false} tickLine={false} />
-                                <YAxis tick={axisTick} axisLine={false} tickLine={false} tickFormatter={(v) => formatETB(v)} />
-                                <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => [`${formatETB(v)} ETB`, 'Revenue']} />
-                                <Area type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={3} fill="url(#revGrad)" />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
+
 
                 {/* Student Growth Chart */}
                 <div style={{ ...styles.chartCard, background: colors.bgCard, border: `1px solid ${colors.border}` }}>
