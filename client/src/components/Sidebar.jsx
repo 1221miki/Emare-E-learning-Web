@@ -199,7 +199,13 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                     onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
                     title="Click to open account menu"
                 >
-                    <div style={styles.userAvatar}>{user?.fullName?.[0]?.toUpperCase()}</div>
+                    <div style={styles.userAvatar}>
+                        {user?.avatarUrl ? (
+                            <img src={user.avatarUrl} alt="Profile Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                        ) : (
+                            user?.fullName?.[0]?.toUpperCase()
+                        )}
+                    </div>
                     <div style={styles.userMeta}>
                         <span style={{ ...styles.userName, color: colors.text }}>{user?.fullName}</span>
                         <span style={{ ...styles.userRole, color: colors.textMuted }}>{user?.assignedRole}</span>

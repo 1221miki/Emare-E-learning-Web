@@ -344,7 +344,11 @@ export default function DiscussionPage() {
                                                         return (
                                                             <div key={idx} style={{ display: 'flex', gap: '12px', padding: '14px', borderRadius: '12px', border: `1px solid ${isBest ? colors.primary : colors.border}`, background: isBest ? 'rgba(59,130,246,0.06)' : 'transparent' }}>
                                                                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: reply.authorRef?.assignedRole === 'Instructor' ? colors.accent : colors.textMuted, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', flexShrink: 0 }}>
-                                                                    {reply.authorRef?.fullName?.[0]}
+                                                                    {reply.authorRef?.avatarUrl ? (
+                                                                        <img src={reply.authorRef.avatarUrl} alt={reply.authorRef.fullName} style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />
+                                                                    ) : (
+                                                                        reply.authorRef?.fullName?.[0]
+                                                                    )}
                                                                 </div>
                                                                 <div style={{ flex: 1 }}>
                                                                     <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '12px', marginBottom: '6px', alignItems: 'center' }}>

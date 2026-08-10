@@ -1,17 +1,3 @@
-<<<<<<< HEAD
-node_modules/
-.env
-.env.local
-.env.*.local
-dist/
-build/
-.DS_Store
-*.log
-crash.log
-
-.idea/
-.vscode/
-=======
 # Dependencies
 node_modules/
 **/node_modules/
@@ -30,6 +16,7 @@ client/dist/
 # Logs
 *.log
 npm-debug.log*
+crash.log
 
 # OS files
 .DS_Store
@@ -49,4 +36,4 @@ vite-inspect.txt
 temp_*.js
 check_*.mjs
 check-*.mjs
->>>>>>> 5dbce57d9d5449159247e4309aca0180cfbe42e9
+

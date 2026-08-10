@@ -130,19 +130,6 @@ exports.submitAssignmentMultipart = async (req, res) => {
                     resolve(result);
                 });
                 streamifier.createReadStream(file.buffer).pipe(uploadStream);
-            }).catch(err => {
-                console.warn('Cloud upload failed, falling back to local for file', file.originalname, err.message);
-                const fs = require('fs');
-                const path = require('path');
-                const uploadsDir = path.join(__dirname, '../public/uploads');
-                if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-                const ext = path.extname(file.originalname) || '';
-                const filename = `assign_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
-                const filePath = path.join(uploadsDir, filename);
-                fs.writeFileSync(filePath, file.buffer);
-                const protocol = 'http';
-                const host = req.get('host') || 'localhost:5000';
-                return { secure_url: `${protocol}://${host}/uploads/${filename}`, public_id: filename, format: ext.replace('.', '') };
             });
 
             uploadedFiles.push({ filename: file.originalname, url: result.secure_url, mimeType: file.mimetype, size: file.size });

@@ -5021,8 +5021,12 @@ export default function AdminDashboard() {
                                         onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                     >
-                                        <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: '#eff6ff', color: '#2563eb', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            {user.fullName?.charAt(0) || 'U'}
+                                        <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: '#eff6ff', color: '#2563eb', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                            {user.avatarUrl ? (
+                                                <img src={user.avatarUrl} alt={user.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : (
+                                                user.fullName?.charAt(0) || 'U'
+                                            )}
                                         </div>
                                         <div>
                                             <div style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>{user.fullName}</div>
@@ -5040,8 +5044,12 @@ export default function AdminDashboard() {
                     {/* Rich Instructor Preview Card */}
                     {selectedInstructorObj && (
                         <div style={{ padding: '16px', borderRadius: '12px', background: colors.bg, border: `1px solid ${colors.border}`, display: 'flex', gap: '14px', alignItems: 'center' }}>
-                            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#dbeafe', color: '#1d4ed8', fontWeight: '800', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #3b82f6', flexShrink: 0 }}>
-                                {selectedInstructorObj.fullName?.charAt(0) || 'I'}
+                            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#dbeafe', color: '#1d4ed8', fontWeight: '800', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #3b82f6', flexShrink: 0, overflow: 'hidden' }}>
+                                {selectedInstructorObj.avatarUrl ? (
+                                    <img src={selectedInstructorObj.avatarUrl} alt={selectedInstructorObj.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    selectedInstructorObj.fullName?.charAt(0) || 'I'
+                                )}
                             </div>
                             <div style={{ flex: 1 }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

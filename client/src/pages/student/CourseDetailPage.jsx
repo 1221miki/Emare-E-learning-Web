@@ -154,7 +154,11 @@ export default function CourseDetailPage() {
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                             <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: colors.border, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                                {course.creatorRef?.fullName?.[0]}
+                                {course.creatorRef?.avatarUrl ? (
+                                    <img src={course.creatorRef.avatarUrl} alt={course.creatorRef.fullName} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                                ) : (
+                                    course.creatorRef?.fullName?.[0]
+                                )}
                             </div>
                             <div>
                                 <div style={{ fontSize: '12px', color: colors.textMuted }}>Created by</div>
@@ -332,7 +336,11 @@ export default function CourseDetailPage() {
                                     <div key={review._id} style={{ borderBottom: `1px solid ${colors.border}`, paddingBottom: '20px' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                                             <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#3b82f6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                                                {review.studentRef?.fullName?.[0]}
+                                                {review.studentRef?.avatarUrl ? (
+                                                    <img src={review.studentRef.avatarUrl} alt={review.studentRef.fullName} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                                                ) : (
+                                                    review.studentRef?.fullName?.[0]
+                                                )}
                                             </div>
                                             <div>
                                                 <div style={{ color: colors.text, fontWeight: '700', fontSize: '15px' }}>{review.studentRef?.fullName}</div>

@@ -38,6 +38,7 @@ const contentRoutes = require('./routes/contentRoutes');
 const auditRoutes = require('./routes/auditRoutes');
 const calendarRoutes = require('./routes/calendarRoutes');
 const communicationRoutes = require('./routes/communicationRoutes');
+const mediaRoutes = require('./routes/mediaRoutes');
 const { getAnalytics } = require('./controllers/userController');
 const { protect, authorizeRoles } = require('./middleware/auth');
 
@@ -110,6 +111,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/content', contentRoutes);
+app.use('/api/media', mediaRoutes);
 app.use('/api/audit-logs', auditRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/comm', communicationRoutes);

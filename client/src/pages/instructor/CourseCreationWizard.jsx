@@ -217,6 +217,10 @@ export default function CourseCreationWizard() {
         try {
             const formData = new FormData();
             formData.append('file', file);
+            if (field === 'thumbnailUrl') {
+                formData.append('targetType', 'thumbnail');
+                formData.append('folder', 'emare_elms/course_thumbnails');
+            }
             const res = await uploadService.uploadFile(formData);
             const uploadedUrl = res.data?.data?.url || res.data?.data;
             if (!uploadedUrl) throw new Error('Upload returned no URL.');

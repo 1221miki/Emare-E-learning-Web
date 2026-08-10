@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect, authorizeRoles, optionalProtect } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 const {
     getAllUsers,
     getUserById,
@@ -9,8 +10,12 @@ const {
     resetUserPassword,
     deleteUser,
     getAnalytics,
-    updateInstructorProfile
+    updateInstructorProfile,
+    uploadUserAvatar
 } = require('../controllers/userController');
+
+// ── User Avatar Upload ─────────────────────────────────────────────
+router.post('/avatar', protect, upload.single('avatar'), uploadUserAvatar);
 
 // ── User Self Profile Management (Student/Instructor/Admin) ──
 router.patch('/profile', protect, (req, res, next) => {

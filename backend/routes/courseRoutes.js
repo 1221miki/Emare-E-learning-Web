@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect, authorizeRoles, denySuspendedActions, optionalProtect } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 const {
     createCourse,
     getPublishedCourses,
@@ -27,7 +28,8 @@ const {
     deleteCourse,
     unpublishCourse,
     duplicateCourse,
-    getInstructorAnalytics
+    getInstructorAnalytics,
+    uploadCourseThumbnail
 } = require('../controllers/courseController');
 
 // ── Public Routes ──────────────────────────────────────────
@@ -54,6 +56,7 @@ router.get('/instructor/mine', protect, authorizeRoles('Instructor'), getInstruc
 router.get('/instructor/analytics', protect, authorizeRoles('Instructor'), getInstructorAnalytics);
 router.post('/', protect, denySuspendedActions, authorizeRoles('Instructor'), createCourse);
 router.put('/:id', protect, denySuspendedActions, authorizeRoles('Instructor'), updateCourse);
+router.post('/:id/thumbnail', protect, denySuspendedActions, authorizeRoles('Instructor'), upload.single('thumbnail'), uploadCourseThumbnail);
 router.delete('/:id', protect, denySuspendedActions, authorizeRoles('Instructor'), deleteCourse);
 router.patch('/:id/submit', protect, denySuspendedActions, authorizeRoles('Instructor'), submitCourseForReview);
 router.patch('/:id/archive', protect, denySuspendedActions, authorizeRoles('Instructor','Admin'), archiveCourse);

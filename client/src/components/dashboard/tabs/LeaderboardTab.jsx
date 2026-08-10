@@ -52,7 +52,11 @@ export default function LeaderboardTab(dash) {
                             <div key={entry._id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                                 <Medal size={28} color={podiumMedalColors[i]} aria-label={MEDAL_LABELS[i]} />
                                 <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '18px' }}>
-                                    {entry.fullName?.[0]?.toUpperCase()}
+                                    {entry.avatarUrl ? (
+                                        <img src={entry.avatarUrl} alt={entry.fullName} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                                    ) : (
+                                        entry.fullName?.[0]?.toUpperCase()
+                                    )}
                                 </div>
                                 <span style={{ fontSize: '12px', fontWeight: '700', color: colors.text, maxWidth: '80px', textAlign: 'center', lineHeight: '1.3' }}>{entry.fullName?.split(' ')[0]}</span>
                                 <span style={{ fontSize: '11px', color: colors.textMuted }}>{entry.gamificationPoints} XP</span>
@@ -92,7 +96,11 @@ export default function LeaderboardTab(dash) {
                                         <td style={styles.td}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '14px', flexShrink: 0 }}>
-                                                    {entry.fullName?.[0]?.toUpperCase()}
+                                                    {entry.avatarUrl ? (
+                                                        <img src={entry.avatarUrl} alt={entry.fullName} style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        entry.fullName?.[0]?.toUpperCase()
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <strong style={{ color: isMe ? colors.primary : colors.text }}>{entry.fullName} {isMe ? '(You)' : ''}</strong>

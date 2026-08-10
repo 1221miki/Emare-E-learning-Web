@@ -138,8 +138,12 @@ export default function OverviewTab(dash) {
                     {/* Welcome Card & Hero Section */}
                     <div style={{ ...styles.welcomeCard, display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: '900', boxShadow: '0 8px 20px rgba(59,130,246,0.3)', border: '2px solid rgba(255,255,255,0.2)' }}>
-                                {user?.fullName?.[0]?.toUpperCase() || 'S'}
+                            <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: '900', boxShadow: '0 8px 20px rgba(59,130,246,0.3)', border: '2px solid rgba(255,255,255,0.2)', overflow: 'hidden' }}>
+                                {user?.avatarUrl ? (
+                                    <img src={user.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    user?.fullName?.[0]?.toUpperCase() || 'S'
+                                )}
                             </div>
                             <div style={{ flex: 1, minWidth: '240px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
