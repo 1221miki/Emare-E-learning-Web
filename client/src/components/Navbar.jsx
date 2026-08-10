@@ -10,6 +10,7 @@ export default function Navbar() {
 
     const [currentLang, setCurrentLang] = useState('en');
     const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const dropdownRef = useRef(null);
 
     const languages = [
@@ -81,8 +82,8 @@ export default function Navbar() {
             zIndex: 1001
         },
         logoBox: { display: 'flex', alignItems: 'center', gap: '12px' },
-        logoMark: { width: '40px', height: '40px', borderRadius: '12px', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#fff', fontSize: '20px' },
-        logoText: { fontSize: '20px', fontWeight: '800', letterSpacing: '-0.5px' },
+        logoMark: { width: '180px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', objectFit: 'contain' },
+        logoText: { fontSize: '14px', fontWeight: '800', letterSpacing: '0.45px', color: colors.text, whiteSpace: 'nowrap' },
         navCenter: { display: 'flex', alignItems: 'center', gap: '20px' },
         navLink: { textDecoration: 'none', fontWeight: '500', fontSize: '13px', transition: 'color 0.2s', color: colors.text },
         navRight: { display: 'flex', alignItems: 'center', gap: '12px' },
@@ -90,6 +91,7 @@ export default function Navbar() {
         loginBtn: { textDecoration: 'none', fontWeight: '600', fontSize: '14px', padding: '8px 16px', background: 'transparent', border: 'none', cursor: 'pointer', color: colors.text },
         registerBtn: { background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', textDecoration: 'none', padding: '10px 22px', borderRadius: '10px', fontWeight: '700', fontSize: '14px' },
         logoutBtn: { background: `${colors.danger}15`, border: `1px solid ${colors.danger}30`, color: colors.danger, borderRadius: '8px', padding: '10px 16px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', transition: 'background 0.2s' },
+        mobileMenuButton: { display: 'none', border: 'none', background: 'transparent', color: colors.text, fontSize: '24px', cursor: 'pointer', padding: '4px 8px' },
         
         langDropdownContainer: { position: 'relative' },
         langBtn: { background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', padding: '8px 14px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s' },
@@ -104,13 +106,15 @@ export default function Navbar() {
 
             <nav style={s.navbar}>
                 <div style={s.logoBox}>
-                    <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={s.logoMark}>E</div>
-                        <span style={{ ...s.logoText, color: colors.text }}>Emare ICT Hub</span>
+                    <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5cm' }}>
+                        <img src="/images/image.png" alt="Emare ICT Hub" style={s.logoMark} />
+                        <span style={s.logoText}>EMARE ICT HUB ELMS</span>
                     </Link>
                 </div>
                 
-                <div style={s.navCenter}>
+                <button className="emare-mobile-menu-button" aria-label="Open navigation" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} style={s.mobileMenuButton}>☰</button>
+
+                <div className="emare-nav-center" style={s.navCenter}>
                     <Link to="/" style={s.navLink}>Home</Link>
                     <Link to="/about" style={s.navLink}>About</Link>
                     <Link to="/developers" style={s.navLink}>Emare Developers</Link>
@@ -119,7 +123,7 @@ export default function Navbar() {
                     <Link to="/search" style={s.navLink}>Search</Link>
                 </div>
 
-                <div style={s.navRight}>
+                <div className="emare-nav-right" style={s.navRight}>
                     {/* Language Switcher */}
                     <div style={s.langDropdownContainer} ref={dropdownRef}>
                         <button onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)} style={s.langBtn}>
@@ -162,6 +166,29 @@ export default function Navbar() {
                     )}
                 </div>
             </nav>
+
+            {isMobileMenuOpen && (
+                <div className="emare-mobile-drawer">
+                    <Link to="/" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
+                    <Link to="/about" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>About</Link>
+                    <Link to="/developers" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Emare Developers</Link>
+                    <Link to="/courses" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Course Catalogs</Link>
+                    <Link to="/career-tracks" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Career Tracks</Link>
+                    <Link to="/search" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Search</Link>
+                    {!isAuthenticated && (
+                        <>
+                            <Link to="/login" style={s.loginBtn} onClick={() => setIsMobileMenuOpen(false)}>Login</Link>
+                            <Link to="/register" style={s.registerBtn} onClick={() => setIsMobileMenuOpen(false)}>Register</Link>
+                        </>
+                    )}
+                    {isAuthenticated && (
+                        <>
+                            <Link to={handleDashboardRedirect()} style={s.loginBtn} onClick={() => setIsMobileMenuOpen(false)}>Dashboard</Link>
+                            <button onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }} style={s.logoutBtn}>Sign Out</button>
+                        </>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

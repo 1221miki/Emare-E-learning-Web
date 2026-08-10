@@ -14,8 +14,8 @@ export default function AboutPage() {
         badge: { display: 'inline-block', padding: '8px 22px', background: 'rgba(59,130,246,0.12)', color: '#60a5fa', borderRadius: '999px', fontWeight: '700', fontSize: '13px', letterSpacing: '0.12em', textTransform: 'uppercase', border: '1px solid rgba(59,130,246,0.24)' },
         title: { fontSize: '54px', fontWeight: '900', lineHeight: '1.03', margin: '0', color: colors.text, maxWidth: '700px' },
         description: { fontSize: '17px', lineHeight: '1.9', color: colors.textMuted, maxWidth: '760px' },
-        card: { background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '28px', padding: '42px 36px', boxShadow: `0 30px 80px rgba(0,0,0,0.08)`, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '16px' },
-        icon: { width: '88px', height: '88px', borderRadius: '24px', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '36px' },
+        card: { background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '28px', padding: '42px 36px', boxShadow: `0 30px 80px rgba(0,0,0,0.08)`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', minHeight: '420px' },
+        cardLogo: { width: '100%', maxWidth: '560px', objectFit: 'contain', filter: 'drop-shadow(0 10px 24px rgba(0,0,0,0.26))' },
         cardTitle: { fontSize: '28px', fontWeight: '900', margin: '0', color: colors.text },
         cardSubtitle: { fontSize: '13px', fontWeight: '700', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.primary, margin: '0' },
         cardUrl: { fontSize: '13px', color: colors.textMuted, letterSpacing: '0.12em', marginTop: '6px' },
@@ -41,10 +41,7 @@ export default function AboutPage() {
                     </div>
 
                     <div style={s.card}>
-                        <div style={s.icon}>💻</div>
-                        <div style={s.cardTitle}>EMARE ICT HUB</div>
-                        <div style={s.cardSubtitle}>FOSTERING DIGITAL GROWTH</div>
-                        <div style={s.cardUrl}>www.emareicthub.com</div>
+                        <img src="/images/Emare-ICT-Hub-Logo.jpg" alt="Emare ICT Hub" style={s.cardLogo} />
                     </div>
                 </div>
             </div>

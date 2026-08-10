@@ -280,10 +280,10 @@ export default function CourseCatalog() {
                 ))}
             </div>
 
-            <div style={s.layout}>
+            <div className="emare-course-layout" style={s.layout}>
                 {/* Sidebar */}
-                <aside style={s.sidebar}>
-                    <div style={s.filterCard}>
+                <aside className="emare-course-sidebar" style={s.sidebar}>
+                    <div className="emare-course-filter-card" style={s.filterCard}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
                             <h3 style={{ fontSize: '14px', fontWeight: '800', color: colors.text, margin: 0 }}>◈️ Filters</h3>
                             {hasActiveFilters && <button style={{ background: 'none', border: 'none', color: colors.primary, cursor: 'pointer', fontSize: '11px', fontWeight: '700' }} onClick={clearFilters}>Clear All</button>}
@@ -374,7 +374,7 @@ export default function CourseCatalog() {
                 </aside>
 
                 {/* Main */}
-                <main style={s.main}>
+                <main className="emare-course-main" style={s.main}>
                     {!isAuthenticated && (
                         <div style={s.guestBanner}>
                             <div>
@@ -435,7 +435,7 @@ export default function CourseCatalog() {
                             <button style={{ background: `linear-gradient(135deg,${colors.primary},${colors.accent})`, color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }} onClick={clearFilters}>Clear All Filters</button>
                         </div>
                     ) : (
-                        <div style={viewMode === 'grid' ? s.grid : s.list}>
+                        <div className={viewMode === 'grid' ? 'emare-course-grid' : 'emare-course-list'} style={viewMode === 'grid' ? s.grid : s.list}>
                             {filtered.map(c => <CourseCard key={c._id} course={c} isList={viewMode === 'list'} />)}
                         </div>
                     )}

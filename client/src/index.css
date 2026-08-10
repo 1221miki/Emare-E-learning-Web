@@ -4,11 +4,34 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   font-family: 'Inter', 'Segoe UI', sans-serif;
   background-color: #0f172a;
   color: #f1f5f9;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
 }
 
 ::-webkit-scrollbar { width: 6px; }
@@ -79,4 +102,103 @@ input:-webkit-autofill:focus {
 body.emare-sidebar-right main {
   margin-left: 0 !important;
   margin-right: 260px !important;
+}
+
+.emare-mobile-drawer {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .emare-course-layout {
+    flex-direction: column !important;
+  }
+
+  .emare-course-sidebar {
+    width: 100% !important;
+    flex-basis: auto !important;
+  }
+
+  .emare-course-filter-card {
+    position: relative !important;
+    top: auto !important;
+  }
+
+  .emare-course-main {
+    width: 100%;
+  }
+
+  .emare-course-layout .emare-course-main .emare-course-grid {
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .emare-course-layout {
+    padding-inline: 12px !important;
+  }
+
+  .emare-course-layout .emare-course-main .emare-course-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .emare-course-layout .emare-course-main .emare-course-list {
+    grid-template-columns: 1fr !important;
+  }
+
+  .emare-course-layout .emare-course-main .emare-course-filter-card {
+    width: 100%;
+  }
+
+  .emare-nav-center,
+  .emare-nav-right {
+    display: none !important;
+  }
+
+  .emare-mobile-menu-button {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .emare-mobile-drawer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 24px 24px;
+    background: rgba(15, 23, 42, 0.98);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .emare-mobile-drawer a,
+  .emare-mobile-drawer button {
+    font-size: 14px;
+    width: 100%;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .emare-course-layout .emare-course-main .emare-course-grid {
+    grid-template-columns: repeat(2, minmax(230px, 1fr));
+  }
+}
+
+@media (min-width: 1440px) {
+  .emare-course-layout {
+    max-width: 1600px;
+  }
+}
+
+@media (max-width: 480px) {
+  .emare-course-layout {
+    padding: 0 10px !important;
+  }
+
+  .emare-course-filter-card {
+    padding: 14px !important;
+  }
+
+  .emare-course-main .emare-course-grid,
+  .emare-course-main .emare-course-list {
+    gap: 14px;
+  }
 }
