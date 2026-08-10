@@ -4,7 +4,8 @@ import { courseService } from '../services/api';
 import Navbar from '../components/Navbar';
 import TypingText from '../components/TypingText';
 import { useTheme } from '../context/ThemeContext';
-import heroStudents from '../assets/hero-students.png';
+
+const heroStudents = '/images/dashboard-bg.jpg';
 
 export default function LandingPage() {
     const { colors, theme } = useTheme();

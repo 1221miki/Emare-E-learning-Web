@@ -127,8 +127,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
             {/* Header: Logo + Notifications + Theme Toggle */}
             <div style={styles.headerBox}>
                 <div style={styles.logoBox}>
-                    <div style={styles.logo}>E</div>
-                    <span style={{ ...styles.logoText, color: colors.text }}>Emare ELMS</span>
+                    <img src="/images/emare-ict-hub-logo.svg" alt="Emare ICT Hub" style={{ width: '180px', height: '48px', objectFit: 'contain' }} />
                 </div>
                 <div style={styles.actionsBox}>
                     <button onClick={toggleTheme} style={styles.iconBtn} title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'} aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
