@@ -10,6 +10,7 @@ export default function ProfilePage() {
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
+    const [avatarError, setAvatarError] = useState(false);
     const fileInputRef = useRef(null);
 
     const navItems = [
@@ -36,6 +37,7 @@ export default function ProfilePage() {
         setUploading(true);
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('targetType', 'avatar');
 
         try {
             const uploadRes = await uploadService.uploadFile(formData);
@@ -71,8 +73,13 @@ export default function ProfilePage() {
                         }}
                         onClick={() => fileInputRef.current.click()}
                     >
-                        {profile?.avatarUrl || user.avatarUrl ? (
-                            <img src={profile?.avatarUrl || user.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        {(!avatarError && (profile?.avatarUrl || user.avatarUrl)) ? (
+                            <img
+                                src={profile?.avatarUrl || user.avatarUrl}
+                                alt="Avatar"
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={() => setAvatarError(true)}
+                            />
                         ) : (
                             user.fullName[0].toUpperCase()
                         )}

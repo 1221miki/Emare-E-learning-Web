@@ -80,9 +80,6 @@ exports.submitProjectMultipart = async (req, res) => {
             const result = await new Promise((resolve, reject) => {
                 const stream = cloudinary.uploader.upload_stream({ folder: 'emare_elms/projects', resource_type: resourceType }, (err, result) => { if (err) reject(err); else resolve(result); });
                 streamifier.createReadStream(file.buffer).pipe(stream);
-            }).catch(err => {
-                // fallback local storage
-                const fs = require('fs'); const path = require('path'); const uploadsDir = path.join(__dirname, '../public/uploads'); if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true }); const fn = `proj_${Date.now()}_${Math.random().toString(36).slice(2,8)}${path.extname(file.originalname)}`; fs.writeFileSync(path.join(uploadsDir, fn), file.buffer); return { secure_url: `${req.protocol}://${req.get('host')}/uploads/${fn}` };
             });
             uploaded.push({ filename: file.originalname, url: result.secure_url, mimeType: file.mimetype, size: file.size });
         }

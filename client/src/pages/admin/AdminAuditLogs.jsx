@@ -463,7 +463,11 @@ export default function AdminAuditLogs() {
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: 13, fontWeight: 800, color: '#fff'
                                         }}>
-                                            {(log.actorSnapshot?.fullName?.[0] || 'S').toUpperCase()}
+                                            {log.actorSnapshot?.avatarUrl ? (
+                                                <img src={log.actorSnapshot.avatarUrl} alt={log.actorSnapshot?.fullName || 'Actor'} style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />
+                                            ) : (
+                                                (log.actorSnapshot?.fullName?.[0] || 'S').toUpperCase()
+                                            )}
                                         </div>
                                         <div>
                                             <div style={{ fontSize: 12, fontWeight: 700, color: colors.text, lineHeight: 1.2 }}>

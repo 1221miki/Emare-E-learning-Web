@@ -7,6 +7,7 @@ const Submission = require('../models/Submission');
 const Quiz = require('../models/Quiz');
 const QuizAttempt = require('../models/QuizAttempt');
 const LearningProgress = require('../models/LearningProgress');
+const { uploadImage } = require('../services/cloudinaryService');
 const { audit } = require('../utils/auditLogger');
 
 // ─────────────────────────────────────────────
@@ -184,6 +185,29 @@ const submitCourseForReview = async (req, res, next) => {
             targetType: 'Course', targetId: course._id, targetLabel: course.courseTitle });
 
         res.status(200).json({ success: true, message: 'Course submitted for administrator review.', data: course });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const uploadCourseThumbnail = async (req, res, next) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) {
+            return res.status(404).json({ success: false, message: 'Course not found.' });
+        }
+        if (course.creatorRef.toString() !== req.user.id && req.user.assignedRole !== 'Admin') {
+            return res.status(403).json({ success: false, message: 'You are not authorized to update this course.' });
+        }
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No thumbnail image uploaded.' });
+        }
+
+        const result = await uploadImage(req.file.buffer, 'emare_elms/course_thumbnails');
+        course.thumbnailUrl = result.secure_url;
+        await course.save();
+
+        res.status(200).json({ success: true, message: 'Course thumbnail uploaded successfully.', data: course });
     } catch (err) {
         next(err);
     }
@@ -995,5 +1019,6 @@ module.exports = {
     archiveCourse,
     unpublishCourse,
     duplicateCourse,
-    getInstructorAnalytics
+    getInstructorAnalytics,
+    uploadCourseThumbnail
 };

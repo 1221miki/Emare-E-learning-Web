@@ -4,6 +4,7 @@ import { courseService } from '../services/api';
 import Navbar from '../components/Navbar';
 import TypingText from '../components/TypingText';
 import { useTheme } from '../context/ThemeContext';
+import heroStudents from '../assets/hero-students.png';
 
 export default function LandingPage() {
     const { colors, theme } = useTheme();
@@ -147,12 +148,15 @@ export default function LandingPage() {
 
     const p = {
         page: { minHeight: '100vh', fontFamily: "'Outfit', 'Inter', sans-serif", overflowX: 'hidden' },
-        hero: { position: 'relative', padding: '120px 5% 100px', display: 'flex', justifyContent: 'center', textAlign: 'center', overflow: 'hidden' },
-        heroContent: { maxWidth: '800px', zIndex: 2, position: 'relative' },
+        hero: { position: 'relative', padding: '120px 5% 100px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '40px', overflow: 'hidden', textAlign: 'center' },
+        heroContent: { flex: '1 1 520px', maxWidth: '700px', zIndex: 2, position: 'relative', textAlign: 'left' },
+        heroImageWrapper: { flex: '0 0 520px', width: '100%', maxWidth: '520px', minHeight: '500px', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative' },
+        heroImageOverlay: { position: 'absolute', inset: 0, borderRadius: '32px', background: 'linear-gradient(180deg, rgba(6,10,78,0.10), rgba(6,10,78,0.35))', pointerEvents: 'none' },
+        heroImage: { width: '100%', height: '100%', borderRadius: '32px', objectFit: 'cover', boxShadow: '0 40px 120px rgba(0,0,0,0.18)', border: `1px solid ${colors.border}` },
         heroTitle: { fontSize: '60px', fontWeight: '900', lineHeight: 1.1, margin: '0 0 16px', letterSpacing: '-2px', color: colors.text },
-        heroSubtitleAnimated: { fontSize: '32px', fontWeight: '700', lineHeight: 1.2, margin: '0 0 40px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto', color: colors.primary, minHeight: '50px' },
-        heroSubtitle: { fontSize: '18px', color: colors.textMuted, lineHeight: 1.7, margin: '0 0 32px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' },
-        searchForm: { display: 'flex', maxWidth: '600px', margin: '0 auto 32px', background: colors.bgCard, borderRadius: '14px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' },
+        heroSubtitleAnimated: { fontSize: '32px', fontWeight: '700', lineHeight: 1.2, margin: '0 0 40px', maxWidth: '600px', color: colors.primary, minHeight: '50px' },
+        heroSubtitle: { fontSize: '18px', color: colors.textMuted, lineHeight: 1.7, margin: '0 0 32px', maxWidth: '600px' },
+        searchForm: { display: 'flex', maxWidth: '600px', margin: '0 0 32px', background: colors.bgCard, borderRadius: '14px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' },
         searchInput: { flex: 1, background: 'transparent', border: 'none', color: colors.text, padding: '18px 24px', fontSize: '15px', outline: 'none' },
         searchBtn: { background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', border: 'none', padding: '16px 32px', fontWeight: '700', cursor: 'pointer', fontSize: '15px' },
         heroActions: { display: 'flex', gap: '16px', justifyContent: 'center' },
@@ -248,6 +252,10 @@ export default function LandingPage() {
                         <button onClick={() => navigate('/courses')} style={p.primaryBtn}>Browse Courses</button>
                         <button onClick={() => navigate('/courses')} style={p.secondaryBtn}>Start Learning for Free</button>
                     </div>
+                </div>
+                <div style={p.heroImageWrapper}>
+                    <img src={heroStudents} alt="Students learning at Emare ICT Hub" style={p.heroImage} />
+                    <div style={p.heroImageOverlay} />
                 </div>
                 <div style={p.heroGlow1} />
                 <div style={p.heroGlow2} />

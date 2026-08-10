@@ -107,7 +107,9 @@ function ProfileTab({ user, onSaved }) {
         const file = e.target.files?.[0]; if (!file) return;
         setUploading(true);
         try {
-            const fd = new FormData(); fd.append('file', file);
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('targetType', 'avatar');
             const res = await uploadService.uploadFile(fd);
             if (res.data?.success) { setAvatar(res.data.data.url); }
         } catch { /* ignore */ } finally { setUploading(false); }

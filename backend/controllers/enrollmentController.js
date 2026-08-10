@@ -1,5 +1,6 @@
 const Enrollment = require('../models/Enrollment');
 const { createNotification } = require('./notificationController');
+const { uploadImage } = require('../services/cloudinaryService');
 
 // ─────────────────────────────────────────────
 // @desc    Get all enrollments (Admin view with payment details)
@@ -121,7 +122,8 @@ const uploadPaymentSlip = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Please upload a payment slip image.' });
         }
 
-        enrollment.paymentSlipUrl = req.file.path; // Cloudinary URL
+        const result = await uploadImage(req.file.buffer, 'emare_elms/payment_slips');
+        enrollment.paymentSlipUrl = result.secure_url;
         enrollment.paymentMethod = req.body.paymentMethod || enrollment.paymentMethod;
         enrollment.paymentReference = req.body.paymentReference || enrollment.paymentReference;
         enrollment.paymentAmount = req.body.paymentAmount ? Number(req.body.paymentAmount) : enrollment.paymentAmount;

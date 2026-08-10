@@ -413,6 +413,7 @@ export default function StudentDashboard() {
         setAvatarUploading(true);
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('targetType', 'avatar');
 
         try {
             const res = await uploadService.uploadFile(formData);
@@ -458,12 +459,12 @@ export default function StudentDashboard() {
             githubUrl,
             socialMediaLinks: { website, linkedin: linkedInUrl },
             twoFactorEnabled,
-            avatarUrl,
             preferredLanguage: prefLanguage,
             timeZone,
             notificationPreferences: notifPreferences,
             isPublicProfile
         };
+        if (avatarUrl) payload.avatarUrl = avatarUrl;
 
         if (newPassword) {
             payload.currentPassword = currentPassword;

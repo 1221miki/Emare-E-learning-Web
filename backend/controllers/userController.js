@@ -6,6 +6,7 @@ const GradeBook = require('../models/GradeBook');
 const Submission = require('../models/Submission');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const { uploadImage } = require('../services/cloudinaryService');
 const { 
     sendAdminPasswordResetEmail,
     sendPasswordResetConfirmationEmail,
@@ -201,7 +202,7 @@ const updateUser = async (req, res, next) => {
         // Update fields if provided
         if (fullName !== undefined) user.fullName = fullName;
         if (accountEmail !== undefined) user.accountEmail = accountEmail;
-        if (avatarUrl !== undefined) user.avatarUrl = avatarUrl;
+        if (avatarUrl !== undefined && avatarUrl !== '') user.avatarUrl = avatarUrl;
         if (req.body.profilePicture !== undefined) user.profilePicture = req.body.profilePicture;
         if (req.body.professionalTitle !== undefined) user.professionalTitle = req.body.professionalTitle;
         if (req.body.phoneNumber !== undefined) user.phoneNumber = req.body.phoneNumber;
@@ -593,4 +594,26 @@ const updateInstructorProfile = async (req, res, next) => {
     }
 };
 
-module.exports = { getAllUsers, getUserById, createUser, updateUser, resetUserPassword, deleteUser, getAnalytics, updateInstructorProfile };
+const uploadUserAvatar = async (req, res, next) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No avatar file uploaded.' });
+        }
+
+        const result = await uploadImage(req.file.buffer, 'emare_elms/avatars');
+        const user = await User.findByIdAndUpdate(req.user.id, { avatarUrl: result.secure_url }, {
+            new: true,
+            runValidators: true
+        }).select('-securedPassword');
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        res.status(200).json({ success: true, message: 'Avatar uploaded successfully.', data: user });
+    } catch (err) {
+        next(err);
+    }
+};
+
+module.exports = { getAllUsers, getUserById, createUser, updateUser, resetUserPassword, deleteUser, getAnalytics, updateInstructorProfile, uploadUserAvatar };

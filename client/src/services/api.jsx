@@ -2,14 +2,20 @@ import axios from 'axios';
 
 const API = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
-    withCredentials: true,  // Send HTTP-Only cookies with every request
+    withCredentials: true,
     headers: { 'Content-Type': 'application/json' }
 });
 
 // The app relies on HTTP-only auth cookie for authentication.
 // Keep withCredentials enabled so the backend can validate the current session.
 API.interceptors.request.use(
-    (config) => config,
+    (config) => {
+        if (config?.data instanceof FormData && config.headers) {
+            delete config.headers['Content-Type'];
+            delete config.headers['content-type'];
+        }
+        return config;
+    },
     (error) => Promise.reject(error)
 );
 
@@ -297,9 +303,7 @@ export const aiService = {
 
 // ── Upload & Media API Calls (Phase 6) ─────────────────────
 export const uploadService = {
-    uploadFile: (formData) => API.post('/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    uploadFile: (formData) => API.post('/upload', formData)
 };
 
 // ── Payment Gateway API Calls (Phase 6) ────────────────────

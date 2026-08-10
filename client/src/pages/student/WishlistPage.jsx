@@ -78,8 +78,11 @@ export default function WishlistPage() {
                                 borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column'
                             }}>
                                 <div style={{
-                                    height: '160px', background: `url(${item.courseRef.thumbnailUrl || 'https://via.placeholder.com/300x160'}) center/cover`
-                                }} />
+                                    height: '160px', background: item.courseRef.thumbnailUrl ? `url(${item.courseRef.thumbnailUrl}) center/cover` : `linear-gradient(135deg, ${colors.primary}18, ${colors.accent}12)`,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.textMuted, fontSize: '36px'
+                                }}>
+                                    {!item.courseRef.thumbnailUrl && '◈'}
+                                </div>
                                 <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', flex: 1 }}>
                                     <div style={{ color: colors.accent, fontSize: '12px', fontWeight: '700', marginBottom: '8px' }}>
                                         {item.courseRef.technicalCategory}
