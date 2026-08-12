@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { messageService, notificationService, discussionService, aiService } from '../../../services/api';
-import { Award, Bell, BookOpen, Bot, ClipboardCheck, CreditCard, FileQuestion, Inbox, Medal, MessagesSquare, SendHorizonal, Settings, Star } from 'lucide-react';
+import { Award, Bell, BookOpen, Bot, CheckCircle2, ClipboardCheck, CreditCard, FileQuestion, Inbox, Medal, MessagesSquare, SendHorizonal, Settings, Star } from 'lucide-react';
 
 const WARN = '#f59e0b';
 const DANGER = '#ef4444';

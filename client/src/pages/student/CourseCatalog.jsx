@@ -51,7 +51,7 @@ export default function CourseCatalog() {
     const [categories, setCategories] = useState([]);
     const [wishlistIds, setWishlistIds] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeSection, setActiveSection] = useState('all');
+    const [activeSection, setActiveSection] = useState(urlParams.get('section') || (urlParams.get('certificates') === 'true' ? 'certificates' : 'all'));
 
     // Filters
     const [filterCategory, setFilterCategory] = useState(urlParams.get('category') || 'All');
@@ -61,7 +61,7 @@ export default function CourseCatalog() {
     const [filterRating, setFilterRating] = useState(0);
     const [filterDuration, setFilterDuration] = useState('All');
     const [filterInstructor, setFilterInstructor] = useState('All');
-    const [filterCertificate, setFilterCertificate] = useState(false);
+    const [filterCertificate, setFilterCertificate] = useState(urlParams.get('certificates') === 'true');
     const [searchQuery, setSearchQuery] = useState(urlParams.get('search') || '');
     const [sortBy, setSortBy] = useState('newest');
     const [viewMode, setViewMode] = useState('grid');
@@ -128,8 +128,22 @@ export default function CourseCatalog() {
             return new Date(b.creationTimestamp || b.createdAt || 0) - new Date(a.creationTimestamp || a.createdAt || 0);
         }), [sectionCourses, filterCategory, filterLevel, filterLanguage, filterPrice, filterRating, filterDuration, filterInstructor, filterCertificate, searchQuery, sortBy]);
 
+    useEffect(() => {
+        setFilterCertificate(urlParams.get('certificates') === 'true');
+        setActiveSection(urlParams.get('section') || (urlParams.get('certificates') === 'true' ? 'certificates' : 'all'));
+    }, [urlParams]);
+
     const clearFilters = () => { setFilterCategory('All'); setFilterLevel('All'); setFilterLanguage('All'); setFilterPrice('All'); setFilterRating(0); setFilterDuration('All'); setFilterInstructor('All'); setFilterCertificate(false); setSearchQuery(''); setSortBy('newest'); };
     const hasActiveFilters = filterCategory !== 'All' || filterLevel !== 'All' || filterLanguage !== 'All' || filterPrice !== 'All' || filterRating > 0 || filterDuration !== 'All' || filterInstructor !== 'All' || filterCertificate || searchQuery;
+
+    const categoryCount = Math.max(categories.length - 1, 0);
+    const averageRating = useMemo(() => {
+        const ratings = courses
+            .map(course => course.averageRating)
+            .filter(value => typeof value === 'number' && !Number.isNaN(value));
+        if (!ratings.length) return null;
+        return (ratings.reduce((sum, value) => sum + value, 0) / ratings.length).toFixed(1);
+    }, [courses]);
 
     const toggleWishlist = async (e, courseId) => {
         e.stopPropagation();
@@ -142,14 +156,19 @@ export default function CourseCatalog() {
 
     const getEmoji = (c) => EMOJI_MAP[c.technicalCategory] || EMOJIS[(c._id?.charCodeAt(0) || 0) % EMOJIS.length] || '◈';
 
-    const renderStars = (r) => {
-        const arr = [];
-        for (let i = 1; i <= 5; i++) arr.push(<span key={i} style={{ color: i <= Math.round(r) ? '#fbbf24' : `${colors.border}`, fontSize: '11px' }}></span>);
-        return arr;
+    const renderStars = (rating = 0) => {
+        return Array.from({ length: 5 }, (_, index) => {
+            const filled = index < Math.round(rating);
+            return (
+                <span key={index} style={{ color: filled ? '#fbbf24' : colors.border, fontSize: '11px', marginRight: '1px' }}>
+                    ★
+                </span>
+            );
+        });
     };
 
     const s = {
-        page: { minHeight: '100vh', background: colors.bg, fontFamily: "'Outfit','Inter',sans-serif" },
+        page: { minHeight: '100vh', paddingTop: '90px', background: colors.bg, fontFamily: "'Outfit','Inter',sans-serif" },
         hero: { background: theme === 'dark' ? 'linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%)' : `linear-gradient(135deg,${colors.primary}06,${colors.accent}06)`, padding: '52px 5% 36px', borderBottom: `1px solid ${colors.border}`, position: 'relative', overflow: 'hidden' },
         heroDeco: { position: 'absolute', top: '-40%', right: '-8%', width: '420px', height: '420px', borderRadius: '50%', background: `radial-gradient(circle,${colors.primary}08,transparent 70%)`, pointerEvents: 'none' },
         heroTitle: { fontSize: '42px', fontWeight: '900', color: colors.text, margin: '0 0 6px', letterSpacing: '-0.8px', lineHeight: 1.1 },
@@ -159,6 +178,7 @@ export default function CourseCatalog() {
         statLabel: { fontSize: '11px', color: colors.textMuted, fontWeight: '600' },
         searchWrap: { display: 'flex', maxWidth: '620px', background: colors.bgCard, borderRadius: '14px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 6px 24px rgba(0,0,0,0.08)' },
         searchInput: { flex: 1, background: 'transparent', border: 'none', color: colors.text, padding: '13px 4px', fontSize: '14px', outline: 'none' },
+        searchClear: { background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: '0 12px', fontSize: '18px', lineHeight: '1' },
         sectionTabs: { display: 'flex', gap: 0, background: colors.bgCard, borderBottom: `1px solid ${colors.border}`, padding: '0 5%', overflowX: 'auto' },
         layout: { display: 'flex', gap: '24px', maxWidth: '1440px', margin: '0 auto', padding: '24px 20px' },
         sidebar: { width: '256px', flexShrink: 0 },
@@ -197,6 +217,9 @@ export default function CourseCatalog() {
     const CourseCard = ({ course, isList }) => {
         const inWish = wishlistIds.includes(course._id);
         const isNew = course.creationTimestamp && (Date.now() - new Date(course.creationTimestamp).getTime()) < 30 * 24 * 3600 * 1000;
+        const ratingValue = typeof course.averageRating === 'number' ? course.averageRating : 0;
+        const hasRating = typeof course.averageRating === 'number' && !Number.isNaN(course.averageRating);
+        const enrollmentLabel = course.totalEnrollments != null ? `${course.totalEnrollments} students` : 'New course';
         const bg = course.thumbnailUrl ? `url(${course.thumbnailUrl}) center/cover no-repeat` : `linear-gradient(135deg,${colors.primary}18,${colors.accent}12)`;
         return (
             <div
@@ -224,10 +247,10 @@ export default function CourseCatalog() {
                     <h3 style={s.cTitle}>{course.courseTitle}</h3>
                     <p style={s.cInstr}>By {course.creatorRef?.fullName || 'EMARE Instructor'}</p>
                     <div style={s.cMeta}>
-                        <span style={{ color: '#fbbf24', fontWeight: '700' }}>{(course.averageRating || 4.8).toFixed(1)}</span>
-                        <span style={{ display: 'flex' }}>{renderStars(course.averageRating || 4.8)}</span>
+                        <span style={{ color: '#fbbf24', fontWeight: '700' }}>{hasRating ? ratingValue.toFixed(1) : 'New'}</span>
+                        <span style={{ display: 'flex' }}>{renderStars(ratingValue)}</span>
                         <span style={{ opacity: 0.3 }}>·</span>
-                        <span>{course.totalEnrollments || 0} students</span>
+                        <span>{enrollmentLabel}</span>
                     </div>
                     <div style={{ display: 'flex', gap: '10px', fontSize: '10px', color: colors.textMuted, marginBottom: '6px', flexWrap: 'wrap' }}>
                         <span>▧ {course.level || 'Beginner'}</span>
@@ -261,21 +284,27 @@ export default function CourseCatalog() {
                 <p style={s.heroSub}>Discover world-class tech courses curated for African learners. Learn at your pace, earn certificates.</p>
                 <div style={s.heroStats}>
                     <div><span style={s.statNum}>{courses.length}+</span><span style={s.statLabel}>Total Courses</span></div>
-                    <div><span style={s.statNum}>{categories.length - 1}+</span><span style={s.statLabel}>Categories</span></div>
+                    <div><span style={s.statNum}>{categoryCount}+</span><span style={s.statLabel}>Categories</span></div>
                     <div><span style={s.statNum}>{courses.filter(c => c.price === 0).length}</span><span style={s.statLabel}>Free Courses</span></div>
-                    <div><span style={s.statNum}> 4.8</span><span style={s.statLabel}>Avg Rating</span></div>
+                    <div><span style={s.statNum}>{averageRating ?? '—'}</span><span style={s.statLabel}>Avg Rating</span></div>
                 </div>
                 <div style={s.searchWrap}>
-                    <span style={{ padding: '13px 14px', fontSize: '16px', color: colors.textMuted }}>⌕</span>
+                        <span style={{ padding: '13px 14px', fontSize: '16px', color: colors.textMuted }}>⌕</span>
                     <input type="text" placeholder="Search courses, topics, instructors..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={s.searchInput} id="catalog-search" />
-                    {searchQuery && <button style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: '0 12px', fontSize: '16px' }} onClick={() => setSearchQuery('')}></button>}
-                    <button style={{ background: `linear-gradient(135deg,${colors.primary},${colors.accent})`, color: '#fff', border: 'none', padding: '13px 24px', fontWeight: '800', cursor: 'pointer', fontSize: '13px' }}>Search</button>
+                    {searchQuery && <button type="button" aria-label="Clear search" style={s.searchClear} onClick={() => setSearchQuery('')}>×</button>}
+                    <button type="button" style={{ background: `linear-gradient(135deg,${colors.primary},${colors.accent})`, color: '#fff', border: 'none', padding: '13px 24px', fontWeight: '800', cursor: 'pointer', fontSize: '13px' }}>Search</button>
                 </div>
             </div>
 
             {/* Section Tabs */}
             <div style={s.sectionTabs}>
-                {[{ key: 'all', label: '▤ All Courses' }, { key: 'featured', label: ' Featured' }, { key: 'trending', label: ' Trending' }, { key: 'newest', label: '🆕 Newest' }, { key: 'certificates', label: ' With Certificate' }].map(t => (
+                {[
+                    { key: 'all', label: '▤ All Courses' },
+                    { key: 'featured', label: '★ Featured' },
+                    { key: 'trending', label: '↗ Trending' },
+                    { key: 'newest', label: '🆕 Newest' },
+                    { key: 'certificates', label: '🎓 With Certificate' }
+                ].map(t => (
                     <button key={t.key} style={tabStyle(activeSection === t.key)} onClick={() => setActiveSection(t.key)}>{t.label}</button>
                 ))}
             </div>
@@ -415,7 +444,7 @@ export default function CourseCatalog() {
                             </select>
                             <div style={{ display: 'flex', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', overflow: 'hidden' }}>
                                 <button onClick={() => setViewMode('grid')} style={{ padding: '7px 10px', border: 'none', cursor: 'pointer', fontSize: '14px', background: viewMode === 'grid' ? colors.primary : 'transparent', color: viewMode === 'grid' ? '#fff' : colors.textMuted }}>⊞</button>
-                                <button onClick={() => setViewMode('list')} style={{ padding: '7px 10px', border: 'none', cursor: 'pointer', fontSize: '14px', background: viewMode === 'list' ? colors.primary : 'transparent', color: viewMode === 'list' ? '#fff' : colors.textMuted }}></button>
+                                <button onClick={() => setViewMode('list')} style={{ padding: '7px 10px', border: 'none', cursor: 'pointer', fontSize: '14px', background: viewMode === 'list' ? colors.primary : 'transparent', color: viewMode === 'list' ? '#fff' : colors.textMuted }}>☰</button>
                             </div>
                         </div>
                     </div>

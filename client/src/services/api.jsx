@@ -2,20 +2,14 @@ import axios from 'axios';
 
 const API = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
-    withCredentials: true,
+    withCredentials: true,  // Send HTTP-Only cookies with every request
     headers: { 'Content-Type': 'application/json' }
 });
 
 // The app relies on HTTP-only auth cookie for authentication.
 // Keep withCredentials enabled so the backend can validate the current session.
 API.interceptors.request.use(
-    (config) => {
-        if (config?.data instanceof FormData && config.headers) {
-            delete config.headers['Content-Type'];
-            delete config.headers['content-type'];
-        }
-        return config;
-    },
+    (config) => config,
     (error) => Promise.reject(error)
 );
 
@@ -45,9 +39,7 @@ export const authService = {
     getMe: () => API.get('/auth/me'),
     socialLogin: (data) => API.post('/auth/social-login', data),
     forgotPassword: (data) => API.post('/auth/forgot-password', data),
-    resetPassword: (data) => API.post('/auth/reset-password', data),
-    verifyEmail: (data) => API.post('/auth/verify-email', data),
-    resendVerification: (data) => API.post('/auth/resend-verification', data)
+    resetPassword: (data) => API.post('/auth/reset-password', data)
 };
 
 // ── Course API Calls ───────────────────────────────────────
@@ -132,6 +124,18 @@ export const analyticsService = {
 // ── Reports & Exports API Calls (Admin) ───────────────────
 export const reportService = {
     export: (params) => API.get('/reports/export', { params, responseType: 'blob' })
+};
+
+// ── Admin Coupon API Calls ─────────────────────────────────
+export const adminCouponService = {
+    list: (params) => API.get('/admin/coupons', { params }),
+    create: (data) => API.post('/admin/coupons', data),
+    getById: (id) => API.get(`/admin/coupons/${id}`),
+    update: (id, data) => API.put(`/admin/coupons/${id}`, data),
+    delete: (id) => API.delete(`/admin/coupons/${id}`),
+    setStatus: (id, active) => API.patch(`/admin/coupons/${id}/status`, { active }),
+    getUsage: (id) => API.get(`/admin/coupons/${id}/usage`),
+    stats: () => API.get('/admin/coupons/stats')
 };
 
 // ── Wishlist API Calls ─────────────────────────────────────
@@ -270,7 +274,6 @@ export const leaderboardService = {
 export const liveSessionService = {
     getCourseSessions: (courseId) => API.get(`/live-sessions/course/${courseId}`),
     getMySessions: () => API.get('/live-sessions/me'),
-    getAllSessions: () => API.get('/live-sessions'),
     createSession: (data) => API.post('/live-sessions', data),
     markAttendance: (id) => API.put(`/live-sessions/${id}/attendance`),
     createGoogleMeet: (data) => API.post('/live-sessions/google/create', data),
@@ -295,15 +298,13 @@ export const aiService = {
     recommendCourses: (data) => API.post('/ai/recommend-courses', data),
     generateQuiz: (data) => API.post('/ai/generate-quiz', data),
     assignmentAssistant: (data) => API.post('/ai/assignment-assistant', data)
-    ,
-    summarize: (data) => API.post('/ai/summarize', data),
-    generateMicroLesson: (data) => API.post('/ai/microlesson', data),
-    generateFlashcards: (data) => API.post('/ai/flashcards', data)
 };
 
 // ── Upload & Media API Calls (Phase 6) ─────────────────────
 export const uploadService = {
-    uploadFile: (formData) => API.post('/upload', formData)
+    uploadFile: (formData) => API.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    })
 };
 
 // ── Payment Gateway API Calls (Phase 6) ────────────────────

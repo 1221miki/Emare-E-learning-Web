@@ -59,7 +59,7 @@ import MessagesTab from '../../components/dashboard/tabs/MessagesTab';
 import PaymentsTab from '../../components/dashboard/tabs/PaymentsTab';
 import SettingsTab from '../../components/dashboard/tabs/SettingsTab';
 export default function StudentDashboard() {
-    const { user, logout, updateUser } = useAuth();
+    const { user, logout } = useAuth();
     const { theme, toggleTheme, colors } = useTheme();
     const navigate = useNavigate();
     
@@ -308,7 +308,6 @@ export default function StudentDashboard() {
                 safe(leaderboardService.getTop(), 'leaderboard'),
                 safe(messageService.getConversations(), 'conversations'),
                 safe(liveSessionService.getMySessions(), 'live sessions'),
-                safe(liveSessionService.getAllSessions(), 'all live sessions'),
                 ...perCoursePromises
             ]);
 
@@ -370,9 +369,8 @@ export default function StudentDashboard() {
                     discussionData.push(perCourseResults[offset + 2]);
                 });
 
-                const chosenSessions = myLiveSessions.length > 0 ? myLiveSessions : allLiveSessions;
-                setState(setLiveSessions)(chosenSessions);
-                setState(setAllLiveSessions)(chosenSessions);
+                setState(setLiveSessions)(myLiveSessions);
+                setState(setAllLiveSessions)(myLiveSessions);
                 setState(setQuizzesList)(quizData.flat());
                 setState(setDiscussionsList)(discussionData.flat());
                 // Prefer per-course assignments; fall back to the student-wide list if per-course is empty.
@@ -380,9 +378,8 @@ export default function StudentDashboard() {
                 setState(setAssignmentsList)(perCourseAssignments.length > 0 ? perCourseAssignments : myAssignments);
                 setState(setSelectedDiscussionCourse)(activeEnrollments[0].courseRef?._id || activeEnrollments[0].courseRef || '');
             } else {
-                const chosenSessions = myLiveSessions.length > 0 ? myLiveSessions : allLiveSessions;
-                setState(setLiveSessions)(chosenSessions);
-                setState(setAllLiveSessions)(chosenSessions);
+                setState(setLiveSessions)(myLiveSessions);
+                setState(setAllLiveSessions)(myLiveSessions);
                 setState(setAssignmentsList)(myAssignments);
             }
 
@@ -413,14 +410,12 @@ export default function StudentDashboard() {
         setAvatarUploading(true);
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('targetType', 'avatar');
 
         try {
             const res = await uploadService.uploadFile(formData);
             const uploadedUrl = res.data.data.url;
             setAvatarUrl(uploadedUrl);
             await userService.updateProfile({ avatarUrl: uploadedUrl });
-            updateUser({ avatarUrl: uploadedUrl });
             setProfileSuccessMsg('Profile picture updated successfully!');
         } catch (err) {
             alert('Failed to upload image: ' + (err.response?.data?.message || err.message));
@@ -459,12 +454,12 @@ export default function StudentDashboard() {
             githubUrl,
             socialMediaLinks: { website, linkedin: linkedInUrl },
             twoFactorEnabled,
+            avatarUrl,
             preferredLanguage: prefLanguage,
             timeZone,
             notificationPreferences: notifPreferences,
             isPublicProfile
         };
-        if (avatarUrl) payload.avatarUrl = avatarUrl;
 
         if (newPassword) {
             payload.currentPassword = currentPassword;
@@ -478,11 +473,9 @@ export default function StudentDashboard() {
             setNewPassword('');
             setConfirmPassword('');
 
-            const updatedData = res.data.data || payload;
-            updateUser(updatedData);
-
-            // Synchronize Local Storage User (fallback if the updateUser callback did not persist all fields)
+            // Synchronize Local Storage User
             const localUser = JSON.parse(localStorage.getItem('elms_user') || '{}');
+            const updatedData = res.data.data || payload;
             Object.assign(localUser, updatedData);
             localStorage.setItem('elms_user', JSON.stringify(localUser));
         } catch (err) {

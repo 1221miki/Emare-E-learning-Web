@@ -49,6 +49,8 @@ import CareerTracksPage from './pages/CareerTracksPage';
 import SearchPage from './pages/SearchPage';
 import InstructorProfilePage from './pages/InstructorProfilePage';
 import AdminUserProfilePage from './pages/admin/AdminUserProfilePage';
+import AdminCoupons from './pages/admin/Coupons';
+import CouponDetail from './pages/admin/CouponDetail';
 
 // ── Route Guard: Redirect unauthenticated users to login ──
 const PrivateRoute = ({ children, allowedRoles }) => {
@@ -124,6 +126,8 @@ function AppRoutes() {
             <Route path="/admin/dashboard" element={<PrivateRoute allowedRoles={['Admin']}><AdminDashboard /></PrivateRoute>} />
             <Route path="/admin/users/:id" element={<PrivateRoute allowedRoles={['Admin']}><AdminUserProfilePage /></PrivateRoute>} />
             <Route path="/admin/audit-logs" element={<PrivateRoute allowedRoles={['Admin']}><AdminAuditLogs /></PrivateRoute>} />
+            <Route path="/admin/coupons" element={<PrivateRoute allowedRoles={['Admin']}><AdminCoupons /></PrivateRoute>} />
+            <Route path="/admin/coupons/:id" element={<PrivateRoute allowedRoles={['Admin']}><CouponDetail /></PrivateRoute>} />
 
             {/* ── Fallback ─────────────────────────────────────── */}
             <Route path="/unauthorized" element={

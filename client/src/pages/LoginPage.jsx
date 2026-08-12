@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { FaEye, FaEyeSlash, FaGoogle, FaGithub, FaMicrosoft, FaFacebook, FaArrowLeft } from 'react-icons/fa';
 
 export default function LoginPage() {
     const { login, socialAuth, requestPasswordReset, resetPassword } = useAuth();
+    const { theme, colors } = useTheme();
+    const isDark = theme === 'dark';
     const navigate = useNavigate();
     const location = useLocation();
     const [form, setForm] = useState({ accountEmail: '', securedPassword: '' });
@@ -106,26 +109,61 @@ export default function LoginPage() {
     };
 
     const renderProviderIcon = (provider) => {
+        const iconColor = isDark ? '#fff' : '#0f172a';
         switch (provider) {
             case 'Google': return <FaGoogle style={{ color: '#ea4335', fontSize: '24px' }} />;
-            case 'GitHub': return <FaGithub style={{ color: '#fff', fontSize: '24px' }} />;
+            case 'GitHub': return <FaGithub style={{ color: iconColor, fontSize: '24px' }} />;
             case 'Microsoft': return <FaMicrosoft style={{ color: '#00a4ef', fontSize: '24px' }} />;
             case 'Facebook': return <FaFacebook style={{ color: '#1877f2', fontSize: '24px' }} />;
             default: return null;
         }
     };
 
+    const pageStyle = {
+        ...styles.page,
+        background: isDark
+            ? 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)'
+            : 'linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%)',
+        color: colors.text
+    };
+
+    const cardStyle = {
+        ...styles.card,
+        background: colors.bgCard,
+        border: `1px solid ${colors.border}`
+    };
+
+    const inputStyle = {
+        ...styles.input,
+        background: colors.bgInput,
+        border: `1px solid ${colors.border}`,
+        color: colors.text
+    };
+
+    const modalStyle = {
+        ...styles.modalContent,
+        background: colors.bgCard,
+        border: `1px solid ${colors.border}`
+    };
+
+    const labelStyle = { ...styles.label, color: colors.textMuted };
+    const titleStyle = { ...styles.title, color: colors.text };
+    const subtitleStyle = { ...styles.subtitle, color: colors.textMuted };
+    const sectionHeaderStyle = { ...styles.sectionHeader, color: colors.text };
+    const footerTextStyle = { ...styles.footerText, color: colors.textMuted };
+    const linkStyle = { ...styles.link, color: colors.primary };
+
     return (
-        <div style={styles.page}>
+        <div style={pageStyle}>
             <Link to="/" style={styles.backButton}>
                 <FaArrowLeft /> Back to Home
             </Link>
-            <div style={styles.card}>
+            <div style={cardStyle}>
                 {/* Logo & Header */}
                 <div style={styles.header}>
                     <div style={styles.logo}>E</div>
-                    <h1 style={styles.title}>Emare ELMS</h1>
-                    <p style={styles.subtitle}>Sign in to your account</p>
+                    <h1 style={titleStyle}>Emare ELMS</h1>
+                    <p style={subtitleStyle}>Sign in to your account</p>
                 </div>
 
                 {success && <div style={styles.successBox}>{success}</div>}
@@ -142,7 +180,7 @@ export default function LoginPage() {
                             placeholder="you@example.com"
                             value={form.accountEmail}
                             onChange={handleChange}
-                            style={styles.input}
+                            style={inputStyle}
                         />
                     </div>
                     <div style={styles.fieldGroup}>
@@ -165,7 +203,7 @@ export default function LoginPage() {
                                 className="login-password-input"
                                 value={form.securedPassword}
                                 onChange={handleChange}
-                                style={{ ...styles.input, ...styles.loginPasswordInput, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }}
+                                style={{ ...inputStyle, ...styles.loginPasswordInput, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }}
                             />
                             <button 
                                 type="button" 
@@ -183,7 +221,7 @@ export default function LoginPage() {
 
                 {/* Social Login Buttons */}
                 <div style={styles.socialContainer}>
-                    <p style={styles.socialText}>Or continue with</p>
+                    <p style={{ ...styles.socialText, color: colors.textMuted }}>Or continue with</p>
                     <div style={styles.socialButtons}>
                         <button 
                             type="button" 
@@ -224,60 +262,60 @@ export default function LoginPage() {
                     </div>
                 </div>
 
-                <p style={styles.footerText}>
-                    Don't have an account? <Link to="/register" style={styles.link}>Register here</Link>
+                <p style={{ ...styles.footerText, color: colors.textMuted }}>
+                    Don't have an account? <Link to="/register" style={{ ...styles.link, color: colors.primary }}>Register here</Link>
                 </p>
             </div>
 
             {/* Social Login Modal */}
             {showSocialModal && (
                 <div style={styles.modalOverlay}>
-                    <div style={styles.modalContent}>
+                    <div style={modalStyle}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 {renderProviderIcon(socialProvider)}
-                                <h3 style={{ color: '#fff', margin: 0, fontSize: '18px', fontWeight: '800' }}>
+                                <h3 style={{ color: colors.text, margin: 0, fontSize: '18px', fontWeight: '800' }}>
                                     Sign in with {socialProvider}
                                 </h3>
                             </div>
-                            <button onClick={() => setShowSocialModal(false)} style={styles.closeBtn}></button>
+                            <button onClick={() => setShowSocialModal(false)} style={styles.closeBtn} />
                         </div>
 
                         {socialError && <div style={styles.errorBox}>{socialError}</div>}
 
                         <form onSubmit={handleSocialSubmit} style={styles.form}>
-                            <p style={{ color: '#94a3b8', fontSize: '13px', margin: '0 0 16px' }}>
+                            <p style={{ color: colors.textMuted, fontSize: '13px', margin: '0 0 16px' }}>
                                 Confirm your {socialProvider} profile credentials to sign in to Emare ELMS.
                             </p>
 
                             <div style={styles.fieldGroup}>
-                                <label style={styles.label}>Account Name</label>
+                                <label style={labelStyle}>Account Name</label>
                                 <input
                                     type="text"
                                     required
                                     value={socialName}
                                     onChange={e => setSocialName(e.target.value)}
-                                    style={styles.input}
+                                    style={inputStyle}
                                 />
                             </div>
 
                             <div style={styles.fieldGroup}>
-                                <label style={styles.label}>{socialProvider} Account Email</label>
+                                <label style={labelStyle}>{socialProvider} Account Email</label>
                                 <input
                                     type="email"
                                     required
                                     value={socialEmail}
                                     onChange={e => setSocialEmail(e.target.value)}
-                                    style={styles.input}
+                                    style={inputStyle}
                                 />
                             </div>
 
                             <div style={styles.fieldGroup}>
-                                <label style={styles.label}>Role</label>
-                                <select 
-                                    value={socialRole} 
-                                    onChange={e => setSocialRole(e.target.value)} 
-                                    style={{ ...styles.input, cursor: 'pointer' }}
+                                <label style={labelStyle}>Role</label>
+                                <select
+                                    value={socialRole}
+                                    onChange={e => setSocialRole(e.target.value)}
+                                    style={{ ...inputStyle, cursor: 'pointer' }}
                                 >
                                     <option value="Student">Student</option>
                                     <option value="Instructor">Instructor</option>
@@ -295,9 +333,9 @@ export default function LoginPage() {
             {/* Forgot Password Modal */}
             {showForgotModal && (
                 <div style={styles.modalOverlay}>
-                    <div style={styles.modalContent}>
+                    <div style={modalStyle}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h3 style={{ color: '#fff', margin: 0, fontSize: '18px', fontWeight: '800' }}>
+                            <h3 style={{ color: colors.text, margin: 0, fontSize: '18px', fontWeight: '800' }}>
                                 {forgotStep === 1 ? '▣ Reset Password' : '◈ Set New Password'}
                             </h3>
                             <button 
@@ -313,18 +351,18 @@ export default function LoginPage() {
 
                         {forgotStep === 1 ? (
                             <form onSubmit={handleForgotSubmit} style={styles.form}>
-                                <p style={{ color: '#94a3b8', fontSize: '13px', margin: '0 0 16px' }}>
+                                <p style={{ color: colors.textMuted, fontSize: '13px', margin: '0 0 16px' }}>
                                     Enter your registered email address below to receive a password reset authorization code.
                                 </p>
                                 <div style={styles.fieldGroup}>
-                                    <label style={styles.label}>Email Address</label>
+                                    <label style={labelStyle}>Email Address</label>
                                     <input
                                         type="email"
                                         required
                                         placeholder="you@example.com"
                                         value={forgotEmail}
                                         onChange={(e) => setForgotEmail(e.target.value)}
-                                        style={styles.input}
+                                        style={inputStyle}
                                     />
                                 </div>
                                 <button type="submit" style={styles.btn}>
@@ -334,26 +372,26 @@ export default function LoginPage() {
                         ) : (
                             <div style={{ textAlign: 'center', padding: '20px 0' }}>
                                 {forgotSuccess && <div style={styles.successBox}>{forgotSuccess}</div>}
-                                <p style={{ color: '#cbd5e1', fontSize: '14px', lineHeight: '1.6', marginBottom: '20px' }}>
-                                    A password reset link has been sent to <strong style={{ color: '#f1f5f9' }}>{forgotEmail}</strong>
+                                <p style={{ color: colors.textMuted, fontSize: '14px', lineHeight: '1.6', marginBottom: '20px' }}>
+                                    A password reset link has been sent to <strong style={{ color: colors.text }}>{forgotEmail}</strong>
                                 </p>
-                                <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '20px' }}>
+                                <p style={{ color: colors.textMuted, fontSize: '13px', marginBottom: '20px' }}>
                                      Check your inbox and click the link to reset your password. The link expires in 15 minutes.
                                 </p>
-                                <p style={{ color: '#64748b', fontSize: '12px', marginBottom: '20px' }}>
+                                <p style={{ color: colors.textMuted, fontSize: '12px', marginBottom: '20px' }}>
                                      Can't find the email? Check your spam or junk folder.
                                 </p>
                                 <button 
                                     type="button" 
                                     onClick={() => { setForgotStep(1); setForgotEmail(''); setForgotSuccess(''); }} 
-                                    style={{ ...styles.link, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', marginBottom: '12px' }}
+                                    style={{ ...styles.link, color: colors.text, background: 'rgba(59,130,246,0.12)', border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', marginBottom: '12px' }}
                                 >
                                     Try Another Email
                                 </button>
                                 <button 
                                     type="button" 
                                     onClick={() => setShowForgotModal(false)} 
-                                    style={{ ...styles.link, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer' }}
+                                    style={{ ...styles.link, color: colors.text, background: colors.bgInput, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '10px 20px', cursor: 'pointer' }}
                                 >
                                     Close
                                 </button>

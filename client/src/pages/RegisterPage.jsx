@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { FaGoogle, FaGithub, FaMicrosoft, FaFacebook, FaEye, FaEyeSlash, FaArrowLeft } from 'react-icons/fa';
 
 export default function RegisterPage() {
     const { register, socialAuth } = useAuth();
+    const { theme, colors } = useTheme();
+    const isDark = theme === 'dark';
     const navigate = useNavigate();
     const [form, setForm] = useState({
         firstName: '',
@@ -168,17 +171,51 @@ export default function RegisterPage() {
         }
     };
 
+    const pageStyle = {
+        ...styles.page,
+        background: isDark
+            ? 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)'
+            : 'linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%)',
+        color: colors.text
+    };
+
+    const cardStyle = {
+        ...styles.card,
+        background: colors.bgCard,
+        border: `1px solid ${colors.border}`
+    };
+
+    const labelStyle = { ...styles.label, color: colors.textMuted };
+    const titleStyle = { ...styles.title, color: colors.text };
+    const subtitleStyle = { ...styles.subtitle, color: colors.textMuted };
+    const sectionHeaderStyle = { ...styles.sectionHeader, color: colors.text };
+    const footerTextStyle = { ...styles.footerText, color: colors.textMuted };
+    const linkStyle = { ...styles.link, color: colors.primary };
+
+    const inputStyle = {
+        ...styles.input,
+        background: colors.bgInput,
+        border: `1px solid ${colors.border}`,
+        color: colors.text
+    };
+
+    const modalStyle = {
+        ...styles.modalContent,
+        background: colors.bgCard,
+        border: `1px solid ${colors.border}`
+    };
+
     return (
-        <div style={styles.page}>
-            <div style={styles.card}>
+        <div style={pageStyle}>
+            <div style={cardStyle}>
                 <Link to="/" style={styles.backButton}>
                     <FaArrowLeft /> Back to home
                 </Link>
 
                 <div style={styles.header}>
                     <div style={styles.logo}>E</div>
-                    <h1 style={styles.title}>Create your Emare account</h1>
-                    <p style={styles.subtitle}>Join Emare and start your learning journey today.</p>
+                    <h1 style={titleStyle}>Create your Emare account</h1>
+                    <p style={subtitleStyle}>Join Emare and start your learning journey today.</p>
                 </div>
 
                 {/* Students only register here — instructors are created by admin */}
@@ -186,19 +223,19 @@ export default function RegisterPage() {
                 {error && <div style={styles.errorBox}>{error}</div>}
 
                 <form onSubmit={handleSubmit} style={styles.form}>
-                    <h3 style={styles.sectionHeader}>Biographical Information</h3>
+                    <h3 style={sectionHeaderStyle}>Biographical Information</h3>
                     <div style={styles.fieldGroup}>
-                        <label style={styles.label}>First Name</label>
-                        <input name="firstName" type="text" required placeholder="John" value={form.firstName} onChange={handleChange} style={styles.input} />
+                        <label style={labelStyle}>First Name</label>
+                        <input name="firstName" type="text" required placeholder="John" value={form.firstName} onChange={handleChange} style={inputStyle} />
                     </div>
                     <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Last Name</label>
-                        <input name="lastName" type="text" required placeholder="Doe" value={form.lastName} onChange={handleChange} style={styles.input} />
+                        <label style={labelStyle}>Last Name</label>
+                        <input name="lastName" type="text" required placeholder="Doe" value={form.lastName} onChange={handleChange} style={inputStyle} />
                     </div>
 
                     <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Gender</label>
-                        <select name="gender" value={form.gender} onChange={handleChange} style={styles.input}>
+                        <label style={labelStyle}>Gender</label>
+                        <select name="gender" value={form.gender} onChange={handleChange} style={{ ...inputStyle, cursor: 'pointer' }}>
                             <option value="">Select</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
@@ -206,29 +243,29 @@ export default function RegisterPage() {
                         </select>
                     </div>
 
-                    <h3 style={styles.sectionHeader}>Security & Contact</h3>
+                    <h3 style={sectionHeaderStyle}>Security & Contact</h3>
                     <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Username</label>
-                        <input name="username" type="text" required placeholder="johndoe" value={form.username} onChange={handleChange} style={styles.input} />
+                        <label style={labelStyle}>Username</label>
+                        <input name="username" type="text" required placeholder="johndoe" value={form.username} onChange={handleChange} style={inputStyle} />
                     </div>
                     <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Verified Email Address</label>
-                        <input name="accountEmail" type="email" required placeholder="you@example.com" value={form.accountEmail} onChange={handleChange} style={styles.input} />
+                        <label style={labelStyle}>Verified Email Address</label>
+                        <input name="accountEmail" type="email" required placeholder="you@example.com" value={form.accountEmail} onChange={handleChange} style={inputStyle} />
                     </div>
 
                     <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Password</label>
+                        <label style={labelStyle}>Password</label>
                         <div style={styles.passwordWrapper}>
-                            <input name="securedPassword" type={showPassword ? 'text' : 'password'} required placeholder="••••••••" value={form.securedPassword} onChange={handleChange} style={{ ...styles.input, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }} />
+                            <input name="securedPassword" type={showPassword ? 'text' : 'password'} required placeholder="••••••••" value={form.securedPassword} onChange={handleChange} style={{ ...inputStyle, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }} />
                             <button type="button" onClick={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
                                 {showPassword ? <FaEyeSlash /> : <FaEye />}
                             </button>
                         </div>
                     </div>
                     <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Confirm Password</label>
+                        <label style={labelStyle}>Confirm Password</label>
                         <div style={styles.passwordWrapper}>
-                            <input name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} required placeholder="••••••••" value={form.confirmPassword} onChange={handleChange} style={{ ...styles.input, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }} />
+                            <input name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} required placeholder="••••••••" value={form.confirmPassword} onChange={handleChange} style={{ ...inputStyle, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }} />
                             <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
                                 {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                             </button>
@@ -236,31 +273,31 @@ export default function RegisterPage() {
                     </div>
 
                     <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Verified Phone Number (Optional)</label>
-                        <input name="phoneNumber" type="tel" placeholder="09xxxxxxxx or +2519xxxxxxxx" value={form.phoneNumber} onChange={handleChange} style={styles.input} />
+                        <label style={labelStyle}>Verified Phone Number (Optional)</label>
+                        <input name="phoneNumber" type="tel" placeholder="09xxxxxxxx or +2519xxxxxxxx" value={form.phoneNumber} onChange={handleChange} style={inputStyle} />
                     </div>
                     {/* ── Instructor-specific fields ── */}
                     {form.assignedRole === 'Instructor' && (<>
-                        <h3 style={styles.sectionHeader}>‍▧ Instructor Profile</h3>
+                        <h3 style={sectionHeaderStyle}>‍▧ Instructor Profile</h3>
                         <div style={styles.fieldGroup}>
-                            <label style={styles.label}>Professional Title <span style={{ color: '#ef4444' }}>*</span></label>
-                            <input name="professionalTitle" type="text" required placeholder="e.g., Senior Software Engineer" value={form.professionalTitle} onChange={handleChange} style={styles.input} />
+                            <label style={labelStyle}>Professional Title <span style={{ color: '#ef4444' }}>*</span></label>
+                            <input name="professionalTitle" type="text" required placeholder="e.g., Senior Software Engineer" value={form.professionalTitle} onChange={handleChange} style={inputStyle} />
                         </div>
                         <div style={styles.fieldGroup}>
-                            <label style={styles.label}>Years of Experience</label>
-                            <input name="yearsOfExperience" type="number" min="0" max="50" placeholder="5" value={form.yearsOfExperience} onChange={handleChange} style={styles.input} />
+                            <label style={labelStyle}>Years of Experience</label>
+                            <input name="yearsOfExperience" type="number" min="0" max="50" placeholder="5" value={form.yearsOfExperience} onChange={handleChange} style={inputStyle} />
                         </div>
                         <div style={styles.fieldGroup}>
-                            <label style={styles.label}>Expertise Areas</label>
-                            <input name="expertiseAreas" type="text" placeholder="AI, Web Dev, Cloud..." value={form.expertiseAreas} onChange={handleChange} style={styles.input} />
+                            <label style={labelStyle}>Expertise Areas</label>
+                            <input name="expertiseAreas" type="text" placeholder="AI, Web Dev, Cloud..." value={form.expertiseAreas} onChange={handleChange} style={inputStyle} />
                         </div>
                         <div style={styles.fieldGroup}>
-                            <label style={styles.label}>LinkedIn Profile (Optional)</label>
-                            <input name="linkedIn" type="url" placeholder="https://linkedin.com/in/..." value={form.linkedIn} onChange={handleChange} style={styles.input} />
+                            <label style={labelStyle}>LinkedIn Profile (Optional)</label>
+                            <input name="linkedIn" type="url" placeholder="https://linkedin.com/in/..." value={form.linkedIn} onChange={handleChange} style={inputStyle} />
                         </div>
                         <div style={styles.fieldGroup}>
-                            <label style={styles.label}>Highest Qualification</label>
-                            <select name="highestQualification" value={form.highestQualification} onChange={handleChange} style={styles.input}>
+                            <label style={labelStyle}>Highest Qualification</label>
+                            <select name="highestQualification" value={form.highestQualification} onChange={handleChange} style={{ ...inputStyle, cursor: 'pointer' }}>
                                 <option value="">Select</option>
                                 <option value="Diploma">Diploma</option>
                                 <option value="Bachelor">Bachelor's Degree</option>
@@ -270,12 +307,12 @@ export default function RegisterPage() {
                             </select>
                         </div>
                         <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
-                            <label style={styles.label}>Short Biography</label>
-                            <textarea name="biography" rows={3} placeholder="Tell students about yourself and your expertise..." value={form.biography} onChange={handleChange} style={styles.textarea} />
+                            <label style={labelStyle}>Short Biography</label>
+                            <textarea name="biography" rows={3} placeholder="Tell students about yourself and your expertise..." value={form.biography} onChange={handleChange} style={inputStyle} />
                         </div>
                         <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
-                            <label style={styles.label}>Upload CV / Resume (Optional)</label>
-                            <input name="cvResume" type="file" accept=".pdf,.doc,.docx" onChange={handleChange} style={styles.input} />
+                            <label style={labelStyle}>Upload CV / Resume (Optional)</label>
+                            <input name="cvResume" type="file" accept=".pdf,.doc,.docx" onChange={handleChange} style={inputStyle} />
                         </div>
                     </>)}
 
@@ -285,7 +322,7 @@ export default function RegisterPage() {
                 </form>
 
                 <div style={styles.socialContainer}>
-                    <p style={styles.socialText}>Or continue with</p>
+                    <p style={{ ...styles.socialText, color: colors.textMuted }}>Or continue with</p>
                     <div style={styles.socialButtons}>
                         <button type="button" onClick={() => openSocialModal('Google')} style={styles.socialBtn} title="Register with Google"><FaGoogle style={{ color: '#ea4335' }} /></button>
                         <button type="button" onClick={() => openSocialModal('GitHub')} style={styles.socialBtn} title="Register with GitHub"><FaGithub style={{ color: '#24292e' }} /></button>
@@ -294,14 +331,14 @@ export default function RegisterPage() {
                     </div>
                 </div>
 
-                <p style={styles.footerText}>
-                    Already have an account? <Link to="/login" style={styles.link}>Sign in</Link>
+                <p style={{ ...styles.footerText, color: colors.textMuted }}>
+                    Already have an account? <Link to="/login" style={{ ...styles.link, color: colors.primary }}>Sign in</Link>
                 </p>
             </div>
 
             {showSocialModal && (
                 <div style={styles.modalOverlay}>
-                    <div style={styles.modalContent}>
+                    <div style={modalStyle}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 {renderProviderIcon(socialProvider)}
@@ -315,38 +352,38 @@ export default function RegisterPage() {
                         {socialError && <div style={styles.errorBox}>{socialError}</div>}
 
                         <form onSubmit={handleSocialSubmit} style={styles.form}>
-                            <p style={{ color: '#94a3b8', fontSize: '13px', margin: '0 0 16px' }}>
+                            <p style={{ color: colors.textMuted, fontSize: '13px', margin: '0 0 16px' }}>
                                 Authorize your {socialProvider} account to automatically register and log in to Emare ELMS.
                             </p>
 
                             <div style={styles.fieldGroup}>
-                                <label style={styles.label}>Full Name</label>
+                                <label style={labelStyle}>Full Name</label>
                                 <input
                                     type="text"
                                     required
                                     value={socialName}
                                     onChange={e => setSocialName(e.target.value)}
-                                    style={styles.input}
+                                    style={inputStyle}
                                 />
                             </div>
 
                             <div style={styles.fieldGroup}>
-                                <label style={styles.label}>{socialProvider} Account Email</label>
+                                <label style={labelStyle}>{socialProvider} Account Email</label>
                                 <input
                                     type="email"
                                     required
                                     value={socialEmail}
                                     onChange={e => setSocialEmail(e.target.value)}
-                                    style={styles.input}
+                                    style={inputStyle}
                                 />
                             </div>
 
                             <div style={styles.fieldGroup}>
-                                <label style={styles.label}>Register As</label>
+                                <label style={labelStyle}>Register As</label>
                                 <select 
                                     value={socialRole} 
                                     onChange={e => setSocialRole(e.target.value)} 
-                                    style={{ ...styles.input, cursor: 'pointer' }}
+                                    style={{ ...inputStyle, cursor: 'pointer' }}
                                 >
                                     <option value="Student">Student</option>
                                     <option value="Instructor">Instructor</option>

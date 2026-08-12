@@ -12,6 +12,7 @@ const emailService = require('../services/emailService');
 const { audit, resolveIp } = require('../utils/auditLogger');
 
 const chapa = require('../services/chapaService');
+const couponService = require('../services/couponService');
 const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY || '';
 const CHAPA_WEBHOOK_SECRET = process.env.CHAPA_WEBHOOK_SECRET || CHAPA_SECRET_KEY || '';
 
@@ -35,7 +36,27 @@ exports.initiatePayment = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Course not found.' });
         }
 
-        const finalAmount = course.price || 0;
+        const originalAmount = course.price || 0;
+        let finalAmount = originalAmount;
+        let couponMeta = null;
+        if (coupon) {
+            try {
+                const validation = await couponService.validateCoupon(coupon, courseId, req.user._id, originalAmount);
+                if (!validation || !validation.valid) {
+                    return res.status(400).json({ success: false, message: validation?.message || 'Invalid coupon' });
+                }
+                finalAmount = validation.finalAmount;
+                couponMeta = {
+                    couponId: validation.coupon._id,
+                    code: validation.coupon.code,
+                    discountAmount: validation.discountAmount,
+                    originalAmount
+                };
+            } catch (err) {
+                console.error('Coupon validation error', err);
+                return res.status(500).json({ success: false, message: 'Coupon validation failed' });
+            }
+        }
         if (amount && amount !== finalAmount) {
             console.warn(`Payment amount mismatch for course ${courseId}. Enforcing course price ${finalAmount}.`);
         }
@@ -73,9 +94,9 @@ exports.initiatePayment = async (req, res) => {
         if (tx) {
             tx.amount = finalAmount;
             tx.currency = currency;
-            tx.metadata = { ...tx.metadata, coupon };
+            tx.metadata = { ...tx.metadata, coupon: couponMeta };
         } else {
-            tx = new Transaction({ studentRef: req.user._id, courseRef: courseId, amount: finalAmount, currency, provider, status: 'Pending', metadata: { coupon } });
+            tx = new Transaction({ studentRef: req.user._id, courseRef: courseId, amount: finalAmount, currency, provider, status: 'Pending', metadata: { coupon: couponMeta, originalAmount } });
         }
 
         if (provider === 'chapa') {
@@ -113,7 +134,7 @@ exports.initiatePayment = async (req, res) => {
                         currency,
                         paymentMethod: provider,
                         status: 'Pending',
-                        metadata: { ...tx.metadata, coupon }
+                        metadata: tx.metadata || {}
                     }
                 },
                 { upsert: true, new: true }
@@ -249,6 +270,15 @@ exports.chapaWebhook = async (req, res) => {
                 { upsert: true, new: true }
             );
 
+            // Record coupon usage atomically if a coupon was attached to the tx
+            try {
+                if (tx.metadata && tx.metadata.coupon && !tx.metadata.couponRecorded) {
+                    await couponService.recordUsageIfNeeded(tx.metadata.coupon.couponId || tx.metadata.coupon.couponId || tx.metadata.coupon, tx);
+                }
+            } catch (err) {
+                console.error('Failed to record coupon usage from webhook:', err);
+            }
+
             // Idempotent enrollment creation or update
             await Enrollment.findOneAndUpdate(
                 { studentRef: tx.studentRef, courseRef: tx.courseRef },
@@ -316,6 +346,15 @@ exports.verifyChapa = async (req, res) => {
                 },
                 { upsert: true, new: true }
             );
+
+                // Record coupon usage now that we have a verified, completed transaction
+                try {
+                    if (tx.metadata && tx.metadata.coupon && !tx.metadata.couponRecorded) {
+                        await couponService.recordUsageIfNeeded(tx.metadata.coupon.couponId || tx.metadata.coupon, tx);
+                    }
+                } catch (err) {
+                    console.error('Failed to record coupon usage from verify:', err);
+                }
 
             await Enrollment.findOneAndUpdate(
                 { studentRef: tx.studentRef, courseRef: tx.courseRef },
@@ -409,12 +448,11 @@ exports.requestRefund = async (req, res) => {
 
 exports.applyCoupon = async (req, res) => {
     try {
-        const { code } = req.body;
-        const coupon = await Coupon.findOne({ code });
-        if (!coupon) return res.status(404).json({ success: false, message: 'Coupon not found' });
-        if (coupon.expiresAt && coupon.expiresAt < new Date()) return res.status(400).json({ success: false, message: 'Coupon expired' });
-        if (coupon.redeemLimit && coupon.redeemedCount >= coupon.redeemLimit) return res.status(400).json({ success: false, message: 'Coupon limit reached' });
-        res.json({ success: true, data: coupon });
+        const { code, courseId } = req.body;
+        const originalAmount = (await Course.findById(courseId))?.price || 0;
+        const validation = await couponService.validateCoupon(code, courseId, req.user?._id, originalAmount);
+        if (!validation || !validation.valid) return res.status(400).json({ success: false, message: validation?.message || 'Invalid coupon' });
+        res.json({ success: true, data: { coupon: validation.coupon, discountAmount: validation.discountAmount, finalAmount: validation.finalAmount } });
     } catch (err) { console.error(err); res.status(500).json({ success: false }); }
 };
 

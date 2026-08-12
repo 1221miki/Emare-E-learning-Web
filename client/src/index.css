@@ -130,6 +130,57 @@ body.emare-sidebar-right main {
   .emare-course-layout .emare-course-main .emare-course-grid {
     grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   }
+
+  .landing-hero {
+    flex-direction: column;
+    padding: 80px 5% 60px;
+    text-align: center;
+  }
+
+  .landing-hero-content {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .landing-hero-actions {
+    justify-content: center;
+  }
+
+  .landing-hero-image-wrapper {
+    width: 100%;
+    max-width: 640px;
+    min-height: auto;
+    margin: 0 auto;
+  }
+
+  .landing-hero-image {
+    border-radius: 28px;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-hero {
+    padding: 64px 4% 36px;
+  }
+
+  .landing-hero-content {
+    width: 100%;
+    text-align: center;
+  }
+
+  .landing-hero-image-wrapper {
+    display: none;
+  }
+
+  .landing-hero-actions {
+    justify-content: center;
+  }
+
+  .landing-hero-actions button {
+    width: 100%;
+    max-width: 320px;
+  }
 }
 
 @media (max-width: 767px) {

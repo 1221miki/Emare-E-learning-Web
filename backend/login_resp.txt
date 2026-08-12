@@ -1,0 +1,24 @@
+HTTP/1.1 200 OK
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: cross-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=15552000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Vary: Origin
+Access-Control-Allow-Credentials: true
+Set-Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNzM4Zjc0ZjNlNmIxYzZhODU4ZjYzMCIsImxhc3RMb2dpbiI6MTc4NjMwMjMxMzMwMywiaWF0IjoxNzg2MzAyMzEzLCJleHAiOjE3ODYzMDk1MTN9.HI9lxbg2b9mMEhggp_3ANb_ispC12sqFBacLGqZbK10; Max-Age=7200; Path=/; Expires=Sun, 09 Aug 2026 21:05:13 GMT; HttpOnly; SameSite=Lax
+Content-Type: application/json; charset=utf-8
+Content-Length: 423
+ETag: W/"1a7-eZNePWKm2btdjPQ7iOJrFVAUoXk"
+Date: Sun, 09 Aug 2026 19:05:13 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"success":true,"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNzM4Zjc0ZjNlNmIxYzZhODU4ZjYzMCIsImxhc3RMb2dpbiI6MTc4NjMwMjMxMzMwMywiaWF0IjoxNzg2MzAyMzEzLCJleHAiOjE3ODYzMDk1MTN9.HI9lxbg2b9mMEhggp_3ANb_ispC12sqFBacLGqZbK10","data":{"id":"6a738f74f3e6b1c6a858f630","fullName":"Demo Instructor","accountEmail":"instructor@emare.com","username":"","assignedRole":"Instructor","isActive":true,"socialProvider":"local"}}
