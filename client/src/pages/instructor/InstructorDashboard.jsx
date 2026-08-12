@@ -29,86 +29,86 @@ export default function InstructorDashboard() {
     const s = {
         // Layout
         page: { display: 'flex', minHeight: '100vh', fontFamily: "'Outfit', sans-serif" },
-        sidebar: { width: '260px', background: 'rgba(15,20,34,0.7)', backdropFilter: 'blur(12px)', borderRight: '1px solid rgba(30,41,59,0.5)', display: 'flex', flexDirection: 'column', padding: '24px 16px', position: 'fixed', height: '100vh', zIndex: 10 },
+        sidebar: { width: '260px', background: 'linear-gradient(180deg, #e0e7ff, #f0f4ff)', backdropFilter: 'blur(12px)', borderRight: '2px solid #c7d2fe', display: 'flex', flexDirection: 'column', padding: '24px 16px', position: 'fixed', height: '100vh', zIndex: 10 },
         logoBox: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '36px', paddingLeft: '8px' },
-        logo: { width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#fff', fontSize: '18px' },
-        logoText: { color: '#fff', fontWeight: '700', fontSize: '16px' },
+        logo: { width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#fff', fontSize: '18px' },
+        logoText: { color: '#1e3a8a', fontWeight: '700', fontSize: '16px' },
         nav: { display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, overflowY: 'auto' },
-        navItem: { textAlign: 'left', background: 'transparent', border: 'none', color: colors.textMuted, padding: '10px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', outline: 'none' },
-        catalogBtn: { background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#60a5fa', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
-        logoutBtn: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+        navItem: { textAlign: 'left', background: 'transparent', border: 'none', color: '#4f46e5', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', outline: 'none' },
+        catalogBtn: { background: '#dbeafe', border: '2px solid #60a5fa', color: '#1e40af', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+        logoutBtn: { background: '#fee2e2', border: '2px solid #f87171', color: '#991b1b', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
 
         // Main
-        main: { marginLeft: '260px', flex: 1, padding: '40px', overflowY: 'auto' },
+        main: { marginLeft: '260px', flex: 1, padding: '40px', overflowY: 'auto', background: '#f8fafc' },
         header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '36px' },
-        greeting: { color: '#f8fafc', fontSize: '26px', fontWeight: '800', margin: 0 },
-        subGreeting: { color: colors.textMuted, fontSize: '14px', margin: '4px 0 0' },
+        greeting: { color: '#1e293b', fontSize: '26px', fontWeight: '800', margin: 0 },
+        subGreeting: { color: '#64748b', fontSize: '14px', margin: '4px 0 0' },
         avatar: { width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '20px' },
-        loadingBox: { color: colors.textMuted, fontSize: '16px', textAlign: 'center', padding: '100px 0' },
+        loadingBox: { color: '#64748b', fontSize: '16px', textAlign: 'center', padding: '100px 0' },
 
         // Tabs
         tabHeader: { marginBottom: '28px' },
-        tabTitle: { color: '#f8fafc', fontSize: '22px', fontWeight: '800', margin: 0 },
-        tabSubtitle: { color: colors.textMuted, fontSize: '14px', margin: '4px 0 0' },
+        tabTitle: { color: '#1e293b', fontSize: '22px', fontWeight: '800', margin: 0 },
+        tabSubtitle: { color: '#64748b', fontSize: '14px', margin: '4px 0 0' },
 
         // Stats
         statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' },
-        statCard: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '22px', border: '1px solid rgba(30,41,59,0.5)' },
-        statValue: { display: 'block', fontSize: '32px', fontWeight: '800' },
-        statLabel: { color: colors.textMuted, fontSize: '12px', fontWeight: '500', marginTop: '4px', display: 'block' },
+        statCard: { background: 'linear-gradient(135deg, #e0e7ff, #dbeafe)', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '22px', border: '2px solid #c7d2fe' },
+        statValue: { display: 'block', fontSize: '32px', fontWeight: '800', color: '#1e3a8a' },
+        statLabel: { color: '#64748b', fontSize: '12px', fontWeight: '500', marginTop: '4px', display: 'block' },
 
         // Cards
-        panelCard: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '28px', border: '1px solid rgba(30,41,59,0.5)', marginBottom: '24px', cursor: 'default', transition: 'border-color 0.2s' },
-        panelTitle: { color: colors.text, fontSize: '16px', fontWeight: '700', margin: '0 0 20px' },
-        recentItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid rgba(30,41,59,0.3)' },
-        courseRow: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '24px', border: '1px solid rgba(30,41,59,0.5)', display: 'flex', justifyContent: 'space-between', gap: '20px' },
+        panelCard: { background: '#ffffff', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '28px', border: '2px solid #e0e7ff', marginBottom: '24px', cursor: 'default', transition: 'border-color 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' },
+        panelTitle: { color: '#1e293b', fontSize: '16px', fontWeight: '700', margin: '0 0 20px' },
+        recentItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #e0e7ff' },
+        courseRow: { background: '#ffffff', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '24px', border: '2px solid #e0e7ff', display: 'flex', justifyContent: 'space-between', gap: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' },
         dashboardGrid: { display: 'grid', gap: '24px' },
-        heroCard: { background: 'rgba(255,255,255,0.08)', borderRadius: '20px', padding: '32px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 28px 80px rgba(15,23,42,0.12)' },
-        heroTitle: { color: '#fff', fontSize: '30px', fontWeight: '800', margin: '0 0 10px' },
-        heroSubtitle: { color: 'rgba(226,232,240,0.72)', fontSize: '15px', margin: 0, lineHeight: 1.75 },
+        heroCard: { background: 'linear-gradient(135deg, #c7d2fe, #dbeafe)', borderRadius: '20px', padding: '32px', border: '2px solid #60a5fa', boxShadow: '0 10px 30px rgba(59,130,246,0.15)' },
+        heroTitle: { color: '#1e3a8a', fontSize: '30px', fontWeight: '800', margin: '0 0 10px' },
+        heroSubtitle: { color: '#3f4b63', fontSize: '15px', margin: 0, lineHeight: 1.75 },
         heroActions: { display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '24px' },
-        chartCard: { background: 'rgba(14,23,38,0.7)', borderRadius: '20px', padding: '24px', border: '1px solid rgba(255,255,255,0.08)', minHeight: '320px' },
-        miniCard: { background: 'rgba(15,23,42,0.75)', borderRadius: '18px', padding: '18px', border: '1px solid rgba(255,255,255,0.08)' },
-        cardLabel: { color: 'rgba(226,232,240,0.72)', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.08em' },
-        cardValue: { color: '#fff', fontSize: '28px', fontWeight: '800', marginTop: '8px' },
+        chartCard: { background: '#ffffff', borderRadius: '20px', padding: '24px', border: '2px solid #e0e7ff', minHeight: '320px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' },
+        miniCard: { background: '#f8fafc', borderRadius: '18px', padding: '18px', border: '2px solid #e2e8f0' },
+        cardLabel: { color: '#64748b', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.08em' },
+        cardValue: { color: '#1e293b', fontSize: '28px', fontWeight: '800', marginTop: '8px' },
         sectionRow: { display: 'grid', gap: '24px', marginTop: '24px' },
-        subtleText: { color: colors.textMuted, fontSize: '13px', lineHeight: 1.7 },
-        badge: { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', display: 'inline-block' },
-        miniStat: { background: 'rgba(15,23,42,0.4)', padding: '14px 16px', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '2px' },
+        subtleText: { color: '#64748b', fontSize: '13px', lineHeight: 1.7 },
+        badge: { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', display: 'inline-block', background: '#e0e7ff', color: '#1e3a8a' },
+        miniStat: { background: '#f0f4ff', padding: '14px 16px', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '2px', border: '1px solid #e0e7ff' },
 
         // Empty
-        emptyBox: { padding: '48px', textAlign: 'center', background: 'rgba(14,23,38,0.45)', borderRadius: '14px', border: '1px solid rgba(30,41,59,0.4)' },
-        emptyText: { color: colors.textMuted, fontSize: '14px', margin: 0 },
+        emptyBox: { padding: '48px', textAlign: 'center', background: '#f8fafc', borderRadius: '14px', border: '2px solid #e2e8f0' },
+        emptyText: { color: '#64748b', fontSize: '14px', margin: 0 },
 
         // Table
-        tableCard: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', border: '1px solid rgba(30,41,59,0.5)', overflow: 'hidden' },
+        tableCard: { background: '#ffffff', backdropFilter: 'blur(10px)', borderRadius: '14px', border: '2px solid #e0e7ff', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' },
         table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
-        thRow: { background: 'rgba(15,20,34,0.6)' },
-        th: { padding: '14px 20px', color: colors.textMuted, fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' },
-        tr: { borderBottom: '1px solid rgba(30,41,59,0.4)' },
-        td: { padding: '14px 20px', color: colors.text, fontSize: '14px' },
+        thRow: { background: '#f0f4ff' },
+        th: { padding: '14px 20px', color: '#4f46e5', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' },
+        tr: { borderBottom: '1px solid #e0e7ff' },
+        td: { padding: '14px 20px', color: '#1e293b', fontSize: '14px' },
 
         // Buttons
-        primaryBtn: { background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', transition: 'opacity 0.2s' },
-        actionBtn: { background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', color: '#60a5fa', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'background 0.2s' },
-        actionBtnAlt: { background: 'transparent', border: '1px solid rgba(51,65,85,0.6)', color: colors.text, borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'background 0.2s' },
-        dangerBtn: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px' },
-        textBtn: { background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: '600', fontSize: '13px', textDecoration: 'underline' },
+        primaryBtn: { background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', transition: 'opacity 0.2s' },
+        actionBtn: { background: '#dbeafe', border: '2px solid #60a5fa', color: '#1e40af', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'background 0.2s' },
+        actionBtnAlt: { background: '#f0f4ff', border: '2px solid #c7d2fe', color: '#4f46e5', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'background 0.2s' },
+        dangerBtn: { background: '#fee2e2', border: '2px solid #f87171', color: '#991b1b', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px' },
+        textBtn: { background: 'transparent', border: 'none', color: '#2563eb', cursor: 'pointer', fontWeight: '600', fontSize: '13px', textDecoration: 'underline' },
 
         // Forms
         formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
         formGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
-        label: { color: colors.textMuted, fontSize: '12px', fontWeight: '600' },
-        input: { background: 'rgba(9,13,22,0.6)', border: '1px solid rgba(30,41,59,0.6)', color: '#fff', padding: '11px 14px', borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.2s' },
-        select: { background: 'rgba(9,13,22,0.6)', border: '1px solid rgba(30,41,59,0.6)', color: '#fff', padding: '11px 14px', borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit' },
-        successAlert: { background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px', fontWeight: '600' },
+        label: { color: '#4f46e5', fontSize: '12px', fontWeight: '600' },
+        input: { background: '#f8fafc', border: '2px solid #e0e7ff', color: '#1e293b', padding: '11px 14px', borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.2s' },
+        select: { background: '#f8fafc', border: '2px solid #e0e7ff', color: '#1e293b', padding: '11px 14px', borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit' },
+        successAlert: { background: '#dcfce7', border: '2px solid #86efac', color: '#166534', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px', fontWeight: '600' },
 
         // Modals
-        backdrop: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' },
-        modal: { background: 'rgba(30,41,59,0.95)', backdropFilter: 'blur(16px)', border: '1px solid rgba(51,65,85,0.6)', borderRadius: '18px', width: '100%', maxWidth: '600px', maxHeight: '85vh', overflow: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.5)' },
+        backdrop: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' },
+        modal: { background: '#ffffff', backdropFilter: 'blur(16px)', border: '2px solid #e0e7ff', borderRadius: '18px', width: '100%', maxWidth: '600px', maxHeight: '85vh', overflow: 'auto', boxShadow: '0 10px 30px rgba(0,0,0,0.15)' },
         modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px 0' },
-        modalTitle: { color: colors.text, fontSize: '18px', fontWeight: '700', margin: 0 },
-        closeBtn: { background: colors.bgInput, border: '1px solid rgba(51,65,85,0.6)', color: colors.textMuted, borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+        modalTitle: { color: '#1e293b', fontSize: '18px', fontWeight: '700', margin: 0 },
+        closeBtn: { background: '#f0f4ff', border: '2px solid #c7d2fe', color: '#4f46e5', borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
         modalBody: { padding: '20px 24px 24px' }
     };
     const navigate = useNavigate();
@@ -190,6 +190,13 @@ export default function InstructorDashboard() {
         notifyEnrollments: true, notifyReviews: true, notifyAssignments: true, notifyPayments: true
     });
 
+    // Thumbnail Upload States
+    const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
+    const [thumbnailUploadError, setThumbnailUploadError] = useState('');
+    const [thumbnailPreview, setThumbnailPreview] = useState('');
+    const [selectedThumbnailFile, setSelectedThumbnailFile] = useState(null);
+    const [isContentExpanded, setIsContentExpanded] = useState(false);
+
     // ── Data Fetching ──────────────────────────────────────────
     useEffect(() => {
         fetchDashboardData();
@@ -240,6 +247,30 @@ export default function InstructorDashboard() {
                 .catch(console.error);
         }
     }, [activeTab, selectedCourse]);
+
+    // Populate edit form when modal opens with selected course data
+    useEffect(() => {
+        if (isEditCourseModal && selectedCourse) {
+            setCourseForm({
+                courseTitle: selectedCourse.courseTitle || '',
+                subtitle: selectedCourse.subtitle || '',
+                descriptionText: selectedCourse.descriptionText || '',
+                technicalCategory: selectedCourse.technicalCategory || 'Web Coding',
+                level: selectedCourse.level || 'Beginner',
+                language: selectedCourse.language || 'English',
+                estimatedDurationHours: selectedCourse.estimatedDurationHours || 1,
+                price: selectedCourse.price || 0,
+                discountPrice: selectedCourse.discountPrice || null,
+                thumbnailUrl: selectedCourse.thumbnailUrl || '',
+                learningObjectives: (selectedCourse.learningObjectives || []).join('\n'),
+                requirements: (selectedCourse.requirements || []).join('\n'),
+                tags: (selectedCourse.tags || []).join(', ')
+            });
+            setThumbnailPreview('');
+            setSelectedThumbnailFile(null);
+            setThumbnailUploadError('');
+        }
+    }, [isEditCourseModal, selectedCourse]);
 
     const handleLogout = async () => { await logout(); navigate('/'); };
 
@@ -477,6 +508,87 @@ export default function InstructorDashboard() {
         setSelectedCourse(prev => prev ? ({ ...prev, [field]: value }) : prev);
     };
 
+    // ── Thumbnail Management ───────────────────────────────────
+    const handleThumbnailFileSelect = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            setThumbnailUploadError('Please upload a JPG, PNG, or WebP image');
+            return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            setThumbnailUploadError('Image size must be less than 5MB');
+            return;
+        }
+
+        setSelectedThumbnailFile(file);
+        setThumbnailUploadError('');
+
+        // Create preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            setThumbnailPreview(e.target?.result || '');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleUploadThumbnail = async () => {
+        if (!selectedThumbnailFile || !selectedCourse) return;
+
+        setIsUploadingThumbnail(true);
+        setThumbnailUploadError('');
+
+        try {
+            const formData = new FormData();
+            formData.append('thumbnail', selectedThumbnailFile);
+
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/courses/${selectedCourse._id}/thumbnail`,
+                {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                }
+            );
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Upload failed');
+            }
+
+            const result = await response.json();
+            
+            // Update local state and course form
+            setSelectedCourse(result.data);
+            setCourseForm(prev => ({ ...prev, thumbnailUrl: result.data.thumbnailUrl }));
+            setCourses(prev => prev.map(c => c._id === selectedCourse._id ? result.data : c));
+            
+            setSelectedThumbnailFile(null);
+            setThumbnailPreview('');
+        } catch (err) {
+            setThumbnailUploadError(err.message || 'Failed to upload thumbnail');
+        } finally {
+            setIsUploadingThumbnail(false);
+        }
+    };
+
+    const handleRemoveThumbnail = async () => {
+        if (!selectedCourse) return;
+        try {
+            const res = await courseService.update(selectedCourse._id, { thumbnailUrl: null });
+            setSelectedCourse(res.data.data);
+            setCourseForm(prev => ({ ...prev, thumbnailUrl: null }));
+            setCourses(prev => prev.map(c => c._id === selectedCourse._id ? res.data.data : c));
+        } catch (err) {
+            alert('Failed to remove thumbnail');
+        }
+    };
+
     const handleEditCourse = async (e) => {
         e.preventDefault();
         try {
@@ -663,10 +775,10 @@ export default function InstructorDashboard() {
                     </div>
 
                     {/* Social Links */}
-                    <div style={{ gridColumn: '1 / -1', borderTop: '1px solid rgba(30,41,59,0.5)', paddingTop: '20px', marginTop: '8px' }}>
+                    <div style={{ gridColumn: '1 / -1', borderTop: '2px solid #e0e7ff', paddingTop: '20px', marginTop: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                             <Link2 size={18} aria-hidden="true" />
-                            <h4 style={{ color: colors.text, margin: 0, fontSize: '15px' }}>Social Media Links</h4>
+                            <h4 style={{ color: '#1e293b', margin: 0, fontSize: '15px' }}>Social Media Links</h4>
                         </div>
                     </div>
                     <div style={s.formGroup}>
@@ -780,9 +892,9 @@ export default function InstructorDashboard() {
                             onClick={() => setCourseTab(tab.key)}
                             style={{
                                 ...s.actionBtnAlt,
-                                background: courseTab === tab.key ? 'rgba(59,130,246,0.18)' : 'transparent',
-                                borderColor: courseTab === tab.key ? '#3b82f6' : 'rgba(51,65,85,0.6)',
-                                color: courseTab === tab.key ? '#3b82f6' : colors.text
+                                background: courseTab === tab.key ? '#dbeafe' : 'transparent',
+                                borderColor: courseTab === tab.key ? '#3b82f6' : '#c7d2fe',
+                                color: courseTab === tab.key ? '#1e40af' : '#1e293b'
                             }}
                         >
                             {tab.label} ({tab.count})
@@ -842,12 +954,12 @@ export default function InstructorDashboard() {
                                     <tr key={course._id} style={s.tr}>
                                         <td style={s.td}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: 'rgba(59,130,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700' }}>
+                                                <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1e40af', fontWeight: '700' }}>
                                                     {course.courseTitle?.charAt(0)?.toUpperCase()}
                                                 </div>
                                                 <div>
-                                                    <strong style={{ color: colors.text, display: 'block', fontSize: '14px' }}>{course.courseTitle}</strong>
-                                                    <span style={{ color: colors.textMuted, fontSize: '12px' }}>{course.subtitle || 'No subtitle available'}</span>
+                                                    <strong style={{ color: '#1e293b', display: 'block', fontSize: '14px' }}>{course.courseTitle}</strong>
+                                                    <span style={{ color: '#64748b', fontSize: '12px' }}>{course.subtitle || 'No subtitle available'}</span>
                                                 </div>
                                             </div>
                                         </td>
@@ -857,7 +969,7 @@ export default function InstructorDashboard() {
                                         <td style={s.td}>{course.price > 0 ? `${course.price} ETB` : 'Free'}</td>
                                         <td style={s.td}>{course.totalEnrollments || 0}</td>
                                         <td style={s.td}>{course.averageRating ? `${course.averageRating.toFixed(1)} ` : '—'}</td>
-                                        <td style={s.td}><span style={{ ...s.badge, background: statusLabel(course.publicationState) === 'Published' ? 'rgba(16,185,129,0.15)' : statusLabel(course.publicationState) === 'Draft' ? 'rgba(245,158,11,0.15)' : statusLabel(course.publicationState) === 'Pending Review' ? 'rgba(59,130,246,0.15)' : 'rgba(100,116,139,0.15)', color: statusLabel(course.publicationState) === 'Published' ? '#10b981' : statusLabel(course.publicationState) === 'Draft' ? '#f59e0b' : statusLabel(course.publicationState) === 'Pending Review' ? '#2563eb' : '#64748b' }}>{statusLabel(course.publicationState)}</span></td>
+                                        <td style={s.td}><span style={{ ...s.badge, background: statusLabel(course.publicationState) === 'Published' ? '#d1fae5' : statusLabel(course.publicationState) === 'Draft' ? '#fef3c7' : statusLabel(course.publicationState) === 'Pending Review' ? '#dbeafe' : '#e2e8f0', color: statusLabel(course.publicationState) === 'Published' ? '#065f46' : statusLabel(course.publicationState) === 'Draft' ? '#92400e' : statusLabel(course.publicationState) === 'Pending Review' ? '#1e40af' : '#475569' }}>{statusLabel(course.publicationState)}</span></td>
                                         <td style={s.td}>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                                 <button onClick={() => { setSelectedCourse(course); setIsEditCourseModal(true); }} style={s.actionBtnAlt}>Edit Info</button>
@@ -910,8 +1022,8 @@ export default function InstructorDashboard() {
                 {/* Quick action */}
                 <div style={{ ...s.panelCard, marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
-                        <p style={{ color: colors.text, fontWeight: '700', margin: '0 0 4px', fontSize: '15px' }}>Manage Live Sessions</p>
-                        <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Create, edit, and join live virtual classrooms with your students.</p>
+                        <p style={{ color: '#1e293b', fontWeight: '700', margin: '0 0 4px', fontSize: '15px' }}>Manage Live Sessions</p>
+                        <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Create, edit, and join live virtual classrooms with your students.</p>
                     </div>
                     <button onClick={() => navigate('/live-sessions')} style={s.primaryBtn}>
                         <Video size={16} aria-hidden="true" style={{ marginRight: '6px' }} /> Open Live Sessions
@@ -922,12 +1034,12 @@ export default function InstructorDashboard() {
                 <div style={s.panelCard}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <CalendarDays size={18} color="#818cf8" aria-hidden="true" />
+                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#e0e7ff', border: '2px solid #c7d2fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <CalendarDays size={18} color="#4f46e5" aria-hidden="true" />
                             </div>
                             <div>
                                 <h3 style={{ ...s.panelTitle, margin: 0 }}>Schedule Calendar</h3>
-                                <p style={{ color: colors.textMuted, fontSize: '12px', margin: '2px 0 0' }}>Upcoming live classes and course events</p>
+                                <p style={{ color: '#64748b', fontSize: '12px', margin: '2px 0 0' }}>Upcoming live classes and course events</p>
                             </div>
                         </div>
                         <button onClick={() => navigate('/live-sessions')} style={s.actionBtn}>
@@ -936,9 +1048,9 @@ export default function InstructorDashboard() {
                     </div>
 
                     {upcomingEvents.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '40px 20px', background: 'rgba(9,13,22,0.35)', borderRadius: '12px', border: '1px dashed rgba(51,65,85,0.4)' }}>
-                            <CalendarDays size={36} color="#1e293b" style={{ display: 'block', margin: '0 auto 12px' }} aria-hidden="true" />
-                            <p style={{ color: '#475569', fontSize: '14px', margin: '0 0 16px' }}>No upcoming live sessions scheduled.</p>
+                        <div style={{ textAlign: 'center', padding: '40px 20px', background: '#f0f4ff', borderRadius: '12px', border: '2px dashed #c7d2fe' }}>
+                            <CalendarDays size={36} color="#4f46e5" style={{ display: 'block', margin: '0 auto 12px' }} aria-hidden="true" />
+                            <p style={{ color: '#4f46e5', fontSize: '14px', margin: '0 0 16px' }}>No upcoming live sessions scheduled.</p>
                             <button onClick={() => navigate('/live-sessions')} style={s.primaryBtn}>Schedule Your First Session</button>
                         </div>
                     ) : (
@@ -950,33 +1062,33 @@ export default function InstructorDashboard() {
                                 const dayLabel = isToday ? 'Today' : isTomorrow ? 'Tomorrow' : sessionDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                                 const timeLabel = sessionDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                                 return (
-                                    <div key={session._id || idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 16px', background: 'rgba(9,13,22,0.45)', borderRadius: '12px', border: `1px solid ${isToday ? 'rgba(99,102,241,0.35)' : 'rgba(51,65,85,0.35)'}` }}>
+                                    <div key={session._id || idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 16px', background: '#f8fafc', borderRadius: '12px', border: `2px solid ${isToday ? '#4f46e5' : '#e0e7ff'}` }}>
                                         {/* Date block */}
-                                        <div style={{ textAlign: 'center', minWidth: '56px', padding: '8px', background: isToday ? 'rgba(99,102,241,0.15)' : 'rgba(30,41,59,0.5)', borderRadius: '10px', border: `1px solid ${isToday ? 'rgba(99,102,241,0.3)' : 'rgba(51,65,85,0.3)'}` }}>
-                                            <div style={{ color: isToday ? '#818cf8' : colors.textMuted, fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{dayLabel.split(' ')[0]}</div>
-                                            <div style={{ color: isToday ? '#818cf8' : colors.text, fontSize: '18px', fontWeight: '800', lineHeight: 1.2 }}>
+                                        <div style={{ textAlign: 'center', minWidth: '56px', padding: '8px', background: isToday ? '#e0e7ff' : '#f0f4ff', borderRadius: '10px', border: `2px solid ${isToday ? '#4f46e5' : '#c7d2fe'}` }}>
+                                            <div style={{ color: isToday ? '#4f46e5' : '#64748b', fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{dayLabel.split(' ')[0]}</div>
+                                            <div style={{ color: isToday ? '#4f46e5' : '#1e293b', fontSize: '18px', fontWeight: '800', lineHeight: 1.2 }}>
                                                 {isToday || isTomorrow ? sessionDate.getDate() : dayLabel.split(' ').slice(-1)[0]}
                                             </div>
                                         </div>
                                         {/* Info */}
                                         <div style={{ flex: 1 }}>
-                                            <div style={{ color: colors.text, fontSize: '14px', fontWeight: '700', marginBottom: '3px' }}>{session.title || session.sessionTitle || 'Live Class'}</div>
+                                            <div style={{ color: '#1e293b', fontSize: '14px', fontWeight: '700', marginBottom: '3px' }}>{session.title || session.sessionTitle || 'Live Class'}</div>
                                             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                                                <span style={{ color: colors.textMuted, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <span style={{ color: '#64748b', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                     <Video size={11} aria-hidden="true" /> {timeLabel}
                                                 </span>
                                                 {session.durationMinutes && (
-                                                    <span style={{ color: colors.textMuted, fontSize: '12px' }}>{session.durationMinutes} min</span>
+                                                    <span style={{ color: '#64748b', fontSize: '12px' }}>{session.durationMinutes} min</span>
                                                 )}
                                                 {session.courseRef?.courseTitle && (
-                                                    <span style={{ color: '#818cf8', fontSize: '12px', fontWeight: '600' }}>{session.courseRef.courseTitle}</span>
+                                                    <span style={{ color: '#4f46e5', fontSize: '12px', fontWeight: '600' }}>{session.courseRef.courseTitle}</span>
                                                 )}
                                             </div>
                                         </div>
                                         {/* Badge + Join */}
                                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
                                             {isToday && (
-                                                <span style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '20px', padding: '3px 10px', fontSize: '10px', fontWeight: '800' }}>
+                                                <span style={{ background: '#fee2e2', color: '#991b1b', border: '2px solid #fecaca', borderRadius: '20px', padding: '3px 10px', fontSize: '10px', fontWeight: '800' }}>
                                                     TODAY
                                                 </span>
                                             )}
@@ -1003,7 +1115,7 @@ export default function InstructorDashboard() {
                 <p style={s.tabSubtitle}>Message enrolled students and manage conversations.</p>
             </div>
             <div style={s.panelCard}>
-                <p style={{ color: colors.textMuted }}>Go to the messaging center for full conversation support.</p>
+                <p style={{ color: '#64748b' }}>Go to the messaging center for full conversation support.</p>
                 <button onClick={() => navigate('/messages')} style={s.primaryBtn}>Open Messaging</button>
             </div>
         </div>
@@ -1072,23 +1184,23 @@ export default function InstructorDashboard() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
                 <div style={s.panelCard} onClick={() => navigate('/messages')} role="button">
                     <div style={{ marginBottom: '12px', color: '#60a5fa' }}><MessagesSquare size={32} /></div>
-                    <h3 style={{ color: colors.text, margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Direct Messages</h3>
-                    <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Send private messages to enrolled students</p>
+                    <h3 style={{ color: '#1e293b', margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Direct Messages</h3>
+                    <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Send private messages to enrolled students</p>
                 </div>
                 <div style={s.panelCard}>
                     <div style={{ marginBottom: '12px', color: '#f59e0b' }}><Megaphone size={32} /></div>
-                    <h3 style={{ color: colors.text, margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Announcements</h3>
-                    <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Post announcements visible to all enrolled students</p>
+                    <h3 style={{ color: '#1e293b', margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Announcements</h3>
+                    <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Post announcements visible to all enrolled students</p>
                 </div>
                 <div style={s.panelCard}>
                     <div style={{ marginBottom: '12px', color: '#38bdf8' }}><MessageCircle size={32} /></div>
-                    <h3 style={{ color: colors.text, margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Discussion Forum</h3>
-                    <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Reply to student questions and discussion posts</p>
+                    <h3 style={{ color: '#1e293b', margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Discussion Forum</h3>
+                    <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Reply to student questions and discussion posts</p>
                 </div>
                 <div style={s.panelCard} onClick={() => navigate('/live-sessions')} role="button">
                     <div style={{ marginBottom: '12px', color: '#a855f7' }}><Video size={32} /></div>
-                    <h3 style={{ color: colors.text, margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Live Sessions</h3>
-                    <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Schedule and manage live Q&A sessions</p>
+                    <h3 style={{ color: '#1e293b', margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Live Sessions</h3>
+                    <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Schedule and manage live Q&A sessions</p>
                 </div>
             </div>
         </div>
@@ -1115,8 +1227,8 @@ export default function InstructorDashboard() {
                         <div key={r._id} style={s.panelCard}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                                 <div>
-                                    <strong style={{ color: colors.text }}>{r.studentRef?.fullName}</strong>
-                                    <span style={{ color: colors.textMuted, fontSize: '12px', marginLeft: '12px' }}>{new Date(r.createdAt).toLocaleDateString()}</span>
+                                    <strong style={{ color: '#1e293b' }}>{r.studentRef?.fullName}</strong>
+                                    <span style={{ color: '#64748b', fontSize: '12px', marginLeft: '12px' }}>{new Date(r.createdAt).toLocaleDateString()}</span>
                                 </div>
                                 <span style={{ display: 'inline-flex', gap: '2px', alignItems: 'center' }}>
                                     {Array.from({ length: r.rating }).map((_, iconIndex) => <Star key={iconIndex} size={14} style={{ color: '#f59e0b' }} aria-hidden="true" />)}
@@ -1126,7 +1238,7 @@ export default function InstructorDashboard() {
                             {r.instructorReply ? (
                                 <div style={{ background: 'rgba(59,130,246,0.08)', padding: '12px 16px', borderRadius: '8px', borderLeft: '3px solid #3b82f6' }}>
                                     <span style={{ color: '#60a5fa', fontSize: '12px', fontWeight: '700' }}>Your Reply:</span>
-                                    <p style={{ color: colors.textMuted, fontSize: '13px', margin: '4px 0 0' }}>{r.instructorReply}</p>
+                                    <p style={{ color: '#64748b', fontSize: '13px', margin: '4px 0 0' }}>{r.instructorReply}</p>
                                 </div>
                             ) : (
                                 <div>
@@ -1174,11 +1286,11 @@ export default function InstructorDashboard() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {Object.entries(analytics.enrollmentsByCategory).map(([cat, count]) => (
                             <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                <span style={{ color: colors.textMuted, fontSize: '13px', minWidth: '160px' }}>{cat}</span>
-                                <div style={{ flex: 1, background: 'rgba(30,41,59,0.5)', borderRadius: '8px', height: '8px', overflow: 'hidden' }}>
+                                <span style={{ color: '#64748b', fontSize: '13px', minWidth: '160px' }}>{cat}</span>
+                            <div style={{ flex: 1, background: '#e0e7ff', borderRadius: '8px', height: '8px', overflow: 'hidden' }}>
                                     <div style={{ height: '100%', background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', borderRadius: '8px', width: `${Math.min((count / (analytics.totalStudents || 1)) * 100, 100)}%` }} />
                                 </div>
-                                <span style={{ color: colors.text, fontSize: '14px', fontWeight: '700', minWidth: '30px', textAlign: 'right' }}>{count}</span>
+                                <span style={{ color: '#1e293b', fontSize: '14px', fontWeight: '700', minWidth: '30px', textAlign: 'right' }}>{count}</span>
                             </div>
                         ))}
                     </div>
@@ -1212,7 +1324,7 @@ export default function InstructorDashboard() {
     ];
 
     return (
-        <div style={{ ...s.page, background: colors.bg, color: colors.text }}>
+        <div style={{ ...s.page, background: '#f8fafc', color: '#1e293b' }}>
             {/* ── Sidebar ─────────────────────────────────────── */}
             <Sidebar
                 navItems={sidebarTabs}
@@ -1301,47 +1413,242 @@ export default function InstructorDashboard() {
             {/* Edit Course Modal */}
             {isEditCourseModal && (
                 <div style={s.backdrop} onClick={() => setIsEditCourseModal(false)}>
-                    <div style={s.modal} onClick={e => e.stopPropagation()}>
+                    <div style={{ ...s.modal, maxWidth: '800px', maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
                         <div style={s.modalHeader}>
                             <h3 style={s.modalTitle}>Edit Course</h3>
                             <button onClick={() => setIsEditCourseModal(false)} style={s.closeBtn}><X size={18} aria-hidden="true" /></button>
                         </div>
                         <div style={s.modalBody}>
-                            <form onSubmit={handleEditCourse} style={s.formGrid}>
-                                <div style={s.formGroup}><label style={s.label}>Course Title</label><input style={s.input} required value={courseForm.courseTitle} onChange={e => setCourseForm({ ...courseForm, courseTitle: e.target.value })} /></div>
-                                <div style={s.formGroup}><label style={s.label}>Subtitle</label><input style={s.input} value={courseForm.subtitle} onChange={e => setCourseForm({ ...courseForm, subtitle: e.target.value })} /></div>
-                        <div style={{ ...s.formGroup, gridColumn: '1 / -1' }}>
-                            <label style={s.label}>Description</label>
-                            <textarea
-                                style={{ ...s.input, minHeight: '80px' }}
-                                required
-                                value={courseForm.descriptionText}
-                                onChange={e => setCourseForm({ ...courseForm, descriptionText: e.target.value })}
-                            />
-                        </div>
-                        <div style={s.formGroup}>
-                            <label style={s.label}>Category</label>
-                            <select
-                                style={s.select}
-                                value={courseForm.technicalCategory}
-                                onChange={e => setCourseForm({ ...courseForm, technicalCategory: e.target.value })}
-                            >
-                                {['Web Coding', 'Creative Media', 'Robotics Hardware', 'Network Engineering', 'Mobile Development', 'Data Science', 'Cybersecurity', 'Cloud Computing', 'Artificial Intelligence', 'Business & Management', 'Databases', 'DevOps & CI/CD', 'Graphic Design'].map(c => <option key={c} value={c}>{c}</option>)}
-                            </select>
-                        </div>
-                        <div style={s.formGroup}>
-                            <label style={s.label}>Level</label>
-                            <select
-                                style={s.select}
-                                value={courseForm.level}
-                                onChange={e => setCourseForm({ ...courseForm, level: e.target.value })}
-                            >
-                                {['Beginner', 'Intermediate', 'Advanced'].map(l => <option key={l} value={l}>{l}</option>)}
-                            </select>
-                        </div>
-                        <div style={s.formGroup}><label style={s.label}>Duration (hours)</label><input style={s.input} type="number" min="1" value={courseForm.estimatedDurationHours} onChange={e => setCourseForm({ ...courseForm, estimatedDurationHours: e.target.value })} /></div>
-                        <div style={s.formGroup}><label style={s.label}>Price (ETB)</label><input style={s.input} type="number" min="0" value={courseForm.price} onChange={e => setCourseForm({ ...courseForm, price: e.target.value })} /></div>
-                                <div style={{ gridColumn: '1 / -1' }}><button type="submit" style={s.primaryBtn}>Update Course</button></div>
+                            <form onSubmit={handleEditCourse} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                
+                                {/* ═══ BASIC INFORMATION ═══ */}
+                                <div>
+                                    <h4 style={{ color: '#1e293b', fontSize: '14px', fontWeight: '700', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Basic Information</h4>
+                                    <div style={s.formGrid}>
+                                        <div style={s.formGroup}>
+                                            <label style={s.label}>Course Title *</label>
+                                            <input style={s.input} required value={courseForm.courseTitle} onChange={e => setCourseForm({ ...courseForm, courseTitle: e.target.value })} placeholder="Enter course title" />
+                                        </div>
+                                        <div style={s.formGroup}>
+                                            <label style={s.label}>Subtitle</label>
+                                            <input style={s.input} value={courseForm.subtitle} onChange={e => setCourseForm({ ...courseForm, subtitle: e.target.value })} placeholder="Optional subtitle" />
+                                        </div>
+                                        <div style={{ ...s.formGroup, gridColumn: '1 / -1' }}>
+                                            <label style={s.label}>Description *</label>
+                                            <textarea style={{ ...s.input, minHeight: '100px', resize: 'vertical' }} required value={courseForm.descriptionText} onChange={e => setCourseForm({ ...courseForm, descriptionText: e.target.value })} placeholder="Detailed course description" />
+                                        </div>
+                                        <div style={s.formGroup}>
+                                            <label style={s.label}>Category *</label>
+                                            <select style={s.select} value={courseForm.technicalCategory} onChange={e => setCourseForm({ ...courseForm, technicalCategory: e.target.value })}>
+                                                {['Web Coding', 'Creative Media', 'Robotics Hardware', 'Network Engineering', 'Mobile Development', 'Data Science', 'Cybersecurity', 'Cloud Computing', 'Artificial Intelligence', 'Business & Management', 'Databases', 'DevOps & CI/CD', 'Graphic Design'].map(c => <option key={c} value={c}>{c}</option>)}
+                                            </select>
+                                        </div>
+                                        <div style={s.formGroup}>
+                                            <label style={s.label}>Level</label>
+                                            <select style={s.select} value={courseForm.level} onChange={e => setCourseForm({ ...courseForm, level: e.target.value })}>
+                                                {['Beginner', 'Intermediate', 'Advanced'].map(l => <option key={l} value={l}>{l}</option>)}
+                                            </select>
+                                        </div>
+                                        <div style={s.formGroup}>
+                                            <label style={s.label}>Language</label>
+                                            <select style={s.select} value={courseForm.language || 'English'} onChange={e => setCourseForm({ ...courseForm, language: e.target.value })}>
+                                                {['English', 'Amharic', 'Afaan Oromo'].map(l => <option key={l} value={l}>{l}</option>)}
+                                            </select>
+                                        </div>
+                                        <div style={s.formGroup}>
+                                            <label style={s.label}>Duration (hours) *</label>
+                                            <input style={s.input} type="number" min="1" required value={courseForm.estimatedDurationHours} onChange={e => setCourseForm({ ...courseForm, estimatedDurationHours: parseInt(e.target.value) || 1 })} />
+                                        </div>
+                                        {selectedCourse?.publicationState && (
+                                            <div style={s.formGroup}>
+                                                <label style={s.label}>Status</label>
+                                                <div style={{ ...s.input, background: '#f8fafc', color: '#64748b', padding: '11px 14px', borderRadius: '8px', fontSize: '14px', border: '1px solid #e0e7ff' }}>
+                                                    {selectedCourse.publicationState}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* ═══ THUMBNAIL MANAGEMENT ═══ */}
+                                <div style={{ borderTop: '2px solid #e0e7ff', paddingTop: '16px' }}>
+                                    <h4 style={{ color: '#1e293b', fontSize: '14px', fontWeight: '700', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Course Thumbnail</h4>
+                                    
+                                    {/* Current Thumbnail Preview */}
+                                    {(thumbnailPreview || courseForm.thumbnailUrl) && (
+                                        <div style={{ marginBottom: '16px', textAlign: 'center' }}>
+                                            <div style={{ marginBottom: '12px', fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+                                                {thumbnailPreview ? 'Preview (unsaved)' : 'Current Thumbnail'}
+                                            </div>
+                                            <img 
+                                                src={thumbnailPreview || courseForm.thumbnailUrl} 
+                                                alt="Thumbnail" 
+                                                style={{ maxWidth: '100%', height: 'auto', maxHeight: '240px', borderRadius: '8px', border: '2px solid #e0e7ff' }} 
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Upload Error */}
+                                    {thumbnailUploadError && (
+                                        <div style={{ ...s.successAlert, background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.3)', color: '#f87171', marginBottom: '12px' }}>
+                                            {thumbnailUploadError}
+                                        </div>
+                                    )}
+
+                                    {/* File Input */}
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <label htmlFor="thumbnail-upload" style={{ ...s.label, display: 'block', marginBottom: '8px' }}>
+                                            Select Image
+                                        </label>
+                                        <input 
+                                            id="thumbnail-upload"
+                                            type="file" 
+                                            accept="image/jpeg,image/png,image/webp"
+                                            onChange={handleThumbnailFileSelect}
+                                            disabled={isUploadingThumbnail}
+                                            style={{ width: '100%', padding: '8px', borderRadius: '8px', background: '#f8fafc', border: '2px solid #e0e7ff', color: '#1e293b', cursor: 'pointer', fontSize: '13px' }}
+                                        />
+                                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                                            JPG, PNG or WebP • Max 5MB
+                                        </div>
+                                    </div>
+
+                                    {/* Upload/Remove Buttons */}
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                        {selectedThumbnailFile && (
+                                            <button 
+                                                type="button"
+                                                onClick={handleUploadThumbnail}
+                                                disabled={isUploadingThumbnail}
+                                                style={{ ...s.primaryBtn, opacity: isUploadingThumbnail ? 0.6 : 1, cursor: isUploadingThumbnail ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                            >
+                                                {isUploadingThumbnail ? <>Uploading...</> : <><UploadCloud size={14} />Upload</>}
+                                            </button>
+                                        )}
+                                        {courseForm.thumbnailUrl && (
+                                            <button 
+                                                type="button"
+                                                onClick={handleRemoveThumbnail}
+                                                style={{ ...s.dangerBtn }}
+                                            >
+                                                Remove Thumbnail
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* ═══ PRICING ═══ */}
+                                <div style={{ borderTop: '2px solid #e0e7ff', paddingTop: '16px' }}>
+                                    <h4 style={{ color: '#1e293b', fontSize: '14px', fontWeight: '700', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pricing</h4>
+                                    <div style={s.formGrid}>
+                                        <div style={s.formGroup}>
+                                            <label style={s.label}>Price (ETB) *</label>
+                                            <input style={s.input} type="number" min="0" step="0.01" required value={courseForm.price} onChange={e => setCourseForm({ ...courseForm, price: parseFloat(e.target.value) || 0 })} />
+                                        </div>
+                                        <div style={s.formGroup}>
+                                            <label style={s.label}>Discount Price (ETB)</label>
+                                            <input style={s.input} type="number" min="0" step="0.01" value={courseForm.discountPrice || ''} onChange={e => setCourseForm({ ...courseForm, discountPrice: e.target.value ? parseFloat(e.target.value) : null })} placeholder="Optional discount" />
+                                        </div>
+                                        {courseForm.price > 0 && courseForm.discountPrice && (
+                                            <div style={{ ...s.formGroup, gridColumn: '1 / -1', background: '#d1fae5', border: '2px solid #6ee7b7', padding: '12px', borderRadius: '8px' }}>
+                                                <div style={{ fontSize: '12px', color: '#065f46', fontWeight: '600' }}>Price Preview</div>
+                                                <div style={{ display: 'flex', gap: '24px', marginTop: '8px', fontSize: '13px' }}>
+                                                    <div>
+                                                        <span style={{ color: '#64748b' }}>Original: </span>
+                                                        <span style={{ color: '#1e293b', fontWeight: '600' }}>{courseForm.price} ETB</span>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#64748b' }}>Discount: </span>
+                                                        <span style={{ color: '#065f46', fontWeight: '600' }}>{courseForm.discountPrice} ETB</span>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#64748b' }}>Savings: </span>
+                                                        <span style={{ color: '#065f46', fontWeight: '600' }}>
+                                                            {((courseForm.price - courseForm.discountPrice) / courseForm.price * 100).toFixed(0)}%
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* ═══ COURSE CONTENT ═══ */}
+                                <div style={{ borderTop: '2px solid #e0e7ff', paddingTop: '16px' }}>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setIsContentExpanded(!isContentExpanded)}
+                                        style={{ background: 'transparent', border: 'none', color: '#1e293b', fontSize: '14px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                                    >
+                                        {isContentExpanded ? '▼' : '▶'} Course Content ({selectedCourse?.curriculumTree?.length || 0} chapters)
+                                    </button>
+                                    
+                                    {isContentExpanded && (
+                                        <div style={{ marginTop: '16px', maxHeight: '300px', overflowY: 'auto' }}>
+                                            {(!selectedCourse?.curriculumTree || selectedCourse.curriculumTree.length === 0) ? (
+                                                <div style={{ padding: '16px', background: '#f0f4ff', borderRadius: '8px', border: '2px dashed #c7d2fe', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                                                    No chapters yet. Add chapters to structure your course.
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    {selectedCourse.curriculumTree.map((chapter, idx) => (
+                                                        <div key={idx} style={{ background: '#f0f4ff', border: '2px solid #c7d2fe', borderRadius: '8px', padding: '12px', fontSize: '13px' }}>
+                                                            <div style={{ color: '#1e293b', fontWeight: '600', marginBottom: '6px' }}>
+                                                                📚 {chapter.chapterTitle || `Chapter ${idx + 1}`}
+                                                            </div>
+                                                            <div style={{ color: '#64748b', fontSize: '12px', marginLeft: '20px' }}>
+                                                                {chapter.lessons?.length || 0} lesson{(chapter.lessons?.length || 0) !== 1 ? 's' : ''}
+                                                                {chapter.lessons && chapter.lessons.length > 0 && (
+                                                                    <div style={{ marginTop: '4px', maxHeight: '100px', overflowY: 'auto' }}>
+                                                                        {chapter.lessons.map((lesson, lessonIdx) => (
+                                                                            <div key={lessonIdx} style={{ paddingLeft: '12px', color: '#94a3b8', fontSize: '11px', marginTop: '2px' }}>
+                                                                                ▪ {lesson.lessonTitle || `Lesson ${lessonIdx + 1}`}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedCourse(selectedCourse);
+                                                        setIsAddChapterModalOpen(true);
+                                                        setIsEditCourseModal(false);
+                                                    }}
+                                                    style={{ ...s.actionBtn, fontSize: '12px' }}
+                                                >
+                                                    + Add Chapter
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedCourse(selectedCourse);
+                                                        setIsAddLessonModalOpen(true);
+                                                        setIsEditCourseModal(false);
+                                                    }}
+                                                    style={{ ...s.actionBtn, fontSize: '12px' }}
+                                                >
+                                                    + Add Lesson
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* ═══ ACTIONS ═══ */}
+                                <div style={{ borderTop: '1px solid rgba(30,41,59,0.4)', paddingTop: '16px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                    <button type="button" onClick={() => setIsEditCourseModal(false)} style={s.actionBtnAlt}>
+                                        Cancel
+                                    </button>
+                                    <button type="submit" style={s.primaryBtn}>
+                                        Save Changes
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </div>
@@ -1415,7 +1722,7 @@ export default function InstructorDashboard() {
 
                                 {/* Question Builder */}
                                 <div style={{ borderTop: '1px solid rgba(30,41,59,0.5)', paddingTop: '16px' }}>
-                                    <h4 style={{ color: colors.text, margin: '0 0 12px', fontSize: '15px' }}>Questions</h4>
+                                    <h4 style={{ color: '#1e293b', margin: '0 0 12px', fontSize: '15px' }}>Questions</h4>
                                     {quizForm.questions.map((q, qIdx) => (
                                         <div key={qIdx} style={{ background: colors.bgCard, padding: '16px', borderRadius: '10px', marginBottom: '12px', border: '1px solid rgba(30,41,59,0.5)' }}>
                                             <label style={{ ...s.label, marginBottom: '6px', display: 'block' }}>Q{qIdx + 1}: Question Text</label>
@@ -1448,7 +1755,7 @@ export default function InstructorDashboard() {
                         <div style={s.modalBody}>
                             {selectedSubmission?.submittedRepositoryURL && (
                                 <div style={{ marginBottom: '16px', padding: '12px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px' }}>
-                                    <p style={{ margin: 0, fontSize: '12px', color: colors.textMuted }}>Submitted Link:</p>
+                                    <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Submitted Link:</p>
                                     <a href={selectedSubmission.submittedRepositoryURL} target="_blank" rel="noreferrer" style={{ color: '#60a5fa', fontSize: '13px' }}>{selectedSubmission.submittedRepositoryURL}</a>
                                 </div>
                             )}

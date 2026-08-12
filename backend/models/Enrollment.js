@@ -47,6 +47,10 @@ const EnrollmentSchema = new mongoose.Schema({
     enrollmentTimestamp: {
         type: Date,
         default: Date.now
+    },
+    metadata: {
+        type: mongoose.Schema.Types.Mixed,
+        default: {} // Stores coupon info, transaction details, etc.
     }
 }, {
     timestamps: true

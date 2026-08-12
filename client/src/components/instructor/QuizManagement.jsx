@@ -184,27 +184,27 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
     const qs = {
         badge: (active) => ({
             padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
-            background: active ? 'rgba(34,197,94,0.15)' : 'rgba(234,179,8,0.15)',
-            color: active ? '#22c55e' : '#eab308',
-            border: `1px solid ${active ? 'rgba(34,197,94,0.3)' : 'rgba(234,179,8,0.3)'}`
+            background: active ? '#d1fae5' : '#fef3c7',
+            color: active ? '#065f46' : '#92400e',
+            border: `2px solid ${active ? '#6ee7b7' : '#fcd34d'}`
         }),
         questionCard: {
-            background: 'rgba(15,23,42,0.5)', borderRadius: '12px', padding: '16px',
-            border: '1px solid rgba(51,65,85,0.4)', marginBottom: '12px'
+            background: '#f0f4ff', borderRadius: '12px', padding: '16px',
+            border: '2px solid #c7d2fe', marginBottom: '12px'
         },
         typeBadge: (type) => ({
             padding: '2px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: '800',
             textTransform: 'uppercase', letterSpacing: '0.05em',
-            background: type === 'mcq' ? 'rgba(59,130,246,0.15)' : type === 'tf' ? 'rgba(168,85,247,0.15)' : 'rgba(236,72,153,0.15)',
-            color: type === 'mcq' ? '#3b82f6' : type === 'tf' ? '#a855f7' : '#ec4899'
+            background: type === 'mcq' ? '#dbeafe' : type === 'tf' ? '#f3e8ff' : '#fce7f3',
+            color: type === 'mcq' ? '#1e40af' : type === 'tf' ? '#6d28d9' : '#be185d'
         }),
         correctOption: {
-            background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
-            borderRadius: '8px', padding: '6px 12px', fontSize: '12px', color: '#22c55e', fontWeight: '600'
+            background: '#d1fae5', border: '2px solid #6ee7b7',
+            borderRadius: '8px', padding: '6px 12px', fontSize: '12px', color: '#065f46', fontWeight: '600'
         },
         normalOption: {
-            background: 'rgba(30,41,59,0.4)', border: '1px solid rgba(51,65,85,0.3)',
-            borderRadius: '8px', padding: '6px 12px', fontSize: '12px', color: colors.textMuted
+            background: '#f0f4ff', border: '2px solid #c7d2fe',
+            borderRadius: '8px', padding: '6px 12px', fontSize: '12px', color: '#4f46e5'
         }
     };
 
@@ -418,7 +418,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
                             </div>
 
                             {/* Divider */}
-                            <div style={{ borderTop: '1px solid rgba(51,65,85,0.4)', margin: '0 0 20px', paddingTop: '20px' }}>
+                            <div style={{ borderTop: '2px solid #e0e7ff', margin: '0 0 20px', paddingTop: '20px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                     <div>
                                         <h4 style={{ margin: 0, color: colors.text, fontSize: '16px', fontWeight: 700 }}>
@@ -440,7 +440,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
 
                                 {/* Questions List */}
                                 {qForm.questionArray.length === 0 && !showQuestionForm && (
-                                    <div style={{ padding: '40px 20px', textAlign: 'center', border: '2px dashed rgba(51,65,85,0.4)', borderRadius: '12px' }}>
+                                    <div style={{ padding: '40px 20px', textAlign: 'center', border: '2px dashed #c7d2fe', borderRadius: '12px' }}>
                                         <FileQuestion size={36} style={{ color: colors.textMuted, marginBottom: '10px' }} />
                                         <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>No questions yet. Add your first question above.</p>
                                     </div>

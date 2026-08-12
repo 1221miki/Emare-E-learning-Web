@@ -170,12 +170,21 @@ export default function PaymentsTab(dash) {
 
     const applyCoupon = async (code) => {
         if (!code.trim()) return;
+        setCouponErr('');
+        setCouponMsg('');
         try {
             const res = await paymentService.applyCoupon({ code: code.trim() });
-            setCouponMsg(`Coupon "${res.data.data?.code || code}" applied — ${(res.data.data?.discount ?? '')}% discount active at checkout.`);
-        } catch {
+            if (res.data?.success) {
+                const couponData = res.data.data?.coupon || res.data.data;
+                const discountInfo = couponData.type === 'percent' ? `${couponData.value}% off` : `${couponData.value} ETB off`;
+                setCouponMsg(`✅ Coupon Applied: "${couponData.code}" — ${discountInfo}. Apply this code at checkout for the discount.`);
+                setCouponCode('');
+            } else {
+                setCouponErr(res.data?.message || 'Coupon is invalid, expired, or already fully redeemed.');
+            }
+        } catch (err) {
             setCouponMsg('');
-            setCouponErr('Coupon is invalid, expired, or already fully redeemed.');
+            setCouponErr(err.response?.data?.message || 'Coupon is invalid, expired, or already fully redeemed.');
         }
     };
 

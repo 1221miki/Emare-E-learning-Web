@@ -9,25 +9,26 @@ function StatCard({ icon, color, label, value, sub, badge, loading }) {
     return (
         <div
             style={{
-                background: 'rgba(14,23,38,0.65)',
+                background: '#ffffff',
                 backdropFilter: 'blur(12px)',
-                border: `1px solid rgba(51,65,85,0.45)`,
-                borderTop: `3px solid ${color}`,
+                border: `2px solid #e0e7ff`,
+                borderTop: `4px solid ${color}`,
                 borderRadius: '16px',
                 padding: '22px 24px',
                 transition: 'transform 0.18s, box-shadow 0.18s',
                 cursor: 'default',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
             }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 12px 32px rgba(0,0,0,0.25)`; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 12px 32px rgba(0,0,0,0.12)`; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)'; }}
         >
             {/* Icon + Label row */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
-                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: `${color}18`, border: `2px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {React.cloneElement(icon, { size: 20, color, 'aria-hidden': true })}
                 </div>
                 {badge && (
-                    <span style={{ background: `${badge.color}18`, color: badge.color, border: `1px solid ${badge.color}30`, borderRadius: '20px', padding: '3px 10px', fontSize: '11px', fontWeight: '700' }}>
+                    <span style={{ background: `${badge.color}18`, color: badge.color, border: `2px solid ${badge.color}30`, borderRadius: '20px', padding: '3px 10px', fontSize: '11px', fontWeight: '700' }}>
                         {badge.text}
                     </span>
                 )}
@@ -37,9 +38,9 @@ function StatCard({ icon, color, label, value, sub, badge, loading }) {
             {loading
                 ? <><Skeleton /><Skeleton /></>
                 : <>
-                    <div style={{ color: '#f8fafc', fontSize: '30px', fontWeight: '800', lineHeight: 1, marginBottom: '6px' }}>{value}</div>
-                    <div style={{ color: '#94a3b8', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>{label}</div>
-                    {sub && <div style={{ color: '#475569', fontSize: '12px' }}>{sub}</div>}
+                    <div style={{ color: '#1e293b', fontSize: '30px', fontWeight: '800', lineHeight: 1, marginBottom: '6px' }}>{value}</div>
+                    <div style={{ color: '#64748b', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>{label}</div>
+                    {sub && <div style={{ color: '#64748b', fontSize: '12px' }}>{sub}</div>}
                 </>
             }
         </div>

@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import GuestModal from '../../components/GuestModal';
 import CourseDiscoveryChecklist from '../../components/dashboard/CourseDiscoveryChecklist';
+import PromotionsBanner from '../../components/PromotionsBanner';
 import { categoryMatchesCourse } from '../../utils/categoryMatching';
 
 function useQuery() {
@@ -277,6 +278,8 @@ export default function CourseCatalog() {
     return (
         <div style={s.page}>
             <Navbar />
+            {/* Promotions Banner - Minimal version */}
+            <PromotionsBanner minimal={true} />
             {/* Hero */}
             <div style={s.hero}>
                 <div style={s.heroDeco} />

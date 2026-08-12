@@ -29,7 +29,7 @@ function Avatar({ student }) {
             <img
                 src={student.avatar}
                 alt={student.name}
-                style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(59,130,246,0.3)' }}
+                style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #dbeafe' }}
             />
         );
     }
@@ -63,7 +63,7 @@ function ActionMenu({ student, onViewProfile, onMessage, onRemove }) {
         <div style={{ position: 'relative' }}>
             <button
                 onClick={() => setOpen(o => !o)}
-                style={{ background: 'rgba(51,65,85,0.3)', border: '1px solid rgba(51,65,85,0.5)', color: '#94a3b8', borderRadius: '8px', padding: '7px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                style={{ background: '#f0f4ff', border: '2px solid #c7d2fe', color: '#4f46e5', borderRadius: '8px', padding: '7px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                 aria-label={`Actions for ${student.name}`}
                 aria-expanded={open}
             >
@@ -75,7 +75,7 @@ function ActionMenu({ student, onViewProfile, onMessage, onRemove }) {
                     {/* Backdrop */}
                     <div style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={() => setOpen(false)} />
                     {/* Dropdown */}
-                    <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: 'rgba(15,23,42,0.98)', backdropFilter: 'blur(16px)', border: '1px solid rgba(51,65,85,0.6)', borderRadius: '12px', minWidth: '190px', zIndex: 1000, padding: '6px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
+                    <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: '#ffffff', backdropFilter: 'blur(16px)', border: '2px solid #e0e7ff', borderRadius: '12px', minWidth: '190px', zIndex: 1000, padding: '6px', boxShadow: '0 10px 30px rgba(0,0,0,0.12)' }}>
                         {[
                             { label: 'View Profile',    icon: <Eye size={14} aria-hidden="true" />,           action: () => { onViewProfile(student); setOpen(false); }, color: '#60a5fa' },
                             { label: 'Send Message',    icon: <MessageSquare size={14} aria-hidden="true" />,  action: () => { onMessage(student); setOpen(false); },      color: '#34d399' },
@@ -85,8 +85,8 @@ function ActionMenu({ student, onViewProfile, onMessage, onRemove }) {
                             <button
                                 key={i}
                                 onClick={item.action}
-                                style={{ width: '100%', background: 'transparent', border: 'none', color: item.danger ? '#f87171' : '#e2e8f0', padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left', transition: 'background 0.15s' }}
-                                onMouseEnter={e => e.currentTarget.style.background = item.danger ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.1)'}
+                                style={{ width: '100%', background: 'transparent', border: 'none', color: item.danger ? '#991b1b' : '#1e293b', padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left', transition: 'background 0.15s' }}
+                                onMouseEnter={e => e.currentTarget.style.background = item.danger ? '#fee2e2' : '#f0f4ff'}
                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                             >
                                 <span style={{ color: item.color }}>{item.icon}</span>
@@ -141,19 +141,20 @@ export default function StudentTable({ students = [], loading, onViewProfile, on
     return (
         <div
             style={{
-                background: 'rgba(14,23,38,0.65)',
+                background: '#ffffff',
                 backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(51,65,85,0.45)',
+                border: '2px solid #e0e7ff',
                 borderRadius: '16px',
                 overflow: 'hidden',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
             }}
         >
             <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '860px' }}>
                     <thead>
-                        <tr style={{ background: 'rgba(9,13,22,0.6)', borderBottom: '1px solid rgba(51,65,85,0.4)' }}>
+                        <tr style={{ background: '#f0f4ff', borderBottom: '2px solid #e0e7ff' }}>
                             {COLS.map(col => (
-                                <th key={col.label} style={{ padding: '13px 18px', color: '#475569', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left', whiteSpace: 'nowrap', width: col.width }}>
+                                <th key={col.label} style={{ padding: '13px 18px', color: '#4f46e5', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left', whiteSpace: 'nowrap', width: col.width }}>
                                     {col.label}
                                 </th>
                             ))}
@@ -166,8 +167,8 @@ export default function StudentTable({ students = [], loading, onViewProfile, on
                         {!loading && students.length === 0 && (
                             <tr>
                                 <td colSpan={COLS.length} style={{ padding: '60px 20px', textAlign: 'center' }}>
-                                    <GraduationCap size={40} color="#334155" style={{ display: 'block', margin: '0 auto 12px' }} aria-hidden="true" />
-                                    <p style={{ color: '#475569', fontSize: '14px', margin: 0 }}>No students found. Try adjusting the filters.</p>
+                                    <GraduationCap size={40} color="#c7d2fe" style={{ display: 'block', margin: '0 auto 12px' }} aria-hidden="true" />
+                                    <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>No students found. Try adjusting the filters.</p>
                                 </td>
                             </tr>
                         )}
@@ -175,8 +176,8 @@ export default function StudentTable({ students = [], loading, onViewProfile, on
                         {!loading && students.map((student, idx) => (
                             <tr
                                 key={student._id}
-                                style={{ borderBottom: '1px solid rgba(51,65,85,0.25)', transition: 'background 0.15s' }}
-                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(59,130,246,0.04)'}
+                                style={{ borderBottom: '2px solid #e0e7ff', transition: 'background 0.15s' }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                             >
                                 {/* Student */}
@@ -184,15 +185,15 @@ export default function StudentTable({ students = [], loading, onViewProfile, on
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                         <Avatar student={student} />
                                         <div>
-                                            <div style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: '700', marginBottom: '2px' }}>{student.name}</div>
-                                            <div style={{ color: '#475569', fontSize: '12px' }}>{student.email}</div>
+                                            <div style={{ color: '#1e293b', fontSize: '14px', fontWeight: '700', marginBottom: '2px' }}>{student.name}</div>
+                                            <div style={{ color: '#64748b', fontSize: '12px' }}>{student.email}</div>
                                         </div>
                                     </div>
                                 </td>
 
                                 {/* Course */}
                                 <td style={{ padding: '14px 18px' }}>
-                                    <span style={{ color: '#94a3b8', fontSize: '13px', display: 'block', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span style={{ color: '#64748b', fontSize: '13px', display: 'block', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {student.course}
                                     </span>
                                 </td>

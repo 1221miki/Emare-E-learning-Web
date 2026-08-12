@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { courseService, paymentService } from '../../services/api';
+import PromotionsBanner from '../../components/PromotionsBanner';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function Checkout() {
@@ -81,6 +82,17 @@ export default function Checkout() {
         }
     };
 
+    const handleRemoveCoupon = () => {
+        setCouponCode('');
+        setDiscount(null);
+        setFinalPricePreview(null);
+        setError('');
+    };
+
+    const handleCouponClick = (code) => {
+        setCouponCode(code);
+    };
+
     if (!course) {
         return <div style={{ minHeight: '80vh', background: colors.bg, color: colors.text, padding: '40px', fontFamily: "'Segoe UI', sans-serif" }}>
             <div style={{ maxWidth: '720px', margin: '0 auto', textAlign: 'center' }}>
@@ -93,6 +105,10 @@ export default function Checkout() {
     return (
         <div style={{ minHeight: '100vh', background: colors.bg, color: colors.text, padding: '40px', fontFamily: "'Segoe UI', sans-serif" }}>
             <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                {/* Promotions Banner - Minimal version for quick coupon discovery */}
+                <div style={{ marginBottom: '32px' }}>
+                    <PromotionsBanner minimal={true} onCouponClick={handleCouponClick} />
+                </div>
                 <h1 style={{ fontSize: '32px', fontWeight: '800', marginBottom: '16px' }}>Checkout</h1>
                 <p style={{ color: colors.textMuted, marginBottom: '20px' }}>Review your course, start secure payment with Chapa, and return to verify your enrollment.</p>
 
@@ -147,15 +163,24 @@ export default function Checkout() {
                         </p>
                         {error && <div style={{ marginBottom: '18px', color: '#b91c1c', fontWeight: 600 }}>{error}</div>}
                         <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="Coupon code" style={{ flex: 1, padding: '10px 12px', borderRadius: '10px', border: `1px solid ${colors.border}`, background: colors.bg }} />
-                                <button onClick={handleApplyCoupon} disabled={couponLoading} style={{ padding: '10px 14px', borderRadius: '10px', fontWeight: 700, border: 'none', background: '#10b981', color: '#fff' }}>{couponLoading ? 'Checking…' : 'Apply'}</button>
+                            {discount === null ? (
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="Enter coupon code" style={{ flex: 1, padding: '10px 12px', borderRadius: '10px', border: `1px solid ${colors.border}`, background: colors.bg }} />
+                                    <button onClick={handleApplyCoupon} disabled={couponLoading || !couponCode} style={{ padding: '10px 14px', borderRadius: '10px', fontWeight: 700, border: 'none', background: '#10b981', color: '#fff', cursor: couponLoading || !couponCode ? 'not-allowed' : 'pointer', opacity: couponLoading || !couponCode ? 0.6 : 1 }}>{couponLoading ? 'Checking…' : 'Apply'}</button>
+                                </div>
+                            ) : (
+                                <div style={{ padding: '14px', borderRadius: '12px', background: '#ecfdf5', border: '1px solid #86efac' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                        <strong style={{ color: '#047857', fontSize: '14px' }}>✓ Coupon Applied: {couponCode.toUpperCase()}</strong>
+                                        <button onClick={handleRemoveCoupon} style={{ background: 'none', border: 'none', color: '#047857', cursor: 'pointer', fontWeight: '700', fontSize: '12px' }}>Remove</button>
+                                    </div>
+                                </div>
+                            )}
+                            <div style={{ fontSize: '14px', color: colors.textMuted, padding: '12px', borderRadius: '10px', background: colors.bg }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>Original Price<strong>{course.price} ETB</strong></div>
+                                {discount !== null && discount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#059669' }}>Discount<strong>-{discount.toFixed(2)} ETB</strong></div>}
+                                {discount !== null && <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${colors.border}`, paddingTop: '8px', marginTop: '8px', fontSize: '16px', fontWeight: 'bold' }}>Final Price<strong style={{ color: '#4338ca' }}>{(finalPricePreview ?? course.price).toFixed(2)} ETB</strong></div>}
                             </div>
-                            {discount !== null && <div style={{ fontSize: '14px', color: colors.textMuted }}>
-                                <div>Original: <strong>{course.price} ETB</strong></div>
-                                <div>Discount: <strong>-{discount} ETB</strong></div>
-                                <div>Payable: <strong>{finalPricePreview ?? course.price} ETB</strong></div>
-                            </div>}
                         </div>
                         <button
                             disabled={loading}

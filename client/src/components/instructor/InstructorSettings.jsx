@@ -7,17 +7,17 @@ import {
 } from 'lucide-react';
 import { userService, uploadService } from '../../services/api';
 
-// ── Design tokens (dark glass, matches Instructor Dashboard) ────
+// ── Design tokens (bright glass, matches Instructor Dashboard) ────
 const T = {
     page:   { fontFamily: "'Outfit', sans-serif" },
-    card:   { background: 'rgba(14,23,38,0.72)', backdropFilter: 'blur(14px)', border: '1px solid rgba(51,65,85,0.45)', borderRadius: '16px' },
-    input:  { background: 'rgba(9,13,22,0.75)', border: '1px solid rgba(51,65,85,0.55)', color: '#f1f5f9', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' },
-    select: { background: 'rgba(9,13,22,0.75)', border: '1px solid rgba(51,65,85,0.55)', color: '#f1f5f9', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', cursor: 'pointer', width: '100%', boxSizing: 'border-box' },
+    card:   { background: '#ffffff', backdropFilter: 'blur(14px)', border: '2px solid #e0e7ff', borderRadius: '16px' },
+    input:  { background: '#f8fafc', border: '2px solid #e0e7ff', color: '#1e293b', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' },
+    select: { background: '#f8fafc', border: '2px solid #e0e7ff', color: '#1e293b', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', cursor: 'pointer', width: '100%', boxSizing: 'border-box' },
     lbl:    { color: '#64748b', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' },
-    primaryBtn: { background: 'linear-gradient(135deg,#2563eb,#7c3aed)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 24px', fontWeight: '700', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '7px' },
-    ghostBtn:   { background: 'rgba(51,65,85,0.3)', border: '1px solid rgba(51,65,85,0.5)', color: '#94a3b8', borderRadius: '10px', padding: '11px 20px', fontWeight: '600', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '7px' },
-    dangerBtn:  { background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', color: '#f87171', borderRadius: '10px', padding: '10px 18px', fontWeight: '600', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '7px' },
-    sectionHead: { color: '#f1f5f9', fontSize: '15px', fontWeight: '700', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' },
+    primaryBtn: { background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 24px', fontWeight: '700', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '7px' },
+    ghostBtn:   { background: '#f0f4ff', border: '2px solid #c7d2fe', color: '#4f46e5', borderRadius: '10px', padding: '11px 20px', fontWeight: '600', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '7px' },
+    dangerBtn:  { background: '#fee2e2', border: '2px solid #fecaca', color: '#991b1b', borderRadius: '10px', padding: '10px 18px', fontWeight: '600', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '7px' },
+    sectionHead: { color: '#1e293b', fontSize: '15px', fontWeight: '700', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' },
 };
 
 // ── Reusable Toggle switch ───────────────────────────────────────
@@ -28,7 +28,7 @@ function Toggle({ checked, onChange, color = '#3b82f6', ariaLabel = '' }) {
             aria-checked={checked}
             aria-label={ariaLabel}
             onClick={() => onChange(!checked)}
-            style={{ width: '44px', height: '24px', borderRadius: '34px', background: checked ? color : 'rgba(51,65,85,0.6)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.25s', flexShrink: 0, padding: 0 }}
+            style={{ width: '44px', height: '24px', borderRadius: '34px', background: checked ? color : '#e0e7ff', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.25s', flexShrink: 0, padding: 0 }}
         >
             <span style={{ position: 'absolute', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', top: '3px', left: checked ? '23px' : '3px', transition: 'left 0.25s', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }} />
         </button>
@@ -48,9 +48,9 @@ function Field({ label, children, span }) {
 // ── Skill tag ────────────────────────────────────────────────────
 function Tag({ label, onRemove }) {
     return (
-        <span style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', color: '#93c5fd', borderRadius: '20px', padding: '4px 10px', fontSize: '12px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+        <span style={{ background: '#dbeafe', border: '2px solid #60a5fa', color: '#1e40af', borderRadius: '20px', padding: '4px 10px', fontSize: '12px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
             {label}
-            {onRemove && <button onClick={onRemove} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }} aria-label={`Remove ${label}`}><X size={11} /></button>}
+            {onRemove && <button onClick={onRemove} style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }} aria-label={`Remove ${label}`}><X size={11} /></button>}
         </span>
     );
 }
@@ -156,14 +156,14 @@ function ProfileTab({ user, onSaved }) {
                         {/* Avatar */}
                         <div style={{ position: 'relative', flexShrink: 0 }}>
                             {avatar
-                                ? <img src={avatar} alt="Profile" style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(59,130,246,0.4)' }} />
+                                ? <img src={avatar} alt="Profile" style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #60a5fa' }} />
                                 : <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: `${avatarColor}22`, border: `3px solid ${avatarColor}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: avatarColor, fontSize: '36px', fontWeight: '800' }}>
                                     {(form.fullName || 'I').charAt(0).toUpperCase()}
                                   </div>
                             }
                             <button
                                 onClick={() => fileRef.current?.click()}
-                                style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', background: 'rgba(13,20,35,0.85)', border: '1px solid rgba(59,130,246,0.4)', color: '#60a5fa', borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', background: '#dbeafe', border: '2px solid #60a5fa', color: '#1e40af', borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}
                                 aria-label="Edit profile photo"
                             >
                                 {uploading ? '…' : <><Camera size={11} /> Edit Photo</>}
@@ -209,9 +209,9 @@ function ProfileTab({ user, onSaved }) {
                             <button onClick={() => { const s = prompt('Add specialization:'); if (s?.trim()) setSpecs(prev => [...prev, s.trim()]); }} style={{ ...T.ghostBtn, padding: '5px 10px', fontSize: '11px' }}><Plus size={12} /> Add</button>
                         </div>
                         {specs.map((sp, i) => (
-                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(51,65,85,0.25)' }}>
-                                <span style={{ color: '#e2e8f0', fontSize: '13px' }}>{sp}</span>
-                                <button onClick={() => setSpecs(prev => prev.filter((_, j) => j !== i))} style={{ background: 'transparent', border: 'none', color: '#475569', cursor: 'pointer' }} aria-label={`Edit ${sp}`}><Edit3 size={13} /></button>
+                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #e0e7ff' }}>
+                                <span style={{ color: '#1e293b', fontSize: '13px' }}>{sp}</span>
+                                <button onClick={() => setSpecs(prev => prev.filter((_, j) => j !== i))} style={{ background: 'transparent', border: 'none', color: '#4f46e5', cursor: 'pointer' }} aria-label={`Edit ${sp}`}><Edit3 size={13} /></button>
                             </div>
                         ))}
                     </div>
@@ -235,7 +235,7 @@ function ProfileTab({ user, onSaved }) {
                         <Field label="Communication Tools" span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <input type="checkbox" defaultChecked style={{ accentColor: '#3b82f6', width: '15px', height: '15px' }} id="enable-msg" />
-                                <label htmlFor="enable-msg" style={{ color: '#94a3b8', fontSize: '13px', cursor: 'pointer' }}>Enable internal messaging</label>
+                                <label htmlFor="enable-msg" style={{ color: '#64748b', fontSize: '13px', cursor: 'pointer' }}>Enable internal messaging</label>
                                 <Toggle checked={true} onChange={() => {}} color="#3b82f6" ariaLabel="Toggle internal messaging" />
                             </div>
                         </Field>
@@ -244,7 +244,7 @@ function ProfileTab({ user, onSaved }) {
 
                 {/* Save / Cancel */}
                 {msg && (
-                    <div style={{ background: msg.includes('success') ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${msg.includes('success') ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`, color: msg.includes('success') ? '#34d399' : '#f87171', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', marginBottom: '14px' }}>
+                    <div style={{ background: msg.includes('success') ? '#d1fae5' : '#fee2e2', border: `2px solid ${msg.includes('success') ? '#6ee7b7' : '#fecaca'}`, color: msg.includes('success') ? '#065f46' : '#991b1b', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', marginBottom: '14px' }}>
                         {msg}
                     </div>
                 )}
@@ -275,12 +275,12 @@ function ProfileTab({ user, onSaved }) {
                         </button>
                         <input ref={cvRef} type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }} onChange={handleCvUpload} />
                         {cvName && (
-                            <div style={{ background: 'rgba(9,13,22,0.5)', border: '1px solid rgba(51,65,85,0.4)', borderRadius: '8px', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ background: '#f0f4ff', border: '2px solid #c7d2fe', borderRadius: '8px', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <FileText size={13} color="#3b82f6" />
-                                    <span style={{ color: '#94a3b8', fontSize: '12px' }}>{cvName}</span>
+                                    <FileText size={13} color="#4f46e5" />
+                                    <span style={{ color: '#4f46e5', fontSize: '12px' }}>{cvName}</span>
                                 </div>
-                                <button onClick={() => setCvName('')} style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer' }} aria-label="Remove CV"><X size={13} /></button>
+                                <button onClick={() => setCvName('')} style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer' }} aria-label="Remove CV"><X size={13} /></button>
                             </div>
                         )}
                     </div>
@@ -305,12 +305,12 @@ function ProfileTab({ user, onSaved }) {
                 </div>
 
                 {/* Upgrade card */}
-                <div style={{ background: 'linear-gradient(135deg, rgba(37,99,235,0.2), rgba(124,58,237,0.2))', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '16px', padding: '18px 20px' }}>
+                <div style={{ background: 'linear-gradient(135deg, #dbeafe, #e9d5ff)', border: '2px solid #c7d2fe', borderRadius: '16px', padding: '18px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                         <Zap size={16} color="#f59e0b" />
-                        <span style={{ color: '#f8fafc', fontSize: '14px', fontWeight: '800' }}>Unlock Premium Features</span>
+                        <span style={{ color: '#1e40af', fontSize: '14px', fontWeight: '800' }}>Unlock Premium Features</span>
                     </div>
-                    <p style={{ color: '#94a3b8', fontSize: '12px', margin: '0 0 12px', lineHeight: 1.6 }}>
+                    <p style={{ color: '#4f46e5', fontSize: '12px', margin: '0 0 12px', lineHeight: 1.6 }}>
                         Includes:<br />
                         • Advanced AI tools<br />
                         • More communication channels<br />
@@ -329,8 +329,8 @@ function NotifRow({ label, emailDefault, appDefault }) {
     const [email, setEmail] = useState(emailDefault);
     const [app, setApp]     = useState(appDefault);
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid rgba(51,65,85,0.2)' }}>
-            <span style={{ color: '#e2e8f0', fontSize: '13px' }}>{label}</span>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #e0e7ff' }}>
+            <span style={{ color: '#1e293b', fontSize: '13px' }}>{label}</span>
             <div style={{ display: 'flex', justifyContent: 'center', minWidth: '48px' }}>
                 <Toggle checked={email} onChange={setEmail} color="#3b82f6" ariaLabel={`Email: ${label}`} />
             </div>
@@ -396,8 +396,8 @@ function SecurityTab({ user }) {
                             {['Length ≥8', 'Uppercase', 'Number', 'Symbol'].map((r, i) => {
                                 const pass = i === 0 ? newPwd.length >= 8 : i === 1 ? /[A-Z]/.test(newPwd) : i === 2 ? /\d/.test(newPwd) : /[^A-Za-z0-9]/.test(newPwd);
                                 return (
-                                    <span key={r} style={{ background: pass ? 'rgba(16,185,129,0.12)' : 'rgba(51,65,85,0.3)', border: `1px solid ${pass ? 'rgba(16,185,129,0.3)' : 'rgba(51,65,85,0.4)'}`, color: pass ? '#34d399' : '#475569', borderRadius: '20px', padding: '3px 8px', fontSize: '11px', fontWeight: '600' }}>
-                                        {pass ? ' ' : ''}{r}
+                                    <span key={r} style={{ background: pass ? '#d1fae5' : '#fee2e2', border: `2px solid ${pass ? '#6ee7b7' : '#fecaca'}`, color: pass ? '#065f46' : '#991b1b', borderRadius: '20px', padding: '3px 8px', fontSize: '11px', fontWeight: '600' }}>
+                                        {pass ? '✓' : '✕'}{r}
                                     </span>
                                 );
                             })}
@@ -421,13 +421,13 @@ function SecurityTab({ user }) {
                     { device: 'Chrome on macOS', location: 'Addis Ababa, Ethiopia', current: true, time: 'Active now' },
                     { device: 'Safari on iPhone', location: 'Addis Ababa, Ethiopia', current: false, time: '2 days ago' },
                 ].map((sess, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid rgba(51,65,85,0.25)' }}>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #e0e7ff' }}>
                         <div>
-                            <div style={{ color: '#f1f5f9', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ color: '#1e293b', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 {sess.device}
-                                {sess.current && <span style={{ background: 'rgba(16,185,129,0.12)', color: '#34d399', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '20px', padding: '2px 8px', fontSize: '10px', fontWeight: '700' }}>Current</span>}
+                                {sess.current && <span style={{ background: '#d1fae5', color: '#065f46', border: '2px solid #6ee7b7', borderRadius: '20px', padding: '2px 8px', fontSize: '10px', fontWeight: '700' }}>Current</span>}
                             </div>
-                            <div style={{ color: '#475569', fontSize: '11px', marginTop: '2px' }}>{sess.location} · {sess.time}</div>
+                            <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>{sess.location} · {sess.time}</div>
                         </div>
                         {!sess.current && (
                             <button style={{ ...T.dangerBtn, padding: '5px 12px', fontSize: '11px' }}>Revoke</button>
@@ -441,7 +441,7 @@ function SecurityTab({ user }) {
                 <button style={T.dangerBtn}><AlertTriangle size={14} /> Deactivate Account</button>
             </Section>
 
-            {msg && <div style={{ background: msg.includes('saved') ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${msg.includes('saved') ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`, color: msg.includes('saved') ? '#34d399' : '#f87171', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', marginBottom: '14px' }}>{msg}</div>}
+            {msg && <div style={{ background: msg.includes('saved') ? '#d1fae5' : '#fee2e2', border: `2px solid ${msg.includes('saved') ? '#6ee7b7' : '#fecaca'}`, color: msg.includes('saved') ? '#065f46' : '#991b1b', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', marginBottom: '14px' }}>{msg}</div>}
             <div style={{ display: 'flex', gap: '12px' }}>
                 <button onClick={handleSave} disabled={saving} style={{ ...T.primaryBtn, opacity: saving ? 0.7 : 1 }}><Check size={15} /> {saving ? 'Saving…' : 'Save Changes'}</button>
                 <button style={T.ghostBtn}>Cancel</button>
@@ -493,7 +493,7 @@ function PreferencesTab({ user }) {
                     <Field label="Theme">
                         <div style={{ display: 'flex', gap: '8px' }}>
                             {['dark', 'light', 'system'].map(t => (
-                                <button key={t} onClick={() => set('theme', t)} style={{ flex: 1, padding: '9px', borderRadius: '10px', border: `1px solid ${prefs.theme === t ? 'rgba(59,130,246,0.5)' : 'rgba(51,65,85,0.4)'}`, background: prefs.theme === t ? 'rgba(59,130,246,0.12)' : 'rgba(9,13,22,0.5)', color: prefs.theme === t ? '#60a5fa' : '#64748b', fontSize: '12px', fontWeight: '700', cursor: 'pointer', textTransform: 'capitalize' }}>
+                                <button key={t} onClick={() => set('theme', t)} style={{ flex: 1, padding: '9px', borderRadius: '10px', border: `2px solid ${prefs.theme === t ? '#60a5fa' : '#c7d2fe'}`, background: prefs.theme === t ? '#dbeafe' : '#f0f4ff', color: prefs.theme === t ? '#1e40af' : '#4f46e5', fontSize: '12px', fontWeight: '700', cursor: 'pointer', textTransform: 'capitalize' }}>
                                     {t}
                                 </button>
                             ))}
@@ -514,10 +514,10 @@ function PreferencesTab({ user }) {
                         { key: 'compactMode',          label: 'Compact sidebar mode',           sub: 'Show icons only in the sidebar' },
                         { key: 'showStudentProgress',  label: 'Show student progress on overview', sub: 'Display real-time learner progress on the dashboard' },
                     ].map(pref => (
-                        <div key={pref.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(9,13,22,0.4)', borderRadius: '10px', border: '1px solid rgba(51,65,85,0.3)' }}>
+                        <div key={pref.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f0f4ff', borderRadius: '10px', border: '2px solid #c7d2fe' }}>
                             <div>
-                                <div style={{ color: '#f1f5f9', fontSize: '13px', fontWeight: '600' }}>{pref.label}</div>
-                                <div style={{ color: '#475569', fontSize: '11px', marginTop: '2px' }}>{pref.sub}</div>
+                                <div style={{ color: '#1e293b', fontSize: '13px', fontWeight: '600' }}>{pref.label}</div>
+                                <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>{pref.sub}</div>
                             </div>
                             <Toggle checked={prefs[pref.key]} onChange={v => set(pref.key, v)} color="#3b82f6" ariaLabel={pref.label} />
                         </div>
@@ -529,7 +529,7 @@ function PreferencesTab({ user }) {
                 <Field label="Default Grading Method">
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {[['numeric', 'Numeric (0–100)'], ['letter', 'Letter Grade (A–F)'], ['pass_fail', 'Pass / Fail']].map(([val, lbl]) => (
-                            <button key={val} onClick={() => set('gradingMethod', val)} style={{ padding: '9px 16px', borderRadius: '10px', border: `1px solid ${prefs.gradingMethod === val ? 'rgba(59,130,246,0.5)' : 'rgba(51,65,85,0.4)'}`, background: prefs.gradingMethod === val ? 'rgba(59,130,246,0.12)' : 'rgba(9,13,22,0.5)', color: prefs.gradingMethod === val ? '#60a5fa' : '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                            <button key={val} onClick={() => set('gradingMethod', val)} style={{ padding: '9px 16px', borderRadius: '10px', border: `2px solid ${prefs.gradingMethod === val ? '#60a5fa' : '#c7d2fe'}`, background: prefs.gradingMethod === val ? '#dbeafe' : '#f0f4ff', color: prefs.gradingMethod === val ? '#1e40af' : '#4f46e5', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
                                 {lbl}
                             </button>
                         ))}
@@ -537,7 +537,7 @@ function PreferencesTab({ user }) {
                 </Field>
             </Section>
 
-            {msg && <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#34d399', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', marginBottom: '14px' }}>{msg}</div>}
+            {msg && <div style={{ background: '#d1fae5', border: '2px solid #6ee7b7', color: '#065f46', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', marginBottom: '14px' }}>{msg}</div>}
             <div style={{ display: 'flex', gap: '12px' }}>
                 <button onClick={handleSave} style={T.primaryBtn}><Check size={15} /> Save Preferences</button>
                 <button style={T.ghostBtn}>Reset to Defaults</button>
@@ -605,8 +605,8 @@ function NotificationsTab() {
 function NotifRow3({ label, defaults }) {
     const [vals, setVals] = useState(defaults);
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid rgba(51,65,85,0.2)' }}>
-            <span style={{ color: '#e2e8f0', fontSize: '13px' }}>{label}</span>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #e0e7ff' }}>
+            <span style={{ color: '#1e293b', fontSize: '13px' }}>{label}</span>
             {vals.map((v, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'center', minWidth: '52px' }}>
                     <Toggle checked={v} onChange={nv => setVals(vs => vs.map((x, j) => j === i ? nv : x))} color={['#3b82f6','#8b5cf6','#10b981'][i]} ariaLabel={`${['Email','In-App','SMS'][i]}: ${label}`} />
@@ -635,12 +635,12 @@ function SubscriptionTab() {
                             <span style={{ position: 'absolute', top: '-1px', right: '16px', background: plan.color, color: '#fff', fontSize: '10px', fontWeight: '800', padding: '3px 10px', borderRadius: '0 0 8px 8px' }}>POPULAR</span>
                         )}
                         <div style={{ color: plan.color, fontSize: '13px', fontWeight: '700', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{plan.name}</div>
-                        <div style={{ color: '#f8fafc', fontSize: '32px', fontWeight: '800', marginBottom: '4px' }}>
-                            ${plan.price}<span style={{ color: '#475569', fontSize: '14px', fontWeight: '400' }}>{plan.period}</span>
+                        <div style={{ color: '#1e293b', fontSize: '32px', fontWeight: '800', marginBottom: '4px' }}>
+                            ${plan.price}<span style={{ color: '#64748b', fontSize: '14px', fontWeight: '400' }}>{plan.period}</span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', margin: '16px 0 20px' }}>
                             {plan.features.map(f => (
-                                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '12px' }}>
+                                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '12px' }}>
                                     <Check size={13} color={plan.color} aria-hidden="true" /> {f}
                                 </div>
                             ))}
@@ -683,14 +683,14 @@ export default function InstructorSettings({ user }) {
         <div style={T.page}>
             {/* Page title */}
             <div style={{ marginBottom: '24px' }}>
-                <h2 style={{ color: '#f8fafc', fontSize: '22px', fontWeight: '800', margin: '0 0 4px' }}>
+                <h2 style={{ color: '#1e293b', fontSize: '22px', fontWeight: '800', margin: '0 0 4px' }}>
                     Profile &amp; Account Settings{user?.fullName ? ` — ${user.fullName}` : ''}
                 </h2>
                 <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Manage your instructor profile, security, preferences and subscription.</p>
             </div>
 
             {/* Tab strip */}
-            <div style={{ display: 'flex', gap: '2px', marginBottom: '24px', borderBottom: '1px solid rgba(51,65,85,0.35)', overflowX: 'auto' }}>
+            <div style={{ display: 'flex', gap: '2px', marginBottom: '24px', borderBottom: '2px solid #e0e7ff', overflowX: 'auto' }}>
                 {TABS.map(tab => (
                     <button
                         key={tab.key}
@@ -699,7 +699,7 @@ export default function InstructorSettings({ user }) {
                             background: 'transparent',
                             border: 'none',
                             borderBottom: activeTab === tab.key ? '2px solid #3b82f6' : '2px solid transparent',
-                            color: activeTab === tab.key ? '#60a5fa' : '#64748b',
+                            color: activeTab === tab.key ? '#1e40af' : '#64748b',
                             padding: '11px 18px',
                             fontWeight: '700',
                             fontSize: '13px',

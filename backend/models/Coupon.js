@@ -8,7 +8,8 @@ const CouponSchema = new mongoose.Schema({
     appliesTo: {
         allCourses: { type: Boolean, default: true },
         courseIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
-        categoryIds: [{ type: mongoose.Schema.Types.ObjectId }]
+        categoryIds: [{ type: mongoose.Schema.Types.ObjectId }],
+        minimumPurchaseAmount: { type: Number, default: 0 } // minimum purchase amount to use coupon
     },
     startsAt: { type: Date },
     expiresAt: { type: Date },

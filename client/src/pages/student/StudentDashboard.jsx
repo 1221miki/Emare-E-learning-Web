@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/Sidebar';
+import PromotionsBanner from '../../components/PromotionsBanner';
 import { 
     courseService, 
     wishlistService, 
@@ -775,6 +776,11 @@ export default function StudentDashboard() {
                     </div>
                     <div style={styles.avatar}>{user?.fullName?.[0]?.toUpperCase() || 'S'}</div>
                 </header>
+
+                {/* Active Promotions Banner */}
+                <div style={{ marginBottom: '24px' }}>
+                    <PromotionsBanner minimal={true} />
+                </div>
 
                 {/* Loading State */}
                 {loading ? (

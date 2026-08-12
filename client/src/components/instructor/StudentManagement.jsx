@@ -61,9 +61,9 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
             whiteSpace: 'nowrap',
         },
         ghostBtn: {
-            background: theme === 'dark' ? 'rgba(51,65,85,0.3)' : 'rgba(226,232,240,0.7)',
-            border: `1px solid ${effectiveColors.border}`,
-            color: effectiveColors.textMuted,
+            background: '#f0f4ff',
+            border: '2px solid #c7d2fe',
+            color: '#4f46e5',
             borderRadius: '10px',
             padding: '10px 16px',
             fontWeight: '600',
@@ -375,7 +375,7 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
             {/* ── Remove Confirm Modal ─────────────────────── */}
             {removeConfirm && (
                 <div
-                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '20px' }}
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '20px' }}
                     onClick={() => setRemoveConfirm(null)}
                     role="dialog"
                     aria-modal="true"
@@ -385,14 +385,14 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
                         style={{ ...T.card, maxWidth: '420px', width: '100%', padding: '32px', textAlign: 'center' }}
                         onClick={e => e.stopPropagation()}
                     >
-                        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-                            <AlertTriangle size={26} color="#ef4444" aria-hidden="true" />
+                        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#fee2e2', border: '2px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                            <AlertTriangle size={26} color="#991b1b" aria-hidden="true" />
                         </div>
-                        <h3 style={{ color: '#f8fafc', fontSize: '18px', fontWeight: '800', margin: '0 0 8px' }}>Remove Student?</h3>
+                        <h3 style={{ color: '#1e293b', fontSize: '18px', fontWeight: '800', margin: '0 0 8px' }}>Remove Student?</h3>
                         <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 8px', lineHeight: 1.6 }}>
-                            Remove <strong style={{ color: '#f1f5f9' }}>{removeConfirm.name}</strong> from this course?
+                            Remove <strong style={{ color: '#1e293b' }}>{removeConfirm.name}</strong> from this course?
                         </p>
-                        <p style={{ color: '#475569', fontSize: '12px', margin: '0 0 24px' }}>
+                        <p style={{ color: '#64748b', fontSize: '12px', margin: '0 0 24px' }}>
                             Student progress will be preserved and can be reinstated later.
                         </p>
                         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
@@ -401,7 +401,7 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
                             </button>
                             <button
                                 onClick={handleRemoveConfirm}
-                                style={{ flex: 1, background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#ef4444', borderRadius: '10px', padding: '10px 20px', fontWeight: '700', cursor: 'pointer', fontSize: '13px', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                style={{ flex: 1, background: '#fee2e2', border: '2px solid #fecaca', color: '#991b1b', borderRadius: '10px', padding: '10px 20px', fontWeight: '700', cursor: 'pointer', fontSize: '13px', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '6px' }}
                             >
                                 Remove
                             </button>

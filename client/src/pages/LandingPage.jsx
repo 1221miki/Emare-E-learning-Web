@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { courseService } from '../services/api';
 import Navbar from '../components/Navbar';
+import PromotionsBanner from '../components/PromotionsBanner';
 import { useTheme } from '../context/ThemeContext';
 
 export default function LandingPage() {
@@ -244,6 +245,12 @@ export default function LandingPage() {
                     <div style={p.heroImageOverlay} />
                 </div>
             </section>
+
+            {/* 3.5. Active Promotions Banner */}
+            <PromotionsBanner />
+
+            {/* 3.5. Active Promotions Banner */}
+            <PromotionsBanner />
 
             {/* 4. Platform Statistics */}
             <section style={p.statsSection}>

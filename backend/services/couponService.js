@@ -20,25 +20,32 @@ async function validateCoupon(code, courseId, userId, originalAmount) {
     if (!code) return { valid: false, message: 'Missing coupon code' };
     const normalized = String(code || '').trim().toUpperCase();
     const coupon = await Coupon.findOne({ code: normalized });
-    if (!coupon) return { valid: false, message: 'Coupon not found' };
+    if (!coupon) return { valid: false, message: 'Invalid coupon code.' };
     const now = new Date();
-    if (!coupon.active) return { valid: false, message: 'Coupon is inactive', coupon };
-    if (coupon.startsAt && coupon.startsAt > now) return { valid: false, message: 'Coupon not active yet', coupon };
-    if (coupon.expiresAt && coupon.expiresAt < now) return { valid: false, message: 'Coupon expired', coupon };
-    if (coupon.redeemLimit && coupon.redeemedCount >= coupon.redeemLimit) return { valid: false, message: 'Coupon redemption limit reached', coupon };
+    if (!coupon.active) return { valid: false, message: 'This coupon is currently inactive.' };
+    if (coupon.startsAt && coupon.startsAt > now) return { valid: false, message: 'This coupon is not available yet.' };
+    if (coupon.expiresAt && coupon.expiresAt < now) return { valid: false, message: 'This coupon has expired.' };
+    if (coupon.redeemLimit && coupon.redeemedCount >= coupon.redeemLimit) return { valid: false, message: 'This coupon has reached its usage limit.' };
+
+    // Minimum purchase amount validation
+    if (coupon.appliesTo?.minimumPurchaseAmount && coupon.appliesTo.minimumPurchaseAmount > 0) {
+        if (originalAmount < coupon.appliesTo.minimumPurchaseAmount) {
+            return { valid: false, message: `Minimum purchase amount for this coupon is ${coupon.appliesTo.minimumPurchaseAmount} ETB.`, coupon };
+        }
+    }
 
     // Course applicability
     if (!coupon.appliesTo?.allCourses) {
         if (Array.isArray(coupon.appliesTo?.courseIds) && coupon.appliesTo.courseIds.length > 0) {
             const match = coupon.appliesTo.courseIds.some(id => id.toString() === String(courseId));
-            if (!match) return { valid: false, message: 'Coupon does not apply to this course', coupon };
+            if (!match) return { valid: false, message: 'This coupon is not valid for this course.', coupon };
         }
     }
 
     // Per-user limit check
     if (coupon.usageLimitPerUser && coupon.usageLimitPerUser > 0) {
         const usedCount = await CouponUsage.countDocuments({ couponRef: coupon._id, studentRef: userId });
-        if (usedCount >= coupon.usageLimitPerUser) return { valid: false, message: 'You have already used this coupon the maximum allowed times', coupon };
+        if (usedCount >= coupon.usageLimitPerUser) return { valid: false, message: 'You have already used this coupon the maximum number of times.', coupon };
     }
 
     const { discountAmount, finalAmount } = await calculateDiscount(coupon, originalAmount);

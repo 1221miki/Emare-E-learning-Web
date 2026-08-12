@@ -110,7 +110,9 @@ export default function PaymentPage() {
     const selectedCourse = selectedEnrollment?.courseRef || null;
     const paymentMethod = paymentMethods.find((method) => method.id === selectedMethod) || paymentMethods[0];
     const coursePrice = selectedCourse?.price || 0;
-    const discountAmount = selectedCourse ? Math.round(coursePrice * 0.05) : 0;
+    // Get coupon info from enrollment metadata if available
+    const couponInfo = selectedEnrollment?.metadata?.coupon;
+    const discountAmount = couponInfo?.discountAmount || (selectedCourse ? Math.round(coursePrice * 0.05) : 0);
     const taxAmount = selectedCourse ? Math.round(coursePrice * 0.02) : 0;
     const totalAmount = coursePrice - discountAmount + taxAmount;
 
@@ -146,9 +148,13 @@ export default function PaymentPage() {
             .map((enrollment) => {
                 const status = enrollment.paymentStatus || (enrollment.tuitionClearanceFlag ? 'Cleared' : 'Unpaid');
                 const normalized = status === 'Cleared' ? 'Completed' : status === 'Pending Verification' ? 'Pending' : status;
+                const couponMeta = enrollment.metadata?.coupon;
                 return {
                     id: enrollment._id,
                     course: enrollment.courseRef?.courseTitle || 'Course Payment',
+                    originalAmount: couponMeta?.originalAmount || enrollment.paymentAmount || enrollment.courseRef?.price || 0,
+                    couponCode: couponMeta?.code || null,
+                    discountAmount: couponMeta?.discountAmount || 0,
                     amount: enrollment.paymentAmount || enrollment.courseRef?.price || 0,
                     method: enrollment.paymentMethod || 'Chapa',
                     transactionId: enrollment.paymentReference || `CHP-${String(enrollment._id || '000000').slice(-8).toUpperCase()}`,

@@ -8,7 +8,7 @@ import {
 // ── Mini progress bar ────────────────────────────────────────
 function Bar({ value, color = '#3b82f6', height = 6 }) {
     return (
-        <div style={{ height, borderRadius: '99px', background: 'rgba(51,65,85,0.4)', overflow: 'hidden', flex: 1 }}>
+        <div style={{ height, borderRadius: '99px', background: '#e0e7ff', overflow: 'hidden', flex: 1 }}>
             <div style={{ height: '100%', width: `${Math.min(value, 100)}%`, background: `linear-gradient(90deg, ${color}80, ${color})`, borderRadius: '99px', transition: 'width 0.7s ease' }} />
         </div>
     );
@@ -17,9 +17,9 @@ function Bar({ value, color = '#3b82f6', height = 6 }) {
 // ── Section header ───────────────────────────────────────────
 function SectionTitle({ icon, label }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', paddingBottom: '10px', borderBottom: '1px solid rgba(51,65,85,0.35)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', paddingBottom: '10px', borderBottom: '2px solid #e0e7ff' }}>
             <span style={{ color: '#3b82f6' }}>{React.cloneElement(icon, { size: 17, 'aria-hidden': true })}</span>
-            <h4 style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: '700', margin: 0 }}>{label}</h4>
+            <h4 style={{ color: '#1e293b', fontSize: '14px', fontWeight: '700', margin: 0 }}>{label}</h4>
         </div>
     );
 }
@@ -45,8 +45,8 @@ function TimelineItem({ icon, text, time, color = '#3b82f6' }) {
                 {React.cloneElement(icon, { size: 14, color, 'aria-hidden': true })}
             </div>
             <div>
-                <div style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600' }}>{text}</div>
-                <div style={{ color: '#475569', fontSize: '11px', marginTop: '2px' }}>{time}</div>
+                <div style={{ color: '#1e293b', fontSize: '13px', fontWeight: '600' }}>{text}</div>
+                <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>{time}</div>
             </div>
         </div>
     );
@@ -78,22 +78,22 @@ export default function StudentProfileModal({ student, grades = [], assignments 
             aria-label={`Profile: ${student.name}`}
         >
             <div
-                style={{ background: 'rgba(13,20,35,0.97)', backdropFilter: 'blur(20px)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '20px', width: '100%', maxWidth: '680px', maxHeight: '88vh', overflow: 'auto', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}
+                style={{ background: '#ffffff', backdropFilter: 'blur(20px)', border: '2px solid #e0e7ff', borderRadius: '20px', width: '100%', maxWidth: '680px', maxHeight: '88vh', overflow: 'auto', boxShadow: '0 10px 30px rgba(0,0,0,0.12)' }}
                 onClick={e => e.stopPropagation()}
             >
                 {/* ── Header ──────────────────────────────── */}
-                <div style={{ padding: '24px 28px 0', position: 'sticky', top: 0, background: 'rgba(13,20,35,0.97)', backdropFilter: 'blur(20px)', zIndex: 2, borderBottom: '1px solid rgba(51,65,85,0.3)', paddingBottom: '20px' }}>
+                <div style={{ padding: '24px 28px 0', position: 'sticky', top: 0, background: '#ffffff', backdropFilter: 'blur(20px)', zIndex: 2, borderBottom: '2px solid #e0e7ff', paddingBottom: '20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                         {/* Avatar + name */}
                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                             {student.avatar
-                                ? <img src={student.avatar} alt={student.name} style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(59,130,246,0.4)' }} />
-                                : <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(59,130,246,0.2)', border: '2px solid rgba(59,130,246,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#60a5fa', fontWeight: '800', fontSize: '24px' }}>
+                                ? <img src={student.avatar} alt={student.name} style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #dbeafe' }} />
+                                : <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#dbeafe', border: '2px solid #60a5fa', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1e40af', fontWeight: '800', fontSize: '24px' }}>
                                     {student.initials}
                                   </div>
                             }
                             <div>
-                                <h3 style={{ color: '#f8fafc', fontSize: '18px', fontWeight: '800', margin: '0 0 4px' }}>{student.name}</h3>
+                                <h3 style={{ color: '#1e293b', fontSize: '18px', fontWeight: '800', margin: '0 0 4px' }}>{student.name}</h3>
                                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                                     <span style={{ color: '#64748b', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                         <Mail size={12} aria-hidden="true" /> {student.email}
@@ -110,7 +110,7 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                         {/* Close */}
                         <button
                             onClick={onClose}
-                            style={{ background: 'rgba(51,65,85,0.4)', border: '1px solid rgba(51,65,85,0.5)', color: '#94a3b8', borderRadius: '10px', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                            style={{ background: '#f0f4ff', border: '2px solid #c7d2fe', color: '#4f46e5', borderRadius: '10px', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                             aria-label="Close profile"
                         >
                             <X size={17} aria-hidden="true" />
@@ -124,9 +124,9 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                                 key={sec}
                                 onClick={() => setActiveSection(sec)}
                                 style={{
-                                    background: activeSection === sec ? 'rgba(59,130,246,0.18)' : 'transparent',
-                                    border: `1px solid ${activeSection === sec ? 'rgba(59,130,246,0.4)' : 'transparent'}`,
-                                    color: activeSection === sec ? '#60a5fa' : '#64748b',
+                                    background: activeSection === sec ? '#dbeafe' : 'transparent',
+                                    border: `2px solid ${activeSection === sec ? '#60a5fa' : 'transparent'}`,
+                                    color: activeSection === sec ? '#1e40af' : '#64748b',
                                     borderRadius: '8px',
                                     padding: '7px 16px',
                                     fontSize: '13px',
@@ -159,9 +159,9 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                             {/* Progress section */}
                             <div>
                                 <SectionTitle icon={<BookOpen />} label="Learning Progress" />
-                                <div style={{ background: 'rgba(9,13,22,0.5)', borderRadius: '12px', padding: '18px', border: '1px solid rgba(51,65,85,0.3)' }}>
+                                <div style={{ background: '#f0f4ff', borderRadius: '12px', padding: '18px', border: '2px solid #c7d2fe' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                        <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: '600' }}>{student.course}</span>
+                                        <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '600' }}>{student.course}</span>
                                         <span style={{ color: student.progress >= 80 ? '#10b981' : '#f59e0b', fontSize: '13px', fontWeight: '800' }}>{student.progress}% Completed</span>
                                     </div>
                                     <Bar value={student.progress} color={student.progress >= 80 ? '#10b981' : student.progress >= 40 ? '#3b82f6' : '#f59e0b'} height={8} />
@@ -173,8 +173,8 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                                             { label: 'Quiz Score', value: avgScore ? `${avgScore}%` : '—' },
                                         ].map((item, i) => (
                                             <div key={i}>
-                                                <div style={{ color: '#475569', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{item.label}</div>
-                                                <div style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: '700', marginTop: '2px' }}>{item.value}</div>
+                                                <div style={{ color: '#64748b', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{item.label}</div>
+                                                <div style={{ color: '#1e293b', fontSize: '14px', fontWeight: '700', marginTop: '2px' }}>{item.value}</div>
                                             </div>
                                         ))}
                                     </div>
@@ -182,13 +182,13 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                             </div>
 
                             {/* Clearance status */}
-                            <div style={{ background: student.cleared ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)', border: `1px solid ${student.cleared ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <CheckCircle size={20} color={student.cleared ? '#10b981' : '#ef4444'} aria-hidden="true" />
+                            <div style={{ background: student.cleared ? '#d1fae5' : '#fee2e2', border: `2px solid ${student.cleared ? '#6ee7b7' : '#fecaca'}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <CheckCircle size={20} color={student.cleared ? '#065f46' : '#991b1b'} aria-hidden="true" />
                                 <div>
-                                    <div style={{ color: student.cleared ? '#10b981' : '#f87171', fontSize: '14px', fontWeight: '700' }}>
+                                    <div style={{ color: student.cleared ? '#065f46' : '#991b1b', fontSize: '14px', fontWeight: '700' }}>
                                         Tuition {student.cleared ? 'Cleared' : 'Pending'}
                                     </div>
-                                    <div style={{ color: '#475569', fontSize: '12px' }}>
+                                    <div style={{ color: student.cleared ? '#065f46' : '#991b1b', fontSize: '12px' }}>
                                         {student.cleared ? 'Full access granted to all course materials.' : 'Payment clearance required to unlock full access.'}
                                     </div>
                                 </div>
@@ -297,15 +297,15 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                             </div>
 
                             {/* Engagement summary */}
-                            <div style={{ marginTop: '24px', borderTop: '1px solid rgba(51,65,85,0.3)', paddingTop: '20px' }}>
+                            <div style={{ marginTop: '24px', borderTop: '2px solid #e0e7ff', paddingTop: '20px' }}>
                                 <SectionTitle icon={<Activity aria-hidden="true" />} label="Engagement Summary" />
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                    <div style={{ background: 'rgba(9,13,22,0.5)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(51,65,85,0.3)' }}>
-                                        <div style={{ color: '#475569', fontSize: '12px', marginBottom: '6px' }}>Total Watch Time</div>
-                                        <div style={{ color: '#f1f5f9', fontSize: '20px', fontWeight: '800' }}>{student.watchTime || '—'}</div>
+                                    <div style={{ background: '#f0f4ff', borderRadius: '12px', padding: '16px', border: '2px solid #c7d2fe' }}>
+                                        <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '6px' }}>Total Watch Time</div>
+                                        <div style={{ color: '#1e293b', fontSize: '20px', fontWeight: '800' }}>{student.watchTime || '—'}</div>
                                     </div>
-                                    <div style={{ background: 'rgba(9,13,22,0.5)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(51,65,85,0.3)' }}>
-                                        <div style={{ color: '#475569', fontSize: '12px', marginBottom: '6px' }}>Overall Progress</div>
+                                    <div style={{ background: '#f0f4ff', borderRadius: '12px', padding: '16px', border: '2px solid #c7d2fe' }}>
+                                        <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '6px' }}>Overall Progress</div>
                                         <div style={{ color: '#3b82f6', fontSize: '20px', fontWeight: '800' }}>{student.progress}%</div>
                                     </div>
                                 </div>

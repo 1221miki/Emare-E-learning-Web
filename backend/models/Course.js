@@ -125,6 +125,17 @@ const CourseSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    discountPrice: {
+        type: Number,
+        default: null,
+        validate: {
+            validator: function(value) {
+                if (value === null || value === undefined) return true;
+                return value >= 0 && value < this.price;
+            },
+            message: 'Discount price must be less than the original price'
+        }
+    },
     thumbnailUrl: String,
     previewVideoUrl: String,
     isFeatured: {

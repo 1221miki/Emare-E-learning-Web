@@ -26,11 +26,11 @@ function StatCard({ icon, color, label, value, sub, loading }) {
                 </div>
             </div>
             {loading
-                ? <div style={{ height: '28px', borderRadius: '6px', background: 'rgba(51,65,85,0.4)', marginBottom: '6px' }} />
-                : <div style={{ color: '#f8fafc', fontSize: '28px', fontWeight: '800', lineHeight: 1, marginBottom: '5px' }}>{value}</div>
+                ? <div style={{ height: '28px', borderRadius: '6px', background: '#e0e7ff', marginBottom: '6px' }} />
+                : <div style={{ color: '#1e293b', fontSize: '28px', fontWeight: '800', lineHeight: 1, marginBottom: '5px' }}>{value}</div>
             }
-            <div style={{ color: '#94a3b8', fontSize: '12px', fontWeight: '600', marginBottom: '2px' }}>{label}</div>
-            {sub && <div style={{ color: '#475569', fontSize: '11px' }}>{sub}</div>}
+            <div style={{ color: '#64748b', fontSize: '12px', fontWeight: '600', marginBottom: '2px' }}>{label}</div>
+            {sub && <div style={{ color: '#64748b', fontSize: '11px' }}>{sub}</div>}
         </div>
     );
 }
@@ -153,7 +153,7 @@ export default function AssignmentManagement({ courses: propCourses = [] }) {
             {/* ── Page header ──────────────────────────────── */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: '26px' }}>
                 <div>
-                    <h2 style={{ color: '#f8fafc', fontSize: '22px', fontWeight: '800', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <h2 style={{ color: '#1e293b', fontSize: '22px', fontWeight: '800', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <ClipboardList size={21} color={C.blue} aria-hidden="true" />
                         Assignment Management
                     </h2>
@@ -176,7 +176,7 @@ export default function AssignmentManagement({ courses: propCourses = [] }) {
 
             {/* ── Sub-nav tabs (not shown on create/grading) ── */}
             {view !== 'create' && view !== 'grading' && (
-                <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid rgba(51,65,85,0.3)', paddingBottom: '0' }}>
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '2px solid #e0e7ff', paddingBottom: '0' }}>
                     {navItems.map(n => (
                         <button
                             key={n.key}
@@ -202,11 +202,11 @@ export default function AssignmentManagement({ courses: propCourses = [] }) {
                     ))}
                     {/* Course selector in nav row */}
                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '8px' }}>
-                        <span style={{ color: '#475569', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>Course:</span>
+                        <span style={{ color: '#64748b', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>Course:</span>
                         <select
                             value={selectedCourse?._id || ''}
                             onChange={e => setCourse(courses.find(c => c._id === e.target.value))}
-                            style={{ background: 'rgba(9,13,22,0.75)', border: '1px solid rgba(51,65,85,0.5)', color: '#f1f5f9', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', outline: 'none', cursor: 'pointer', maxWidth: '220px' }}
+                            style={{ background: '#f8fafc', border: '2px solid #e0e7ff', color: '#1e293b', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', outline: 'none', cursor: 'pointer', maxWidth: '220px' }}
                             aria-label="Select course"
                         >
                             {courses.map(c => <option key={c._id} value={c._id}>{c.courseTitle}</option>)}

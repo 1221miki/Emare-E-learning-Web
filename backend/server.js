@@ -34,6 +34,7 @@ const uploadRoutes = require('./routes/uploadRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const systemRoutes = require('./routes/systemRoutes');
 const adminCouponRoutes = require('./routes/adminCouponRoutes');
+const couponRoutes = require('./routes/couponRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const contentRoutes = require('./routes/contentRoutes');
 const auditRoutes = require('./routes/auditRoutes');
@@ -123,6 +124,7 @@ app.use('/api/media', mediaRoutes);
 app.use('/api/audit-logs', auditRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/comm', communicationRoutes);
+app.use('/api/coupons', couponRoutes);
 app.use('/api/analytics/overview', protect, authorizeRoles('Admin'), getAnalytics);
 app.use('/api/admin/coupons', protect, authorizeRoles('Admin'), adminCouponRoutes);
 

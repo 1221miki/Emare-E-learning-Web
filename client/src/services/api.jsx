@@ -138,6 +138,11 @@ export const adminCouponService = {
     stats: () => API.get('/admin/coupons/stats')
 };
 
+// ── Public Promotions API Calls (for all students) ────────
+export const promotionService = {
+    getActivePromotions: () => API.get('/coupons/active')
+};
+
 // ── Wishlist API Calls ─────────────────────────────────────
 export const wishlistService = {
     getMyWishlist: () => API.get('/wishlist'),

@@ -130,15 +130,15 @@ export default function OverviewTab(dash) {
         };
 
         return (
-            <div style={styles.gridTwoCol}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1fr', gap: '24px', alignItems: 'start', maxWidth: '100%' }}>
                 
                 {/* LEFT MAIN PANEL COLUMN */}
-                <div style={styles.dashboardGrid}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                     
                     {/* Welcome Card & Hero Section */}
-                    <div style={{ ...styles.welcomeCard, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: '900', boxShadow: '0 8px 20px rgba(59,130,246,0.3)', border: '2px solid rgba(255,255,255,0.2)', overflow: 'hidden' }}>
+                    <div style={{ ...styles.welcomeCard, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        <div style={{ display: 'flex', gap: '18px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: '900', boxShadow: '0 6px 16px rgba(59,130,246,0.25)', border: '2px solid rgba(255,255,255,0.15)', flexShrink: 0, overflow: 'hidden' }}>
                                 {user?.avatarUrl ? (
                                     <img src={user.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 ) : (
@@ -146,31 +146,31 @@ export default function OverviewTab(dash) {
                                 )}
                             </div>
                             <div style={{ flex: 1, minWidth: '240px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
                                     <div>
-                                        <h2 style={{ color: colors.text, fontSize: '26px', fontWeight: '900', margin: 0, letterSpacing: '-0.5px' }}>
+                                        <h2 style={{ color: colors.text, fontSize: '24px', fontWeight: '900', margin: 0, letterSpacing: '-0.5px' }}>
                                             {getGreeting()}, {user?.fullName?.split(' ')[0]}!
                                         </h2>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
-                                            <span style={{ color: colors.primary, fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', background: `${colors.primary}15`, border: `1px solid ${colors.primary}30`, padding: '4px 10px', borderRadius: '6px' }}>
-                                                Student Account · Level {currentLevel} Scholar
+                                            <span style={{ color: colors.primary, fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.8px', background: `${colors.primary}12`, border: `1px solid ${colors.primary}25`, padding: '4px 10px', borderRadius: '6px' }}>
+                                                Level {currentLevel} Scholar
                                             </span>
                                             {/* Tuition Clearance Badge */}
-                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: hasClearance ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)', border: `1px solid ${hasClearance ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)'}`, padding: '4px 10px', borderRadius: '6px' }}>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: hasClearance ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)', border: `1px solid ${hasClearance ? 'rgba(34,197,94,0.25)' : 'rgba(245,158,11,0.25)'}`, padding: '4px 10px', borderRadius: '6px' }}>
                                                 {hasClearance
                                                     ? <ShieldCheck size={14} color={colors.success} aria-hidden="true" />
                                                     : <ShieldAlert size={14} color="#f59e0b" aria-hidden="true" />
                                                 }
                                                 <span style={{ fontSize: '11px', fontWeight: '800', color: hasClearance ? colors.success : '#f59e0b' }}>
-                                                    {hasClearance ? 'Tuition Cleared' : 'Clearance Pending'}
+                                                    {hasClearance ? 'Tuition Cleared' : 'Pending'}
                                                 </span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div style={{ background: `${colors.success}10`, border: `1px solid ${colors.success}30`, borderRadius: '12px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <GraduationCap size={22} color={colors.success} aria-hidden="true" />
+                                    <div style={{ background: `${colors.success}08`, border: `1px solid ${colors.success}20`, borderRadius: '10px', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+                                        <GraduationCap size={18} color={colors.success} aria-hidden="true" />
                                         <div>
-                                            <span style={{ display: 'block', fontSize: '13px', fontWeight: '800', color: colors.success }}>{completedCoursesCount} Course{completedCoursesCount === 1 ? '' : 's'} Completed</span>
+                                            <span style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: colors.success }}>{completedCoursesCount} Completed</span>
                                             <span style={{ display: 'block', fontSize: '10px', color: colors.textMuted }}>{activeCourses.length} in progress</span>
                                         </div>
                                     </div>
@@ -178,42 +178,32 @@ export default function OverviewTab(dash) {
                             </div>
                         </div>
 
-                        {/* Motivational Quote & Quick Actions Row */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
-                            <div style={{ padding: '10px 14px', background: `${colors.bgCard}90`, borderRadius: '10px', borderLeft: `3px solid ${colors.accent}` }}>
-                                <p style={styles.quoteText}>"{motivationalQuote}"</p>
-                            </div>
-
-                            {/* Quick Action Shortcuts */}
-                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', paddingTop: '4px' }}>
-                                <span style={{ fontSize: '11px', fontWeight: '800', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <Zap size={13} aria-hidden="true" /> Quick Actions:
-                                </span>
-                                <button onClick={() => setActiveTab('assignments')} style={{ background: `${colors.primary}10`, border: `1px solid ${colors.primary}30`, color: colors.primary, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'transform 0.15s' }} aria-label="Submit Tasks">
-                                    <ClipboardCheck size={14} aria-hidden="true" /> Submit Tasks
-                                </button>
-                                <button onClick={() => setActiveTab('payments')} style={{ background: `${colors.accent}10`, border: `1px solid ${colors.accent}30`, color: colors.accent, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'transform 0.15s' }} aria-label="Tuition Portal">
-                                    <CreditCard size={14} aria-hidden="true" /> Tuition Portal
-                                </button>
-                                <button onClick={() => setActiveTab('live')} style={{ background: `${colors.success}10`, border: `1px solid ${colors.success}30`, color: colors.success, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'transform 0.15s' }} aria-label="Live Classes">
-                                    <Video size={14} aria-hidden="true" /> Live Classes
-                                </button>
-                                <button onClick={() => setActiveTab('leaderboard')} style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'transform 0.15s' }} aria-label="Leaderboard">
-                                    <Trophy size={14} aria-hidden="true" /> Leaderboard
-                                </button>
-                            </div>
+                        {/* Quick Action Shortcuts */}
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', paddingTop: '2px' }}>
+                            <button onClick={() => setActiveTab('assignments')} style={{ background: `${colors.primary}12`, border: `1px solid ${colors.primary}25`, color: colors.primary, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'transform 0.15s' }} aria-label="Submit Tasks">
+                                <ClipboardCheck size={14} aria-hidden="true" /> Tasks
+                            </button>
+                            <button onClick={() => setActiveTab('payments')} style={{ background: `${colors.accent}12`, border: `1px solid ${colors.accent}25`, color: colors.accent, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'transform 0.15s' }} aria-label="Tuition Portal">
+                                <CreditCard size={14} aria-hidden="true" /> Tuition
+                            </button>
+                            <button onClick={() => setActiveTab('live')} style={{ background: `${colors.success}12`, border: `1px solid ${colors.success}25`, color: colors.success, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'transform 0.15s' }} aria-label="Live Classes">
+                                <Video size={14} aria-hidden="true" /> Live
+                            </button>
+                            <button onClick={() => setActiveTab('leaderboard')} style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'transform 0.15s' }} aria-label="Leaderboard">
+                                <Trophy size={14} aria-hidden="true" /> Rank
+                            </button>
                         </div>
                     </div>
 
                     {/* Dashboard Personalization Controls */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: colors.bgCard, padding: '12px 20px', borderRadius: '14px', border: `1px solid ${colors.border}` }}>
-                        <span style={{ fontSize: '13px', fontWeight: '700', color: colors.text }}>Customize Widgets</span>
-                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: colors.bgCard, padding: '10px 14px', borderRadius: '10px', border: `1px solid ${colors.border}` }}>
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: colors.text }}>Show/Hide</span>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                             {[
-                                { key: 'stats', label: 'Stats', icon: <BarChart3 size={14} aria-hidden="true" /> },
-                                { key: 'calendar', label: 'Calendar', icon: <CalendarDays size={14} aria-hidden="true" /> },
-                                { key: 'badges', label: 'Badges', icon: <Award size={14} aria-hidden="true" /> },
-                                { key: 'recs', label: 'Suggestions', icon: <Lightbulb size={14} aria-hidden="true" /> }
+                                { key: 'stats', label: 'Stats', icon: <BarChart3 size={13} aria-hidden="true" /> },
+                                { key: 'calendar', label: 'Calendar', icon: <CalendarDays size={13} aria-hidden="true" /> },
+                                { key: 'badges', label: 'Badges', icon: <Award size={13} aria-hidden="true" /> },
+                                { key: 'recs', label: 'Suggestions', icon: <Lightbulb size={13} aria-hidden="true" /> }
                             ].map(widget => {
                                 const isHidden = hiddenWidgets[widget.key];
                                 return (
@@ -221,22 +211,21 @@ export default function OverviewTab(dash) {
                                         key={widget.key} 
                                         onClick={() => toggleWidgetVisibility(widget.key)} 
                                         style={{ 
-                                            padding: '6px 12px', 
-                                            borderRadius: '20px', 
-                                            fontSize: '11px', 
+                                            padding: '5px 10px', 
+                                            borderRadius: '18px', 
+                                            fontSize: '10px', 
                                             fontWeight: '700', 
                                             cursor: 'pointer', 
-                                            background: isHidden ? colors.bgInput : `${colors.primary}15`, 
-                                            border: `1px solid ${isHidden ? colors.border : colors.primary}`,
+                                            background: isHidden ? colors.bgInput : `${colors.primary}12`, 
+                                            border: `1px solid ${isHidden ? colors.border : colors.primary}20`,
                                             color: isHidden ? colors.textMuted : colors.primary,
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '5px'
+                                            gap: '4px'
                                         }}
                                         aria-label={`${isHidden ? 'Show' : 'Hide'} ${widget.label}`}
                                     >
                                         {widget.icon}
-                                        {isHidden ? `Show ${widget.label}` : `Hide ${widget.label}`}
                                     </button>
                                 );
                             })}
@@ -244,46 +233,24 @@ export default function OverviewTab(dash) {
                     </div>
 
                     {/* AI Study Assistant */}
-                    <div style={{ ...styles.panelCard, margin: 0, padding: '24px', borderLeft: `4px solid ${colors.accent}` }}>
-                        <div style={styles.aiWidgetHeader}>
-                        <h3 style={{ ...styles.panelCardTitle, marginBottom: '8px', fontSize: '17px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Bot size={20} color={colors.accent} aria-hidden="true" />
-                                AI Study Assistant
-                            </h3>
-                                <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Your AI coach knows your current course, progress, upcoming work, and quiz readiness.</p>
+                    <div style={{ ...styles.panelCard, margin: 0, padding: '14px', borderLeft: `3px solid ${colors.accent}` }}>
+                        <h3 style={{ fontSize: '14px', fontWeight: '800', color: colors.text, margin: '0 0 2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Bot size={15} color={colors.accent} aria-hidden="true" />
+                            AI Coach
+                        </h3>
+                        <p style={{ color: colors.textMuted, fontSize: '10px', margin: '0 0 8px' }}>Learn smarter</p>
+                        <button onClick={() => triggerAssistantPrompt('What should I work on next?')} style={{ ...styles.aiActionBtn, marginTop: '8px', padding: '5px 12px', fontSize: '11px' }}>
+                            Chat
+                        </button>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '8px' }}>
+                            <div style={{ background: colors.bgInput, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '8px' }}>
+                                <span style={{ fontSize: '9px', color: colors.textMuted, fontWeight: '600' }}>Course</span>
+                                <div style={{ fontSize: '11px', fontWeight: '700', color: colors.text, marginTop: '2px' }}>{currentCourseTitle.substring(0, 20)}...</div>
                             </div>
-                            <button onClick={() => triggerAssistantPrompt('What should I work on next in this course?')} style={styles.aiActionBtn}>
-                                Open Chat
-                            </button>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginTop: '18px' }}>
-                            <div style={{ ...styles.analyticsCard, borderRadius: '16px', padding: '16px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
-                                <span style={{ display: 'block', fontSize: '12px', color: colors.textMuted, marginBottom: '10px' }}>Current Course</span>
-                                <strong style={{ fontSize: '15px', color: colors.text, fontWeight: '800' }}>{currentCourseTitle}</strong>
-                                <p style={{ color: colors.textMuted, fontSize: '12px', margin: '10px 0 0' }}>Lesson: {currentLessonTitle}</p>
+                            <div style={{ background: colors.bgInput, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '8px' }}>
+                                <span style={{ fontSize: '9px', color: colors.textMuted, fontWeight: '600' }}>Progress</span>
+                                <div style={{ fontSize: '13px', fontWeight: '800', color: colors.primary, marginTop: '2px' }}>{currentProgress}%</div>
                             </div>
-                            <div style={{ ...styles.analyticsCard, borderRadius: '16px', padding: '16px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
-                                <span style={{ display: 'block', fontSize: '12px', color: colors.textMuted, marginBottom: '10px' }}>Progress</span>
-                                <strong style={{ fontSize: '22px', color: colors.primary, fontWeight: '800' }}>{currentProgress}%</strong>
-                                <p style={{ color: colors.textMuted, fontSize: '12px', margin: '10px 0 0' }}>Quiz Avg: {quizAverage}% · Assignments: {upcomingAssignmentsCount}</p>
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '18px' }}>
-                            {[
-                                `Continue ${currentCourseTitle} (${currentProgress}% complete)`,
-                                upcomingAssignmentsCount > 0 ? 'Assignment due tomorrow' : 'Discover a practice exercise',
-                                'Practice React Hooks',
-                                `Summarize ${currentLessonTitle}`,
-                                'Debug my code'
-                            ].map((prompt) => (
-                                <button key={prompt} type="button" style={styles.aiPromptTag} onClick={() => triggerAssistantPrompt(prompt)}>
-                                    {prompt}
-                                </button>
-                            ))}
-                        </div>
-                        <div style={{ color: colors.textMuted, fontSize: '12px', marginTop: '12px' }}>
-                            {upcomingAssignmentsCount > 0 ? `You have ${upcomingAssignmentsCount} upcoming assignment${upcomingAssignmentsCount > 1 ? 's' : ''}. Ask the AI for a quick study plan.` : 'No assignments pending; the AI can still help you practice or summarize lessons.'}
                         </div>
                     </div>
 
@@ -341,99 +308,57 @@ export default function OverviewTab(dash) {
                     )}
 
                     {/* Resume Coursework (Resume / Active Course) */}
-                    <div style={{ ...styles.panelCard, margin: 0, padding: '24px' }}>
-                        <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>Resume Coursework</h3>
+                    <div style={{ ...styles.panelCard, margin: 0, padding: '14px' }}>
+                        <h3 style={{ ...styles.panelCardTitle, fontSize: '14px', fontWeight: '800', marginBottom: '10px' }}>Now Learning</h3>
                         {primaryActive ? (
-                            <div style={styles.recentCourseBox}>
-                                <div style={styles.recentCourseLeft}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <span style={styles.courseBadge}>{primaryActive.courseRef?.technicalCategory || 'Development'}</span>
-                                        <button onClick={() => togglePinCourse(primaryActive.courseRef?._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title={pinnedCourses.includes(primaryActive.courseRef?._id) ? 'Unpin' : 'Pin to Top'} aria-label={pinnedCourses.includes(primaryActive.courseRef?._id) ? 'Unpin course' : 'Pin course to top'}>
-                                            {pinnedCourses.includes(primaryActive.courseRef?._id)
-                                                ? <PinOff size={16} color={colors.primary} aria-hidden="true" />
-                                                : <Pin size={16} color={colors.textMuted} aria-hidden="true" />
-                                            }
-                                        </button>
-                                    </div>
-                                    <h4 style={{ ...styles.recentCourseName, fontSize: '20px', fontWeight: '800', marginTop: '6px' }}>{primaryActive.courseRef?.courseTitle}</h4>
-                                    <p style={styles.recentCourseMeta}>Lessons track length: {primaryActive.courseRef?.estimatedDurationHours || 0} Hours</p>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                                <div>
+                                    <span style={{ background: `${colors.primary}15`, color: colors.primary, padding: '3px 8px', borderRadius: '12px', fontSize: '9px', fontWeight: '700' }}>{primaryActive.courseRef?.technicalCategory || 'Dev'}</span>
+                                    <h4 style={{ color: colors.text, fontSize: '13px', fontWeight: '800', margin: '4px 0 2px' }}>{primaryActive.courseRef?.courseTitle?.substring(0, 35)}</h4>
+                                    <p style={{ color: colors.textMuted, fontSize: '10px', margin: 0 }}>{primaryActive.courseRef?.estimatedDurationHours || 0}h · {primaryActive.completionPercentage || 0}% done</p>
                                 </div>
-                                <div style={styles.recentCourseRight}>
-                                    <span style={styles.progressPercent}>{primaryActive.completionPercentage || 0}% Complete</span>
-                                    <div style={{ width: '150px', background: colors.bgInput, height: '6px', borderRadius: '3px', overflow: 'hidden', margin: '4px 0 12px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                                    <div style={{ width: '60px', background: colors.bgInput, height: '4px', borderRadius: '2px', overflow: 'hidden' }}>
                                         <div style={{ width: `${primaryActive.completionPercentage || 0}%`, background: colors.primary, height: '100%' }} />
                                     </div>
                                     {primaryActive.tuitionClearanceFlag ? (
-                                        <button onClick={() => navigate(`/student/learn/${primaryActive.courseRef?._id}`)} style={styles.resumeBtn}>
-                                            Resume Learning →
+                                        <button onClick={() => navigate(`/student/learn/${primaryActive.courseRef?._id}`)} style={{ background: colors.primary, color: '#fff', border: 'none', borderRadius: '5px', padding: '4px 10px', fontSize: '10px', fontWeight: '700', cursor: 'pointer' }}>
+                                            Resume
                                         </button>
                                     ) : (
-                                        <button onClick={() => setActiveTab('payments')} style={styles.lockedBtn}>
-                                            <CreditCard size={14} style={{ marginRight: '6px' }} aria-hidden="true" />
-                                            Pending Clearance
+                                        <button onClick={() => setActiveTab('payments')} style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: 'none', borderRadius: '5px', padding: '4px 10px', fontSize: '10px', fontWeight: '700', cursor: 'pointer' }}>
+                                            Clear Tuition
                                         </button>
                                     )}
                                 </div>
                             </div>
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '32px 20px', background: `${colors.bgInput}40`, borderRadius: '16px', border: `1px dashed ${colors.border}` }}>
-                                <BookOpen size={50} color={colors.textMuted} style={{ marginBottom: '16px' }} aria-hidden="true" />
-                                <h4 style={{ color: colors.text, fontSize: '18px', fontWeight: '800', margin: '0 0 8px' }}>Start Your Learning Journey</h4>
-                                <p style={{ color: colors.textMuted, fontSize: '13px', maxWidth: '360px', margin: '0 0 20px', lineHeight: 1.5 }}>
-                                    Explore professional courses to begin building your skills. Select from Web Development, UI/UX Design, Cyber Security, and more.
-                                </p>
-                                <button onClick={() => navigate('/courses')} style={{ ...styles.resumeBtn, padding: '10px 24px', fontSize: '13px', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` }}>Browse Courses</button>
+                            <div style={{ textAlign: 'center', padding: '12px 8px', background: `${colors.bgInput}40`, borderRadius: '8px' }}>
+                                <p style={{ color: colors.textMuted, fontSize: '10px', margin: 0 }}>No active courses</p>
+                                <button onClick={() => navigate('/courses')} style={{ background: 'transparent', border: 'none', color: colors.primary, fontSize: '9px', fontWeight: '700', cursor: 'pointer', marginTop: '4px' }}>Browse Courses</button>
                             </div>
                         )}
                     </div>
 
                     {/* Learning Statistics */}
-                    <div style={{ ...styles.panelCard, margin: 0, padding: '24px' }}>
-                        <h3 style={{ ...styles.panelCardTitle, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>Learning Statistics</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', flexWrap: 'wrap' }}>
-                            <div>
-                                <span style={{ color: colors.text, fontSize: '13px', fontWeight: '700' }}>Weekly Study Hours Goal</span>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: colors.textMuted, marginTop: '8px' }}>
-                                    <span>Completed: {studyCompletedHours} hrs</span>
-                                    <span>Target: {studyTargetHours} hrs</span>
-                                </div>
-                                <div style={{ width: '100%', background: colors.bgInput, height: '10px', borderRadius: '5px', overflow: 'hidden', marginTop: '6px' }}>
-                                    <div style={{ width: `${Math.min((studyCompletedHours / studyTargetHours) * 100, 100)}%`, background: `linear-gradient(90deg, ${colors.primary}, ${colors.accent})`, height: '100%' }} />
-                                </div>
-                                <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <span style={{ fontSize: '12px', color: colors.textMuted }}>Adjust Goal:</span>
-                                    <input 
-                                        type="range" 
-                                        min="5" 
-                                        max="30" 
-                                        value={studyTargetHours} 
-                                        onChange={(e) => handleUpdateStudyTarget(Number(e.target.value))} 
-                                        style={{ accentColor: colors.primary, flex: 1 }}
-                                    />
-                                    <span style={{ fontSize: '12px', fontWeight: '700', color: colors.text }}>{studyTargetHours}h</span>
-                                </div>
+                    <div style={{ ...styles.panelCard, margin: 0, padding: '14px' }}>
+                        <h3 style={{ ...styles.panelCardTitle, fontSize: '14px', fontWeight: '800', marginBottom: '10px' }}>Study Stats</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                            <div style={{ background: `${colors.primary}08`, border: `1px solid ${colors.primary}20`, borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+                                <div style={{ fontSize: '16px', fontWeight: '800', color: colors.primary }}>{activeCourses.length}</div>
+                                <div style={{ fontSize: '9px', color: colors.textMuted, marginTop: '2px' }}>In Progress</div>
                             </div>
-
-                            <div>
-                                <span style={{ color: colors.text, fontSize: '13px', fontWeight: '700' }}>Learning Activity Snapshot</span>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
-                                    <div style={{ background: `${colors.primary}10`, border: `1px solid ${colors.primary}30`, borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                                        <div style={{ fontSize: '20px', fontWeight: '800', color: colors.primary }}>{activeCourses.length}</div>
-                                        <div style={{ fontSize: '11px', color: colors.textMuted }}>Courses In Progress</div>
-                                    </div>
-                                    <div style={{ background: `${colors.accent}10`, border: `1px solid ${colors.accent}30`, borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                                        <div style={{ fontSize: '20px', fontWeight: '800', color: colors.accent }}>{assignmentsList.length}</div>
-                                        <div style={{ fontSize: '11px', color: colors.textMuted }}>Assignments Available</div>
-                                    </div>
-                                    <div style={{ background: `${colors.success}10`, border: `1px solid ${colors.success}30`, borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                                        <div style={{ fontSize: '20px', fontWeight: '800', color: colors.success }}>{quizAverage}%</div>
-                                        <div style={{ fontSize: '11px', color: colors.textMuted }}>Quiz Average</div>
-                                    </div>
-                                    <div style={{ background: `${colors.textMuted}10`, border: `1px solid ${colors.border}`, borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                                        <div style={{ fontSize: '20px', fontWeight: '800', color: colors.text }}>{certificates.length}</div>
-                                        <div style={{ fontSize: '11px', color: colors.textMuted }}>Certificates Earned</div>
-                                    </div>
-                                </div>
+                            <div style={{ background: `${colors.accent}08`, border: `1px solid ${colors.accent}20`, borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+                                <div style={{ fontSize: '16px', fontWeight: '800', color: colors.accent }}>{assignmentsList.length}</div>
+                                <div style={{ fontSize: '9px', color: colors.textMuted, marginTop: '2px' }}>Assignments</div>
+                            </div>
+                            <div style={{ background: `${colors.success}08`, border: `1px solid ${colors.success}20`, borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+                                <div style={{ fontSize: '16px', fontWeight: '800', color: colors.success }}>{quizAverage}%</div>
+                                <div style={{ fontSize: '9px', color: colors.textMuted, marginTop: '2px' }}>Quiz Avg</div>
+                            </div>
+                            <div style={{ background: colors.bgInput, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+                                <div style={{ fontSize: '16px', fontWeight: '800', color: colors.text }}>{certificates.length}</div>
+                                <div style={{ fontSize: '9px', color: colors.textMuted, marginTop: '2px' }}>Certificates</div>
                             </div>
                         </div>
                     </div>
@@ -543,9 +468,10 @@ export default function OverviewTab(dash) {
                             </div>
                         )}
                     </div>
+                </div>
 
                 {/* RIGHT SIDEBAR PANEL COLUMN */}
-                <div style={styles.dashboardGrid}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                     
                     {/* Learning Calendar Widget */}
                     {!hiddenWidgets['calendar'] && (
