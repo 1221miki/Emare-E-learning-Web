@@ -2,10 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { courseService } from '../services/api';
 import Navbar from '../components/Navbar';
-import TypingText from '../components/TypingText';
 import { useTheme } from '../context/ThemeContext';
-
-const heroStudents = '/images/dashboard-bg.jpg';
 
 export default function LandingPage() {
     const { colors, theme } = useTheme();
@@ -150,17 +147,17 @@ export default function LandingPage() {
     const p = {
         page: { minHeight: '100vh', fontFamily: "'Outfit', 'Inter', sans-serif", overflowX: 'hidden' },
         hero: { position: 'relative', padding: '120px 5% 100px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '40px', overflow: 'hidden', textAlign: 'center' },
-        heroContent: { flex: '1 1 520px', maxWidth: '700px', zIndex: 2, position: 'relative', textAlign: 'left' },
+        heroContent: { flex: '1 1 520px', maxWidth: '700px', zIndex: 2, position: 'relative', textAlign: 'left', minWidth: '280px' },
         heroImageWrapper: { flex: '0 0 520px', width: '100%', maxWidth: '520px', minHeight: '500px', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative' },
         heroImageOverlay: { position: 'absolute', inset: 0, borderRadius: '32px', background: 'linear-gradient(180deg, rgba(6,10,78,0.10), rgba(6,10,78,0.35))', pointerEvents: 'none' },
-        heroImage: { width: '100%', height: '100%', borderRadius: '32px', objectFit: 'cover', boxShadow: '0 40px 120px rgba(0,0,0,0.18)', border: `1px solid ${colors.border}` },
+        heroImage: { width: '100%', height: '100%', maxHeight: '620px', minHeight: '360px', borderRadius: '32px', objectFit: 'cover', boxShadow: '0 40px 120px rgba(0,0,0,0.18)', border: `1px solid ${colors.border}` },
         heroTitle: { fontSize: '60px', fontWeight: '900', lineHeight: 1.1, margin: '0 0 16px', letterSpacing: '-2px', color: colors.text },
         heroSubtitleAnimated: { fontSize: '32px', fontWeight: '700', lineHeight: 1.2, margin: '0 0 40px', maxWidth: '600px', color: colors.primary, minHeight: '50px' },
         heroSubtitle: { fontSize: '18px', color: colors.textMuted, lineHeight: 1.7, margin: '0 0 32px', maxWidth: '600px' },
-        searchForm: { display: 'flex', maxWidth: '600px', margin: '0 0 32px', background: colors.bgCard, borderRadius: '14px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' },
-        searchInput: { flex: 1, background: 'transparent', border: 'none', color: colors.text, padding: '18px 24px', fontSize: '15px', outline: 'none' },
-        searchBtn: { background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', border: 'none', padding: '16px 32px', fontWeight: '700', cursor: 'pointer', fontSize: '15px' },
-        heroActions: { display: 'flex', gap: '16px', justifyContent: 'center' },
+        searchForm: { display: 'flex', flexWrap: 'wrap', gap: '10px', maxWidth: '600px', margin: '0 0 32px', background: colors.bgCard, borderRadius: '14px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' },
+        searchInput: { flex: '1 1 260px', background: 'transparent', border: 'none', color: colors.text, padding: '18px 24px', fontSize: '15px', outline: 'none', minWidth: '180px' },
+        searchBtn: { background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', border: 'none', padding: '16px 28px', fontWeight: '700', cursor: 'pointer', fontSize: '15px', flex: '0 0 auto' },
+        heroActions: { display: 'flex', gap: '16px', justifyContent: 'flex-start', flexWrap: 'wrap' },
         primaryBtn: { background: colors.text, color: colors.bg, border: 'none', padding: '14px 32px', borderRadius: '12px', fontSize: '15px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' },
         secondaryBtn: { background: colors.bgInput, color: colors.text, border: `1px solid ${colors.border}`, padding: '14px 32px', borderRadius: '12px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' },
         heroGlow1: { position: 'absolute', width: '600px', height: '600px', background: colors.primary, filter: 'blur(150px)', opacity: theme === 'dark' ? 0.12 : 0.05, top: '-200px', left: '-100px', borderRadius: '50%' },
@@ -227,39 +224,25 @@ export default function LandingPage() {
             <Navbar />
 
             {/* 3. Hero Section */}
-            <section style={p.hero}>
-                <div style={p.heroContent}>
-                    <span style={p.sectionBadge}>▶ Empowering Africa's Tech Future</span>
+            <section className="landing-hero" style={p.hero}>
+                <div className="landing-hero-content" style={p.heroContent}>
                     <h1 style={p.heroTitle}>Welcome to Emare ICT Hub</h1>
                     <h2 style={p.heroSubtitleAnimated}>
-                        <TypingText 
-                            phrases={[
-                                'Master In-Demand Tech Skills',
-                                'Build Your Future',
-                                'Become Job Ready',
-                                'Learn from Experts',
-                                'Start Learning Today'
-                            ]}
-                            speed={50}
-                            delay={2500}
-                            style={{ color: 'currentColor' }}
-                        />
+                        Master In-Demand Tech Skills, Build Your Future, and Become Job Ready.
                     </h2>
                     <form onSubmit={handleSearch} style={p.searchForm}>
                         <input type="text" placeholder="Search for courses, paths, or instructors..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={p.searchInput} />
                         <button type="submit" style={p.searchBtn}>Search Courses</button>
                     </form>
-                    <div style={p.heroActions}>
+                    <div className="landing-hero-actions" style={p.heroActions}>
                         <button onClick={() => navigate('/courses')} style={p.primaryBtn}>Browse Courses</button>
                         <button onClick={() => navigate('/courses')} style={p.secondaryBtn}>Start Learning for Free</button>
                     </div>
                 </div>
-                <div style={p.heroImageWrapper}>
-                    <img src={heroStudents} alt="Students learning at Emare ICT Hub" style={p.heroImage} />
+                <div className="landing-hero-image-wrapper" style={p.heroImageWrapper}>
+                    <img className="landing-hero-image" src="/images/home.avif" alt="Emare ICT Hub home" style={p.heroImage} />
                     <div style={p.heroImageOverlay} />
                 </div>
-                <div style={p.heroGlow1} />
-                <div style={p.heroGlow2} />
             </section>
 
             {/* 4. Platform Statistics */}

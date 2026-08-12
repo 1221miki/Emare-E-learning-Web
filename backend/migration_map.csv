@@ -1,0 +1,6 @@
+oldPathOrUrl,collection,documentId,field,fileExists,fileSizeBytes,mimeType,sha256,isValidImage,isReferenced,cloudinaryFolder,action,reason,expectedNewUrl
+https://res.cloudinary.com/afthor2f/image/upload/v1786302327/emare_elms/course_thumbnails/nwaqymfu84pvirvqvu86.png,courses,6a738f75f3e6b1c6a858f638,thumbnailUrl,false,0,image/*,,true,true,emare_elms/course_thumbnails,already_cloudinary,DB value is a Cloudinary URL,
+http://localhost:5000/uploads/file_1786180740737_gta6i5.png,users,6a76ee58a738c3885c1d1055,avatarUrl,false,0,,,false,true,,broken_reference,DB references a /uploads/ file that does not exist on disk,
+/backend/public/uploads/file_1785002037571_82i74d.png,,,,true,22,unknown,4add5451d5b4f48d81ee725e964c0f0906348bc17bde6a76c376d4ba5fc08c7d,false,false,,skip,22-byte PNG — invalid/placeholder; skip,
+/backend/public/uploads/file_1785846039702_awrs8p.svg,,,,true,155075,image/svg+xml,a3fbc6b3173fb7770cf6441d15aa071ced500ce2036468c00041a7886dc3c31c,true,false,emare_elms/frontend_assets,manual_review,SVG not referenced in code or DB; manual review before migrating,
+/client/public/images/dashboard-bg.jpg,,,,true,202618,image/jpeg,51c215586e7394cc8191ba4303aa2fa92ecbd1a05a5a82d7d944d2241c1fe796,true,false,emare_elms/frontend_assets,manual_review,Frontend static asset — do not migrate automatically,

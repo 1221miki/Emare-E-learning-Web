@@ -134,9 +134,13 @@ export default function CourseDetailPage() {
 
             {/* Hero Section */}
             <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', padding: '60px 40px', color: '#fff' }}>
-                <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
-                    <div style={{ flex: '1 1 600px' }}>
-                        <div style={{ color: '#3b82f6', fontWeight: '800', textTransform: 'uppercase', fontSize: '13px', marginBottom: '12px', letterSpacing: '1px' }}>
+                <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <button onClick={() => navigate(-1)} style={{ alignSelf: 'flex-start', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)', color: '#fff', borderRadius: '999px', padding: '10px 16px', fontSize: '13px', cursor: 'pointer', fontWeight: '700' }}>
+                        ← Back to Catalog
+                    </button>
+                    <div style={{ display: 'flex', maxWidth: '1200px', margin: '0 auto', gap: '40px', flexWrap: 'wrap' }}>
+                        <div style={{ flex: '1 1 600px' }}>
+                            <div style={{ color: '#3b82f6', fontWeight: '800', textTransform: 'uppercase', fontSize: '13px', marginBottom: '12px', letterSpacing: '1px' }}>
                             {course.technicalCategory} &gt; {course.level || 'Beginner'}
                         </div>
                         <h1 style={{ fontSize: '40px', fontWeight: '900', margin: '0 0 16px', lineHeight: 1.2 }}>{course.courseTitle}</h1>
@@ -205,6 +209,7 @@ export default function CourseDetailPage() {
                     </div>
                 </div>
             </div>
+        </div>
 
             {/* Main Details */}
             <div style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 40px', display: 'flex', gap: '40px' }}>

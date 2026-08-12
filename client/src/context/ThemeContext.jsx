@@ -7,21 +7,21 @@ export const ThemeProvider = ({ children }) => {
 
     useEffect(() => {
         localStorage.setItem('elms_theme', theme);
-        document.body.style.background = theme === 'dark' ? '#0f172a' : '#f8fafc';
-        document.body.style.color = theme === 'dark' ? '#f1f5f9' : '#0f172a';
+        document.body.style.background = theme === 'dark' ? '#0b1220' : '#f8fafc';
+        document.body.style.color = theme === 'dark' ? '#eef2ff' : '#0f172a';
     }, [theme]);
 
     const setTheme = (value) => setThemeValue(value);
     const toggleTheme = () => setThemeValue(prev => prev === 'dark' ? 'light' : 'dark');
 
     const colors = theme === 'dark' ? {
-        bg: '#0f172a', bgCard: '#1e293b', bgInput: 'rgba(255,255,255,0.05)',
-        border: '#334155', text: '#f1f5f9', textMuted: '#94a3b8',
-        primary: '#3b82f6', accent: '#8b5cf6', success: '#10b981'
+        bg: '#0b1220', bgCard: '#111827', bgInput: 'rgba(255,255,255,0.08)',
+        border: '#334155', text: '#e2e8f0', textMuted: '#94a3b8',
+        primary: '#2563eb', accent: '#7c3aed', success: '#10b981'
     } : {
         bg: '#f8fafc', bgCard: '#ffffff', bgInput: '#f1f5f9',
-        border: '#e2e8f0', text: '#0f172a', textMuted: '#64748b',
-        primary: '#2563eb', accent: '#7c3aed', success: '#059669'
+        border: '#e2e8f0', text: '#0f172a', textMuted: '#475569',
+        primary: '#1d4ed8', accent: '#7c3aed', success: '#059669'
     };
 
     return (

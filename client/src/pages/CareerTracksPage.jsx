@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { courseService, categoryService } from '../services/api';
 import Navbar from '../components/Navbar';
-import EmareTeamSection from '../components/EmareTeamSection';
 import { useTheme } from '../context/ThemeContext';
 
 const TRACK_ICONS = {
@@ -259,7 +258,6 @@ export default function CareerTracksPage() {
                     )}
                 </div>
             </div>
-            <EmareTeamSection />
         </div>
     );
 }

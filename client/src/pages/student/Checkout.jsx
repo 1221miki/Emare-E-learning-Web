@@ -11,6 +11,10 @@ export default function Checkout() {
     const [course, setCourse] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [couponCode, setCouponCode] = useState('');
+    const [discount, setDiscount] = useState(null);
+    const [finalPricePreview, setFinalPricePreview] = useState(null);
+    const [couponLoading, setCouponLoading] = useState(false);
 
     useEffect(() => {
         async function loadCourse() {
@@ -30,7 +34,7 @@ export default function Checkout() {
         setError('');
         setLoading(true);
         try {
-            const res = await paymentService.initiate({ courseId: course._id, amount: course.price, provider: 'chapa' });
+            const res = await paymentService.initiate({ courseId: course._id, amount: course.price, provider: 'chapa', coupon: couponCode || undefined });
             if (res.data?.success) {
                 const data = res.data.data;
                 if (data.free) {
@@ -50,6 +54,30 @@ export default function Checkout() {
             setError(err.response?.data?.message || 'Payment initialization failed.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleApplyCoupon = async () => {
+        if (!couponCode || !course) return;
+        setCouponLoading(true);
+        setError('');
+        try {
+            const res = await paymentService.applyCoupon({ code: couponCode, courseId: course._id });
+            if (res.data?.success) {
+                setDiscount(res.data.data.discountAmount || 0);
+                setFinalPricePreview(res.data.data.finalAmount);
+            } else {
+                setError(res.data?.message || 'Invalid coupon');
+                setDiscount(null);
+                setFinalPricePreview(null);
+            }
+        } catch (err) {
+            console.error(err);
+            setError(err.response?.data?.message || 'Coupon validation failed');
+            setDiscount(null);
+            setFinalPricePreview(null);
+        } finally {
+            setCouponLoading(false);
         }
     };
 
@@ -118,6 +146,17 @@ export default function Checkout() {
                             Your payment will be securely processed by Chapa. Do not close this window until the checkout page appears.
                         </p>
                         {error && <div style={{ marginBottom: '18px', color: '#b91c1c', fontWeight: 600 }}>{error}</div>}
+                        <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="Coupon code" style={{ flex: 1, padding: '10px 12px', borderRadius: '10px', border: `1px solid ${colors.border}`, background: colors.bg }} />
+                                <button onClick={handleApplyCoupon} disabled={couponLoading} style={{ padding: '10px 14px', borderRadius: '10px', fontWeight: 700, border: 'none', background: '#10b981', color: '#fff' }}>{couponLoading ? 'Checking…' : 'Apply'}</button>
+                            </div>
+                            {discount !== null && <div style={{ fontSize: '14px', color: colors.textMuted }}>
+                                <div>Original: <strong>{course.price} ETB</strong></div>
+                                <div>Discount: <strong>-{discount} ETB</strong></div>
+                                <div>Payable: <strong>{finalPricePreview ?? course.price} ETB</strong></div>
+                            </div>}
+                        </div>
                         <button
                             disabled={loading}
                             onClick={handlePayNow}
