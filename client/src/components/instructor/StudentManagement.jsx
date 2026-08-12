@@ -4,22 +4,76 @@ import {
     Filter, Download, ChevronDown, AlertTriangle
 } from 'lucide-react';
 import { courseService, enrollmentService, gradebookService, assignmentService } from '../../services/api';
+import { useTheme } from '../../context/ThemeContext';
 import StudentStatisticsCards from './students/StudentStatisticsCards';
 import CourseSelector from './students/CourseSelector';
 import StudentTable from './students/StudentTable';
 import StudentProfileModal from './students/StudentProfileModal';
 import MessagePanel from './students/MessagePanel';
 
-// ─── Shared dark-glass style tokens ─────────────────────────
-const T = {
-    card:       { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(12px)', border: '1px solid rgba(51,65,85,0.45)', borderRadius: '16px' },
-    input:      { background: 'rgba(9,13,22,0.7)', border: '1px solid rgba(51,65,85,0.5)', color: '#f1f5f9', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' },
-    select:     { background: 'rgba(9,13,22,0.7)', border: '1px solid rgba(51,65,85,0.5)', color: '#f1f5f9', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', cursor: 'pointer' },
-    primaryBtn: { background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 20px', fontWeight: '700', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' },
-    ghostBtn:   { background: 'rgba(51,65,85,0.3)', border: '1px solid rgba(51,65,85,0.5)', color: '#94a3b8', borderRadius: '10px', padding: '10px 16px', fontWeight: '600', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' },
-};
-
 export default function StudentManagement({ courses: propCourses = [], colors, s }) {
+    const { theme, colors: themeColors } = useTheme();
+    const effectiveColors = colors || themeColors;
+    const T = {
+        card: {
+            background: effectiveColors.bgCard,
+            backdropFilter: theme === 'dark' ? 'blur(12px)' : 'none',
+            border: `1px solid ${effectiveColors.border}`,
+            borderRadius: '16px',
+        },
+        input: {
+            background: effectiveColors.bgInput,
+            border: `1px solid ${effectiveColors.border}`,
+            color: effectiveColors.text,
+            padding: '10px 14px',
+            borderRadius: '10px',
+            fontSize: '13px',
+            outline: 'none',
+            fontFamily: 'inherit',
+            width: '100%',
+            boxSizing: 'border-box',
+        },
+        select: {
+            background: effectiveColors.bgInput,
+            border: `1px solid ${effectiveColors.border}`,
+            color: effectiveColors.text,
+            padding: '10px 14px',
+            borderRadius: '10px',
+            fontSize: '13px',
+            outline: 'none',
+            fontFamily: 'inherit',
+            cursor: 'pointer',
+            width: '100%',
+            boxSizing: 'border-box',
+        },
+        primaryBtn: {
+            background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '10px',
+            padding: '10px 20px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            fontSize: '13px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            whiteSpace: 'nowrap',
+        },
+        ghostBtn: {
+            background: theme === 'dark' ? 'rgba(51,65,85,0.3)' : 'rgba(226,232,240,0.7)',
+            border: `1px solid ${effectiveColors.border}`,
+            color: effectiveColors.textMuted,
+            borderRadius: '10px',
+            padding: '10px 16px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            fontSize: '13px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+        },
+    };
     // ── State ────────────────────────────────────────────────
     const [courses, setCourses]               = useState(propCourses);
     const [selectedCourse, setSelectedCourse] = useState(null);

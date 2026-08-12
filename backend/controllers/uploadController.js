@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const { uploadBuffer } = require('../services/cloudinaryService');
+const { uploadVideo, uploadFileToStorage } = require('../services/bunnyService');
+const Media = require('../models/Media');
 const streamifier = require('streamifier');
 const pdfParse = require('pdf-parse');
 
@@ -114,13 +116,104 @@ exports.uploadFile = async (req, res) => {
             pdfText = await extractPdfText(req.file.buffer);
         }
 
-        const uploadPromise = uploadBuffer(req.file.buffer, folder, resourceType);
+        const isVideoFile = (mimetype, fileName) => {
+            if (!mimetype && !fileName) return false;
+            const type = String(mimetype || '').toLowerCase();
+            if (type.startsWith('video/')) return true;
+            if (!fileName) return false;
+            return /\.(mp4|mov|m4v|mkv|webm|avi|wmv|flv|mpeg|mpg|3gp|3g2)$/i.test(fileName);
+        };
+
+        // Route video uploads to Bunny Stream instead of Cloudinary
+        if (isVideoFile(req.file.mimetype, req.file.originalname)) {
+            try {
+                const fileName = req.file.originalname || 'emare-upload-video.mp4';
+                const bunnyPayload = req.file.path ? req.file.path : req.file.buffer;
+                const bunnyResult = await uploadVideo(bunnyPayload, fileName, req.file.mimetype || 'video/mp4');
+
+                try {
+                    const mediaDoc = new Media({
+                        filename: fileName,
+                        mimeType: req.file.mimetype || 'video/mp4',
+                        source: 'bunny',
+                        bunnyType: bunnyResult.bunnyType || 'video',
+                        url: bunnyResult.url || bunnyResult.publicUrl || bunnyResult.streamUrl || bunnyResult.storageUrl,
+                        storagePath: bunnyResult.storagePath,
+                        meta: bunnyResult.response || {}
+                    });
+                    if (req.user && req.user._id) mediaDoc.uploadedBy = req.user._id;
+                    await mediaDoc.save();
+                    bunnyResult.dbId = mediaDoc._id;
+                } catch (saveErr) {
+                    console.warn('Warning: could not save media metadata to DB:', saveErr.message || saveErr);
+                }
+
+                return res.status(200).json({
+                    success: true,
+                    data: {
+                        url: bunnyResult.url || bunnyResult.publicUrl || bunnyResult.streamUrl || bunnyResult.storageUrl,
+                        storagePath: bunnyResult.storagePath,
+                        response: bunnyResult.response,
+                        dbId: bunnyResult.dbId,
+                        pdfText
+                    }
+                });
+            } catch (bunnyErr) {
+                const bunnyErrorMessage = bunnyErr?.response?.data?.Message || bunnyErr?.response?.data || bunnyErr?.message || 'Unknown Bunny upload error';
+                const clientError = typeof bunnyErrorMessage === 'string' ? bunnyErrorMessage : JSON.stringify(bunnyErrorMessage);
+                console.error('Bunny.net video upload failed:', bunnyErr?.response?.data || bunnyErr);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Video upload failed.',
+                    error: clientError
+                });
+            }
+        }
+
+        // Keep images and documents on Cloudinary
+
+        // If storage upload fails, we still proceed with Cloudinary
+        let storageResult = null;
+        try {
+            const { uploadFileToStorage } = require('../services/bunnyService');
+            if (req.file.size < 100000000) { // Only try storage for files < 100MB
+                storageResult = await uploadFileToStorage(req.file.buffer, req.file.originalname || 'document', req.file.mimetype, 'documents');
+            }
+        } catch (storageErr) {
+            console.warn('Bunny Storage upload skipped (not critical):', storageErr.message);
+            // Storage is optional - proceed with Cloudinary
+        }
+
+        // Default: upload to Cloudinary
+        const cloudinaryTimeoutMs = resourceType === 'video' ? 180000 : 60000;
+        const uploadPromise = uploadBuffer(req.file.buffer, folder, resourceType, cloudinaryTimeoutMs);
         const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Cloudinary timeout')), 5000)
+            setTimeout(() => reject(new Error(`Cloudinary timeout after ${cloudinaryTimeoutMs}ms`)), cloudinaryTimeoutMs + 1000)
         );
 
         try {
             const result = await Promise.race([uploadPromise, timeoutPromise]);
+
+            // try saving Cloudinary metadata too (non-blocking)
+            try {
+                const mediaDoc = new Media({
+                    filename: req.file.originalname || path.basename(req.file.path || 'upload'),
+                    mimeType: req.file.mimetype,
+                    source: 'cloudinary',
+                    url: result.secure_url,
+                    publicId: result.public_id,
+                    meta: {
+                        format: result.format,
+                        resource_type: result.resource_type,
+                        folder: result.folder
+                    }
+                });
+                if (req.user && req.user._id) mediaDoc.uploadedBy = req.user._id;
+                await mediaDoc.save();
+            } catch (saveErr) {
+                console.warn('Warning: could not save cloudinary media metadata to DB:', saveErr.message || saveErr);
+            }
+
             return res.status(200).json({
                 success: true,
                 data: {
@@ -133,12 +226,31 @@ exports.uploadFile = async (req, res) => {
                 }
             });
         } catch (cloudErr) {
-            console.error('Cloudinary upload failed or timed out:', cloudErr.message);
-            return res.status(500).json({ success: false, message: 'Cloudinary upload failed. Please try again.' });
+            console.error('Cloudinary upload failed or timed out:', {
+                message: cloudErr && cloudErr.message ? cloudErr.message : String(cloudErr),
+                stack: cloudErr && cloudErr.stack ? cloudErr.stack : null,
+                resourceType,
+                fileName: req.file && req.file.originalname,
+                mimeType: req.file && req.file.mimetype,
+                size: req.file && req.file.size
+            });
+            return res.status(500).json({
+                success: false,
+                message: 'Upload failed. Please try again.',
+                error: cloudErr && cloudErr.message ? cloudErr.message : 'Unknown Cloudinary upload error'
+            });
         }
 
     } catch (err) {
-        console.error('Upload Error:', err);
-        res.status(500).json({ success: false, message: 'Upload failed due to an internal error.' });
+        console.error('Upload Error:', {
+            message: err && err.message ? err.message : String(err),
+            stack: err && err.stack ? err.stack : null,
+            file: req.file && {
+                originalname: req.file.originalname,
+                mimetype: req.file.mimetype,
+                size: req.file.size
+            }
+        });
+        res.status(500).json({ success: false, message: 'Upload failed due to an internal error.', error: err && err.message ? err.message : 'Unknown upload error' });
     }
 };

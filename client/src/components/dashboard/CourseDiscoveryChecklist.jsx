@@ -41,7 +41,7 @@ export default function CourseDiscoveryChecklist({ enrolledCount = 0, wishlistCo
             title: 'Choose the best match',
             description: 'Review price, duration, instructor quality, and certificate availability before enrolling.',
             actionLabel: 'Find certificate courses',
-            onClick: () => navigate('/courses')
+            onClick: () => navigate('/courses?section=certificates')
         }
     ];
 

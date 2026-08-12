@@ -22,7 +22,15 @@ const connectDB = async () => {
 
     // ── 1. Try the configured URI ──────────────────────────────────────────────
     try {
-        const conn = await mongoose.connect(configuredUri);
+        const conn = await mongoose.connect(configuredUri, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+            retryWrites: true,
+            w: 'majority',
+            serverSelectionTimeoutMS: 10000,
+            socketTimeoutMS: 10000,
+            family: 4
+        });
         console.log(`MongoDB Connected: ${conn.connection.host}`);
 
         // Check if this endpoint actually supports writes
@@ -31,7 +39,7 @@ const connectDB = async () => {
             console.error('❌ Connected MongoDB endpoint is read-only (Atlas SQL / Data Federation).');
             console.error('   Writes are not supported on this endpoint.');
             if (process.env.USE_IN_MEMORY_DB === 'true') {
-                console.warn('🔄 Falling back to In-Memory MongoDB because USE_IN_MEMORY_DB=true.');
+                console.warn('🔄 Falling back to In-Memory MongoDB because configured DB is read-only.');
                 await mongoose.disconnect();
                 throw new Error('READ_ONLY_ENDPOINT');
             }

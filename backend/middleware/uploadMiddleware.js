@@ -5,24 +5,101 @@ const multer = require('multer');
 // making it extremely fast for piping directly to Cloudinary.
 const storage = multer.memoryStorage();
 
+const MAX_UPLOAD_SIZE = Infinity;
+
+const ALLOWED_MIME_TYPES = new Set([
+    'image/',
+    'video/mp4',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/zip',
+    'application/x-zip-compressed',
+    'application/x-rar-compressed',
+    'application/x-7z-compressed',
+    'application/gzip',
+    'application/x-tar',
+    'text/plain',
+    'text/csv',
+    'application/json',
+    'application/xml',
+    'text/xml'
+]);
+
+const ALLOWED_FILE_EXTENSIONS = new Set([
+    'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff',
+    'pdf',
+    'doc', 'docx',
+    'xls', 'xlsx',
+    'ppt', 'pptx',
+    'zip', 'rar', '7z', 'gz', 'tar',
+    'txt', 'csv', 'json', 'xml', 'mp4'
+]);
+
+const normalizeMimeType = (mimetype = '') => String(mimetype || '').toLowerCase();
+const normalizeFileName = (fileName = '') => String(fileName || '').toLowerCase();
+
+const isAllowedMimeType = (mimetype, fileName = '') => {
+    const normalizedMime = normalizeMimeType(mimetype);
+    const normalizedName = normalizeFileName(fileName);
+
+    if (!normalizedMime && normalizedName) {
+        const ext = normalizedName.split('.').pop();
+        return ALLOWED_FILE_EXTENSIONS.has(ext);
+    }
+
+    if (normalizedMime.startsWith('image/')) return true;
+    if (normalizedMime.startsWith('video/')) return normalizedMime === 'video/mp4';
+    if (normalizedMime === 'application/pdf') return true;
+
+    if (ALLOWED_MIME_TYPES.has(normalizedMime)) return true;
+
+    if (normalizedMime === 'application/octet-stream' && normalizedName) {
+        const ext = normalizedName.split('.').pop();
+        return ALLOWED_FILE_EXTENSIONS.has(ext);
+    }
+
+    return false;
+};
+
 // File validation filter
 const fileFilter = (req, file, cb) => {
-    // Only allow images, pdfs, and mp4s
-    if (file.mimetype.startsWith('image/') || 
-        file.mimetype === 'application/pdf' || 
-        file.mimetype === 'video/mp4') {
+    if (isAllowedMimeType(file.mimetype, file.originalname)) {
         cb(null, true);
     } else {
-        cb(new Error('Unsupported file format. Please upload an image, PDF, or MP4 video.'), false);
+        cb(new Error('Unsupported file format. Please upload an image, PDF, document, archive, or MP4 video.'), false);
     }
 };
 
 const upload = multer({
     storage,
     limits: {
-        fileSize: 50 * 1024 * 1024 // 50MB limit
+        fileSize: MAX_UPLOAD_SIZE
     },
     fileFilter
 });
 
-module.exports = upload;
+// Gracefully handle oversized uploads
+const handleUploadError = (err, req, res, next) => {
+    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+            success: false,
+            message: 'Uploaded file is too large. Please upload a smaller file or check your server upload limits.'
+        });
+    }
+
+    if (err) {
+        return res.status(400).json({
+            success: false,
+            message: err.message || 'Upload failed.'
+        });
+    }
+
+    return next();
+};
+
+module.exports = { upload, handleUploadError, isAllowedMimeType };
