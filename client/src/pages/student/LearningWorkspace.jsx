@@ -473,8 +473,8 @@ export default function LearningWorkspace() {
                 )}
             </div>
 
-            {/* Global AI Assistant */}
-            <AiAssistant context={{ courseName: course.courseTitle }} />
+            {/* Global AI Assistant - Now with Socratic Tutor Backend */}
+            <AiAssistant context={{ courseName: course.courseTitle, courseId }} />
         </div>
     );
 }

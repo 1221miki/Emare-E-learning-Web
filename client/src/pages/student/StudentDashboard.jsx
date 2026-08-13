@@ -35,12 +35,10 @@ import PromptLibrary from '../../components/PromptLibrary';
 import AccountProfileChecklist from '../../components/dashboard/AccountProfileChecklist';
 import ProgressOverview from '../../components/dashboard/ProgressOverview';
 import LearningHistory from '../../components/dashboard/LearningHistory';
-import LearningGoals from '../../components/dashboard/LearningGoals';
 import AchievementsPanel from '../../components/dashboard/AchievementsPanel';
 import Inbox from '../../components/comm/Inbox';
 import ConversationView from '../../components/comm/ConversationView';
 import NotificationsPanel from '../../components/comm/NotificationsPanel';
-import Checkout from '../../components/payments/Checkout';
 import PaymentHistory from '../../components/payments/PaymentHistory';
 import CertificateList from '../../components/certificates/CertificateList';
 import MyReviews from '../../components/reviews/MyReviews';
@@ -503,12 +501,14 @@ export default function StudentDashboard() {
     const activeCourses = enrollments.filter(e => (e.completionPercentage || 0) < 100);
     const primaryActiveCourse = activeCourses.length > 0 ? activeCourses[0] : enrollments[0] || {};
     const currentCourseTitle = primaryActiveCourse?.courseRef?.courseTitle || currentCourseContext;
+    const currentCourseId = primaryActiveCourse?.courseRef?._id || enrollments[0]?.courseRef?._id || null;
     const currentLessonTitle = primaryActiveCourse?.courseRef?.currentLessonTitle || assignmentsList[0]?.title || quizzesList[0]?.title || 'Your latest lesson';
     const currentProgress = Math.round(primaryActiveCourse?.completionPercentage || 0);
     const quizAverage = grades.length ? Math.round(grades.reduce((sum, grade) => sum + (grade.numericalScoreEarned || 0), 0) / grades.length) : 0;
     const upcomingAssignmentsCount = assignmentsList.filter(a => new Date(a.dueDate || Date.now()) >= new Date()).length;
     const courseAwareness = {
         courseName: currentCourseTitle,
+        courseId: currentCourseId,
         currentLessonTitle,
         courseProgress: currentProgress,
         quizAverage,
@@ -804,12 +804,11 @@ export default function StudentDashboard() {
                                     <AchievementsPanel certificates={certificates} badges={[]} />
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20, marginTop: 20 }}>
+                                <div style={{ marginTop: 20 }}>
                                     <LearningHistory recentlyViewed={recentlyViewed} enrollments={enrollments} />
-                                    <LearningGoals />
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, marginTop: 20 }}>
+                                <div style={{ marginTop: 20 }}>
                                     <div style={{ background: colors.bgCard, padding: 12, borderRadius: 10, border: `1px solid ${colors.border}` }}>
                                         <h4 style={{ margin: '0 0 8px 0', color: colors.text }}>Upcoming Assignments</h4>
                                         {assignmentsList.length === 0 ? (
@@ -835,35 +834,15 @@ export default function StudentDashboard() {
                                             })
                                         )}
                                     </div>
-
-                                    <div style={{ background: colors.bgCard, padding: 12, borderRadius: 10, border: `1px solid ${colors.border}` }}>
-                                        <h4 style={{ margin: '0 0 8px 0', color: colors.text }}>Pending Submissions</h4>
-                                        {mySubmissions.filter(s=>s.status!=='Graded').length === 0 ? (
-                                            <div style={{ color: colors.textMuted }}>No pending submissions.</div>
-                                        ) : (
-                                            mySubmissions.filter(s=>s.status!=='Graded').slice(0,5).map(s => (
-                                                <div key={s._id} style={{ padding: 8, borderRadius: 8, background: colors.bgInput, border: `1px solid ${colors.border}`, marginBottom: 8 }}>
-                                                    <div style={{ fontWeight: 800, color: colors.text }}>{s.assignmentRef?.title || 'Assignment'}</div>
-                                                    <div style={{ fontSize: 12, color: colors.textMuted }}>{new Date(s.submittedAt).toLocaleString()}</div>
-                                                    <div style={{ marginTop: 6 }}><a href={`/student/submissions/${s._id}`} style={{ color: colors.primary, fontWeight: 800 }}>View</a></div>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, marginTop: 20 }}>
-                                    <div>
-                                        <PaymentHistory />
-                                        <div style={{ marginTop: 16 }}>
-                                            <CertificateList />
-                                        </div>
-                                        <div style={{ marginTop: 16 }}>
-                                            <MyReviews />
-                                        </div>
+                                <div style={{ marginTop: 20 }}>
+                                    <PaymentHistory />
+                                    <div style={{ marginTop: 16 }}>
+                                        <CertificateList />
                                     </div>
-                                    <div>
-                                        <Checkout course={allCourses[0] || { title: 'Sample Course', price: 299 }} />
+                                    <div style={{ marginTop: 16 }}>
+                                        <MyReviews />
                                     </div>
                                 </div>
 

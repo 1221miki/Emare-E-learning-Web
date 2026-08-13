@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { aiService, uploadService } from '../services/api';
+import axios from 'axios';
 
 export default function AiAssistant({ context = {}, initialPrompt = { prompt: '', id: null } }) {
     const { colors } = useTheme();
@@ -157,6 +159,48 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
         setIsTyping(true);
 
         try {
+            const validCourseId = typeof context.courseId === 'string' && /^[a-fA-F0-9]{24}$/.test(context.courseId) ? context.courseId : null;
+            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
+            if (validCourseId) {
+                try {
+                    let sessionId = window.sessionStorage.getItem(`socratic-session-${validCourseId}`);
+
+                    if (!sessionId) {
+                        const sessionResponse = await axios.post(
+                            `${API_BASE_URL}/socratic/session/${validCourseId}/start`,
+                            { topic: context.courseName || 'General Learning', learningObjectives: [], difficultyLevel: 3 },
+                            { withCredentials: true }
+                        );
+                        sessionId = sessionResponse.data.session.sessionId;
+                        window.sessionStorage.setItem(`socratic-session-${validCourseId}`, sessionId);
+                    }
+
+                    const socraticResponse = await axios.post(
+                        `${API_BASE_URL}/socratic/ask`,
+                        { sessionId, question: query, courseId: validCourseId, useHints: false },
+                        { withCredentials: true }
+                    );
+
+                    let answer = 'No response generated';
+                    if (socraticResponse.data && socraticResponse.data.content) {
+                        answer = socraticResponse.data.content;
+                    }
+
+                    addMessage({
+                        sender: 'ai',
+                        text: answer,
+                        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    });
+                    setLastResponse(answer);
+                    saveHistoryItem(query);
+                    reloadServerHistory();
+                    return;
+                } catch (socraticErr) {
+                    console.warn('Socratic endpoint failed, falling back to old AI service:', socraticErr);
+                }
+            }
+
             const payloadContext = {
                 ...context,
                 pdfText: pdfText || undefined,
