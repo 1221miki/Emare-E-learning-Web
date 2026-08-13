@@ -143,13 +143,25 @@ app.all('/api/*', (req, res) => {
 // ── Serve Frontend in Production ───────────────────────────
 if (process.env.NODE_ENV === 'production') {
     // Serve static files from the React app build directory
-    app.use(express.static(path.join(__dirname, '../client/build')));
+    const fs = require('fs');
+    const viteDist = path.join(__dirname, '../client/dist');
+    const craBuild = path.join(__dirname, '../client/build');
+    const staticDir = fs.existsSync(viteDist) ? viteDist : craBuild;
+
+    if (fs.existsSync(staticDir)) {
+        app.use(express.static(staticDir));
+
+        // The "catchall" handler: for any request that doesn't match one above,
+        // send back the client's index.html file from the resolved static directory.
+        app.get('*', (req, res) => {
+            res.sendFile(path.resolve(staticDir, 'index.html'));
+        });
+    } else {
+        console.warn('Production build not found: expected', viteDist, 'or', craBuild);
+    }
 
     // The "catchall" handler: for any request that doesn't
     // match one above, send back React's index.html file.
-    app.get('*', (req, res) => {
-        res.sendFile(path.resolve(__dirname, '../client/build', 'index.html'));
-    });
 } else {
     app.get('/', (req, res) => {
         res.send('API is running in development mode. Please run the React client separately.');
