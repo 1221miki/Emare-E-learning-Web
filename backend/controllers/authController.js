@@ -162,6 +162,14 @@ const login = async (req, res, next) => {
             return res.status(401).json({ success: false, message: 'Invalid credentials.' });
         }
 
+        // Optional: restrict login to Admins only when enabled via env var
+        if (process.env.ALLOW_ONLY_ADMIN_LOGIN === 'true' && user.assignedRole !== 'Admin') {
+            audit.security({ req, user, action: 'LOGIN_BLOCKED_NON_ADMIN', severity: 'warning',
+                description: `Login blocked for non-admin account (${normalizedEmail}) because ALLOW_ONLY_ADMIN_LOGIN is enabled.`,
+                targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
+            return res.status(403).json({ success: false, message: 'Login disabled for non-admin users.' });
+        }
+
         // Update last login timestamp
         user.lastLoginTimestamp = Date.now();
         await user.save({ validateBeforeSave: false });
