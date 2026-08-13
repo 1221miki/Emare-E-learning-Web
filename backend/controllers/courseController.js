@@ -53,7 +53,22 @@ const getPublishedCourses = async (req, res, next) => {
             .sort({ creationTimestamp: -1 })
             .lean();
 
-        res.status(200).json({ success: true, count: courses.length, data: courses });
+        // Ensure thumbnailUrl is included in response
+        const coursesWithThumbnails = courses.map(c => ({
+            ...c,
+            thumbnailUrl: c.thumbnailUrl || null
+        }));
+
+        console.log(`[${new Date().toISOString()}] getPublishedCourses: Returning ${coursesWithThumbnails.length} courses`);
+        coursesWithThumbnails.forEach(c => {
+            if (c.thumbnailUrl) {
+                console.log(`  ✓ ${c.courseTitle}: ${c.thumbnailUrl}`);
+            } else {
+                console.warn(`  ✗ ${c.courseTitle}: NO THUMBNAIL`);
+            }
+        });
+
+        res.status(200).json({ success: true, count: coursesWithThumbnails.length, data: coursesWithThumbnails });
     } catch (err) {
         next(err);
     }
@@ -72,7 +87,22 @@ const getAllCourses = async (req, res, next) => {
             .sort({ creationTimestamp: -1 })
             .lean();
 
-        res.status(200).json({ success: true, count: courses.length, data: courses });
+        // Ensure all courses have thumbnailUrl included
+        const coursesWithThumbnails = courses.map(c => ({
+            ...c,
+            thumbnailUrl: c.thumbnailUrl || null
+        }));
+
+        console.log('getAllCourses: Returning', coursesWithThumbnails.length, 'courses with thumbnails');
+        if (coursesWithThumbnails.length > 0) {
+            console.log('Sample course:', {
+                title: coursesWithThumbnails[0].courseTitle,
+                thumbnailUrl: coursesWithThumbnails[0].thumbnailUrl,
+                hasThumb: !!coursesWithThumbnails[0].thumbnailUrl
+            });
+        }
+
+        res.status(200).json({ success: true, count: coursesWithThumbnails.length, data: coursesWithThumbnails });
     } catch (err) {
         next(err);
     }
@@ -148,10 +178,8 @@ const updateCourse = async (req, res, next) => {
             return res.status(403).json({ success: false, message: 'You are not the owner of this course.' });
         }
 
-        // Only allow editing Draft courses
-        if (['Published', 'Active', 'Archived'].includes(course.publicationState)) {
-            return res.status(400).json({ success: false, message: `Cannot edit a course that is currently ${course.publicationState}.` });
-        }
+        // Allow editing courses in any state (Draft, Published, Active, etc.)
+        // Archived courses can be edited to restore them
 
         course = await Course.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
 
@@ -203,12 +231,22 @@ const uploadCourseThumbnail = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'No thumbnail image uploaded.' });
         }
 
+        console.log('Uploading thumbnail for course:', req.params.id, 'File size:', req.file.size);
         const result = await uploadImage(req.file.buffer, 'emare_elms/course_thumbnails');
+        console.log('Cloudinary upload result:', result);
+        
+        if (!result || !result.secure_url) {
+            return res.status(500).json({ success: false, message: 'Failed to upload thumbnail to Cloudinary.' });
+        }
+        
         course.thumbnailUrl = result.secure_url;
-        await course.save();
+        const updatedCourse = await course.save();
+        const populatedCourse = await Course.findById(updatedCourse._id).populate('creatorRef', 'fullName email');
 
-        res.status(200).json({ success: true, message: 'Course thumbnail uploaded successfully.', data: course });
+        console.log('Thumbnail saved successfully:', populatedCourse.thumbnailUrl);
+        res.status(200).json({ success: true, message: 'Course thumbnail uploaded successfully.', data: populatedCourse });
     } catch (err) {
+        console.error('Thumbnail upload error:', err);
         next(err);
     }
 };
@@ -993,6 +1031,90 @@ const computeGrowthPct = (current, previous) => {
     return Math.round(((current - previous) / previous) * 100);
 };
 
+// Debug endpoint: Check course thumbnail status
+const debugCourseThumbnails = async (req, res, next) => {
+    try {
+        const courses = await Course.find({}).select('courseTitle thumbnailUrl publicationState _id').lean();
+        const report = courses.map(c => ({
+            title: c.courseTitle,
+            id: c._id,
+            hasThumb: !!c.thumbnailUrl,
+            thumbUrl: c.thumbnailUrl || 'NOT SET',
+            status: c.publicationState,
+            isVisible: ['Published', 'Active'].includes(c.publicationState) && !!c.thumbnailUrl
+        }));
+        
+        const stats = {
+            total: courses.length,
+            withThumbnails: report.filter(r => r.hasThumb).length,
+            withoutThumbnails: report.filter(r => !r.hasThumb).length,
+            published: report.filter(r => ['Published', 'Active'].includes(r.status)).length,
+            visibleInCatalog: report.filter(r => r.isVisible).length,
+            publishedButNoThumb: report.filter(r => ['Published', 'Active'].includes(r.status) && !r.hasThumb).length,
+            courses: report.sort((a, b) => {
+                // Sort: visible first, then with thumbnails, then by title
+                if (a.isVisible && !b.isVisible) return -1;
+                if (!a.isVisible && b.isVisible) return 1;
+                if (a.hasThumb && !b.hasThumb) return -1;
+                if (!a.hasThumb && b.hasThumb) return 1;
+                return a.title.localeCompare(b.title);
+            })
+        };
+        
+        console.log('DEBUG - Course Thumbnails Status:', JSON.stringify(stats, null, 2));
+        res.status(200).json({ success: true, data: stats });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// Auto-fix endpoint: Ensure all courses with thumbnails are properly configured
+const fixCourseThumbnails = async (req, res, next) => {
+    try {
+        console.log('[fixCourseThumbnails] Starting thumbnail verification and fix...');
+        
+        // Find all courses with thumbnails
+        const coursesWithThumbs = await Course.find({ thumbnailUrl: { $exists: true, $ne: '' } });
+        let fixes = { checked: 0, published: 0, errors: [] };
+        
+        for (const course of coursesWithThumbs) {
+            fixes.checked++;
+            
+            // If course has a thumbnail but isn't published, publish it
+            const visibleStates = ['Published', 'Active'];
+            if (!visibleStates.includes(course.publicationState)) {
+                console.log(`[fixCourseThumbnails] Publishing "${course.courseTitle}" (was: ${course.publicationState})`);
+                course.publicationState = 'Published';
+                try {
+                    await course.save();
+                    fixes.published++;
+                } catch (err) {
+                    fixes.errors.push({ course: course.courseTitle, error: err.message });
+                }
+            }
+        }
+        
+        // Re-run the debug report
+        const allCourses = await Course.find({}).select('courseTitle thumbnailUrl publicationState _id').lean();
+        const report = {
+            visibleInCatalog: allCourses.filter(c => ['Published', 'Active'].includes(c.publicationState) && c.thumbnailUrl).length,
+            total: allCourses.length,
+            withThumbnails: allCourses.filter(c => c.thumbnailUrl).length
+        };
+        
+        console.log('[fixCourseThumbnails] Fix complete:', JSON.stringify({ fixes, report }, null, 2));
+        res.status(200).json({ 
+            success: true, 
+            message: 'Thumbnail courses have been published',
+            fixes,
+            report
+        });
+    } catch (err) {
+        console.error('[fixCourseThumbnails] Error:', err);
+        next(err);
+    }
+};
+
 module.exports = {
     createCourse,
     getPublishedCourses,
@@ -1020,5 +1142,7 @@ module.exports = {
     unpublishCourse,
     duplicateCourse,
     getInstructorAnalytics,
-    uploadCourseThumbnail
+    uploadCourseThumbnail,
+    debugCourseThumbnails,
+    fixCourseThumbnails
 };

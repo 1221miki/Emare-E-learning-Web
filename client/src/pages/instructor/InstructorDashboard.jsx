@@ -20,7 +20,7 @@ import StudentManagement from '../../components/instructor/StudentManagement';
 import AssignmentManagement from '../../components/instructor/assignments/AssignmentManagement';
 import InstructorSettings from '../../components/instructor/InstructorSettings';
 import QuizManagement from '../../components/instructor/QuizManagement';
-import { LayoutDashboard, BookOpen, NotebookPen, ClipboardList, FileQuestion, Video, Users, GraduationCap, Award, BarChart3, MessagesSquare, MessageCircle, Megaphone, CalendarDays, Star, Settings, Upload, FilePen, FileText, Archive, PlusCircle, AlertTriangle, X, Link2, Trash2, ArrowUp, ArrowDown, Edit3, PauseCircle } from 'lucide-react';
+import { LayoutDashboard, BookOpen, NotebookPen, ClipboardList, FileQuestion, Video, Users, GraduationCap, Award, BarChart3, MessagesSquare, MessageCircle, Megaphone, CalendarDays, Star, Settings, Upload, UploadCloud, FilePen, FileText, Archive, PlusCircle, AlertTriangle, X, Link2, Trash2, ArrowUp, ArrowDown, Edit3, PauseCircle } from 'lucide-react';
 
 
 export default function InstructorDashboard() {
@@ -547,6 +547,7 @@ export default function InstructorDashboard() {
             const formData = new FormData();
             formData.append('thumbnail', selectedThumbnailFile);
 
+            console.log('Uploading thumbnail for course:', selectedCourse._id);
             const response = await fetch(
                 `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/courses/${selectedCourse._id}/thumbnail`,
                 {
@@ -558,10 +559,12 @@ export default function InstructorDashboard() {
 
             if (!response.ok) {
                 const error = await response.json();
+                console.error('Upload failed:', error);
                 throw new Error(error.message || 'Upload failed');
             }
 
             const result = await response.json();
+            console.log('Upload successful:', result.data.thumbnailUrl);
             
             // Update local state and course form
             setSelectedCourse(result.data);
@@ -570,8 +573,13 @@ export default function InstructorDashboard() {
             
             setSelectedThumbnailFile(null);
             setThumbnailPreview('');
+            
+            // Show success message
+            alert('Thumbnail uploaded successfully! The image will be visible on the course catalog after refresh.');
         } catch (err) {
+            console.error('Thumbnail upload error:', err);
             setThumbnailUploadError(err.message || 'Failed to upload thumbnail');
+            alert('Error: ' + (err.message || 'Failed to upload thumbnail'));
         } finally {
             setIsUploadingThumbnail(false);
         }

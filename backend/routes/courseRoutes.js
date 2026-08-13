@@ -29,11 +29,15 @@ const {
     unpublishCourse,
     duplicateCourse,
     getInstructorAnalytics,
-    uploadCourseThumbnail
+    uploadCourseThumbnail,
+    debugCourseThumbnails,
+    fixCourseThumbnails
 } = require('../controllers/courseController');
 
 // ── Public Routes ──────────────────────────────────────────
 router.get('/', getPublishedCourses);
+router.get('/debug/thumbnails', debugCourseThumbnails);
+router.post('/admin/fix-thumbnails', protect, authorizeRoles('Admin'), fixCourseThumbnails);
 
 // ── Admin Course Management Routes ───────────────────────────
 router.get('/admin/all', protect, authorizeRoles('Admin'), getAllCourses);

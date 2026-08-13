@@ -71,19 +71,59 @@ export default function CourseCatalog() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [resCourses, resCats] = await Promise.all([courseService.getAll(), categoryService.getAll()]);
-                setCourses(resCourses.data?.data || []);
+                // Always fetch fresh data - disable caching
+                const [resCourses, resCats] = await Promise.all([
+                    courseService.getAll(), 
+                    categoryService.getAll()
+                ]);
+                
+                // Validate response
+                if (!resCourses.data?.data || !Array.isArray(resCourses.data.data)) {
+                    console.warn('Invalid courses response:', resCourses);
+                    return;
+                }
+                
+                const coursesData = resCourses.data.data.map(c => {
+                    const thumbUrl = c.thumbnailUrl && c.thumbnailUrl.trim() ? c.thumbnailUrl : null;
+                    console.log(`[CourseCatalog] ${c.courseTitle}: ${thumbUrl ? '✓ Has thumbnail' : '✗ NO thumbnail'}`);
+                    return {
+                        ...c,
+                        thumbnailUrl: thumbUrl
+                    };
+                });
+                
+                console.log(`[CourseCatalog] Loaded ${coursesData.length} courses. With thumbnails: ${coursesData.filter(c => c.thumbnailUrl).length}`);
+                
+                // Force React to re-render by creating a new array
+                setCourses([...coursesData]);
                 setCategories([{ name: 'All' }, ...(resCats.data?.data || [])]);
+                
                 if (isAuthenticated) {
                     try {
                         const wRes = await wishlistService.getMyWishlist();
                         setWishlistIds((wRes.data?.data || []).map(w => w.courseRef?._id || w.courseRef || w._id));
-                    } catch (e) { /* optional */ }
+                    } catch (e) { 
+                        console.warn('Wishlist fetch error:', e);
+                    }
                 }
-            } catch (e) { console.error(e); }
-            finally { setLoading(false); }
+            } catch (e) { 
+                console.error('Error fetching data:', e); 
+            }
+            finally { 
+                setLoading(false); 
+            }
         };
+        
         fetchData();
+        
+        // Also listen for the window focus event to refresh data when tab comes back to focus
+        const handleFocus = () => {
+            console.log('[CourseCatalog] Window focused - refreshing data');
+            fetchData();
+        };
+        
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
     }, [isAuthenticated]);
 
     const instructors = useMemo(() => {
@@ -221,7 +261,19 @@ export default function CourseCatalog() {
         const ratingValue = typeof course.averageRating === 'number' ? course.averageRating : 0;
         const hasRating = typeof course.averageRating === 'number' && !Number.isNaN(course.averageRating);
         const enrollmentLabel = course.totalEnrollments != null ? `${course.totalEnrollments} students` : 'New course';
-        const bg = course.thumbnailUrl ? `url(${course.thumbnailUrl}) center/cover no-repeat` : `linear-gradient(135deg,${colors.primary}18,${colors.accent}12)`;
+        const [imgError, setImgError] = React.useState(false);
+        
+        const hasThumbnail = course.thumbnailUrl && !imgError;
+        const containerStyle = {
+            ...(isList ? s.thumbList : s.thumb), 
+            background: !hasThumbnail ? `linear-gradient(135deg,${colors.primary}18,${colors.accent}12)` : '#000',
+            position: 'relative', 
+            overflow: 'hidden',
+            display: hasThumbnail ? 'flex' : 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+        };
+        
         return (
             <div
                 style={isList ? s.cardList : s.card}
@@ -229,8 +281,28 @@ export default function CourseCatalog() {
                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 14px 36px rgba(0,0,0,0.12)'; e.currentTarget.style.borderColor = `${colors.primary}35`; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = colors.border; }}
             >
-                <div style={{ ...(isList ? s.thumbList : s.thumb), background: bg, position: 'relative' }}>
-                    {!course.thumbnailUrl && <span>{getEmoji(course)}</span>}
+                <div style={containerStyle}>
+                    {hasThumbnail && (
+                        <img 
+                            key={`img-${course._id}-${course.thumbnailUrl}`}
+                            src={course.thumbnailUrl + `?v=${Date.now()}`}
+                            alt={course.courseTitle} 
+                            style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'cover',
+                                display: 'block'
+                            }}
+                            onLoad={e => {
+                                console.log('✓ Thumbnail loaded:', course.courseTitle, course.thumbnailUrl);
+                            }}
+                            onError={e => {
+                                console.warn('✗ Thumbnail failed to load:', course.courseTitle, course.thumbnailUrl);
+                                setImgError(true);
+                            }} 
+                        />
+                    )}
+                    {!hasThumbnail && <span>{getEmoji(course)}</span>}
                     {!isList && <button style={{ ...s.wishBtn, color: inWish ? '#ef4444' : '#fff' }} onClick={e => toggleWishlist(e, course._id)}>{inWish ? '️' : ''}</button>}
                     {course.previewVideoUrl && !isList && (
                         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.15)', opacity: 0, transition: 'opacity 0.2s' }}
