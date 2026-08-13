@@ -4495,9 +4495,7 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
-                {loading ? (
-                    <div style={{padding:'40px', color:colors.textMuted}}>Loading system data...</div>
-                ) : (
+                {!loading && (
                     <>
                                 {activeTab === 'overview' && renderOverview()}
                         {activeTab === 'users' && renderUsers()}
