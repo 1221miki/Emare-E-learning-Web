@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Megaphone, MessageSquare, Mail, Bot } from 'lucide-react';
 import { messageService } from '../../../services/api';
+import { useTheme } from '../../../context/ThemeContext';
 
 const TABS = [
     { key: 'direct',        label: 'Direct Message',    icon: <MessageSquare size={14} aria-hidden="true" /> },
@@ -16,6 +17,7 @@ const QUICK_MSGS = [
 ];
 
 export default function MessagePanel({ student, course, onClose }) {
+    const { colors, theme } = useTheme();
     const [tab, setTab]           = useState('direct');
     const [subject, setSubject]   = useState(`Re: ${course?.courseTitle || 'Your Course'}`);
     const [body, setBody]         = useState('');
@@ -65,32 +67,32 @@ export default function MessagePanel({ student, course, onClose }) {
             aria-label={`Message ${student.name}`}
         >
             <div
-                style={{ background: '#ffffff', backdropFilter: 'blur(20px)', border: '2px solid #e0e7ff', borderRadius: '20px', width: '100%', maxWidth: '540px', boxShadow: '0 10px 30px rgba(0,0,0,0.12)', overflow: 'hidden' }}
+                style={{ background: colors.bgCard, backdropFilter: 'blur(20px)', border: `2px solid ${colors.border}`, borderRadius: '20px', width: '100%', maxWidth: '540px', boxShadow: `0 10px 30px ${theme === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.12)'}`, overflow: 'hidden' }}
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div style={{ padding: '20px 24px', borderBottom: '2px solid #e0e7ff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ padding: '20px 24px', borderBottom: `2px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#dbeafe', border: '2px solid #60a5fa', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1e40af', fontWeight: '800', fontSize: '15px' }}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: colors.bgInput, border: `2px solid ${colors.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.primary, fontWeight: '800', fontSize: '15px' }}>
                             {student.initials}
                         </div>
                         <div>
-                            <div style={{ color: '#1e293b', fontSize: '15px', fontWeight: '700' }}>{student.name}</div>
-                            <div style={{ color: '#64748b', fontSize: '12px' }}>{student.email}</div>
+                            <div style={{ color: colors.text, fontSize: '15px', fontWeight: '700' }}>{student.name}</div>
+                            <div style={{ color: colors.textMuted, fontSize: '12px' }}>{student.email}</div>
                         </div>
                     </div>
-                    <button onClick={onClose} style={{ background: '#f0f4ff', border: '2px solid #c7d2fe', color: '#4f46e5', borderRadius: '10px', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} aria-label="Close">
+                    <button onClick={onClose} style={{ background: colors.bgInput, border: `2px solid ${colors.border}`, color: colors.primary, borderRadius: '10px', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} aria-label="Close">
                         <X size={17} aria-hidden="true" />
                     </button>
                 </div>
 
                 {/* Tabs */}
-                <div style={{ display: 'flex', gap: '4px', padding: '12px 24px 0', borderBottom: '2px solid #e0e7ff' }}>
+                <div style={{ display: 'flex', gap: '4px', padding: '12px 24px 0', borderBottom: `2px solid ${colors.border}` }}>
                     {TABS.map(t => (
                         <button
                             key={t.key}
                             onClick={() => { setTab(t.key); setSent(false); setError(''); }}
-                            style={{ background: tab === t.key ? '#dbeafe' : 'transparent', border: `2px solid ${tab === t.key ? '#60a5fa' : 'transparent'}`, color: tab === t.key ? '#1e40af' : '#64748b', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '-1px', transition: 'all 0.15s' }}
+                            style={{ background: tab === t.key ? colors.bgInput : 'transparent', border: `2px solid ${tab === t.key ? colors.primary : 'transparent'}`, color: tab === t.key ? colors.primary : colors.textMuted, borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '-1px', transition: 'all 0.15s' }}
                         >
                             {t.icon} {t.label}
                         </button>

@@ -1,26 +1,27 @@
 import React from 'react';
 import { Users, Activity, CheckCircle, Star, AlertTriangle, TrendingUp } from 'lucide-react';
+import { useTheme } from '../../../context/ThemeContext';
 
 const Skeleton = () => (
     <div style={{ height: '14px', borderRadius: '6px', background: 'rgba(51,65,85,0.4)', animation: 'pulse 1.5s ease-in-out infinite', marginBottom: '8px' }} />
 );
 
-function StatCard({ icon, color, label, value, sub, badge, loading }) {
+function StatCard({ icon, color, label, value, sub, badge, loading, colors, theme }) {
     return (
         <div
             style={{
-                background: '#ffffff',
+                background: colors.bgCard,
                 backdropFilter: 'blur(12px)',
-                border: `2px solid #e0e7ff`,
+                border: `2px solid ${colors.border}`,
                 borderTop: `4px solid ${color}`,
                 borderRadius: '16px',
                 padding: '22px 24px',
                 transition: 'transform 0.18s, box-shadow 0.18s',
                 cursor: 'default',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                boxShadow: `0 1px 3px ${theme === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.08)'}`,
             }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 12px 32px rgba(0,0,0,0.12)`; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)'; }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 12px 32px ${theme === 'dark' ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.12)'}`; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 1px 3px ${theme === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.08)'}`; }}
         >
             {/* Icon + Label row */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
@@ -38,9 +39,9 @@ function StatCard({ icon, color, label, value, sub, badge, loading }) {
             {loading
                 ? <><Skeleton /><Skeleton /></>
                 : <>
-                    <div style={{ color: '#1e293b', fontSize: '30px', fontWeight: '800', lineHeight: 1, marginBottom: '6px' }}>{value}</div>
-                    <div style={{ color: '#64748b', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>{label}</div>
-                    {sub && <div style={{ color: '#64748b', fontSize: '12px' }}>{sub}</div>}
+                    <div style={{ color: colors.text, fontSize: '30px', fontWeight: '800', lineHeight: 1, marginBottom: '6px' }}>{value}</div>
+                    <div style={{ color: colors.textMuted, fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>{label}</div>
+                    {sub && <div style={{ color: colors.textMuted, fontSize: '12px' }}>{sub}</div>}
                 </>
             }
         </div>
@@ -48,6 +49,7 @@ function StatCard({ icon, color, label, value, sub, badge, loading }) {
 }
 
 export default function StudentStatisticsCards({ analytics = {}, loading }) {
+    const { colors, theme } = useTheme();
     const cards = [
         {
             icon: <Users />,
@@ -98,7 +100,7 @@ export default function StudentStatisticsCards({ analytics = {}, loading }) {
 
     return (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '28px' }}>
-            {cards.map((c, i) => <StatCard key={i} {...c} loading={loading} />)}
+            {cards.map((c, i) => <StatCard key={i} {...c} loading={loading} colors={colors} theme={theme} />)}
         </div>
     );
 }

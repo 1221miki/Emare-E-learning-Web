@@ -4,31 +4,32 @@ import {
     CheckCircle, FileText, Star, MessageSquare, Award,
     BarChart3, PlayCircle, ClipboardList
 } from 'lucide-react';
+import { useTheme } from '../../../context/ThemeContext';
 
 // ── Mini progress bar ────────────────────────────────────────
-function Bar({ value, color = '#3b82f6', height = 6 }) {
+function Bar({ value, color = '#3b82f6', height = 6, borderColor = '#e0e7ff' }) {
     return (
-        <div style={{ height, borderRadius: '99px', background: '#e0e7ff', overflow: 'hidden', flex: 1 }}>
+        <div style={{ height, borderRadius: '99px', background: borderColor, overflow: 'hidden', flex: 1 }}>
             <div style={{ height: '100%', width: `${Math.min(value, 100)}%`, background: `linear-gradient(90deg, ${color}80, ${color})`, borderRadius: '99px', transition: 'width 0.7s ease' }} />
         </div>
     );
 }
 
 // ── Section header ───────────────────────────────────────────
-function SectionTitle({ icon, label }) {
+function SectionTitle({ icon, label, colors }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', paddingBottom: '10px', borderBottom: '2px solid #e0e7ff' }}>
-            <span style={{ color: '#3b82f6' }}>{React.cloneElement(icon, { size: 17, 'aria-hidden': true })}</span>
-            <h4 style={{ color: '#1e293b', fontSize: '14px', fontWeight: '700', margin: 0 }}>{label}</h4>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', paddingBottom: '10px', borderBottom: `2px solid ${colors.border}` }}>
+            <span style={{ color: colors.primary }}>{React.cloneElement(icon, { size: 17, 'aria-hidden': true })}</span>
+            <h4 style={{ color: colors.text, fontSize: '14px', fontWeight: '700', margin: 0 }}>{label}</h4>
         </div>
     );
 }
 
 // ── Stat chip ────────────────────────────────────────────────
-function Chip({ icon, label, value, color = '#3b82f6' }) {
+function Chip({ icon, label, value, color = '#3b82f6', textColor = '#64748b' }) {
     return (
         <div style={{ background: `${color}0d`, border: `1px solid ${color}22`, borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: textColor }}>
                 {React.cloneElement(icon, { size: 13, 'aria-hidden': true })}
                 <span style={{ fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
             </div>
@@ -38,21 +39,22 @@ function Chip({ icon, label, value, color = '#3b82f6' }) {
 }
 
 // ── Activity timeline entry ──────────────────────────────────
-function TimelineItem({ icon, text, time, color = '#3b82f6' }) {
+function TimelineItem({ icon, text, time, color = '#3b82f6', textColor = '#1e293b', timeColor = '#64748b' }) {
     return (
         <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: `${color}15`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
                 {React.cloneElement(icon, { size: 14, color, 'aria-hidden': true })}
             </div>
             <div>
-                <div style={{ color: '#1e293b', fontSize: '13px', fontWeight: '600' }}>{text}</div>
-                <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>{time}</div>
+                <div style={{ color: textColor, fontSize: '13px', fontWeight: '600' }}>{text}</div>
+                <div style={{ color: timeColor, fontSize: '11px', marginTop: '2px' }}>{time}</div>
             </div>
         </div>
     );
 }
 
 export default function StudentProfileModal({ student, grades = [], assignments = [], onClose, onMessage }) {
+    const { colors, theme } = useTheme();
     const [activeSection, setActiveSection] = useState('overview');
 
     if (!student) return null;
@@ -78,28 +80,28 @@ export default function StudentProfileModal({ student, grades = [], assignments 
             aria-label={`Profile: ${student.name}`}
         >
             <div
-                style={{ background: '#ffffff', backdropFilter: 'blur(20px)', border: '2px solid #e0e7ff', borderRadius: '20px', width: '100%', maxWidth: '680px', maxHeight: '88vh', overflow: 'auto', boxShadow: '0 10px 30px rgba(0,0,0,0.12)' }}
+                style={{ background: colors.bgCard, backdropFilter: 'blur(20px)', border: `2px solid ${colors.border}`, borderRadius: '20px', width: '100%', maxWidth: '680px', maxHeight: '88vh', overflow: 'auto', boxShadow: `0 10px 30px ${theme === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.12)'}` }}
                 onClick={e => e.stopPropagation()}
             >
                 {/* ── Header ──────────────────────────────── */}
-                <div style={{ padding: '24px 28px 0', position: 'sticky', top: 0, background: '#ffffff', backdropFilter: 'blur(20px)', zIndex: 2, borderBottom: '2px solid #e0e7ff', paddingBottom: '20px' }}>
+                <div style={{ padding: '24px 28px 0', position: 'sticky', top: 0, background: colors.bgCard, backdropFilter: 'blur(20px)', zIndex: 2, borderBottom: `2px solid ${colors.border}`, paddingBottom: '20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                         {/* Avatar + name */}
                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                             {student.avatar
-                                ? <img src={student.avatar} alt={student.name} style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #dbeafe' }} />
-                                : <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#dbeafe', border: '2px solid #60a5fa', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1e40af', fontWeight: '800', fontSize: '24px' }}>
+                                ? <img src={student.avatar} alt={student.name} style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${colors.primary}` }} />
+                                : <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: colors.bgInput, border: `2px solid ${colors.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.primary, fontWeight: '800', fontSize: '24px' }}>
                                     {student.initials}
                                   </div>
                             }
                             <div>
-                                <h3 style={{ color: '#1e293b', fontSize: '18px', fontWeight: '800', margin: '0 0 4px' }}>{student.name}</h3>
+                                <h3 style={{ color: colors.text, fontSize: '18px', fontWeight: '800', margin: '0 0 4px' }}>{student.name}</h3>
                                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                                    <span style={{ color: '#64748b', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <span style={{ color: colors.textMuted, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                         <Mail size={12} aria-hidden="true" /> {student.email}
                                     </span>
                                     {student.enrollmentDate && (
-                                        <span style={{ color: '#64748b', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <span style={{ color: colors.textMuted, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                             <Calendar size={12} aria-hidden="true" /> Enrolled {new Date(student.enrollmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                         </span>
                                     )}
@@ -110,7 +112,7 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                         {/* Close */}
                         <button
                             onClick={onClose}
-                            style={{ background: '#f0f4ff', border: '2px solid #c7d2fe', color: '#4f46e5', borderRadius: '10px', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                            style={{ background: colors.bgInput, border: `2px solid ${colors.border}`, color: colors.primary, borderRadius: '10px', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                             aria-label="Close profile"
                         >
                             <X size={17} aria-hidden="true" />
@@ -124,9 +126,9 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                                 key={sec}
                                 onClick={() => setActiveSection(sec)}
                                 style={{
-                                    background: activeSection === sec ? '#dbeafe' : 'transparent',
-                                    border: `2px solid ${activeSection === sec ? '#60a5fa' : 'transparent'}`,
-                                    color: activeSection === sec ? '#1e40af' : '#64748b',
+                                    background: activeSection === sec ? colors.bgInput : 'transparent',
+                                    border: `2px solid ${activeSection === sec ? colors.primary : 'transparent'}`,
+                                    color: activeSection === sec ? colors.primary : colors.textMuted,
                                     borderRadius: '8px',
                                     padding: '7px 16px',
                                     fontSize: '13px',

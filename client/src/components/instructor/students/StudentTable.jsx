@@ -3,6 +3,7 @@ import {
     Eye, MessageSquare, TrendingUp, Trash2, MoreHorizontal,
     CheckCircle, Clock, Activity, AlertTriangle, GraduationCap
 } from 'lucide-react';
+import { useTheme } from '../../../context/ThemeContext';
 
 // ── Status config ────────────────────────────────────────────
 const STATUS = {
@@ -58,12 +59,13 @@ function ProgressBar({ value }) {
 
 function ActionMenu({ student, onViewProfile, onMessage, onRemove }) {
     const [open, setOpen] = useState(false);
+    const { colors, theme } = useTheme();
 
     return (
         <div style={{ position: 'relative' }}>
             <button
                 onClick={() => setOpen(o => !o)}
-                style={{ background: '#f0f4ff', border: '2px solid #c7d2fe', color: '#4f46e5', borderRadius: '8px', padding: '7px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                style={{ background: colors.bgInput, border: `2px solid ${colors.border}`, color: colors.primary, borderRadius: '8px', padding: '7px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                 aria-label={`Actions for ${student.name}`}
                 aria-expanded={open}
             >
@@ -75,7 +77,7 @@ function ActionMenu({ student, onViewProfile, onMessage, onRemove }) {
                     {/* Backdrop */}
                     <div style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={() => setOpen(false)} />
                     {/* Dropdown */}
-                    <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: '#ffffff', backdropFilter: 'blur(16px)', border: '2px solid #e0e7ff', borderRadius: '12px', minWidth: '190px', zIndex: 1000, padding: '6px', boxShadow: '0 10px 30px rgba(0,0,0,0.12)' }}>
+                    <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: colors.bgCard, backdropFilter: 'blur(16px)', border: `2px solid ${colors.border}`, borderRadius: '12px', minWidth: '190px', zIndex: 1000, padding: '6px', boxShadow: `0 10px 30px ${theme === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.12)'}` }}>
                         {[
                             { label: 'View Profile',    icon: <Eye size={14} aria-hidden="true" />,           action: () => { onViewProfile(student); setOpen(false); }, color: '#60a5fa' },
                             { label: 'Send Message',    icon: <MessageSquare size={14} aria-hidden="true" />,  action: () => { onMessage(student); setOpen(false); },      color: '#34d399' },
@@ -85,8 +87,8 @@ function ActionMenu({ student, onViewProfile, onMessage, onRemove }) {
                             <button
                                 key={i}
                                 onClick={item.action}
-                                style={{ width: '100%', background: 'transparent', border: 'none', color: item.danger ? '#991b1b' : '#1e293b', padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left', transition: 'background 0.15s' }}
-                                onMouseEnter={e => e.currentTarget.style.background = item.danger ? '#fee2e2' : '#f0f4ff'}
+                                style={{ width: '100%', background: 'transparent', border: 'none', color: item.danger ? '#f87171' : colors.text, padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left', transition: 'background 0.15s' }}
+                                onMouseEnter={e => e.currentTarget.style.background = item.danger ? 'rgba(239,68,68,0.15)' : colors.bgInput}
                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                             >
                                 <span style={{ color: item.color }}>{item.icon}</span>

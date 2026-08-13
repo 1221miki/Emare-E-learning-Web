@@ -1,15 +1,17 @@
 import React from 'react';
 import { BookOpen, ChevronDown, Users } from 'lucide-react';
+import { useTheme } from '../../../context/ThemeContext';
 
 export default function CourseSelector({ courses = [], selectedCourse, onSelect, T }) {
+    const { colors, theme } = useTheme();
     if (courses.length === 0) return null;
 
     return (
         <div
             style={{
-                background: '#ffffff',
+                background: colors.bgCard,
                 backdropFilter: 'blur(12px)',
-                border: '2px solid #e0e7ff',
+                border: `2px solid ${colors.border}`,
                 borderRadius: '16px',
                 padding: '20px 24px',
                 marginBottom: '20px',
@@ -17,24 +19,24 @@ export default function CourseSelector({ courses = [], selectedCourse, onSelect,
                 alignItems: 'center',
                 gap: '20px',
                 flexWrap: 'wrap',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                boxShadow: `0 1px 3px ${theme === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.08)'}`,
             }}
         >
             {/* Label */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#dbeafe', border: '2px solid #60a5fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <BookOpen size={18} color="#1e40af" aria-hidden="true" />
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: colors.bgInput, border: `2px solid ${colors.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <BookOpen size={18} color={colors.primary} aria-hidden="true" />
                 </div>
                 <div>
-                    <div style={{ color: '#64748b', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Selected Course</div>
-                    <div style={{ color: '#1e293b', fontSize: '14px', fontWeight: '700' }}>
+                    <div style={{ color: colors.textMuted, fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Selected Course</div>
+                    <div style={{ color: colors.text, fontSize: '14px', fontWeight: '700' }}>
                         {selectedCourse?.courseTitle ?? 'Choose a course'}
                     </div>
                 </div>
             </div>
 
             {/* Divider */}
-            <div style={{ width: '2px', height: '36px', background: '#e0e7ff', flexShrink: 0 }} />
+            <div style={{ width: '2px', height: '36px', background: colors.border, flexShrink: 0 }} />
 
             {/* Select */}
             <div style={{ position: 'relative', flex: '1 1 260px', minWidth: '220px' }}>

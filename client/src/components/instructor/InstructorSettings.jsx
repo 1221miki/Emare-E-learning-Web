@@ -5,20 +5,8 @@ import {
     Check, AlertTriangle, Lock, Globe, Zap, Star,
     ChevronDown, ChevronUp, Upload, FileText
 } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 import { userService, uploadService } from '../../services/api';
-
-// ── Design tokens (bright glass, matches Instructor Dashboard) ────
-const T = {
-    page:   { fontFamily: "'Outfit', sans-serif" },
-    card:   { background: '#ffffff', backdropFilter: 'blur(14px)', border: '2px solid #e0e7ff', borderRadius: '16px' },
-    input:  { background: '#f8fafc', border: '2px solid #e0e7ff', color: '#1e293b', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' },
-    select: { background: '#f8fafc', border: '2px solid #e0e7ff', color: '#1e293b', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', cursor: 'pointer', width: '100%', boxSizing: 'border-box' },
-    lbl:    { color: '#64748b', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' },
-    primaryBtn: { background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 24px', fontWeight: '700', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '7px' },
-    ghostBtn:   { background: '#f0f4ff', border: '2px solid #c7d2fe', color: '#4f46e5', borderRadius: '10px', padding: '11px 20px', fontWeight: '600', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '7px' },
-    dangerBtn:  { background: '#fee2e2', border: '2px solid #fecaca', color: '#991b1b', borderRadius: '10px', padding: '10px 18px', fontWeight: '600', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '7px' },
-    sectionHead: { color: '#1e293b', fontSize: '15px', fontWeight: '700', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' },
-};
 
 // ── Reusable Toggle switch ───────────────────────────────────────
 function Toggle({ checked, onChange, color = '#3b82f6', ariaLabel = '' }) {
@@ -677,20 +665,34 @@ const TABS = [
 ];
 
 export default function InstructorSettings({ user }) {
+    const { colors, theme } = useTheme();
     const [activeTab, setActiveTab] = useState('profile');
+
+    // ── Dynamic design tokens based on theme ────
+    const T = {
+        page:   { fontFamily: "'Outfit', sans-serif" },
+        card:   { background: colors.bgCard, backdropFilter: 'blur(14px)', border: `2px solid ${colors.border}`, borderRadius: '16px' },
+        input:  { background: colors.bgInput, border: `2px solid ${colors.border}`, color: colors.text, padding: '10px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' },
+        select: { background: colors.bgInput, border: `2px solid ${colors.border}`, color: colors.text, padding: '10px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', cursor: 'pointer', width: '100%', boxSizing: 'border-box' },
+        lbl:    { color: colors.textMuted, fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' },
+        primaryBtn: { background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 24px', fontWeight: '700', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '7px' },
+        ghostBtn:   { background: colors.bgInput, border: `2px solid ${colors.border}`, color: colors.primary, borderRadius: '10px', padding: '11px 20px', fontWeight: '600', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '7px' },
+        dangerBtn:  { background: theme === 'dark' ? 'rgba(239,68,68,0.15)' : '#fee2e2', border: `2px solid ${theme === 'dark' ? 'rgba(239,68,68,0.3)' : '#fecaca'}`, color: '#ef4444', borderRadius: '10px', padding: '10px 18px', fontWeight: '600', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '7px' },
+        sectionHead: { color: colors.text, fontSize: '15px', fontWeight: '700', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' },
+    };
 
     return (
         <div style={T.page}>
             {/* Page title */}
             <div style={{ marginBottom: '24px' }}>
-                <h2 style={{ color: '#1e293b', fontSize: '22px', fontWeight: '800', margin: '0 0 4px' }}>
+                <h2 style={{ color: colors.text, fontSize: '22px', fontWeight: '800', margin: '0 0 4px' }}>
                     Profile &amp; Account Settings{user?.fullName ? ` — ${user.fullName}` : ''}
                 </h2>
-                <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Manage your instructor profile, security, preferences and subscription.</p>
+                <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Manage your instructor profile, security, preferences and subscription.</p>
             </div>
 
             {/* Tab strip */}
-            <div style={{ display: 'flex', gap: '2px', marginBottom: '24px', borderBottom: '2px solid #e0e7ff', overflowX: 'auto' }}>
+            <div style={{ display: 'flex', gap: '2px', marginBottom: '24px', borderBottom: `2px solid ${colors.border}`, overflowX: 'auto' }}>
                 {TABS.map(tab => (
                     <button
                         key={tab.key}
@@ -698,8 +700,8 @@ export default function InstructorSettings({ user }) {
                         style={{
                             background: 'transparent',
                             border: 'none',
-                            borderBottom: activeTab === tab.key ? '2px solid #3b82f6' : '2px solid transparent',
-                            color: activeTab === tab.key ? '#1e40af' : '#64748b',
+                            borderBottom: activeTab === tab.key ? `2px solid ${colors.primary}` : `2px solid transparent`,
+                            color: activeTab === tab.key ? colors.primary : colors.textMuted,
                             padding: '11px 18px',
                             fontWeight: '700',
                             fontSize: '13px',
