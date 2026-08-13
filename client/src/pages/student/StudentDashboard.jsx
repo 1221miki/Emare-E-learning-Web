@@ -783,9 +783,7 @@ export default function StudentDashboard() {
                 </div>
 
                 {/* Loading State */}
-                {loading ? (
-                    <div style={styles.loadingBox}>Loading Dashboard...</div>
-                ) : (
+                {!loading && (
                     <div>
                         {activeTab === 'learning' ? (
                             <>

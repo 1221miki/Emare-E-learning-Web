@@ -1353,9 +1353,7 @@ export default function InstructorDashboard() {
                     <div style={s.avatar}>{user?.fullName?.[0]?.toUpperCase()}</div>
                 </header>
 
-                {loading ? (
-                    <div style={s.loadingBox}>Loading Dashboard...</div>
-                ) : (
+                {!loading && (
                     <>
                         {activeTab === 'overview' && renderOverview()}
                         {activeTab === 'courses' && renderCourses()}
