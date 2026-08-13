@@ -8,14 +8,16 @@ const testUsers = [
         accountEmail: 'admin@emare.com',
         securedPassword: 'admin12345',
         assignedRole: 'Admin',
-        isActive: true
+        isActive: true,
+        isEmailVerified: true
     },
     {
         fullName: 'Test Student',
         accountEmail: 'student@emare.com',
         securedPassword: 'student12345',
         assignedRole: 'Student',
-        isActive: true
+        isActive: true,
+        isEmailVerified: true
     },
     {
         fullName: 'Test Instructor',
@@ -23,6 +25,7 @@ const testUsers = [
         securedPassword: 'instructor12345',
         assignedRole: 'Instructor',
         isActive: true,
+        isEmailVerified: true,
         professionalTitle: 'Test Instructor Title'
     },
     {
