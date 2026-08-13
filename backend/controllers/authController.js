@@ -22,7 +22,8 @@ const sendTokenResponse = (user, statusCode, res) => {
     const cookieOptions = {
         httpOnly: true, // Prevents XSS access via document.cookie
         secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-        sameSite: 'lax',
+        // Allow cross-site cookies in production when frontend and backend are on different origins.
+        sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'lax',
         maxAge: 120 * 60 * 1000 // 120 minutes in milliseconds
     };
 
