@@ -28,70 +28,70 @@ export default function InstructorDashboard() {
     const { theme, toggleTheme, colors } = useTheme();
     const s = {
         // Layout
-        page: { display: 'flex', minHeight: '100vh', fontFamily: "'Outfit', sans-serif" },
-        sidebar: { width: '260px', background: 'rgba(15,20,34,0.7)', backdropFilter: 'blur(12px)', borderRight: '1px solid rgba(30,41,59,0.5)', display: 'flex', flexDirection: 'column', padding: '24px 16px', position: 'fixed', height: '100vh', zIndex: 10 },
+        page: { display: 'flex', minHeight: '100vh', fontFamily: "'Outfit', sans-serif", background: colors.bg },
+        sidebar: { width: '260px', background: theme === 'dark' ? 'rgba(15,20,34,0.7)' : 'rgba(226,232,240,0.8)', backdropFilter: 'blur(12px)', borderRight: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', padding: '24px 16px', position: 'fixed', height: '100vh', zIndex: 10 },
         logoBox: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '36px', paddingLeft: '8px' },
         logo: { width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#fff', fontSize: '18px' },
-        logoText: { color: '#fff', fontWeight: '700', fontSize: '16px' },
+        logoText: { color: colors.text, fontWeight: '700', fontSize: '16px' },
         nav: { display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, overflowY: 'auto' },
         navItem: { textAlign: 'left', background: 'transparent', border: 'none', color: colors.textMuted, padding: '10px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', outline: 'none' },
         catalogBtn: { background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#60a5fa', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
         logoutBtn: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
 
         // Main
-        main: { marginLeft: '260px', flex: 1, padding: '40px', overflowY: 'auto' },
+        main: { marginLeft: '260px', flex: 1, padding: '40px', overflowY: 'auto', background: colors.bg },
         header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '36px' },
-        greeting: { color: '#f8fafc', fontSize: '26px', fontWeight: '800', margin: 0 },
+        greeting: { color: colors.text, fontSize: '26px', fontWeight: '800', margin: 0 },
         subGreeting: { color: colors.textMuted, fontSize: '14px', margin: '4px 0 0' },
         avatar: { width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '20px' },
         loadingBox: { color: colors.textMuted, fontSize: '16px', textAlign: 'center', padding: '100px 0' },
 
         // Tabs
         tabHeader: { marginBottom: '28px' },
-        tabTitle: { color: '#f8fafc', fontSize: '22px', fontWeight: '800', margin: 0 },
+        tabTitle: { color: colors.text, fontSize: '22px', fontWeight: '800', margin: 0 },
         tabSubtitle: { color: colors.textMuted, fontSize: '14px', margin: '4px 0 0' },
 
         // Stats
         statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' },
-        statCard: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '22px', border: '1px solid rgba(30,41,59,0.5)' },
-        statValue: { display: 'block', fontSize: '32px', fontWeight: '800' },
+        statCard: { background: colors.bgCard, backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '22px', border: `1px solid ${colors.border}` },
+        statValue: { display: 'block', fontSize: '32px', fontWeight: '800', color: colors.text },
         statLabel: { color: colors.textMuted, fontSize: '12px', fontWeight: '500', marginTop: '4px', display: 'block' },
 
         // Cards
-        panelCard: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '28px', border: '1px solid rgba(30,41,59,0.5)', marginBottom: '24px', cursor: 'default', transition: 'border-color 0.2s' },
+        panelCard: { background: colors.bgCard, backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '28px', border: `1px solid ${colors.border}`, marginBottom: '24px', cursor: 'default', transition: 'border-color 0.2s' },
         panelTitle: { color: colors.text, fontSize: '16px', fontWeight: '700', margin: '0 0 20px' },
-        recentItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid rgba(30,41,59,0.3)' },
-        courseRow: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '24px', border: '1px solid rgba(30,41,59,0.5)', display: 'flex', justifyContent: 'space-between', gap: '20px' },
+        recentItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: `1px solid ${colors.border}` },
+        courseRow: { background: colors.bgCard, backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '24px', border: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', gap: '20px' },
         dashboardGrid: { display: 'grid', gap: '24px' },
-        heroCard: { background: 'rgba(255,255,255,0.08)', borderRadius: '20px', padding: '32px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 28px 80px rgba(15,23,42,0.12)' },
-        heroTitle: { color: '#fff', fontSize: '30px', fontWeight: '800', margin: '0 0 10px' },
-        heroSubtitle: { color: 'rgba(226,232,240,0.72)', fontSize: '15px', margin: 0, lineHeight: 1.75 },
+        heroCard: { background: colors.bgCard, borderRadius: '20px', padding: '32px', border: `1px solid ${colors.border}`, boxShadow: `0 28px 80px ${theme === 'dark' ? 'rgba(15,23,42,0.12)' : 'rgba(0,0,0,0.06)'}` },
+        heroTitle: { color: colors.text, fontSize: '30px', fontWeight: '800', margin: '0 0 10px' },
+        heroSubtitle: { color: colors.textMuted, fontSize: '15px', margin: 0, lineHeight: 1.75 },
         heroActions: { display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '24px' },
-        chartCard: { background: 'rgba(14,23,38,0.7)', borderRadius: '20px', padding: '24px', border: '1px solid rgba(255,255,255,0.08)', minHeight: '320px' },
-        miniCard: { background: 'rgba(15,23,42,0.75)', borderRadius: '18px', padding: '18px', border: '1px solid rgba(255,255,255,0.08)' },
-        cardLabel: { color: 'rgba(226,232,240,0.72)', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.08em' },
-        cardValue: { color: '#fff', fontSize: '28px', fontWeight: '800', marginTop: '8px' },
+        chartCard: { background: colors.bgCard, borderRadius: '20px', padding: '24px', border: `1px solid ${colors.border}`, minHeight: '320px' },
+        miniCard: { background: colors.bgCard, borderRadius: '18px', padding: '18px', border: `1px solid ${colors.border}` },
+        cardLabel: { color: colors.textMuted, fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.08em' },
+        cardValue: { color: colors.text, fontSize: '28px', fontWeight: '800', marginTop: '8px' },
         sectionRow: { display: 'grid', gap: '24px', marginTop: '24px' },
         subtleText: { color: colors.textMuted, fontSize: '13px', lineHeight: 1.7 },
         badge: { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', display: 'inline-block' },
-        miniStat: { background: 'rgba(15,23,42,0.4)', padding: '14px 16px', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '2px' },
+        miniStat: { background: colors.bgDarker, padding: '14px 16px', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '2px' },
 
         // Empty
-        emptyBox: { padding: '48px', textAlign: 'center', background: 'rgba(14,23,38,0.45)', borderRadius: '14px', border: '1px solid rgba(30,41,59,0.4)' },
+        emptyBox: { padding: '48px', textAlign: 'center', background: colors.bgCard, borderRadius: '14px', border: `1px solid ${colors.border}` },
         emptyText: { color: colors.textMuted, fontSize: '14px', margin: 0 },
 
         // Table
-        tableCard: { background: 'rgba(14,23,38,0.65)', backdropFilter: 'blur(10px)', borderRadius: '14px', border: '1px solid rgba(30,41,59,0.5)', overflow: 'hidden' },
+        tableCard: { background: colors.bgCard, backdropFilter: 'blur(10px)', borderRadius: '14px', border: `1px solid ${colors.border}`, overflow: 'hidden' },
         table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
-        thRow: { background: 'rgba(15,20,34,0.6)' },
+        thRow: { background: colors.bgDarkest },
         th: { padding: '14px 20px', color: colors.textMuted, fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' },
-        tr: { borderBottom: '1px solid rgba(30,41,59,0.4)' },
+        tr: { borderBottom: `1px solid ${colors.border}` },
         td: { padding: '14px 20px', color: colors.text, fontSize: '14px' },
 
         // Buttons
         primaryBtn: { background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', transition: 'opacity 0.2s' },
         actionBtn: { background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', color: '#60a5fa', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'background 0.2s' },
-        actionBtnAlt: { background: 'transparent', border: '1px solid rgba(51,65,85,0.6)', color: colors.text, borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'background 0.2s' },
+        actionBtnAlt: { background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'background 0.2s' },
         dangerBtn: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px' },
         textBtn: { background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: '600', fontSize: '13px', textDecoration: 'underline' },
 
@@ -99,16 +99,16 @@ export default function InstructorDashboard() {
         formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
         formGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
         label: { color: colors.textMuted, fontSize: '12px', fontWeight: '600' },
-        input: { background: 'rgba(9,13,22,0.6)', border: '1px solid rgba(30,41,59,0.6)', color: '#fff', padding: '11px 14px', borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.2s' },
-        select: { background: 'rgba(9,13,22,0.6)', border: '1px solid rgba(30,41,59,0.6)', color: '#fff', padding: '11px 14px', borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit' },
+        input: { background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, padding: '11px 14px', borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.2s' },
+        select: { background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, padding: '11px 14px', borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit' },
         successAlert: { background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px', fontWeight: '600' },
 
         // Modals
         backdrop: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' },
-        modal: { background: 'rgba(30,41,59,0.95)', backdropFilter: 'blur(16px)', border: '1px solid rgba(51,65,85,0.6)', borderRadius: '18px', width: '100%', maxWidth: '600px', maxHeight: '85vh', overflow: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.5)' },
+        modal: { background: colors.bgCard, backdropFilter: 'blur(16px)', border: `1px solid ${colors.border}`, borderRadius: '18px', width: '100%', maxWidth: '600px', maxHeight: '85vh', overflow: 'auto', boxShadow: `0 25px 60px ${theme === 'dark' ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.1)'}` },
         modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px 0' },
         modalTitle: { color: colors.text, fontSize: '18px', fontWeight: '700', margin: 0 },
-        closeBtn: { background: colors.bgInput, border: '1px solid rgba(51,65,85,0.6)', color: colors.textMuted, borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+        closeBtn: { background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.textMuted, borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
         modalBody: { padding: '20px 24px 24px' }
     };
     const navigate = useNavigate();
