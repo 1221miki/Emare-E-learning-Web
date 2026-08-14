@@ -139,7 +139,7 @@ async function seedDefaultData() {
     // Seed only the Master Admin account.
     // Demo accounts (admin@emare.com, student@emare.com, instructor@emare.com) are intentionally NOT seeded.
     // The initial password below is only used on first creation; it is never overwritten on subsequent starts.
-    await upsertUser('Master Admin', 'Ayireszebene8877@gmail.com', 'Admin@Emare2026!', 'Admin');
+    await upsertUser('Master Admin', 'ayireszebene8877@gmail.com', 'Admin@Emare2026!', 'Admin');
     console.log('✅ Default data seeded successfully.');
 
     // Seed category courses (non-fatal)

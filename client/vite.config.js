@@ -19,7 +19,8 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    host: '0.0.0.0',   // accept connections from phone/other devices on the network
+    port: 5173,
     hmr: {
       overlay: false,
     },

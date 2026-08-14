@@ -11,7 +11,7 @@ const fixPasswords = async () => {
         // Demo accounts (admin@emare.com, student@emare.com, instructor@emare.com)
         // have been removed from seeding — do not reset them here.
         const accounts = [
-            { email: 'Ayireszebene8877@gmail.com', password: 'Admin@Emare2026!' }
+            { email: 'ayireszebene8877@gmail.com', password: 'Admin@Emare2026!' }
         ];
 
         for (const { email, password } of accounts) {

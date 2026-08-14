@@ -62,15 +62,24 @@ const allowedOrigins = [
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001',
     'http://127.0.0.1:3002',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
     'http://localhost:5176',
     'http://localhost:5177',
+    'http://127.0.0.1:5173',
     'http://127.0.0.1:5176',
-    'http://127.0.0.1:5177'
+    'http://127.0.0.1:5177',
+    // Network IP — allows phone/tablet on same WiFi to access the app
+    'http://10.18.56.22:5173',
+    'http://10.18.56.22:5000',
+    'http://192.168.137.1:5173',
+    'http://192.168.137.1:5000'
 ];
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+        if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:') || origin.startsWith('http://10.') || origin.startsWith('http://192.168.')) {
             return callback(null, true);
         }
         callback(new Error(`CORS policy blocked origin: ${origin}`));
