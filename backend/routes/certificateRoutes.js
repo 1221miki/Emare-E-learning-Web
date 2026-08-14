@@ -1,22 +1,46 @@
+/**
+ * certificateRoutes.js
+ *
+ * PUBLIC:
+ *   GET  /verify/:certificateId  — anyone can verify a certificate by ID
+ *
+ * PROTECTED (student):
+ *   GET  /my                     — list my certificates
+ *   GET  /mine                   — alias
+ *   GET  /check/:courseId        — eligibility check
+ *   POST /issue/:courseId        — issue certificate (idempotent)
+ *   POST /generate               — alias (courseId in body)
+ *   GET  /:id/download           — download PDF
+ *
+ * PROTECTED (admin):
+ *   GET  /admin/all              — list all certificates (with search)
+ *   POST /admin/generate         — admin-issued certificate
+ *   POST /:id/reissue            — reissue with new unique ID
+ *   PATCH/:id/revoke             — revoke
+ */
 const router = require('express').Router();
 const { protect, authorizeRoles } = require('../middleware/auth');
-const certificateController = require('../controllers/certificateController');
+const c = require('../controllers/certificateController');
 
-// Public verification and eligibility routes
-router.get('/verify/:certificateId', certificateController.verify);
-router.get('/check/:courseId', protect, certificateController.checkEligibility);
-router.post('/issue/:courseId', protect, certificateController.issueCertificate);
-router.get('/my', protect, certificateController.getMyCertificates);
-router.get('/download/:certificateId', protect, certificateController.downloadCertificate);
+// ── Public ────────────────────────────────────────────────────────────────────
+router.get('/verify/:certificateId', c.verify);
 
-// Protected certificate management routes
-router.use(protect);
-router.get('/mine', certificateController.getMyCertificates);
-router.get('/admin/all', authorizeRoles('Admin'), certificateController.getAllCertificates);
-router.post('/generate', certificateController.generateCertificate);
-router.post('/admin/generate', authorizeRoles('Admin'), certificateController.generateCertificateForAdmin);
-router.post('/:id/reissue', authorizeRoles('Admin'), certificateController.reissueCertificate);
-router.patch('/:id/revoke', authorizeRoles('Admin'), certificateController.revokeCertificate);
-router.get('/:id/download', certificateController.downloadCertificate);
+// ── Student (protected) ───────────────────────────────────────────────────────
+router.get('/my',               protect, c.getMyCertificates);
+router.get('/mine',             protect, c.getMyCertificates);
+router.get('/check/:courseId',  protect, c.checkEligibility);
+router.post('/issue/:courseId', protect, c.issueCertificate);
+router.post('/generate',        protect, c.generateCertificate);
+router.get('/:id/download',     protect, c.downloadCertificate);
+
+// ── Admin (protected) ─────────────────────────────────────────────────────────
+router.get('/admin/all',
+    protect, authorizeRoles('Admin'), c.getAllCertificates);
+router.post('/admin/generate',
+    protect, authorizeRoles('Admin'), c.generateCertificateForAdmin);
+router.post('/:id/reissue',
+    protect, authorizeRoles('Admin'), c.reissueCertificate);
+router.patch('/:id/revoke',
+    protect, authorizeRoles('Admin'), c.revokeCertificate);
 
 module.exports = router;

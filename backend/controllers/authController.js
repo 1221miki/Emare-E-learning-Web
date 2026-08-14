@@ -140,18 +140,6 @@ const login = async (req, res, next) => {
             return res.status(401).json({ success: false, message: 'Invalid credentials.' });
         }
 
-        // Debug: log user state for failed login diagnosis (temporary)
-        try {
-            console.debug('DEBUG: login user found', {
-                accountEmail: user.accountEmail,
-                assignedRole: user.assignedRole,
-                isActive: user.isActive,
-                isEmailVerified: user.isEmailVerified
-            });
-        } catch (e) {
-            console.debug('DEBUG: login user found but failed to serialize user info');
-        }
-
         if (!user.isActive) {
             // Audit: login attempt on deactivated account
             audit.security({ req, user, action: 'LOGIN_BLOCKED', severity: 'warning',
@@ -166,7 +154,6 @@ const login = async (req, res, next) => {
 
         // Validate password using bcrypt instance method
         const isMatch = await user.comparePassword(loginPassword);
-        console.debug('DEBUG: password match for', normalizedEmail, '=', isMatch);
         if (!isMatch) {
             // Audit: wrong password
             audit.security({ req, user, action: 'LOGIN_FAILED', severity: 'warning',

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Award, GraduationCap, Lightbulb, BookOpen, Download, Linkedin } from 'lucide-react';
+import { certificateService } from '../../../services/api.jsx';
 
 export default function CertificatesTab(dash) {
     const { user, colors, setActiveTab, certificates, linkedInUrl, styles } = dash;
@@ -61,7 +62,23 @@ export default function CertificatesTab(dash) {
                             )}
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                                 <button
-                                    onClick={() => window.open(cert.certificatePdfUrl, '_blank')}
+                                    onClick={async () => {
+                                        try {
+                                            const res = await certificateService.download(cert._id, { responseType: 'blob' });
+                                            const blob = new Blob([res.data], { type: 'application/pdf' });
+                                            const url  = URL.createObjectURL(blob);
+                                            const a    = document.createElement('a');
+                                            a.href     = url;
+                                            a.download = `${cert.certificateId || cert.certificateNumber || cert._id}.pdf`;
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            document.body.removeChild(a);
+                                            URL.revokeObjectURL(url);
+                                        } catch (err) {
+                                            console.error('Certificate download failed:', err);
+                                            alert('Download failed. Please try again.');
+                                        }
+                                    }}
                                     style={{ ...styles.downloadBtn, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                                     aria-label="Download Certificate PDF"
                                 >

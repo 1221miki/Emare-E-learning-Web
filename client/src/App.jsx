@@ -31,6 +31,7 @@ import QuizPage from './pages/student/QuizPage';
 import PaymentPage from './pages/student/PaymentPage';
 import WishlistPage from './pages/student/WishlistPage';
 import CertificatesPage from './pages/student/CertificatesPage';
+import VerifyCertificatePage from './pages/VerifyCertificatePage';
 import ProfilePage from './pages/student/ProfilePage';
 import LeaderboardPage from './pages/student/LeaderboardPage';
 import DiscussionPage from './pages/student/DiscussionPage';
@@ -94,6 +95,10 @@ function AppRoutes() {
 
             {/* Leaderboard — public */}
             <Route path="/leaderboard" element={<LeaderboardPage />} />
+
+            {/* Certificate verification — public, no login required */}
+            <Route path="/verify-certificate" element={<VerifyCertificatePage />} />
+            <Route path="/verify-certificate/:certificateId" element={<VerifyCertificatePage />} />
 
             {/* ── Student Routes ──────────────────────────────── */}
             <Route path="/student/dashboard" element={<PrivateRoute allowedRoles={['Student']}><StudentDashboard /></PrivateRoute>} />

@@ -87,32 +87,34 @@ async function seedDefaultData() {
 
     async function upsertUser(label, email, plainPassword, role) {
         try {
-            const salt = await bcrypt.genSalt(10);
-            const hashed = await bcrypt.hash(plainPassword, salt);
-
             const existing = await User.findOne({ accountEmail: email });
             if (existing) {
-                // Use native driver updateOne — bypasses any problematic Mongoose internals
+                // Account already exists — NEVER overwrite the password.
+                // Only ensure isActive/isEmailVerified are correct so the
+                // account stays usable even after manual password changes.
                 await User.collection.updateOne(
                     { accountEmail: email },
                     {
                         $set: {
-                            fullName: label,
-                            securedPassword: hashed,
-                            assignedRole: role,
                             isActive: true,
+                            isEmailVerified: true,
                             isSuspended: false,
                             suspensionReason: '',
                             suspensionDate: null,
-                            suspensionEndDate: null,
-                            isEmailVerified: true,
-                            emailVerificationToken: undefined,
-                            emailVerificationExpire: undefined,
+                            suspensionEndDate: null
+                        },
+                        $unset: {
+                            emailVerificationToken: '',
+                            emailVerificationExpire: ''
                         }
                     }
                 );
-                console.log(`🔒 Default ${role.toLowerCase()} enforced: ${email} / ${plainPassword}`);
+                // Only log at debug level — password is NOT touched
+                console.log(`✅ Default ${role.toLowerCase()} account verified: ${email}`);
             } else {
+                // First-time creation — set the initial password
+                const salt = await bcrypt.genSalt(10);
+                const hashed = await bcrypt.hash(plainPassword, salt);
                 await User.collection.insertOne({
                     fullName: label,
                     accountEmail: email,

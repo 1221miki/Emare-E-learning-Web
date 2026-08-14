@@ -17,10 +17,6 @@ const subscriptionLimiter = rateLimit({
     max: 5,
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) =>
-        req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-        req.socket?.remoteAddress ||
-        req.ip,
     message: { success: false, code: 'RATE_LIMITED', message: 'Too many subscription attempts from this IP. Please try again in 1 hour.' }
 });
 
