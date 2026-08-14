@@ -14,7 +14,7 @@ export default function AdminDashboard() {
     const navigate = useNavigate();
     const location = useLocation();
     const [activeTab, setActiveTab] = useState(() => location.state?.activeTab || 'overview');
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false); // start false — show skeleton immediately
 
     useEffect(() => {
         if (location.state?.activeTab) {
@@ -418,17 +418,15 @@ export default function AdminDashboard() {
     };
 
     const fetchData = async () => {
-        setLoading(true);
+        // Fetch only the critical data needed for initial render
+        // Non-critical data (certificates, audit logs, calendar, content) loads after
         try {
-            const [analyticsRes, usersRes, coursesRes, enrollmentsRes, settingsRes, notificationsRes, collectionsRes, storageRes] = await Promise.all([
+            const [analyticsRes, usersRes, coursesRes, enrollmentsRes, notificationsRes] = await Promise.all([
                 analyticsService.getOverview().catch(() => ({ data: { data: {} } })),
                 userService.getAll({ limit: 500 }).catch(() => ({ data: { data: [] } })),
                 courseService.getAdminAll().catch(() => ({ data: { data: [] } })),
                 enrollmentService.getAll().catch(() => ({ data: { data: [] } })),
-                systemService.getSettings().catch(() => ({ data: { data: {} } })),
                 notificationService.getAll().catch(() => ({ data: { data: [] } })),
-                systemService.getDatabaseCollections().catch(() => ({ data: { data: { collections: [] } } })),
-                systemService.getDatabaseStorage().catch(() => ({ data: { data: { storageSizeBytes: 0 } } }))
             ]);
 
             setAnalytics(analyticsRes.data.data);
@@ -436,26 +434,34 @@ export default function AdminDashboard() {
             setAllCourses(coursesRes.data.data || []);
             setEnrollments(enrollmentsRes.data.data);
             setNotifications(notificationsRes.data.data || []);
-            if(settingsRes.data?.data) setSettings(settingsRes.data.data);
-            const dbData = collectionsRes.data?.data || storageRes.data?.data || {};
-            setDbMetrics({
-                databaseName: dbData.databaseName || 'unknown',
-                collections: dbData.collections || [],
-                dataSizeBytes: dbData.dataSizeBytes || 0,
-                indexSizeBytes: dbData.indexSizeBytes || 0,
-                storageSizeBytes: dbData.storageSizeBytes || 0,
-                objects: dbData.objects || 0
-            });
         } catch (error) {
             console.error("Error fetching admin data:", error);
-        } finally {
-            setLoading(false);
+        }
+
+        // Defer non-critical fetches so they don't block the initial render
+        setTimeout(() => {
+            Promise.all([
+                systemService.getSettings().catch(() => ({ data: { data: {} } })),
+                systemService.getDatabaseCollections().catch(() => ({ data: { data: { collections: [] } } })),
+                systemService.getDatabaseStorage().catch(() => ({ data: { data: { storageSizeBytes: 0 } } }))
+            ]).then(([settingsRes, collectionsRes, storageRes]) => {
+                if (settingsRes.data?.data) setSettings(settingsRes.data.data);
+                const dbData = collectionsRes.data?.data || storageRes.data?.data || {};
+                setDbMetrics({
+                    databaseName: dbData.databaseName || 'unknown',
+                    collections: dbData.collections || [],
+                    dataSizeBytes: dbData.dataSizeBytes || 0,
+                    indexSizeBytes: dbData.indexSizeBytes || 0,
+                    storageSizeBytes: dbData.storageSizeBytes || 0,
+                    objects: dbData.objects || 0
+                });
+            });
             fetchCertificates();
             fetchNotificationSummary();
             fetchContentPages();
             fetchAuditLogs();
             fetchCalendarEvents();
-        }
+        }, 100);
     };
 
     const showNotification = (msg) => {
@@ -4527,7 +4533,7 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
-                {!loading && (
+                {/* Render immediately — each section shows skeletons while data loads */}
                     <>
                                 {activeTab === 'overview' && renderOverview()}
                         {activeTab === 'users' && renderUsers()}
@@ -4544,7 +4550,6 @@ export default function AdminDashboard() {
                         {activeTab === 'calendar' && renderCalendar()}
                         {activeTab === 'system' && renderSystem()}
                     </>
-                )}
             </main>
 
             <Modal isOpen={isReviewModalOpen} onClose={handleCloseReviewModal} title="Review Course">

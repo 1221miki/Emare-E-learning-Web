@@ -1,59 +1,81 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 
-// Pages
-import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import VerifyEmailPage from './pages/VerifyEmailPage';
-import AboutPage from './pages/AboutPage';
-import ContactPage from './pages/ContactPage';
-import HelpPage from './pages/HelpPage';
-import PrivacyPage from './pages/PrivacyPage';
-import TermsPage from './pages/TermsPage';
-import CookiePage from './pages/CookiePage';
-import DevelopersPage from './pages/DevelopersPage';
-import StudentDashboard from './pages/student/StudentDashboard';
-import InstructorDashboard from './pages/instructor/InstructorDashboard';
-import InstructorSettings from './pages/instructor/InstructorSettings';
-import AssignmentBuilder from './pages/instructor/AssignmentBuilder';
-import CourseCreationWizard from './pages/instructor/CourseCreationWizard';
-import QuizManagementDashboard from './pages/instructor/QuizManagementDashboard';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminAuditLogs from './pages/admin/AdminAuditLogs';
-import LearningWorkspace from './pages/student/LearningWorkspace';
-import CourseCatalog from './pages/student/CourseCatalog';
-import CourseDetailPage from './pages/student/CourseDetailPage';
-import QuizPage from './pages/student/QuizPage';
-import PaymentPage from './pages/student/PaymentPage';
-import WishlistPage from './pages/student/WishlistPage';
-import CertificatesPage from './pages/student/CertificatesPage';
-import VerifyCertificatePage from './pages/VerifyCertificatePage';
-import ProfilePage from './pages/student/ProfilePage';
-import LeaderboardPage from './pages/student/LeaderboardPage';
-import DiscussionPage from './pages/student/DiscussionPage';
-import AssignmentPage from './pages/student/AssignmentPage';
-import MockCheckoutPage from './pages/student/MockCheckoutPage';
-import Checkout from './pages/student/Checkout';
-import PaymentCallbackPage from './pages/student/PaymentCallbackPage';
-import PaymentSuccess from './pages/student/PaymentSuccess';
-import PaymentFailed from './pages/student/PaymentFailed';
-import MessageInboxPage from './pages/MessageInboxPage';
-import LiveSessionsPage from './pages/LiveSessionsPage';
+// ── Instant page-shell fallback (shows immediately, no white flash) ────────
+const PageShell = () => (
+    <div style={{
+        minHeight: '100vh', background: '#0f172a',
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+    }}>
+        <div style={{
+            width: 36, height: 36, borderRadius: '50%',
+            border: '3px solid rgba(99,102,241,0.25)',
+            borderTopColor: '#6366f1',
+            animation: 'spin 0.7s linear infinite'
+        }} />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+);
 
-// NEW: Visitor Public Pages
-import CategoriesPage from './pages/CategoriesPage';
-import CareerTracksPage from './pages/CareerTracksPage';
-import SearchPage from './pages/SearchPage';
-import InstructorProfilePage from './pages/InstructorProfilePage';
-import AdminUserProfilePage from './pages/admin/AdminUserProfilePage';
-import AdminCoupons from './pages/admin/Coupons';
-import CouponDetail from './pages/admin/CouponDetail';
+// ── Lazy-loaded pages (each gets its own JS chunk) ─────────────────────────
+const LandingPage           = lazy(() => import('./pages/LandingPage'));
+const LoginPage             = lazy(() => import('./pages/LoginPage'));
+const RegisterPage          = lazy(() => import('./pages/RegisterPage'));
+const ResetPasswordPage     = lazy(() => import('./pages/ResetPasswordPage'));
+const VerifyEmailPage       = lazy(() => import('./pages/VerifyEmailPage'));
+const AboutPage             = lazy(() => import('./pages/AboutPage'));
+const ContactPage           = lazy(() => import('./pages/ContactPage'));
+const HelpPage              = lazy(() => import('./pages/HelpPage'));
+const PrivacyPage           = lazy(() => import('./pages/PrivacyPage'));
+const TermsPage             = lazy(() => import('./pages/TermsPage'));
+const CookiePage            = lazy(() => import('./pages/CookiePage'));
+const DevelopersPage        = lazy(() => import('./pages/DevelopersPage'));
 
-// ── Route Guard: Redirect unauthenticated users to login ──
+// Student pages
+const StudentDashboard      = lazy(() => import('./pages/student/StudentDashboard'));
+const LearningWorkspace     = lazy(() => import('./pages/student/LearningWorkspace'));
+const CourseCatalog         = lazy(() => import('./pages/student/CourseCatalog'));
+const CourseDetailPage      = lazy(() => import('./pages/student/CourseDetailPage'));
+const QuizPage              = lazy(() => import('./pages/student/QuizPage'));
+const PaymentPage           = lazy(() => import('./pages/student/PaymentPage'));
+const WishlistPage          = lazy(() => import('./pages/student/WishlistPage'));
+const CertificatesPage      = lazy(() => import('./pages/student/CertificatesPage'));
+const ProfilePage           = lazy(() => import('./pages/student/ProfilePage'));
+const LeaderboardPage       = lazy(() => import('./pages/student/LeaderboardPage'));
+const DiscussionPage        = lazy(() => import('./pages/student/DiscussionPage'));
+const AssignmentPage        = lazy(() => import('./pages/student/AssignmentPage'));
+const MockCheckoutPage      = lazy(() => import('./pages/student/MockCheckoutPage'));
+const Checkout              = lazy(() => import('./pages/student/Checkout'));
+const PaymentCallbackPage   = lazy(() => import('./pages/student/PaymentCallbackPage'));
+const PaymentSuccess        = lazy(() => import('./pages/student/PaymentSuccess'));
+const PaymentFailed         = lazy(() => import('./pages/student/PaymentFailed'));
+
+// Instructor pages
+const InstructorDashboard   = lazy(() => import('./pages/instructor/InstructorDashboard'));
+const InstructorSettings    = lazy(() => import('./pages/instructor/InstructorSettings'));
+const AssignmentBuilder     = lazy(() => import('./pages/instructor/AssignmentBuilder'));
+const CourseCreationWizard  = lazy(() => import('./pages/instructor/CourseCreationWizard'));
+const QuizManagementDashboard = lazy(() => import('./pages/instructor/QuizManagementDashboard'));
+
+// Admin pages
+const AdminDashboard        = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminAuditLogs        = lazy(() => import('./pages/admin/AdminAuditLogs'));
+const AdminUserProfilePage  = lazy(() => import('./pages/admin/AdminUserProfilePage'));
+const AdminCoupons          = lazy(() => import('./pages/admin/Coupons'));
+const CouponDetail          = lazy(() => import('./pages/admin/CouponDetail'));
+
+// Shared pages
+const VerifyCertificatePage = lazy(() => import('./pages/VerifyCertificatePage'));
+const MessageInboxPage      = lazy(() => import('./pages/MessageInboxPage'));
+const LiveSessionsPage      = lazy(() => import('./pages/LiveSessionsPage'));
+const CategoriesPage        = lazy(() => import('./pages/CategoriesPage'));
+const CareerTracksPage      = lazy(() => import('./pages/CareerTracksPage'));
+const SearchPage            = lazy(() => import('./pages/SearchPage'));
+const InstructorProfilePage = lazy(() => import('./pages/InstructorProfilePage'));
+
+// ── Route Guard ────────────────────────────────────────────────────────────
 const PrivateRoute = ({ children, allowedRoles }) => {
     const { isAuthenticated, user } = useAuth();
     if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -63,95 +85,85 @@ const PrivateRoute = ({ children, allowedRoles }) => {
 
 function AppRoutes() {
     return (
-        <Routes>
-            {/* ── Public / Visitor Routes ─────────────────────── */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/verify-email" element={<VerifyEmailPage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/developers" element={<DevelopersPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/help" element={<HelpPage />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/cookies" element={<CookiePage />} />
+        <Suspense fallback={<PageShell />}>
+            <Routes>
+                {/* ── Public Routes ──────────────────────────────────── */}
+                <Route path="/"                      element={<LandingPage />} />
+                <Route path="/login"                 element={<LoginPage />} />
+                <Route path="/register"              element={<RegisterPage />} />
+                <Route path="/reset-password"        element={<ResetPasswordPage />} />
+                <Route path="/verify-email"          element={<VerifyEmailPage />} />
+                <Route path="/about"                 element={<AboutPage />} />
+                <Route path="/developers"            element={<DevelopersPage />} />
+                <Route path="/contact"               element={<ContactPage />} />
+                <Route path="/help"                  element={<HelpPage />} />
+                <Route path="/privacy"               element={<PrivacyPage />} />
+                <Route path="/terms"                 element={<TermsPage />} />
+                <Route path="/cookies"               element={<CookiePage />} />
+                <Route path="/courses"               element={<CourseCatalog />} />
+                <Route path="/courses/:courseId"     element={<CourseDetailPage />} />
+                <Route path="/search"                element={<SearchPage />} />
+                <Route path="/career-tracks"         element={<CareerTracksPage />} />
+                <Route path="/categories"            element={<CategoriesPage />} />
+                <Route path="/instructors/:id"       element={<InstructorProfilePage />} />
+                <Route path="/instructors"           element={<SearchPage />} />
+                <Route path="/leaderboard"           element={<LeaderboardPage />} />
+                <Route path="/verify-certificate"           element={<VerifyCertificatePage />} />
+                <Route path="/verify-certificate/:certificateId" element={<VerifyCertificatePage />} />
 
-            {/* Courses — public browsing */}
-            <Route path="/courses" element={<CourseCatalog />} />
-            <Route path="/courses/:courseId" element={<CourseDetailPage />} />
+                {/* ── Student Routes ──────────────────────────────────── */}
+                <Route path="/student/dashboard"             element={<PrivateRoute allowedRoles={['Student']}><StudentDashboard /></PrivateRoute>} />
+                <Route path="/student/learn"                 element={<Navigate to="/student/dashboard" replace />} />
+                <Route path="/student/learn/:courseId"       element={<PrivateRoute allowedRoles={['Student']}><LearningWorkspace /></PrivateRoute>} />
+                <Route path="/student/quiz/:quizId"          element={<PrivateRoute allowedRoles={['Student']}><QuizPage /></PrivateRoute>} />
+                <Route path="/student/payments"              element={<PrivateRoute allowedRoles={['Student']}><PaymentPage /></PrivateRoute>} />
+                <Route path="/student/wishlist"              element={<PrivateRoute allowedRoles={['Student']}><WishlistPage /></PrivateRoute>} />
+                <Route path="/student/certificates"          element={<PrivateRoute allowedRoles={['Student']}><CertificatesPage /></PrivateRoute>} />
+                <Route path="/student/profile"               element={<PrivateRoute allowedRoles={['Student']}><ProfilePage /></PrivateRoute>} />
+                <Route path="/student/discussions"           element={<PrivateRoute allowedRoles={['Student']}><DiscussionPage /></PrivateRoute>} />
+                <Route path="/student/discussions/:courseId" element={<PrivateRoute allowedRoles={['Student']}><DiscussionPage /></PrivateRoute>} />
+                <Route path="/student/assignments/:courseId" element={<PrivateRoute allowedRoles={['Student']}><AssignmentPage /></PrivateRoute>} />
+                <Route path="/checkout/:courseId"            element={<PrivateRoute allowedRoles={['Student']}><Checkout /></PrivateRoute>} />
+                <Route path="/mock-checkout/:txRef"          element={<PrivateRoute allowedRoles={['Student']}><MockCheckoutPage /></PrivateRoute>} />
+                <Route path="/payment/callback"              element={<PaymentCallbackPage />} />
+                <Route path="/payment/success"               element={<PaymentSuccess />} />
+                <Route path="/payment/failed"                element={<PaymentFailed />} />
+                <Route path="/messages"                      element={<PrivateRoute><MessageInboxPage /></PrivateRoute>} />
+                <Route path="/live-sessions"                 element={<PrivateRoute><LiveSessionsPage /></PrivateRoute>} />
 
-            {/* Search */}
-            <Route path="/search" element={<SearchPage />} />
+                {/* ── Instructor Routes ───────────────────────────────── */}
+                <Route path="/instructor/dashboard"          element={<PrivateRoute allowedRoles={['Instructor']}><InstructorDashboard /></PrivateRoute>} />
+                <Route path="/instructor/quizzes"            element={<PrivateRoute allowedRoles={['Instructor']}><QuizManagementDashboard /></PrivateRoute>} />
+                <Route path="/instructor/settings"           element={<PrivateRoute allowedRoles={['Instructor']}><InstructorSettings /></PrivateRoute>} />
+                <Route path="/instructor/courses/new"        element={<PrivateRoute allowedRoles={['Instructor']}><CourseCreationWizard /></PrivateRoute>} />
+                <Route path="/instructor/assignments/new"    element={<PrivateRoute allowedRoles={['Instructor']}><AssignmentBuilder /></PrivateRoute>} />
 
-            {/* Career Tracks & Categories */}
-            <Route path="/career-tracks" element={<CareerTracksPage />} />
-            <Route path="/categories" element={<CategoriesPage />} />
+                {/* ── Admin Routes ─────────────────────────────────────── */}
+                <Route path="/admin/dashboard"               element={<PrivateRoute allowedRoles={['Admin']}><AdminDashboard /></PrivateRoute>} />
+                <Route path="/admin/users/:id"               element={<PrivateRoute allowedRoles={['Admin']}><AdminUserProfilePage /></PrivateRoute>} />
+                <Route path="/admin/audit-logs"              element={<PrivateRoute allowedRoles={['Admin']}><AdminAuditLogs /></PrivateRoute>} />
+                <Route path="/admin/coupons"                 element={<PrivateRoute allowedRoles={['Admin']}><AdminCoupons /></PrivateRoute>} />
+                <Route path="/admin/coupons/:id"             element={<PrivateRoute allowedRoles={['Admin']}><CouponDetail /></PrivateRoute>} />
 
-            {/* Instructors */}
-            <Route path="/instructors/:id" element={<InstructorProfilePage />} />
-            <Route path="/instructors" element={<SearchPage />} />
-
-            {/* Leaderboard — public */}
-            <Route path="/leaderboard" element={<LeaderboardPage />} />
-
-            {/* Certificate verification — public, no login required */}
-            <Route path="/verify-certificate" element={<VerifyCertificatePage />} />
-            <Route path="/verify-certificate/:certificateId" element={<VerifyCertificatePage />} />
-
-            {/* ── Student Routes ──────────────────────────────── */}
-            <Route path="/student/dashboard" element={<PrivateRoute allowedRoles={['Student']}><StudentDashboard /></PrivateRoute>} />
-            <Route path="/student/learn" element={<Navigate to="/student/dashboard" replace />} />
-            <Route path="/student/learn/:courseId" element={<PrivateRoute allowedRoles={['Student']}><LearningWorkspace /></PrivateRoute>} />
-            <Route path="/student/quiz/:quizId" element={<PrivateRoute allowedRoles={['Student']}><QuizPage /></PrivateRoute>} />
-            <Route path="/student/payments" element={<PrivateRoute allowedRoles={['Student']}><PaymentPage /></PrivateRoute>} />
-            <Route path="/student/wishlist" element={<PrivateRoute allowedRoles={['Student']}><WishlistPage /></PrivateRoute>} />
-            <Route path="/student/certificates" element={<PrivateRoute allowedRoles={['Student']}><CertificatesPage /></PrivateRoute>} />
-            <Route path="/student/profile" element={<PrivateRoute allowedRoles={['Student']}><ProfilePage /></PrivateRoute>} />
-            <Route path="/student/discussions" element={<PrivateRoute allowedRoles={['Student']}><DiscussionPage /></PrivateRoute>} />
-            <Route path="/student/discussions/:courseId" element={<PrivateRoute allowedRoles={['Student']}><DiscussionPage /></PrivateRoute>} />
-            <Route path="/student/assignments/:courseId" element={<PrivateRoute allowedRoles={['Student']}><AssignmentPage /></PrivateRoute>} />
-            <Route path="/checkout/:courseId" element={<PrivateRoute allowedRoles={['Student']}><Checkout /></PrivateRoute>} />
-            <Route path="/mock-checkout/:txRef" element={<PrivateRoute allowedRoles={['Student']}><MockCheckoutPage /></PrivateRoute>} />
-            <Route path="/payment/callback" element={<PaymentCallbackPage />} />
-            <Route path="/payment/success" element={<PaymentSuccess />} />
-            <Route path="/payment/failed" element={<PaymentFailed />} />
-            <Route path="/messages" element={<PrivateRoute><MessageInboxPage /></PrivateRoute>} />
-            <Route path="/live-sessions" element={<PrivateRoute><LiveSessionsPage /></PrivateRoute>} />
-
-            {/* ── Instructor Routes ───────────────────────────── */}
-            <Route path="/instructor/dashboard" element={<PrivateRoute allowedRoles={['Instructor']}><InstructorDashboard /></PrivateRoute>} />
-            <Route path="/instructor/quizzes" element={<PrivateRoute allowedRoles={['Instructor']}><QuizManagementDashboard /></PrivateRoute>} />
-            <Route path="/instructor/settings" element={<PrivateRoute allowedRoles={['Instructor']}><InstructorSettings /></PrivateRoute>} />
-            <Route path="/instructor/courses/new" element={<PrivateRoute allowedRoles={['Instructor']}><CourseCreationWizard /></PrivateRoute>} />
-            <Route path="/instructor/assignments/new" element={<PrivateRoute allowedRoles={['Instructor']}><AssignmentBuilder /></PrivateRoute>} />
-
-            {/* ── Admin Routes ────────────────────────────────── */}
-            <Route path="/admin/dashboard" element={<PrivateRoute allowedRoles={['Admin']}><AdminDashboard /></PrivateRoute>} />
-            <Route path="/admin/users/:id" element={<PrivateRoute allowedRoles={['Admin']}><AdminUserProfilePage /></PrivateRoute>} />
-            <Route path="/admin/audit-logs" element={<PrivateRoute allowedRoles={['Admin']}><AdminAuditLogs /></PrivateRoute>} />
-            <Route path="/admin/coupons" element={<PrivateRoute allowedRoles={['Admin']}><AdminCoupons /></PrivateRoute>} />
-            <Route path="/admin/coupons/:id" element={<PrivateRoute allowedRoles={['Admin']}><CouponDetail /></PrivateRoute>} />
-
-            {/* ── Fallback ─────────────────────────────────────── */}
-            <Route path="/unauthorized" element={
-                <div style={{ color: '#fff', textAlign: 'center', padding: '80px', background: '#0f172a', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ fontSize: '64px', marginBottom: '20px' }}>🚫</div>
-                    <h2 style={{ fontSize: '32px', margin: '0 0 12px' }}>403 — Access Denied</h2>
-                    <p style={{ color: '#94a3b8', marginBottom: '24px' }}>You do not have permission to view this page.</p>
-                    <a href="/" style={{ background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: '#fff', padding: '12px 24px', borderRadius: '10px', textDecoration: 'none', fontWeight: '700' }}>Go Home</a>
-                </div>
-            } />
-            <Route path="*" element={
-                <div style={{ color: '#fff', textAlign: 'center', padding: '80px', background: '#0f172a', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ fontSize: '64px', marginBottom: '20px' }}>🔍</div>
-                    <h2 style={{ fontSize: '32px', margin: '0 0 12px' }}>404 — Page Not Found</h2>
-                    <p style={{ color: '#94a3b8', marginBottom: '24px' }}>The page you're looking for doesn't exist.</p>
-                    <a href="/" style={{ background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: '#fff', padding: '12px 24px', borderRadius: '10px', textDecoration: 'none', fontWeight: '700' }}>Go Home</a>
-                </div>
-            } />
-        </Routes>
+                {/* ── Fallback ─────────────────────────────────────────── */}
+                <Route path="/unauthorized" element={
+                    <div style={{ color: '#fff', textAlign: 'center', padding: '80px', background: '#0f172a', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ fontSize: '64px', marginBottom: '20px' }}>🚫</div>
+                        <h2 style={{ fontSize: '32px', margin: '0 0 12px' }}>403 — Access Denied</h2>
+                        <p style={{ color: '#94a3b8', marginBottom: '24px' }}>You do not have permission to view this page.</p>
+                        <a href="/" style={{ background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: '#fff', padding: '12px 24px', borderRadius: '10px', textDecoration: 'none', fontWeight: '700' }}>Go Home</a>
+                    </div>
+                } />
+                <Route path="*" element={
+                    <div style={{ color: '#fff', textAlign: 'center', padding: '80px', background: '#0f172a', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ fontSize: '64px', marginBottom: '20px' }}>🔍</div>
+                        <h2 style={{ fontSize: '32px', margin: '0 0 12px' }}>404 — Page Not Found</h2>
+                        <p style={{ color: '#94a3b8', marginBottom: '24px' }}>The page you're looking for doesn't exist.</p>
+                        <a href="/" style={{ background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: '#fff', padding: '12px 24px', borderRadius: '10px', textDecoration: 'none', fontWeight: '700' }}>Go Home</a>
+                    </div>
+                } />
+            </Routes>
+        </Suspense>
     );
 }
 

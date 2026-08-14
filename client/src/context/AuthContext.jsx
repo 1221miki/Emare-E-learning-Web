@@ -7,34 +7,35 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(() => {
-        const saved = localStorage.getItem('elms_user');
-        return saved ? JSON.parse(saved) : null;
+        // Hydrate immediately from localStorage — no network round-trip needed to render
+        try {
+            const saved = localStorage.getItem('elms_user');
+            return saved ? JSON.parse(saved) : null;
+        } catch { return null; }
     });
-    const [loading, setLoading] = useState(true);
+    // Start as FALSE — render immediately using localStorage data.
+    // verifySession runs silently in the background to confirm the token is still valid.
+    const [loading, setLoading] = useState(false);
 
-    // On first mount, verify token is still valid with the server
+    // On first mount, silently verify token with the server.
+    // We do NOT block rendering — the user sees the page instantly.
+    // If the token is invalid we redirect to login; if server is down we keep the cached user.
     useEffect(() => {
         const verifySession = async () => {
             const token = localStorage.getItem('elms_token');
-            if (token) {
-                try {
-                    const { data } = await authService.getMe();
-                    setUser(data.data);
-                } catch (err) {
-                    // Only clear the session on a real 401 (invalid/expired token).
-                    // Do NOT clear on network errors (ECONNREFUSED, timeout, etc.)
-                    // so the user stays logged in if the server is momentarily unreachable.
-                    const status = err?.response?.status;
-                    if (status === 401) {
-                        localStorage.removeItem('elms_token');
-                        localStorage.removeItem('elms_user');
-                        setUser(null);
-                    }
-                    // For network errors (no response) keep the localStorage user so
-                    // PrivateRoute can render the page — getMe will re-verify next reload.
+            if (!token) return; // no token — nothing to verify, user stays null
+            try {
+                const { data } = await authService.getMe();
+                setUser(data.data);
+            } catch (err) {
+                const status = err?.response?.status;
+                if (status === 401) {
+                    localStorage.removeItem('elms_token');
+                    localStorage.removeItem('elms_user');
+                    setUser(null);
                 }
+                // Network errors: keep the localStorage user intact
             }
-            setLoading(false);
         };
         verifySession();
     }, []);
@@ -122,29 +123,7 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={value}>
-            {loading ? (
-                <div style={{
-                    minHeight: '100vh',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: '#0f172a',
-                    color: '#fff',
-                    fontFamily: 'system-ui, sans-serif'
-                }}>
-                    <div style={{
-                        width: '48px',
-                        height: '48px',
-                        border: '4px solid rgba(59,130,246,0.2)',
-                        borderTopColor: '#3b82f6',
-                        borderRadius: '50%',
-                        animation: 'spin 0.8s linear infinite'
-                    }} />
-                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                    <p style={{ marginTop: '16px', color: '#94a3b8', fontSize: '14px', fontWeight: '600' }}>Loading Emare ELMS...</p>
-                </div>
-            ) : children}
+            {children}
         </AuthContext.Provider>
     );
 };
