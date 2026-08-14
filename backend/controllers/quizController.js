@@ -10,7 +10,11 @@ const GradeBook = require('../models/GradeBook');
 // ─────────────────────────────────────────────
 const createQuiz = async (req, res, next) => {
     try {
-        const { courseRef, quizTitle, allottedDurationMinutes, passingScoreThreshold, questionArray, submissionDeadline } = req.body;
+        const {
+            courseRef, quizTitle, allottedDurationMinutes, passingScoreThreshold,
+            questionArray, submissionDeadline,
+            lessonRef   // optional — links quiz to a specific embedded lesson
+        } = req.body;
 
         // Verify the course exists and belongs to the instructor
         const course = await Course.findById(courseRef);
@@ -23,6 +27,7 @@ const createQuiz = async (req, res, next) => {
 
         const quiz = await Quiz.create({
             courseRef,
+            lessonRef: lessonRef || null,
             quizTitle,
             allottedDurationMinutes,
             passingScoreThreshold: passingScoreThreshold || 60,
@@ -233,6 +238,11 @@ const updateQuiz = async (req, res, next) => {
         const course = await Course.findById(quiz.courseRef);
         if (!course || course.creatorRef.toString() !== req.user.id) {
             return res.status(403).json({ success: false, message: 'You can only edit quizzes for your own courses.' });
+        }
+
+        // Allow updating lessonRef (link/unlink this quiz from a lesson)
+        if ('lessonRef' in req.body) {
+            req.body.lessonRef = req.body.lessonRef || null;
         }
 
         quiz = await Quiz.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });

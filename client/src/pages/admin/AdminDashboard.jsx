@@ -79,6 +79,22 @@ export default function AdminDashboard() {
     const [isAddCourseDropdownOpen, setIsAddCourseDropdownOpen] = useState(false);
     const [isAiCourseGenModalOpen, setIsAiCourseGenModalOpen] = useState(false);
     const [aiPromptInput, setAiPromptInput] = useState('');
+
+    // ── Fixed-position course action menu (escapes table overflow clipping) ──
+    const [courseMenuOpenId, setCourseMenuOpenId] = useState(null);   // course._id or null
+    const [courseMenuPos,    setCourseMenuPos]    = useState({ top: 0, right: 0 });
+
+    // Close the fixed course action menu on any outside click or scroll
+    useEffect(() => {
+        if (!courseMenuOpenId) return;
+        const close = () => setCourseMenuOpenId(null);
+        document.addEventListener('mousedown', close);
+        document.addEventListener('scroll', close, true);
+        return () => {
+            document.removeEventListener('mousedown', close);
+            document.removeEventListener('scroll', close, true);
+        };
+    }, [courseMenuOpenId]);
     const [isGeneratingAiCourse, setIsGeneratingAiCourse] = useState(false);
 
     // Smart Import Wizard states
@@ -2631,26 +2647,22 @@ export default function AdminDashboard() {
                                             </td>
                                             <td style={{ padding: '16px 24px', color: colors.text, fontSize: '14px', fontWeight: '500', whiteSpace: 'nowrap' }}>{course.date}</td>
                                             <td style={{ padding: '16px 24px', textAlign: 'center' }}>
-                                                <div style={{ position: 'relative', display: 'inline-block' }} className="action-dropdown-container">
-                                                    <button title="More actions" style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '7px', padding: '7px', color: colors.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }} onMouseEnter={e => { e.currentTarget.style.background='#f8fafc'; e.currentTarget.style.color='#0f172a'; }} onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#64748b'; }} onClick={(e) => {
-                                                        const menus = document.querySelectorAll('.action-menu');
-                                                        menus.forEach(m => { if(m !== e.currentTarget.nextElementSibling) m.style.display = 'none'; });
-                                                        e.currentTarget.nextElementSibling.style.display = e.currentTarget.nextElementSibling.style.display === 'block' ? 'none' : 'block';
-                                                    }}>
+                                                <div style={{ position: 'relative', display: 'inline-block' }}>
+                                                    <button
+                                                        title="More actions"
+                                                        style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '7px', padding: '7px', color: colors.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
+                                                        onMouseEnter={e => { e.currentTarget.style.background='#f8fafc'; e.currentTarget.style.color='#0f172a'; }}
+                                                        onMouseLeave={e => { e.currentTarget.style.background=colors.bgCard; e.currentTarget.style.color=colors.textMuted; }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (courseMenuOpenId === course._id) { setCourseMenuOpenId(null); return; }
+                                                            const rect = e.currentTarget.getBoundingClientRect();
+                                                            setCourseMenuPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+                                                            setCourseMenuOpenId(course._id);
+                                                        }}
+                                                    >
                                                         <MoreVertical size={15} />
                                                     </button>
-                                                    <div className="action-menu" style={{ display: 'none', position: 'absolute', right: '0', top: '100%', marginTop: '4px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', padding: '8px', width: '200px', zIndex: 50, textAlign: 'left' }}>
-                                                        <button onClick={() => course._id && navigate(`/courses/${course._id}`)} style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '13px', color: colors.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: '0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = colors.border || 'rgba(100,116,139,0.15)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}><Eye size={14} /> View</button>
-                                                        <button onClick={() => course._id && handleAssignInstructor(course._id)} style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '13px', color: colors.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: '0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = colors.border || 'rgba(100,116,139,0.15)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}><Edit size={14} /> Assign Instructor</button>
-                                                        <button onClick={() => course._id && handleDuplicateCourse(course._id)} style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '13px', color: colors.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: '0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = colors.border || 'rgba(100,116,139,0.15)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}><Copy size={14} /> Duplicate</button>
-                                                        <button onClick={() => course._id && handleApproveCourse(course._id)} style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '13px', color: colors.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: '0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = colors.border || 'rgba(100,116,139,0.15)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}><Upload size={14} /> Publish</button>
-                                                        <button onClick={() => course._id && handleArchiveCourse(course._id)} style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '13px', color: colors.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: '0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = colors.border || 'rgba(100,116,139,0.15)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}><Archive size={14} /> Archive</button>
-                                                        <button onClick={() => { setActiveCourseId(course._id); setIsManageStudentsModalOpen(true); }} style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '13px', color: colors.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: '0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = colors.border || 'rgba(100,116,139,0.15)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}><Users size={14} /> Manage Students</button>
-                                                        <button onClick={() => { setActiveCourseId(course._id); setIsCourseAnalyticsModalOpen(true); }} style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '13px', color: colors.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: '0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = colors.border || 'rgba(100,116,139,0.15)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}><BarChart3 size={14} /> Analytics</button>
-                                                        <button onClick={() => { setActiveCourseId(course._id); setIsCourseReviewsModalOpen(true); }} style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '13px', color: colors.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: '0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = colors.border || 'rgba(100,116,139,0.15)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}><Star size={14} /> Reviews</button>
-                                                        <div style={{ margin: '4px 0', borderTop: `1px solid ${colors.border}` }}></div>
-                                                        <button onClick={() => course._id && handleDeleteCourse(course._id)} style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '13px', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: '0.2s' }} onMouseEnter={e => e.currentTarget.style.background='#fef2f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}><Trash size={14} /> Delete</button>
-                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
@@ -5673,6 +5685,35 @@ export default function AdminDashboard() {
                     <button type="submit" style={s.primaryBtn}>Save Template</button>
                 </form>
             </Modal>
+
+            {/* ── Fixed-position course action menu (renders above all overflow contexts) ── */}
+            {courseMenuOpenId && (() => {
+                const course = allCourses.find(c => c._id === courseMenuOpenId);
+                if (!course) return null;
+                const menuBg     = colors.bgCard || '#1e293b';
+                const menuBorder = colors.border  || '#334155';
+                const menuText   = colors.text    || '#f1f5f9';
+                const menuHover  = colors.bg      || 'rgba(100,116,139,0.15)';
+                const btnStyle   = { width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '13px', color: menuText, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' };
+                return (
+                    <div
+                        onMouseDown={e => e.stopPropagation()}
+                        style={{ position: 'fixed', top: courseMenuPos.top, right: courseMenuPos.right, width: '200px', background: menuBg, border: `1px solid ${menuBorder}`, borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.25)', padding: '8px', zIndex: 99999, textAlign: 'left' }}
+                    >
+                        <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); course._id && navigate(`/courses/${course._id}`); }}><Eye size={14} /> View</button>
+                        <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); course._id && handleAssignInstructor(course._id); }}><Edit size={14} /> Assign Instructor</button>
+                        <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); course._id && handleDuplicateCourse(course._id); }}><Copy size={14} /> Duplicate</button>
+                        <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); course._id && handleApproveCourse(course._id); }}><Upload size={14} /> Publish</button>
+                        <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); course._id && handleArchiveCourse(course._id); }}><Archive size={14} /> Archive</button>
+                        <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); setActiveCourseId(course._id); setIsManageStudentsModalOpen(true); }}><Users size={14} /> Manage Students</button>
+                        <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); setActiveCourseId(course._id); setIsCourseAnalyticsModalOpen(true); }}><BarChart3 size={14} /> Analytics</button>
+                        <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); setActiveCourseId(course._id); setIsCourseReviewsModalOpen(true); }}><Star size={14} /> Reviews</button>
+                        <div style={{ margin: '4px 0', borderTop: `1px solid ${menuBorder}` }} />
+                        <button style={{ ...btnStyle, color: '#ef4444' }} onMouseEnter={e => e.currentTarget.style.background='rgba(239,68,68,0.08)'} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); course._id && handleDeleteCourse(course._id); }}><Trash size={14} /> Delete</button>
+                    </div>
+                );
+            })()}
+
         </div>
     );
 }

@@ -1,6 +1,8 @@
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
 const LearningProgress = require('../models/LearningProgress');
+const GradeBook = require('../models/GradeBook');
+const Submission = require('../models/Submission');
 
 const getCourseProgress = async (req, res, next) => {
     try {
@@ -47,6 +49,113 @@ const getResumeProgress = async (req, res, next) => {
     }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Internal helper: check whether a student has satisfied the quiz + assignment
+// requirements for a given lesson.
+//
+// Returns:
+//   { quizRequired, quizPassed, assignmentRequired, assignmentSubmitted, canComplete }
+// ─────────────────────────────────────────────────────────────────────────────
+const checkLessonRequirements = async (studentId, lessonData) => {
+    const quizRequired        = lessonData.quizRequired        === true;
+    const assignmentRequired  = lessonData.assignmentRequired  === true;
+    const linkedQuizId        = lessonData.linkedQuizId;
+    const linkedAssignmentId  = lessonData.linkedAssignmentId;
+
+    let quizPassed           = false;
+    let assignmentSubmitted  = false;
+
+    // ── Quiz gate ────────────────────────────────────────────────────────────
+    if (quizRequired && linkedQuizId) {
+        const gradeEntry = await GradeBook.findOne({
+            studentRef: studentId,
+            assessmentRef: linkedQuizId
+        }).lean();
+        // A quiz entry is created on any submission; consider it "passed" if
+        // it was graded and the score meets the threshold OR the quiz itself
+        // doesn't enforce a threshold (entry existence = completion).
+        quizPassed = !!(gradeEntry && gradeEntry.isGraded);
+    } else if (quizRequired && !linkedQuizId) {
+        // Quiz required but no quiz linked yet — block completion
+        quizPassed = false;
+    } else {
+        // Quiz not required — treat as satisfied
+        quizPassed = true;
+    }
+
+    // ── Assignment gate ──────────────────────────────────────────────────────
+    if (assignmentRequired && linkedAssignmentId) {
+        const submission = await Submission.findOne({
+            assignmentRef: linkedAssignmentId,
+            studentRef: studentId
+        }).lean();
+        assignmentSubmitted = !!(submission);
+    } else if (assignmentRequired && !linkedAssignmentId) {
+        // Assignment required but none linked yet — block completion
+        assignmentSubmitted = false;
+    } else {
+        // Assignment not required — treat as satisfied
+        assignmentSubmitted = true;
+    }
+
+    const canComplete = quizPassed && assignmentSubmitted;
+
+    return {
+        quizRequired,
+        quizPassed,
+        assignmentRequired,
+        assignmentSubmitted,
+        canComplete,
+        linkedQuizId:       linkedQuizId       ? linkedQuizId.toString()       : null,
+        linkedAssignmentId: linkedAssignmentId ? linkedAssignmentId.toString() : null
+    };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// @desc    Get the requirement + completion status for a specific lesson
+// @route   GET /api/learning-progress/course/:courseId/lesson/:lessonId/requirements
+// @access  Private (Student)
+// ─────────────────────────────────────────────────────────────────────────────
+const getLessonRequirementsStatus = async (req, res, next) => {
+    try {
+        const { courseId, lessonId } = req.params;
+
+        const course = await Course.findById(courseId).lean();
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+
+        // Find the lesson in the curriculumTree
+        let lessonFound = null;
+        for (const chapter of (course.curriculumTree || [])) {
+            for (const lesson of (chapter.lessons || [])) {
+                if (lesson._id.toString() === lessonId) {
+                    lessonFound = lesson;
+                    break;
+                }
+            }
+            if (lessonFound) break;
+        }
+
+        if (!lessonFound) {
+            return res.status(404).json({ success: false, message: 'Lesson not found.' });
+        }
+
+        const result = await checkLessonRequirements(req.user.id, lessonFound);
+
+        return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// @desc    Save lesson progress / mark lesson as completed
+// @route   POST /api/learning-progress/course/:courseId/lesson/:lessonId/progress
+// @access  Private (Student)
+//
+// BACKEND GATE: When completed=true, verifies quiz + assignment requirements
+// before setting the lesson as complete.  Returns 422 with detailed status
+// if requirements are not met so the frontend can display exactly what's missing.
+// ─────────────────────────────────────────────────────────────────────────────
 const saveLessonProgress = async (req, res, next) => {
     try {
         const { courseId, lessonId } = req.params;
@@ -74,6 +183,19 @@ const saveLessonProgress = async (req, res, next) => {
 
         if (!lessonFound) {
             return res.status(404).json({ success: false, message: 'Lesson not found.' });
+        }
+
+        // ── BACKEND GATE: enforce quiz + assignment requirements ─────────────
+        if (completed) {
+            const reqStatus = await checkLessonRequirements(req.user.id, lessonFound);
+            if (!reqStatus.canComplete) {
+                return res.status(422).json({
+                    success: false,
+                    message: 'Please complete the required activities before completing this lesson.',
+                    requirementsNotMet: true,
+                    data: reqStatus
+                });
+            }
         }
 
         const totalLessons = course.curriculumTree?.reduce((sum, chapter) => sum + (chapter.lessons?.length || 0), 0) || 0;
@@ -163,6 +285,7 @@ const trackResourceDownload = async (req, res, next) => {
 module.exports = {
     getCourseProgress,
     getResumeProgress,
+    getLessonRequirementsStatus,
     saveLessonProgress,
     markDocumentViewed,
     trackResourceDownload

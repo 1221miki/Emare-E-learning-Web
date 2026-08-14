@@ -17,6 +17,12 @@ const QuizSchema = new mongoose.Schema({
         ref: 'Course',
         required: true
     },
+    // lessonRef: optional — links this quiz to a specific embedded lesson (_id inside curriculumTree)
+    // When set, this quiz gates lesson completion when the lesson has quizRequired: true
+    lessonRef: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null
+    },
     quizTitle: {
         type: String,
         required: true,

@@ -7,7 +7,7 @@ const LessonSchema = new mongoose.Schema({
         trim: true
     },
     videoUrl: {
-        type: String, // Cloudinary or secure CDN link
+        type: String, // Bunny Stream embed URL: https://iframe.mediadelivery.net/embed/LIBRARY_ID/VIDEO_GUID
         required: true
     },
     durationMinutes: {
@@ -25,6 +25,29 @@ const LessonSchema = new mongoose.Schema({
     notesPdfUrl: {
         type: String,
         default: ''
+    },
+    // ── Completion requirements (per-lesson) ────────────────────────────────
+    // quizRequired: student must pass the linked quiz before marking this lesson complete
+    quizRequired: {
+        type: Boolean,
+        default: false
+    },
+    // assignmentRequired: student must submit the linked assignment before marking complete
+    assignmentRequired: {
+        type: Boolean,
+        default: false
+    },
+    // linkedQuizId: ObjectId of the Quiz document that gates this lesson
+    linkedQuizId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Quiz',
+        default: null
+    },
+    // linkedAssignmentId: ObjectId of the Assignment document that gates this lesson
+    linkedAssignmentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Assignment',
+        default: null
     }
 });
 

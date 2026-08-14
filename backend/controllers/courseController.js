@@ -178,8 +178,20 @@ const updateCourse = async (req, res, next) => {
             return res.status(403).json({ success: false, message: 'You are not the owner of this course.' });
         }
 
-        // Allow editing courses in any state (Draft, Published, Active, etc.)
-        // Archived courses can be edited to restore them
+        // Normalise per-lesson requirement fields so empty strings become null
+        // (Mongoose ObjectId fields must be null or a valid id, not '').
+        if (req.body.curriculumTree && Array.isArray(req.body.curriculumTree)) {
+            req.body.curriculumTree = req.body.curriculumTree.map(ch => ({
+                ...ch,
+                lessons: (ch.lessons || []).map(l => ({
+                    ...l,
+                    linkedQuizId:       l.linkedQuizId       && String(l.linkedQuizId).trim()       ? l.linkedQuizId       : null,
+                    linkedAssignmentId: l.linkedAssignmentId && String(l.linkedAssignmentId).trim() ? l.linkedAssignmentId : null,
+                    quizRequired:       !!l.quizRequired,
+                    assignmentRequired: !!l.assignmentRequired
+                }))
+            }));
+        }
 
         course = await Course.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
 
@@ -696,18 +708,30 @@ const streamLessonVideo = async (req, res, next) => {
 };
 
 // ─────────────────────────────────────────────
-// @desc    Delete a course (Instructor - must be owner, Draft only)
+// @desc    Delete a course permanently
 // @route   DELETE /api/courses/:id
-// @access  Private (Instructor only)
+// @access  Private (Instructor - must be owner | Admin - any course)
 // ─────────────────────────────────────────────
 const deleteCourse = async (req, res, next) => {
     try {
         const course = await Course.findById(req.params.id);
         if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
-        if (course.creatorRef.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Access denied.' });
-        if (['Published', 'Active'].includes(course.publicationState)) return res.status(400).json({ success: false, message: 'Cannot delete a published course. Archive it first.' });
+
+        const isAdmin      = req.user.assignedRole === 'Admin';
+        const isOwner      = course.creatorRef.toString() === req.user.id;
+
+        // Admin can delete any course; Instructor can only delete their own
+        if (!isAdmin && !isOwner) {
+            return res.status(403).json({ success: false, message: 'Access denied. You can only delete your own courses.' });
+        }
 
         await Course.findByIdAndDelete(req.params.id);
+
+        // Audit log
+        audit.course({ req, user: req.user, action: 'COURSE_DELETED', severity: 'warning',
+            description: `${req.user?.assignedRole} (${req.user?.accountEmail}) permanently deleted course: '${course.courseTitle}'.`,
+            targetType: 'Course', targetId: course._id, targetLabel: course.courseTitle });
+
         res.status(200).json({ success: true, message: 'Course deleted permanently.' });
     } catch (err) {
         next(err);

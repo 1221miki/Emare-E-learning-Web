@@ -39,7 +39,9 @@ export const authService = {
     getMe: () => API.get('/auth/me'),
     socialLogin: (data) => API.post('/auth/social-login', data),
     forgotPassword: (data) => API.post('/auth/forgot-password', data),
-    resetPassword: (data) => API.post('/auth/reset-password', data)
+    resetPassword: (data) => API.post('/auth/reset-password', data),
+    verifyEmail: (data) => API.post('/auth/verify-email', data),
+    resendVerification: (data) => API.post('/auth/resend-verification', data)
 };
 
 // ── Course API Calls ───────────────────────────────────────
@@ -240,25 +242,29 @@ export const issueService = {
 
 // ── Certificate API Calls ──────────────────────────────────
 export const certificateService = {
-    // issuance & admin
-    generate: (courseId) => API.post('/certificates/generate', { courseId }),
-    generateForAdmin: (data) => API.post('/certificates/admin/generate', data),
-    reissue: (id, data) => API.post(`/certificates/${id}/reissue`, data),
-    revoke: (id, reason) => API.patch(`/certificates/${id}/revoke`, { reason }),
-    getAllAdmin: () => API.get('/certificates/admin/all'),
-    // student-facing
-    getMine: () => API.get('/certificates/mine'),
-    myCertificates: () => API.get('/certificates/my'),
-    getMyCertificates: () => API.get('/certificates/me'),
-    issue: (courseId) => API.post(`/certificates/issue/${courseId}`),
-    issueCertificate: (courseId) => API.post(`/certificates/course/${courseId}/issue`),
+    // Student — issue / list
+    issue:            (courseId) => API.post(`/certificates/issue/${courseId}`),
+    generate:         (courseId) => API.post('/certificates/generate', { courseId }),
+    getMine:          ()         => API.get('/certificates/my'),
+    myCertificates:   ()         => API.get('/certificates/my'),   // alias kept for existing components
     checkEligibility: (courseId) => API.get(`/certificates/check/${courseId}`),
-    // verification & download
-    verify: (certNumber) => API.get(`/certificates/verify/${certNumber}`),
-    verifyCertificate: (certNumber) => API.get(`/certificates/verify/${certNumber}`),
-    verifyPublic: (certificateId) => API.get(`/certificates/verify/${certificateId}`),
-    download: (id, opts = { responseType: 'blob' }) => API.get(`/certificates/${id}/download`, opts),
-    downloadCertificate: (id) => API.get(`/certificates/${id}/download`, { responseType: 'blob' })
+
+    // Download — returns blob; always same certificateId on every download
+    download: (id, opts = {}) => API.get(
+        `/certificates/${id}/download`,
+        { responseType: 'blob', ...opts }
+    ),
+
+    // Verification — PUBLIC, no auth required
+    verify:       (certId) => API.get(`/certificates/verify/${certId}`),
+    verifyPublic: (certId) => API.get(`/certificates/verify/${certId}`),
+
+    // Admin
+    getAllAdmin:       ()          => API.get('/certificates/admin/all'),
+    generateForAdmin: (data)       => API.post('/certificates/admin/generate', data),
+    reissue:          (id, data)   => API.post(`/certificates/${id}/reissue`, data),
+    revoke:           (id, reason) => API.patch(`/certificates/${id}/revoke`, { reason }),
+    searchAdmin:      (params)     => API.get('/certificates/admin/all', { params })
 };
 
 // ── Discussion API Calls ───────────────────────────────────
@@ -319,6 +325,8 @@ export const liveSessionService = {
 export const learningProgressService = {
     getCourseProgress: (courseId) => API.get(`/learning-progress/course/${courseId}`),
     getResumeProgress: () => API.get('/learning-progress/resume'),
+    // Returns { quizRequired, quizPassed, assignmentRequired, assignmentSubmitted, canComplete }
+    getLessonRequirementsStatus: (courseId, lessonId) => API.get(`/learning-progress/course/${courseId}/lesson/${lessonId}/requirements`),
     saveLessonProgress: (courseId, lessonId, payload) => API.post(`/learning-progress/course/${courseId}/lesson/${lessonId}/progress`, payload),
     markDocumentViewed: (courseId, lessonId) => API.post(`/learning-progress/course/${courseId}/lesson/${lessonId}/document`, {}),
     trackResourceDownload: (courseId, lessonId, payload) => API.post(`/learning-progress/course/${courseId}/lesson/${lessonId}/resource`, payload)
@@ -340,6 +348,36 @@ export const uploadService = {
     uploadFile: (formData) => API.post('/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
     })
+};
+
+/**
+ * getPdfUrl
+ * Converts any Bunny CDN PDF URL to the backend proxy URL.
+ * This bypasses the suspended CDN hostname (emare-elms-ict-hub.b-cdn.net)
+ * and streams the file through the backend from Bunny Storage directly.
+ *
+ * Input:  https://emare-elms-ict-hub.b-cdn.net/courses/pdfs/notes.pdf
+ * Output: http://localhost:5000/api/pdf-proxy/courses/pdfs/notes.pdf
+ *
+ * Non-Bunny CDN URLs (Google Drive, Cloudinary, etc.) are returned as-is.
+ */
+export const getPdfUrl = (rawUrl = '') => {
+    if (!rawUrl) return '';
+    const trimmed = String(rawUrl).trim();
+
+    // Only proxy Bunny CDN URLs — other URLs work fine as-is
+    const bunnyPattern = /^https?:\/\/[^/]+\.b-cdn\.net\//i;
+    if (!bunnyPattern.test(trimmed)) return trimmed;
+
+    // Extract the path after the hostname
+    try {
+        const url = new URL(trimmed);
+        const storagePath = url.pathname.replace(/^\//, ''); // e.g. courses/pdfs/notes.pdf
+        const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+        return `${base}/api/pdf-proxy/${storagePath}`;
+    } catch {
+        return trimmed; // fallback: return original if URL parsing fails
+    }
 };
 
 // ── Payment Gateway API Calls (Phase 6) ────────────────────

@@ -45,6 +45,12 @@ const AssignmentSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'ContentPage'
     },
+    // embeddedLessonId: the _id of the embedded lesson inside Course.curriculumTree
+    // Used to link this assignment to a specific lesson for completion gating
+    embeddedLessonId: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null
+    },
     attachments: [AttachmentSchema],
     rubricItems: [RubricItemSchema],
     maxScore: {
