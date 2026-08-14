@@ -9,7 +9,15 @@ const API = axios.create({
 // The app relies on HTTP-only auth cookie for authentication.
 // Keep withCredentials enabled so the backend can validate the current session.
 API.interceptors.request.use(
-    (config) => config,
+    (config) => {
+        // Also send JWT as Authorization header so it works when the HTTP-only
+        // cookie isn't transmitted (e.g. phone accessing via network IP vs localhost).
+        const token = localStorage.getItem('elms_token');
+        if (token) {
+            config.headers['Authorization'] = `Bearer ${token}`;
+        }
+        return config;
+    },
     (error) => Promise.reject(error)
 );
 

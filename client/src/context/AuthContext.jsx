@@ -20,10 +20,18 @@ export const AuthProvider = ({ children }) => {
                 try {
                     const { data } = await authService.getMe();
                     setUser(data.data);
-                } catch {
-                    localStorage.removeItem('elms_token');
-                    localStorage.removeItem('elms_user');
-                    setUser(null);
+                } catch (err) {
+                    // Only clear the session on a real 401 (invalid/expired token).
+                    // Do NOT clear on network errors (ECONNREFUSED, timeout, etc.)
+                    // so the user stays logged in if the server is momentarily unreachable.
+                    const status = err?.response?.status;
+                    if (status === 401) {
+                        localStorage.removeItem('elms_token');
+                        localStorage.removeItem('elms_user');
+                        setUser(null);
+                    }
+                    // For network errors (no response) keep the localStorage user so
+                    // PrivateRoute can render the page — getMe will re-verify next reload.
                 }
             }
             setLoading(false);
