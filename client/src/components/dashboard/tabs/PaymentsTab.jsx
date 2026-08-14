@@ -74,10 +74,6 @@ export default function PaymentsTab(dash) {
     const [refundMsg, setRefundMsg] = useState('');
     const [refundErr, setRefundErr] = useState('');
     const [localRefunds, setLocalRefunds] = useState(() => readLocal(REFUNDS_KEY, []));
-    const [couponCode, setCouponCode] = useState('');
-    const [couponMsg, setCouponMsg] = useState('');
-    const [couponErr, setCouponErr] = useState('');
-
     const enrollmentList = useMemo(() => (Array.isArray(enrollments) ? enrollments : []), [enrollments]);
     const statusList = useMemo(() => (Array.isArray(paymentStatusList) ? paymentStatusList : []), [paymentStatusList]);
 
@@ -168,26 +164,6 @@ export default function PaymentsTab(dash) {
     const refundHistory = transactions.filter(t => t.status === 'Refunded');
     const combinedRefunds = [...refundHistory, ...localRefunds.filter(l => !refundHistory.some(t => String(t._id) === String(l.transactionId)))];
 
-    const applyCoupon = async (code) => {
-        if (!code.trim()) return;
-        setCouponErr('');
-        setCouponMsg('');
-        try {
-            const res = await paymentService.applyCoupon({ code: code.trim() });
-            if (res.data?.success) {
-                const couponData = res.data.data?.coupon || res.data.data;
-                const discountInfo = couponData.type === 'percent' ? `${couponData.value}% off` : `${couponData.value} ETB off`;
-                setCouponMsg(`✅ Coupon Applied: "${couponData.code}" — ${discountInfo}. Apply this code at checkout for the discount.`);
-                setCouponCode('');
-            } else {
-                setCouponErr(res.data?.message || 'Coupon is invalid, expired, or already fully redeemed.');
-            }
-        } catch (err) {
-            setCouponMsg('');
-            setCouponErr(err.response?.data?.message || 'Coupon is invalid, expired, or already fully redeemed.');
-        }
-    };
-
     const statusBadge = (status) => {
         const meta = STATUS_META[status] || { color: colors.textMuted, label: status };
         return (
@@ -223,16 +199,6 @@ export default function PaymentsTab(dash) {
                     <span style={{ ...styles.statValue, color: WARN, fontSize: '22px', marginTop: '6px' }}>{pendingCount}</span>
                     <span style={styles.statLabel}>Pending Settlement</span>
                 </div>
-            </div>
-
-            <div style={{ ...styles.panelCard, marginBottom: '20px' }}>
-                <h3 style={{ ...styles.panelCardTitle, fontSize: '16px' }}>Coupon Redemption</h3>
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <input value={couponCode} onChange={e => setCouponCode(e.target.value)} placeholder="Enter coupon code (e.g. EMARE10)" style={{ ...styles.input, flex: '1', minWidth: '220px' }} />
-                    <button onClick={() => applyCoupon(couponCode)} style={{ ...styles.resumeBtn, fontSize: '13px' }}>Apply Coupon</button>
-                </div>
-                {couponMsg && <div style={{ ...styles.successAlert, marginTop: '12px' }}>{couponMsg}</div>}
-                {couponErr && <div style={{ marginTop: '12px', background: `${DANGER}15`, border: `1px solid ${DANGER}30`, color: DANGER, padding: '12px 16px', borderRadius: '8px', fontSize: '14px', fontWeight: '600' }}>{couponErr}</div>}
             </div>
 
             <div style={styles.tableCard}>

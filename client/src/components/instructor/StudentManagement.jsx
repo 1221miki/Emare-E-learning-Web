@@ -61,9 +61,9 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
             whiteSpace: 'nowrap',
         },
         ghostBtn: {
-            background: '#f0f4ff',
-            border: '2px solid #c7d2fe',
-            color: '#4f46e5',
+            background: theme === 'dark' ? 'rgba(255,255,255,0.06)' : '#f0f4ff',
+            border: theme === 'dark' ? `2px solid ${effectiveColors.border}` : '2px solid #c7d2fe',
+            color: theme === 'dark' ? effectiveColors.text : '#4f46e5',
             borderRadius: '10px',
             padding: '10px 16px',
             fontWeight: '600',

@@ -450,29 +450,59 @@ exports.requestRefund = async (req, res) => {
 exports.applyCoupon = async (req, res) => {
     try {
         const { code, courseId } = req.body;
-        
-        // If courseId is provided, validate with course price
-        if (courseId) {
-            const originalAmount = (await Course.findById(courseId))?.price || 0;
-            const validation = await couponService.validateCoupon(code, courseId, req.user?._id, originalAmount);
-            if (!validation || !validation.valid) return res.status(400).json({ success: false, message: validation?.message || 'Invalid coupon' });
-            return res.json({ success: true, data: { coupon: validation.coupon, discountAmount: validation.discountAmount, finalAmount: validation.finalAmount } });
+
+        // courseId is REQUIRED — coupons must always be validated against a specific course
+        if (!courseId) {
+            return res.status(400).json({
+                success: false,
+                message: 'A course must be selected before applying a coupon. Please go to a course checkout page.'
+            });
         }
-        
-        // If no courseId, validate coupon exists and is active (for preview/info only)
-        const normalized = String(code || '').trim().toUpperCase();
-        const coupon = await Coupon.findOne({ code: normalized });
-        if (!coupon) return res.status(400).json({ success: false, message: 'Invalid coupon code.' });
-        
-        const now = new Date();
-        if (!coupon.active) return res.status(400).json({ success: false, message: 'This coupon is currently inactive.' });
-        if (coupon.startsAt && coupon.startsAt > now) return res.status(400).json({ success: false, message: 'This coupon is not available yet.' });
-        if (coupon.expiresAt && coupon.expiresAt < now) return res.status(400).json({ success: false, message: 'This coupon has expired.' });
-        if (coupon.redeemLimit && coupon.redeemedCount >= coupon.redeemLimit) return res.status(400).json({ success: false, message: 'This coupon has reached its usage limit.' });
-        
-        // Return coupon info without discount calculation (since no course price)
-        res.json({ success: true, data: { coupon, message: `${coupon.value}${coupon.type === 'percent' ? '%' : ' ETB'} off with code: ${coupon.code}` } });
-    } catch (err) { console.error(err); res.status(500).json({ success: false }); }
+
+        if (!code || !String(code).trim()) {
+            return res.status(400).json({ success: false, message: 'Please enter a coupon code.' });
+        }
+
+        const course = await Course.findById(courseId).lean();
+        if (!course) {
+            return res.status(404).json({ success: false, message: 'Course not found.' });
+        }
+
+        const originalAmount = course.price || 0;
+        const userId = req.user?._id;
+
+        const validation = await couponService.validateCoupon(
+            String(code).trim(),
+            courseId,
+            userId,
+            originalAmount
+        );
+
+        if (!validation || !validation.valid) {
+            return res.status(400).json({
+                success: false,
+                message: validation?.message || 'Invalid or expired coupon code.'
+            });
+        }
+
+        return res.json({
+            success: true,
+            data: {
+                coupon: {
+                    code: validation.coupon.code,
+                    type: validation.coupon.type,
+                    value: validation.coupon.value,
+                    maxDiscount: validation.coupon.maxDiscount
+                },
+                discountAmount: validation.discountAmount,
+                finalAmount: validation.finalAmount,
+                originalAmount
+            }
+        });
+    } catch (err) {
+        console.error('[applyCoupon]', err);
+        res.status(500).json({ success: false, message: 'Coupon validation failed. Please try again.' });
+    }
 };
 
 module.exports = exports;

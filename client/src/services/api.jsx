@@ -143,6 +143,36 @@ export const promotionService = {
     getActivePromotions: () => API.get('/coupons/active')
 };
 
+// ── Discount Subscription API Calls ───────────────────────
+export const subscriptionService = {
+    /**
+     * GET /api/subscriptions/status
+     * Primary cross-browser check. Backend is source of truth.
+     * Uses the auth cookie if present (authenticated users get account-level lookup).
+     * Anonymous users receive { isSubscribed: false, requiresEmail: true }.
+     */
+    getStatus: () => API.get('/subscriptions/status'),
+
+    /**
+     * POST /api/subscriptions/status/check-email
+     * Email-based status lookup for anonymous visitors.
+     * Returns { isSubscribed, status, expiresAt } — never the coupon code.
+     */
+    checkEmailStatus: (email) => API.post('/subscriptions/status/check-email', { email }),
+
+    /**
+     * POST /api/subscriptions/discount
+     * Subscribe with email to receive a personal discount coupon.
+     * Returns { success, message, expiresAt } — coupon code is NOT in response.
+     */
+    subscribeForDiscount: (email) => API.post('/subscriptions/discount', { email }),
+
+    /**
+     * GET /api/subscriptions/discount/check  (legacy — device fingerprint only)
+     */
+    checkDeviceSubscription: () => API.get('/subscriptions/discount/check')
+};
+
 // ── Wishlist API Calls ─────────────────────────────────────
 export const wishlistService = {
     getMyWishlist: () => API.get('/wishlist'),

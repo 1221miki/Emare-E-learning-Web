@@ -1,18 +1,134 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { courseService } from '../services/api';
+import { courseService, subscriptionService } from '../services/api.jsx';
 import Navbar from '../components/Navbar';
-import PromotionsBanner from '../components/PromotionsBanner';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function LandingPage() {
     const { colors, theme } = useTheme();
+    const { user, isAuthenticated } = useAuth();
     const [allCourses, setAllCourses] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [newsletterEmail, setNewsletterEmail] = useState('');
-    const [newsletterMsg, setNewsletterMsg] = useState('');
     const [activeFaq, setActiveFaq] = useState(null);
     const navigate = useNavigate();
+
+    // ── Subscription state ─────────────────────────────────────────────────
+    //
+    // subPhase controls exactly what the section renders — prevents any flash:
+    //   'loading'       → skeleton / spinner (initial state, shown until DB responds)
+    //   'subscribed'    → "You're subscribed!" card
+    //   'email_check'   → small "enter email to check status" form (anonymous only)
+    //   'form'          → full subscription form
+    //
+    const [subPhase, setSubPhase] = useState('loading');
+    const [subEmail, setSubEmail] = useState('');
+    const [subLoading, setSubLoading] = useState(false);
+    const [subMessage, setSubMessage] = useState('');
+    const [subError, setSubError] = useState('');
+    const [subExpiresAt, setSubExpiresAt] = useState(null);
+
+    // Email-check form (anonymous path)
+    const [checkEmail, setCheckEmail] = useState('');
+    const [checkLoading, setCheckLoading] = useState(false);
+    const [checkError, setCheckError] = useState('');
+
+    const statusFetched = useRef(false);
+
+    // ── On mount: hit the backend — database is the source of truth ────────
+    useEffect(() => {
+        if (statusFetched.current) return;
+        statusFetched.current = true;
+
+        subscriptionService.getStatus()
+            .then(res => {
+                const data = res.data;
+                if (data?.isSubscribed) {
+                    // Authenticated user OR auth-email matched → subscribed
+                    setSubExpiresAt(data.expiresAt || null);
+                    setSubPhase('subscribed');
+                } else if (data?.requiresEmail) {
+                    // Anonymous visitor: backend can't identify them cross-browser
+                    // → show a small email-check form so they can verify themselves
+                    setSubPhase('email_check');
+                } else {
+                    // Authenticated user confirmed NOT subscribed
+                    setSubPhase('form');
+                }
+            })
+            .catch(() => {
+                // Network error — fall back to showing the form (safe default)
+                setSubPhase('form');
+            });
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // ── Email-check handler (anonymous path) ──────────────────────────────
+    const handleCheckEmail = async (e) => {
+        e.preventDefault();
+        const email = checkEmail.trim().toLowerCase();
+        const emailRe = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+        if (!email || !emailRe.test(email)) {
+            setCheckError('Please enter a valid email address.');
+            return;
+        }
+        setCheckLoading(true);
+        setCheckError('');
+        try {
+            const res = await subscriptionService.checkEmailStatus(email);
+            const data = res.data;
+            if (data?.isSubscribed) {
+                setSubExpiresAt(data.expiresAt || null);
+                setSubPhase('subscribed');
+                setSubMessage('Your email is already subscribed. Check your inbox for the coupon code!');
+            } else {
+                // Not subscribed — pre-fill the subscription form with their email
+                setSubEmail(email);
+                setSubPhase('form');
+            }
+        } catch (err) {
+            const msg = err?.response?.data?.message;
+            if (msg) setCheckError(msg);
+            else setCheckError('Could not check status. Please try again.');
+        } finally {
+            setCheckLoading(false);
+        }
+    };
+
+    // ── Subscribe handler ──────────────────────────────────────────────────
+    const handleSubscribe = async (e) => {
+        e.preventDefault();
+        const email = subEmail.trim().toLowerCase();
+        const emailRe = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+        if (!email) { setSubError('Please enter your email address.'); return; }
+        if (!emailRe.test(email)) { setSubError('Please enter a valid email address.'); return; }
+
+        setSubLoading(true);
+        setSubError('');
+
+        try {
+            const res = await subscriptionService.subscribeForDiscount(email);
+            setSubExpiresAt(res.data?.expiresAt || null);
+            setSubMessage(res.data?.message || 'Your coupon has been sent to your email!');
+            setSubPhase('subscribed');
+            setSubEmail('');
+        } catch (err) {
+            const data = err?.response?.data;
+            const code = data?.code;
+            if (code === 'EMAIL_ALREADY_SUBSCRIBED' || code === 'ACCOUNT_ALREADY_SUBSCRIBED') {
+                setSubPhase('subscribed');
+                setSubMessage(data.message || 'This email has already received a discount coupon. Check your inbox!');
+            } else if (code === 'DEVICE_ALREADY_SUBSCRIBED') {
+                setSubPhase('subscribed');
+                setSubMessage(data.message || 'This device has already received a discount coupon.');
+            } else if (code === 'RATE_LIMITED') {
+                setSubError('Too many attempts. Please wait an hour and try again.');
+            } else {
+                setSubError(data?.message || 'Something went wrong. Please try again.');
+            }
+        } finally {
+            setSubLoading(false);
+        }
+    };
 
     useEffect(() => {
         courseService.getAll()
@@ -26,12 +142,6 @@ export default function LandingPage() {
     const handleSearch = (e) => {
         e.preventDefault();
         if (searchQuery.trim()) navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
-    };
-
-    const handleNewsletter = (e) => {
-        e.preventDefault();
-        setNewsletterMsg(' Thank you! You have been subscribed to our newsletter.');
-        setNewsletterEmail('');
     };
 
     // ── DATA MOCKS FOR 21 SECTIONS ──────────────────────────────────────────────
@@ -246,12 +356,6 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* 3.5. Active Promotions Banner */}
-            <PromotionsBanner />
-
-            {/* 3.5. Active Promotions Banner */}
-            <PromotionsBanner />
-
             {/* 4. Platform Statistics */}
             <section style={p.statsSection}>
                 <div style={p.statsGrid}>
@@ -447,18 +551,207 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* 20. Newsletter Subscription */}
-            <section style={{ padding: '60px 5%', background: colors.bgCard, borderTop: `1px solid ${colors.border}`, textAlign: 'center' }}>
-                <h3 style={{ color: colors.text, fontSize: '24px', margin: '0 0 16px' }}>Subscribe to our Newsletter</h3>
-                <p style={{ color: colors.textMuted, marginBottom: '32px' }}>Get the latest updates on new courses, tech news, and exclusive discounts.</p>
-                {newsletterMsg ? (
-                    <div style={{ color: colors.success, fontWeight: '700', fontSize: '16px' }}>{newsletterMsg}</div>
-                ) : (
-                    <form onSubmit={handleNewsletter} style={{ display: 'flex', gap: '12px', maxWidth: '500px', margin: '0 auto' }}>
-                        <input type="email" required placeholder="Email address" value={newsletterEmail} onChange={e => setNewsletterEmail(e.target.value)} style={{ flex: 1, background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, padding: '14px 20px', borderRadius: '10px', fontSize: '14px', outline: 'none' }} />
-                        <button type="submit" style={p.enrollBtn}>Subscribe</button>
-                    </form>
-                )}
+            {/* 20. Discount Subscription */}
+            <section style={{
+                padding: '72px 5%',
+                background: theme === 'dark'
+                    ? 'linear-gradient(135deg, rgba(37,99,235,0.15) 0%, rgba(124,58,237,0.15) 100%)'
+                    : 'linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%)',
+                borderTop: `1px solid ${colors.border}`,
+                borderBottom: `1px solid ${colors.border}`,
+                textAlign: 'center',
+                position: 'relative',
+                overflow: 'hidden'
+            }}>
+                {/* Decorative blobs */}
+                <div style={{ position: 'absolute', top: '-60px', left: '-60px', width: '240px', height: '240px', background: 'radial-gradient(circle, rgba(99,102,241,0.12), transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', bottom: '-60px', right: '-60px', width: '240px', height: '240px', background: 'radial-gradient(circle, rgba(59,130,246,0.12), transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
+
+                <div style={{ position: 'relative', maxWidth: '600px', margin: '0 auto' }}>
+
+                    {/* ── PHASE: loading ── skeleton, no flash */}
+                    {subPhase === 'loading' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '20px 0' }}>
+                            <div style={{ width: '120px', height: '20px', borderRadius: '10px', background: theme === 'dark' ? 'rgba(255,255,255,0.08)' : '#e2e8f0', animation: 'pulse 1.4s ease-in-out infinite' }} />
+                            <div style={{ width: '280px', height: '32px', borderRadius: '10px', background: theme === 'dark' ? 'rgba(255,255,255,0.08)' : '#e2e8f0', animation: 'pulse 1.4s ease-in-out infinite' }} />
+                            <div style={{ width: '400px', maxWidth: '90%', height: '16px', borderRadius: '8px', background: theme === 'dark' ? 'rgba(255,255,255,0.06)' : '#e2e8f0', animation: 'pulse 1.4s ease-in-out infinite' }} />
+                            <div style={{ width: '340px', maxWidth: '90%', height: '16px', borderRadius: '8px', background: theme === 'dark' ? 'rgba(255,255,255,0.06)' : '#e2e8f0', animation: 'pulse 1.4s ease-in-out infinite' }} />
+                        </div>
+                    )}
+
+                    {/* ── PHASE: subscribed ── shown regardless of browser */}
+                    {subPhase === 'subscribed' && (
+                        <>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: theme === 'dark' ? 'rgba(16,185,129,0.2)' : '#d1fae5', color: theme === 'dark' ? '#34d399' : '#065f46', borderRadius: '100px', padding: '6px 16px', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '20px' }}>
+                                ✅ Subscribed
+                            </div>
+                            <div style={{ background: theme === 'dark' ? 'rgba(16,185,129,0.12)' : '#f0fdf4', border: `1.5px solid ${theme === 'dark' ? 'rgba(16,185,129,0.35)' : '#86efac'}`, borderRadius: '16px', padding: '32px 28px' }}>
+                                <div style={{ fontSize: '44px', marginBottom: '14px' }}>🎉</div>
+                                <h4 style={{ color: theme === 'dark' ? '#34d399' : '#065f46', fontSize: '20px', fontWeight: '800', margin: '0 0 12px' }}>
+                                    You're subscribed!
+                                </h4>
+                                <p style={{ color: theme === 'dark' ? '#6ee7b7' : '#047857', fontSize: '14px', margin: '0 0 10px', lineHeight: 1.65 }}>
+                                    {subMessage || 'Your discount coupon code has been sent to your email.'}
+                                </p>
+                                {subExpiresAt && (
+                                    <p style={{ color: theme === 'dark' ? '#9ca3af' : '#6b7280', fontSize: '12px', margin: 0 }}>
+                                        Coupon expires: {new Date(subExpiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                    </p>
+                                )}
+                            </div>
+                        </>
+                    )}
+
+                    {/* ── PHASE: email_check ── anonymous cross-browser verification */}
+                    {subPhase === 'email_check' && (
+                        <>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: theme === 'dark' ? 'rgba(99,102,241,0.2)' : '#e0e7ff', color: theme === 'dark' ? '#a5b4fc' : '#4338ca', borderRadius: '100px', padding: '6px 16px', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '20px' }}>
+                                🎁 Limited Time Offer
+                            </div>
+                            <h3 style={{ color: colors.text, fontSize: '26px', fontWeight: '900', margin: '0 0 10px', lineHeight: 1.25 }}>
+                                Get 10% Off Your First Course
+                            </h3>
+                            <p style={{ color: colors.textMuted, fontSize: '14px', lineHeight: 1.7, margin: '0 0 28px' }}>
+                                Already subscribed? Enter your email to restore your subscription status, or use a new email to subscribe.
+                            </p>
+                            <form onSubmit={handleCheckEmail} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: '10px', width: '100%', maxWidth: '480px', flexWrap: 'wrap' }}>
+                                    <input
+                                        type="email"
+                                        required
+                                        placeholder="Enter your email address"
+                                        value={checkEmail}
+                                        onChange={e => { setCheckEmail(e.target.value); setCheckError(''); }}
+                                        disabled={checkLoading}
+                                        style={{
+                                            flex: '1 1 220px',
+                                            background: colors.bgInput,
+                                            border: `1.5px solid ${checkError ? '#ef4444' : colors.border}`,
+                                            color: colors.text,
+                                            padding: '13px 16px',
+                                            borderRadius: '10px',
+                                            fontSize: '14px',
+                                            outline: 'none',
+                                            opacity: checkLoading ? 0.7 : 1,
+                                            transition: 'border-color 0.2s'
+                                        }}
+                                        aria-label="Email address to check subscription status"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={checkLoading}
+                                        style={{
+                                            flex: '0 0 auto',
+                                            background: checkLoading ? colors.textMuted : 'linear-gradient(135deg, #3b82f6, #7c3aed)',
+                                            color: '#fff', border: 'none', borderRadius: '10px',
+                                            padding: '13px 24px', fontSize: '14px', fontWeight: '700',
+                                            cursor: checkLoading ? 'not-allowed' : 'pointer',
+                                            whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '7px'
+                                        }}
+                                        aria-label="Check subscription status"
+                                    >
+                                        {checkLoading
+                                            ? <><span style={{ display: 'inline-block', width: '13px', height: '13px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> Checking…</>
+                                            : '🔍 Check Status'}
+                                    </button>
+                                </div>
+                                {checkError && (
+                                    <p role="alert" style={{ color: '#ef4444', fontSize: '13px', fontWeight: '600', margin: 0 }}>⚠ {checkError}</p>
+                                )}
+                                <p style={{ color: colors.textMuted, fontSize: '12px', margin: 0 }}>
+                                    🔒 We only check whether your email is subscribed. No data is shared.
+                                </p>
+                            </form>
+                        </>
+                    )}
+
+                    {/* ── PHASE: form ── full subscription form */}
+                    {subPhase === 'form' && (
+                        <>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: theme === 'dark' ? 'rgba(99,102,241,0.2)' : '#e0e7ff', color: theme === 'dark' ? '#a5b4fc' : '#4338ca', borderRadius: '100px', padding: '6px 16px', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '20px' }}>
+                                🎁 Limited Time Offer
+                            </div>
+                            <h3 style={{ color: colors.text, fontSize: '28px', fontWeight: '900', margin: '0 0 12px', lineHeight: 1.25 }}>
+                                Get 10% Off Your First Course
+                            </h3>
+                            <p style={{ color: colors.textMuted, fontSize: '15px', lineHeight: 1.7, margin: '0 0 32px' }}>
+                                Subscribe to our newsletter and instantly receive an exclusive discount coupon delivered straight to your inbox. No spam — just great courses and learning tips.
+                            </p>
+                            <form onSubmit={handleSubscribe} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '14px', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: '10px', width: '100%', maxWidth: '480px', flexWrap: 'wrap' }}>
+                                    <input
+                                        type="email"
+                                        required
+                                        placeholder="Enter your email address"
+                                        value={subEmail}
+                                        onChange={e => { setSubEmail(e.target.value); setSubError(''); }}
+                                        disabled={subLoading}
+                                        style={{
+                                            flex: '1 1 220px',
+                                            background: colors.bgInput,
+                                            border: `1.5px solid ${subError ? '#ef4444' : colors.border}`,
+                                            color: colors.text,
+                                            padding: '14px 18px',
+                                            borderRadius: '10px',
+                                            fontSize: '14px',
+                                            outline: 'none',
+                                            opacity: subLoading ? 0.7 : 1,
+                                            transition: 'border-color 0.2s'
+                                        }}
+                                        aria-label="Email address for discount subscription"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={subLoading}
+                                        style={{
+                                            flex: '0 0 auto',
+                                            background: subLoading ? colors.textMuted : 'linear-gradient(135deg, #3b82f6, #7c3aed)',
+                                            color: '#fff', border: 'none', borderRadius: '10px',
+                                            padding: '14px 28px', fontSize: '14px', fontWeight: '700',
+                                            cursor: subLoading ? 'not-allowed' : 'pointer',
+                                            whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '8px'
+                                        }}
+                                        aria-label="Subscribe to get discount coupon"
+                                    >
+                                        {subLoading
+                                            ? <><span style={{ display: 'inline-block', width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> Sending…</>
+                                            : <>🎁 Get My Coupon</>}
+                                    </button>
+                                </div>
+                                {subError && (
+                                    <p role="alert" style={{ color: '#ef4444', fontSize: '13px', fontWeight: '600', margin: 0 }}>⚠ {subError}</p>
+                                )}
+                                <p style={{ color: colors.textMuted, fontSize: '12px', margin: 0 }}>
+                                    🔒 No spam, ever. Unsubscribe anytime. One coupon per subscriber.
+                                </p>
+                            </form>
+                        </>
+                    )}
+
+                    {/* Feature chips — shown on check and form phases */}
+                    {(subPhase === 'form' || subPhase === 'email_check') && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px', marginTop: '28px' }}>
+                            {[
+                                { icon: '🏷️', text: '10% off any course' },
+                                { icon: '⚡', text: 'Instant delivery' },
+                                { icon: '📅', text: 'Valid 30 days' },
+                                { icon: '🔒', text: 'Single use, secure' }
+                            ].map(({ icon, text }) => (
+                                <span key={text} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: theme === 'dark' ? 'rgba(255,255,255,0.06)' : '#fff', border: `1px solid ${colors.border}`, borderRadius: '100px', padding: '6px 14px', fontSize: '12px', fontWeight: '600', color: colors.text }}>
+                                    {icon} {text}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <style>{`
+                    @keyframes spin { to { transform: rotate(360deg); } }
+                    @keyframes pulse {
+                        0%, 100% { opacity: 1; }
+                        50% { opacity: 0.4; }
+                    }
+                `}</style>
             </section>
 
             {/* 21. Footer */}

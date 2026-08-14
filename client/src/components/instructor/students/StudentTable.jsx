@@ -140,23 +140,25 @@ const SkeletonRow = () => (
 );
 
 export default function StudentTable({ students = [], loading, onViewProfile, onMessage, onRemove }) {
+    const { colors, theme } = useTheme();
+
     return (
         <div
             style={{
-                background: '#ffffff',
-                backdropFilter: 'blur(12px)',
-                border: '2px solid #e0e7ff',
+                background: colors.bgCard,
+                backdropFilter: theme === 'dark' ? 'blur(12px)' : 'none',
+                border: `2px solid ${colors.border}`,
                 borderRadius: '16px',
                 overflow: 'hidden',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                boxShadow: theme === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.08)',
             }}
         >
             <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '860px' }}>
                     <thead>
-                        <tr style={{ background: '#f0f4ff', borderBottom: '2px solid #e0e7ff' }}>
+                        <tr style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.04)' : '#f0f4ff', borderBottom: `2px solid ${colors.border}` }}>
                             {COLS.map(col => (
-                                <th key={col.label} style={{ padding: '13px 18px', color: '#4f46e5', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left', whiteSpace: 'nowrap', width: col.width }}>
+                                <th key={col.label} style={{ padding: '13px 18px', color: colors.primary, fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left', whiteSpace: 'nowrap', width: col.width }}>
                                     {col.label}
                                 </th>
                             ))}
@@ -169,8 +171,8 @@ export default function StudentTable({ students = [], loading, onViewProfile, on
                         {!loading && students.length === 0 && (
                             <tr>
                                 <td colSpan={COLS.length} style={{ padding: '60px 20px', textAlign: 'center' }}>
-                                    <GraduationCap size={40} color="#c7d2fe" style={{ display: 'block', margin: '0 auto 12px' }} aria-hidden="true" />
-                                    <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>No students found. Try adjusting the filters.</p>
+                                    <GraduationCap size={40} color={colors.textMuted} style={{ display: 'block', margin: '0 auto 12px' }} aria-hidden="true" />
+                                    <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>No students found. Try adjusting the filters.</p>
                                 </td>
                             </tr>
                         )}
@@ -178,8 +180,8 @@ export default function StudentTable({ students = [], loading, onViewProfile, on
                         {!loading && students.map((student, idx) => (
                             <tr
                                 key={student._id}
-                                style={{ borderBottom: '2px solid #e0e7ff', transition: 'background 0.15s' }}
-                                onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                                style={{ borderBottom: `2px solid ${colors.border}`, transition: 'background 0.15s' }}
+                                onMouseEnter={e => e.currentTarget.style.background = colors.bgInput}
                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                             >
                                 {/* Student */}
@@ -187,22 +189,22 @@ export default function StudentTable({ students = [], loading, onViewProfile, on
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                         <Avatar student={student} />
                                         <div>
-                                            <div style={{ color: '#1e293b', fontSize: '14px', fontWeight: '700', marginBottom: '2px' }}>{student.name}</div>
-                                            <div style={{ color: '#64748b', fontSize: '12px' }}>{student.email}</div>
+                                            <div style={{ color: colors.text, fontSize: '14px', fontWeight: '700', marginBottom: '2px' }}>{student.name}</div>
+                                            <div style={{ color: colors.textMuted, fontSize: '12px' }}>{student.email}</div>
                                         </div>
                                     </div>
                                 </td>
 
                                 {/* Course */}
                                 <td style={{ padding: '14px 18px' }}>
-                                    <span style={{ color: '#64748b', fontSize: '13px', display: 'block', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span style={{ color: colors.textMuted, fontSize: '13px', display: 'block', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {student.course}
                                     </span>
                                 </td>
 
                                 {/* Enrolled */}
                                 <td style={{ padding: '14px 18px' }}>
-                                    <span style={{ color: '#64748b', fontSize: '12px' }}>
+                                    <span style={{ color: colors.textMuted, fontSize: '12px' }}>
                                         {student.enrollmentDate ? new Date(student.enrollmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) : '—'}
                                     </span>
                                 </td>
@@ -223,7 +225,7 @@ export default function StudentTable({ students = [], loading, onViewProfile, on
                                         ? <span style={{ color: student.quizScore >= 80 ? '#10b981' : student.quizScore >= 60 ? '#f59e0b' : '#ef4444', fontSize: '13px', fontWeight: '700' }}>
                                             {student.quizScore}%
                                           </span>
-                                        : <span style={{ color: '#334155', fontSize: '12px' }}>—</span>
+                                        : <span style={{ color: colors.textMuted, fontSize: '12px' }}>—</span>
                                     }
                                 </td>
 
@@ -249,7 +251,7 @@ export default function StudentTable({ students = [], loading, onViewProfile, on
 
             {/* Footer row */}
             {!loading && students.length > 0 && (
-                <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(51,65,85,0.3)', color: '#475569', fontSize: '12px' }}>
+                <div style={{ padding: '12px 20px', borderTop: `1px solid ${colors.border}`, color: colors.textMuted, fontSize: '12px' }}>
                     Showing {students.length} student{students.length !== 1 ? 's' : ''}
                 </div>
             )}

@@ -621,6 +621,188 @@ const sendCourseEnrollmentEmail = async (user, course, txRef) => {
     }
 };
 
+/**
+ * Send Discount Coupon Email
+ * Sent after a successful homepage newsletter subscription.
+ * The coupon code is delivered only via this email — never exposed in the API response.
+ */
+const sendDiscountEmail = async (toEmail, couponCode, expiresAt) => {
+    const expiryStr = expiresAt
+        ? new Date(expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        : '30 days from now';
+    const coursesUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/courses`;
+
+    const htmlTemplate = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4ff; padding: 20px; }
+          .wrapper { max-width: 600px; margin: 0 auto; }
+          .header {
+            background: linear-gradient(135deg, #3b82f6 0%, #7c3aed 100%);
+            color: #fff;
+            padding: 40px 32px;
+            border-radius: 16px 16px 0 0;
+            text-align: center;
+          }
+          .header .logo { font-size: 28px; font-weight: 900; letter-spacing: -0.5px; }
+          .header .tagline { font-size: 13px; opacity: 0.85; margin-top: 6px; }
+          .body { background: #ffffff; padding: 36px 32px; border: 1px solid #e2e8f0; }
+          .body p { color: #374151; font-size: 15px; line-height: 1.7; margin-bottom: 16px; }
+          .coupon-box {
+            background: linear-gradient(135deg, #eff6ff, #f5f3ff);
+            border: 2px dashed #6366f1;
+            border-radius: 12px;
+            padding: 28px 24px;
+            text-align: center;
+            margin: 28px 0;
+          }
+          .coupon-label { font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+          .coupon-code {
+            font-size: 32px;
+            font-weight: 900;
+            color: #4f46e5;
+            letter-spacing: 0.12em;
+            background: #fff;
+            border: 2px solid #c7d2fe;
+            border-radius: 8px;
+            padding: 10px 24px;
+            display: inline-block;
+            margin: 8px 0 12px;
+          }
+          .coupon-detail { font-size: 13px; color: #6b7280; margin-top: 4px; }
+          .coupon-detail strong { color: #4f46e5; }
+          .expiry-note {
+            background: #fff7ed;
+            border-left: 4px solid #f59e0b;
+            border-radius: 4px;
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #92400e;
+            margin: 20px 0;
+          }
+          .cta-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #3b82f6, #7c3aed);
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 14px 36px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            margin-top: 8px;
+          }
+          .how-to { background: #f8fafc; border-radius: 10px; padding: 20px 24px; margin: 24px 0; }
+          .how-to h4 { color: #1e293b; font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+          .how-to ol { padding-left: 18px; color: #475569; font-size: 13px; line-height: 2; }
+          .footer {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-top: none;
+            border-radius: 0 0 16px 16px;
+            padding: 20px 32px;
+            text-align: center;
+            font-size: 11px;
+            color: #9ca3af;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="wrapper">
+          <div class="header">
+            <div class="logo">🎓 Emare ICT Hub</div>
+            <div class="tagline">E-Learning Management System &mdash; Ethiopia&apos;s Premier Tech Learning Platform</div>
+          </div>
+
+          <div class="body">
+            <p>Hello,</p>
+            <p>
+              Thank you for subscribing to <strong>Emare ICT Hub</strong>! 🎉<br>
+              As a welcome gift, here is your exclusive <strong>10% discount coupon</strong> valid on any course.
+            </p>
+
+            <div class="coupon-box">
+              <div class="coupon-label">Your Exclusive Coupon Code</div>
+              <div class="coupon-code">${couponCode}</div>
+              <div class="coupon-detail">
+                <strong>10% OFF</strong> any course &nbsp;&bull;&nbsp; Max discount: 500 ETB
+              </div>
+              <div class="coupon-detail" style="margin-top:6px;">Single use &nbsp;&bull;&nbsp; Valid until <strong>${expiryStr}</strong></div>
+            </div>
+
+            <div class="expiry-note">
+              ⏰ <strong>Important:</strong> This coupon expires on <strong>${expiryStr}</strong>.
+              Apply it at checkout before it expires!
+            </div>
+
+            <div class="how-to">
+              <h4>📋 How to use your coupon:</h4>
+              <ol>
+                <li>Browse our course catalog and pick a course</li>
+                <li>Add the course to your cart and proceed to checkout</li>
+                <li>Enter the coupon code <strong>${couponCode}</strong> in the discount field</li>
+                <li>Your 10% discount will be applied automatically</li>
+              </ol>
+            </div>
+
+            <div style="text-align:center; margin-top: 28px;">
+              <a href="${coursesUrl}" class="cta-btn">Browse Courses Now &rarr;</a>
+            </div>
+
+            <p style="margin-top: 32px; font-size: 13px; color: #6b7280;">
+              If you did not subscribe on our website, please ignore this email.
+              This coupon is personal and linked to your email address.
+            </p>
+          </div>
+
+          <div class="footer">
+            <p>&copy; ${new Date().getFullYear()} Emare ICT Hub. All rights reserved.</p>
+            <p style="margin-top:4px;">This is an automated message. Please do not reply to this email.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+    `;
+
+    try {
+        const info = await transporter.sendMail({
+            from: process.env.EMAIL_FROM || 'noreply@emare.com',
+            to: toEmail,
+            subject: '🎉 Your Exclusive 10% Discount Coupon — Emare ICT Hub',
+            html: htmlTemplate,
+            text: [
+                `Hello,`,
+                ``,
+                `Thank you for subscribing to Emare ICT Hub!`,
+                `Here is your exclusive 10% discount coupon: ${couponCode}`,
+                ``,
+                `Details:`,
+                `  - 10% OFF any course (max 500 ETB)`,
+                `  - Single use`,
+                `  - Valid until: ${expiryStr}`,
+                ``,
+                `How to use:`,
+                `  1. Go to ${coursesUrl}`,
+                `  2. Choose a course and proceed to checkout`,
+                `  3. Enter the code ${couponCode} in the discount field`,
+                ``,
+                `Best regards,`,
+                `The Emare ICT Hub Team`
+            ].join('\n')
+        });
+
+        console.log(`✅ Discount coupon email sent to ${toEmail} (Message ID: ${info.messageId})`);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
+        console.error(`❌ Failed to send discount email to ${toEmail}:`, error.message);
+        return { success: false, error: error.message };
+    }
+};
+
 module.exports = {
     sendPasswordResetEmail,
     sendPasswordResetConfirmationEmail,
@@ -628,5 +810,6 @@ module.exports = {
     sendAccountCreatedEmail,
     sendEmailVerification,
     sendCourseEnrollmentEmail,
+    sendDiscountEmail,
     isEmailConfigured: () => emailConfigured
 };
