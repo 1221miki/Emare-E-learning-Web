@@ -422,7 +422,7 @@ export default function AdminDashboard() {
         try {
             const [analyticsRes, usersRes, coursesRes, enrollmentsRes, settingsRes, notificationsRes, collectionsRes, storageRes] = await Promise.all([
                 analyticsService.getOverview().catch(() => ({ data: { data: {} } })),
-                userService.getAll({ limit: 100 }).catch(() => ({ data: { data: [] } })),
+                userService.getAll({ limit: 500 }).catch(() => ({ data: { data: [] } })),
                 courseService.getAdminAll().catch(() => ({ data: { data: [] } })),
                 enrollmentService.getAll().catch(() => ({ data: { data: [] } })),
                 systemService.getSettings().catch(() => ({ data: { data: {} } })),
@@ -801,6 +801,8 @@ export default function AdminDashboard() {
             const response = await userService.createUser(payload);
             if (response?.data?.success) {
                 if (response.data.verificationRequired) {
+                    // Refresh user list immediately so new account appears (unverified state)
+                    fetchData();
                     // Show OTP verification step
                     setCreateVerifyEmail(createForm.accountEmail.trim().toLowerCase());
                     setCreateVerifyCode('');
@@ -1668,6 +1670,9 @@ export default function AdminDashboard() {
                                 <option value="Instructor" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Instructors</option>
                                 <option value="Admin" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Admins</option>
                             </select>
+                            <button onClick={() => { setLoading(true); userService.getAll({ limit: 500 }).then(r => setUsers(r.data.data || [])).catch(() => {}).finally(() => setLoading(false)); }} style={{ ...s.secondaryBtn, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <RefreshCw size={14} /> Refresh
+                            </button>
                             <button onClick={() => setIsCreateModalOpen(true)} style={s.primaryBtn}>Create account</button>
                         </div>
                     </div>

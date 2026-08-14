@@ -39,7 +39,7 @@ const getAllUsers = async (req, res, next) => {
 
         const users = await User.find(query)
             .select('-securedPassword')
-            .sort({ creationTimestamp: -1 })
+            .sort({ _id: -1 })   // newest first — _id contains creation timestamp, always reliable
             .skip((parseInt(page) - 1) * parseInt(limit))
             .limit(parseInt(limit))
             .lean();
