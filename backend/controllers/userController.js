@@ -10,7 +10,8 @@ const { uploadImage } = require('../services/cloudinaryService');
 const { 
     sendAdminPasswordResetEmail,
     sendPasswordResetConfirmationEmail,
-    sendAccountCreatedEmail
+    sendAccountCreatedEmail,
+    sendEmailVerification
 } = require('../services/emailService');
 
 // ─────────────────────────────────────────────
@@ -101,6 +102,18 @@ const createUser = async (req, res, next) => {
             });
         }
 
+        // ── Backend email format validation ──────────────────────────────────
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!accountEmail || !emailRegex.test(accountEmail.trim())) {
+            return res.status(400).json({ success: false, message: 'Please enter a valid email address (e.g. name@gmail.com).' });
+        }
+
+        // ── Backend phone format validation: 09xxxxxxxx or 07xxxxxxxx (10 digits) ──
+        const phoneRegex = /^(09|07)\d{8}$/;
+        if (!contactPhone || !phoneRegex.test(contactPhone.trim())) {
+            return res.status(400).json({ success: false, message: 'Phone number must start with 09 or 07 and be exactly 10 digits (e.g. 0912345678).' });
+        }
+
         const existingUser = await User.findOne({ accountEmail: accountEmail.toLowerCase() });
         if (existingUser) {
             return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
@@ -111,18 +124,27 @@ const createUser = async (req, res, next) => {
         const instructorId = assignedRole === 'Instructor' ? `INST-${Date.now()}-${randomSuffix}` : undefined;
         const administratorId = assignedRole === 'Admin' ? `ADM-${Date.now()}-${randomSuffix}` : undefined;
 
+        // Generate email verification OTP
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const hashedVerificationCode = crypto.createHash('sha256').update(verificationCode).digest('hex');
+        const verificationExpire = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+
         const user = await User.create({
             fullName,
             accountEmail: accountEmail.toLowerCase(),
             securedPassword,
             assignedRole,
-            contactPhone: contactPhone || '',
+            contactPhone: contactPhone.trim(),
             isActive: isActive !== false,
             requirePasswordChange: !!requirePasswordChange,
             username: username || undefined,
             gender: gender || '',
             dateOfBirth: dateOfBirth || undefined,
             avatarUrl: avatarUrl || '',
+            // Email verification — NOT verified until OTP is confirmed
+            isEmailVerified: false,
+            emailVerificationToken: hashedVerificationCode,
+            emailVerificationExpire: verificationExpire,
             // Instructor specific
             instructorId,
             specialization: specialization || '',
@@ -148,18 +170,30 @@ const createUser = async (req, res, next) => {
             permissions: permissions || undefined
         });
 
-        if (sendWelcomeEmail && typeof sendAccountCreatedEmail === 'function') {
-            try {
-                await sendAccountCreatedEmail(user, securedPassword);
-            } catch (emailErr) {
-                console.error('Failed to send welcome email:', emailErr);
-            }
+        // Send verification email with OTP
+        let verificationSent = false;
+        try {
+            await sendEmailVerification(user, verificationCode);
+            verificationSent = true;
+            console.log(`✅ Verification email sent to ${user.accountEmail}`);
+        } catch (emailErr) {
+            console.error('Failed to send verification email:', emailErr.message);
+            // If email fails, still return the code in dev mode so admin can verify manually
         }
 
         const userData = user.toObject();
         delete userData.securedPassword;
+        delete userData.emailVerificationToken;
 
-        res.status(201).json({ success: true, message: `${assignedRole} account created successfully.`, data: userData });
+        res.status(201).json({
+            success: true,
+            message: `${assignedRole} account created. A verification code has been sent to ${user.accountEmail}. The account must be verified before it can be used.`,
+            data: userData,
+            verificationRequired: true,
+            verificationSent,
+            // Return code in non-production if email failed (so admin can manually verify)
+            ...(process.env.NODE_ENV !== 'production' && !verificationSent ? { verificationCode } : {})
+        });
     } catch (err) {
         next(err);
     }

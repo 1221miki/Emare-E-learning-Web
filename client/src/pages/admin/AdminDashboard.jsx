@@ -251,6 +251,11 @@ export default function AdminDashboard() {
     });
     const [createFormStep, setCreateFormStep] = useState(1);
     const [createStepError, setCreateStepError] = useState('');
+    const [createVerifyStep, setCreateVerifyStep] = useState(false);   // show OTP entry
+    const [createVerifyEmail, setCreateVerifyEmail] = useState('');     // email to show
+    const [createVerifyCode, setCreateVerifyCode] = useState('');       // code entered by admin
+    const [createVerifyError, setCreateVerifyError] = useState('');
+    const [createVerifyLoading, setCreateVerifyLoading] = useState(false);
     const [isUploadingCreateFile, setIsUploadingCreateFile] = useState(false);
     const [editForm, setEditForm] = useState({ fullName: '', accountEmail: '' });
     const [showCreatePassword, setShowCreatePassword] = useState(false);
@@ -795,21 +800,29 @@ export default function AdminDashboard() {
             }
             const response = await userService.createUser(payload);
             if (response?.data?.success) {
-                showNotification(`${createForm.assignedRole} account created successfully`);
-                setIsCreateModalOpen(false);
-                setCreateFormStep(1);
-                setCreateStepError('');
-                setCreateForm({
-                    fullName: '', accountEmail: '', securedPassword: '', confirmPassword: '', assignedRole: 'Instructor', contactPhone: '', isActive: true, requirePasswordChange: true, sendWelcomeEmail: true,
-                    username: '', gender: '', dateOfBirth: '', avatarUrl: '',
-                    specialization: '', yearsOfExperience: '', skills: '', biography: '', department: '', employmentType: '', joiningDate: '',
-                    cvResumeUrl: '', educationCertificateUrl: '', professionalCertificateUrl: '', nationalIdUrl: '',
-                    positionJobTitle: '', dateOfAppointment: '', recoveryEmail: '', securityQuestion: '', securityAnswer: '',
-                    employeeIdCardUrl: '', appointmentLetterUrl: '',
-                    permissions: { userManagement: false, courseManagement: false, instructorManagement: false, studentManagement: false, reportsAnalytics: false, systemSettings: false, rolePermissionManagement: false, contentApproval: false, announcementManagement: false }
-                });
-                setShowCreatePassword(false);
-                fetchData();
+                if (response.data.verificationRequired) {
+                    // Show OTP verification step
+                    setCreateVerifyEmail(createForm.accountEmail.trim().toLowerCase());
+                    setCreateVerifyCode('');
+                    setCreateVerifyError('');
+                    setCreateVerifyStep(true);
+                } else {
+                    showNotification(`${createForm.assignedRole} account created successfully`);
+                    setIsCreateModalOpen(false);
+                    setCreateFormStep(1);
+                    setCreateStepError('');
+                    setCreateForm({
+                        fullName: '', accountEmail: '', securedPassword: '', confirmPassword: '', assignedRole: 'Instructor', contactPhone: '', isActive: true, requirePasswordChange: true, sendWelcomeEmail: true,
+                        username: '', gender: '', dateOfBirth: '', avatarUrl: '',
+                        specialization: '', yearsOfExperience: '', skills: '', biography: '', department: '', employmentType: '', joiningDate: '',
+                        cvResumeUrl: '', educationCertificateUrl: '', professionalCertificateUrl: '', nationalIdUrl: '',
+                        positionJobTitle: '', dateOfAppointment: '', recoveryEmail: '', securityQuestion: '', securityAnswer: '',
+                        employeeIdCardUrl: '', appointmentLetterUrl: '',
+                        permissions: { userManagement: false, courseManagement: false, instructorManagement: false, studentManagement: false, reportsAnalytics: false, systemSettings: false, rolePermissionManagement: false, contentApproval: false, announcementManagement: false }
+                    });
+                    setShowCreatePassword(false);
+                    fetchData();
+                }
             }
         } catch (err) {
             alert(err.response?.data?.message || 'Failed to create user account.');
@@ -4645,7 +4658,7 @@ export default function AdminDashboard() {
                 )}
             </Modal>
 
-            <Modal isOpen={isCreateModalOpen} onClose={() => { setIsCreateModalOpen(false); setCreateFormStep(1); setCreateStepError(''); }} title={`Create New ${createForm.assignedRole} Account`} maxWidth="720px">
+            <Modal isOpen={isCreateModalOpen} onClose={() => { setIsCreateModalOpen(false); setCreateFormStep(1); setCreateStepError(''); setCreateVerifyStep(false); }} title={`Create New ${createForm.assignedRole} Account`} maxWidth="720px">
                 <form onSubmit={handleCreateUser} style={{display:'flex', flexDirection:'column', gap:'0'}}>
                     {/* Step indicators */}
                     <div style={{ display: 'flex', gap: '4px', marginBottom: '20px' }}>
@@ -4679,11 +4692,29 @@ export default function AdminDashboard() {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                 <div>
                                     <label style={s.label}>Email Address *</label>
-                                    <input type="email" value={createForm.accountEmail} onChange={(e) => setCreateForm({ ...createForm, accountEmail: e.target.value })} placeholder="Enter email" style={s.input} required />
+                                    <input type="email" value={createForm.accountEmail} onChange={(e) => setCreateForm({ ...createForm, accountEmail: e.target.value })} placeholder="Enter email (e.g. name@gmail.com)" style={{
+                                        ...s.input,
+                                        borderColor: createForm.accountEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(createForm.accountEmail) ? '#ef4444' : undefined
+                                    }} required />
+                                    {createForm.accountEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(createForm.accountEmail) && (
+                                        <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>Enter a valid email (e.g. name@gmail.com)</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label style={s.label}>Phone Number *</label>
-                                    <input type="tel" value={createForm.contactPhone} onChange={(e) => setCreateForm({ ...createForm, contactPhone: e.target.value })} placeholder="Enter phone number" style={s.input} required />
+                                    <input type="tel" value={createForm.contactPhone} onChange={(e) => {
+                                        // Only allow digits, max 10
+                                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                        setCreateForm({ ...createForm, contactPhone: val });
+                                    }} placeholder="09xxxxxxxx or 07xxxxxxxx" style={{
+                                        ...s.input,
+                                        borderColor: createForm.contactPhone && !/^(09|07)\d{8}$/.test(createForm.contactPhone) ? '#ef4444' : undefined
+                                    }} required />
+                                    {createForm.contactPhone && !/^(09|07)\d{8}$/.test(createForm.contactPhone) && (
+                                        <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>
+                                            Must start with 09 or 07 and be exactly 10 digits
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -4923,10 +4954,14 @@ export default function AdminDashboard() {
                                     // ── Validate current step before advancing ──────────
                                     let err = '';
                                     if (createFormStep === 1) {
+                                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                                        const phoneRegex = /^(09|07)\d{8}$/;
                                         if (!createForm.fullName.trim())           err = 'Full Name is required.';
                                         else if (!createForm.username.trim())      err = 'Username is required.';
                                         else if (!createForm.accountEmail.trim())  err = 'Email Address is required.';
+                                        else if (!emailRegex.test(createForm.accountEmail.trim())) err = 'Please enter a valid email address (e.g. name@gmail.com).';
                                         else if (!createForm.contactPhone.trim())  err = 'Phone Number is required.';
+                                        else if (!phoneRegex.test(createForm.contactPhone.trim())) err = 'Phone number must start with 09 or 07 and be exactly 10 digits (e.g. 0912345678).';
                                         else if (!createForm.gender)               err = 'Please select a Gender.';
                                         else if (!createForm.securedPassword)      err = 'Password is required.';
                                         else if (createForm.securedPassword.length < 8) err = 'Password must be at least 8 characters.';
@@ -4952,10 +4987,89 @@ export default function AdminDashboard() {
                             {createFormStep === 3 && (
                                 <button type="submit" style={{...s.primaryBtn, flex: 1}} disabled={isUploadingCreateFile}>{isUploadingCreateFile ? 'Uploading...' : 'Create Account'}</button>
                             )}
-                            <button type="button" onClick={() => { setIsCreateModalOpen(false); setCreateFormStep(1); setCreateStepError(''); }} style={{...s.secondaryBtn, flex: 1}}>Cancel</button>
+                            <button type="button" onClick={() => { setIsCreateModalOpen(false); setCreateFormStep(1); setCreateStepError(''); setCreateVerifyStep(false); }} style={{...s.secondaryBtn, flex: 1}}>Cancel</button>
                         </div>
                     </div>
                 </form>
+            </Modal>
+
+            {/* ── Email Verification Modal (shown after account creation) ── */}
+            <Modal isOpen={createVerifyStep} onClose={() => { setCreateVerifyStep(false); setIsCreateModalOpen(false); }} title="Verify Email Address">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                        <div style={{ fontSize: 48, marginBottom: 12 }}>📧</div>
+                        <p style={{ color: colors.text, fontWeight: 700, fontSize: 15, margin: '0 0 8px' }}>
+                            Verification Code Sent
+                        </p>
+                        <p style={{ color: colors.textMuted, fontSize: 13, lineHeight: 1.6 }}>
+                            A 6-digit verification code has been sent to:
+                            <br /><strong style={{ color: colors.primary }}>{createVerifyEmail}</strong>
+                            <br />The account will be activated after entering the correct code.
+                        </p>
+                    </div>
+
+                    {createVerifyError && (
+                        <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '10px 14px', color: '#fca5a5', fontSize: '13px', fontWeight: '600' }}>
+                            ⚠ {createVerifyError}
+                        </div>
+                    )}
+
+                    <div>
+                        <label style={s.label}>Enter 6-Digit Verification Code *</label>
+                        <input
+                            type="text"
+                            maxLength={6}
+                            value={createVerifyCode}
+                            onChange={e => setCreateVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            placeholder="e.g. 847291"
+                            style={{ ...s.input, textAlign: 'center', letterSpacing: '0.3em', fontSize: 22, fontWeight: 700 }}
+                            autoFocus
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 12 }}>
+                        <button
+                            type="button"
+                            disabled={createVerifyLoading || createVerifyCode.length !== 6}
+                            style={{ ...s.primaryBtn, flex: 1, opacity: createVerifyLoading || createVerifyCode.length !== 6 ? 0.6 : 1 }}
+                            onClick={async () => {
+                                setCreateVerifyLoading(true);
+                                setCreateVerifyError('');
+                                try {
+                                    const res = await authService.verifyEmail({
+                                        accountEmail: createVerifyEmail,
+                                        verificationCode: createVerifyCode
+                                    });
+                                    if (res?.data?.success) {
+                                        showNotification('Account verified and activated successfully!');
+                                        setCreateVerifyStep(false);
+                                        setIsCreateModalOpen(false);
+                                        setCreateFormStep(1);
+                                        setCreateStepError('');
+                                        setCreateVerifyCode('');
+                                        fetchData();
+                                    }
+                                } catch (err) {
+                                    setCreateVerifyError(err?.response?.data?.message || 'Invalid or expired verification code.');
+                                } finally {
+                                    setCreateVerifyLoading(false);
+                                }
+                            }}
+                        >
+                            {createVerifyLoading ? 'Verifying...' : 'Verify & Activate Account'}
+                        </button>
+                        <button
+                            type="button"
+                            style={{ ...s.secondaryBtn, flex: 1 }}
+                            onClick={() => { setCreateVerifyStep(false); setIsCreateModalOpen(false); setCreateFormStep(1); setCreateStepError(''); }}
+                        >
+                            Close
+                        </button>
+                    </div>
+                    <p style={{ color: colors.textMuted, fontSize: 12, textAlign: 'center', margin: 0 }}>
+                        Didn't receive the code? Check spam/junk folder. Code expires in 24 hours.
+                    </p>
+                </div>
             </Modal>
 
             <Modal isOpen={isEditModalOpen} onClose={() => { setIsEditModalOpen(false); setSelectedUser(null); setEditForm({ fullName: '', accountEmail: '' }); }} title={`Edit Account - ${selectedUser?.fullName || ''}`}>
