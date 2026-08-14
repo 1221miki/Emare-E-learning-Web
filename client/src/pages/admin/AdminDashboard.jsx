@@ -250,6 +250,7 @@ export default function AdminDashboard() {
         permissions: { userManagement: false, courseManagement: false, instructorManagement: false, studentManagement: false, reportsAnalytics: false, systemSettings: false, rolePermissionManagement: false, contentApproval: false, announcementManagement: false }
     });
     const [createFormStep, setCreateFormStep] = useState(1);
+    const [createStepError, setCreateStepError] = useState('');
     const [isUploadingCreateFile, setIsUploadingCreateFile] = useState(false);
     const [editForm, setEditForm] = useState({ fullName: '', accountEmail: '' });
     const [showCreatePassword, setShowCreatePassword] = useState(false);
@@ -797,6 +798,7 @@ export default function AdminDashboard() {
                 showNotification(`${createForm.assignedRole} account created successfully`);
                 setIsCreateModalOpen(false);
                 setCreateFormStep(1);
+                setCreateStepError('');
                 setCreateForm({
                     fullName: '', accountEmail: '', securedPassword: '', confirmPassword: '', assignedRole: 'Instructor', contactPhone: '', isActive: true, requirePasswordChange: true, sendWelcomeEmail: true,
                     username: '', gender: '', dateOfBirth: '', avatarUrl: '',
@@ -4643,7 +4645,7 @@ export default function AdminDashboard() {
                 )}
             </Modal>
 
-            <Modal isOpen={isCreateModalOpen} onClose={() => { setIsCreateModalOpen(false); setCreateFormStep(1); }} title={`Create New ${createForm.assignedRole} Account`} maxWidth="720px">
+            <Modal isOpen={isCreateModalOpen} onClose={() => { setIsCreateModalOpen(false); setCreateFormStep(1); setCreateStepError(''); }} title={`Create New ${createForm.assignedRole} Account`} maxWidth="720px">
                 <form onSubmit={handleCreateUser} style={{display:'flex', flexDirection:'column', gap:'0'}}>
                     {/* Step indicators */}
                     <div style={{ display: 'flex', gap: '4px', marginBottom: '20px' }}>
@@ -4905,17 +4907,53 @@ export default function AdminDashboard() {
                     )}
 
                     {/* Navigation buttons */}
-                    <div style={{ display: 'flex', gap: '12px', marginTop: '20px', borderTop: `1px solid ${colors.border}`, paddingTop: '16px' }}>
-                        {createFormStep > 1 && (
-                            <button type="button" onClick={() => setCreateFormStep(createFormStep - 1)} style={{...s.secondaryBtn, flex: 1}}>← Back</button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px', borderTop: `1px solid ${colors.border}`, paddingTop: '16px' }}>
+                        {/* Step validation error */}
+                        {createStepError && (
+                            <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '10px 14px', color: '#fca5a5', fontSize: '13px', fontWeight: '600' }}>
+                                ⚠ {createStepError}
+                            </div>
                         )}
-                        {createFormStep < 3 && (
-                            <button type="button" onClick={() => setCreateFormStep(createFormStep + 1)} style={{...s.primaryBtn, flex: 1}}>Next →</button>
-                        )}
-                        {createFormStep === 3 && (
-                            <button type="submit" style={{...s.primaryBtn, flex: 1}} disabled={isUploadingCreateFile}>{isUploadingCreateFile ? 'Uploading...' : 'Create Account'}</button>
-                        )}
-                        <button type="button" onClick={() => { setIsCreateModalOpen(false); setCreateFormStep(1); }} style={{...s.secondaryBtn, flex: 1}}>Cancel</button>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            {createFormStep > 1 && (
+                                <button type="button" onClick={() => { setCreateFormStep(createFormStep - 1); setCreateStepError(''); }} style={{...s.secondaryBtn, flex: 1}}>← Back</button>
+                            )}
+                            {createFormStep < 3 && (
+                                <button type="button" onClick={() => {
+                                    // ── Validate current step before advancing ──────────
+                                    let err = '';
+                                    if (createFormStep === 1) {
+                                        if (!createForm.fullName.trim())           err = 'Full Name is required.';
+                                        else if (!createForm.username.trim())      err = 'Username is required.';
+                                        else if (!createForm.accountEmail.trim())  err = 'Email Address is required.';
+                                        else if (!createForm.contactPhone.trim())  err = 'Phone Number is required.';
+                                        else if (!createForm.gender)               err = 'Please select a Gender.';
+                                        else if (!createForm.securedPassword)      err = 'Password is required.';
+                                        else if (createForm.securedPassword.length < 8) err = 'Password must be at least 8 characters.';
+                                        else if (createForm.securedPassword !== createForm.confirmPassword) err = 'Passwords do not match.';
+                                    } else if (createFormStep === 2) {
+                                        if (createForm.assignedRole === 'Instructor') {
+                                            if (!createForm.specialization.trim())    err = 'Highest Qualification is required.';
+                                            else if (!createForm.skills.trim())       err = 'Specialization / Expertise is required.';
+                                            else if (createForm.yearsOfExperience === '') err = 'Years of Teaching Experience is required.';
+                                            else if (!createForm.department.trim())   err = 'Department / Training Category is required.';
+                                        } else if (createForm.assignedRole === 'Admin') {
+                                            if (!createForm.positionJobTitle.trim())  err = 'Position / Job Title is required.';
+                                            else if (!createForm.department.trim())   err = 'Department is required.';
+                                            else if (!createForm.employmentType)      err = 'Employment Type is required.';
+                                            else if (!createForm.dateOfAppointment)   err = 'Date of Appointment is required.';
+                                        }
+                                    }
+                                    if (err) { setCreateStepError(err); return; }
+                                    setCreateStepError('');
+                                    setCreateFormStep(createFormStep + 1);
+                                }} style={{...s.primaryBtn, flex: 1}}>Next →</button>
+                            )}
+                            {createFormStep === 3 && (
+                                <button type="submit" style={{...s.primaryBtn, flex: 1}} disabled={isUploadingCreateFile}>{isUploadingCreateFile ? 'Uploading...' : 'Create Account'}</button>
+                            )}
+                            <button type="button" onClick={() => { setIsCreateModalOpen(false); setCreateFormStep(1); setCreateStepError(''); }} style={{...s.secondaryBtn, flex: 1}}>Cancel</button>
+                        </div>
                     </div>
                 </form>
             </Modal>
