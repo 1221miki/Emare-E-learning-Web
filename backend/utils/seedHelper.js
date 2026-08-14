@@ -337,29 +337,13 @@ const seedCategoryCoursesHelper = async () => {
     try {
         const bcrypt = require('bcryptjs');
 
-        // Find or upsert instructor using native driver
+        // Find any existing Instructor to assign as course creator.
+        // If none exists yet, the category courses will not be seeded this run
+        // (they will be created once a real instructor registers and creates courses).
         let instructor = await User.findOne({ assignedRole: 'Instructor' });
         if (!instructor) {
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash('instructor12345', salt);
-            await User.collection.updateOne(
-                { accountEmail: 'instructor@emare.com' },
-                {
-                    $set: {
-                        fullName: 'Demo Instructor',
-                        securedPassword: hashedPassword,
-                        assignedRole: 'Instructor',
-                        isActive: true,
-                        updatedAt: new Date(),
-                    },
-                    $setOnInsert: {
-                        accountEmail: 'instructor@emare.com',
-                        creationTimestamp: new Date(),
-                    }
-                },
-                { upsert: true }
-            );
-            instructor = await User.findOne({ accountEmail: 'instructor@emare.com' });
+            console.log('ℹ️  No Instructor account found — skipping category course seeding.');
+            return;
         }
 
         for (const item of categoryCoursesData) {

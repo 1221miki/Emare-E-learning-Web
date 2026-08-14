@@ -6,17 +6,23 @@ const fixPasswords = async () => {
     try {
         await mongoose.connect(process.env.MONGODB_URI);
         console.log('MongoDB Connected');
-        
-        const emails = ['admin@emare.com', 'student@emare.com', 'instructor@emare.com'];
-        const passwords = ['admin12345', 'student12345', 'instructor12345'];
-        
-        for (let i = 0; i < emails.length; i++) {
-            const user = await User.findOne({ accountEmail: emails[i] }).select('+securedPassword');
+
+        // Only the Master Admin account is a seeded default account.
+        // Demo accounts (admin@emare.com, student@emare.com, instructor@emare.com)
+        // have been removed from seeding — do not reset them here.
+        const accounts = [
+            { email: 'Ayireszebene8877@gmail.com', password: 'Admin@Emare2026!' }
+        ];
+
+        for (const { email, password } of accounts) {
+            const user = await User.findOne({ accountEmail: email }).select('+securedPassword');
             if (user) {
-                user.securedPassword = passwords[i];
+                user.securedPassword = password;
                 user.markModified('securedPassword'); // Force Mongoose to trigger pre-save hook
                 await user.save();
-                console.log(`Password reset and forcibly hashed for ${emails[i]}`);
+                console.log(`Password reset and forcibly hashed for ${email}`);
+            } else {
+                console.log(`Account not found: ${email}`);
             }
         }
         

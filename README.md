@@ -47,15 +47,14 @@ npm run dev
 
 ---
 
-## 🔐 Default Login Credentials
+## 🔐 Admin Access
 
-| Account         | Email                    | Password      |
-|-----------------|--------------------------|---------------|
-| **Admin**       | admin@emare.com          | Admin@123456  |
-| **Demo Student**| student@emare.com        | student12345  |
-| **Demo Instructor** | instructor@emare.com | instructor12345 |
+| Account        | Email                          |
+|----------------|--------------------------------|
+| **Master Admin** | Ayireszebene8877@gmail.com   |
 
-> **Note:** These credentials are reset-protected — server restarts will NOT overwrite passwords that have been changed.
+> **Note:** The Master Admin account is created automatically on first server startup. The initial password is set via environment configuration. Demo/seed accounts (`admin@emare.com`, `student@emare.com`, `instructor@emare.com`) have been removed and will not be recreated.
+> Students and Instructors register through the normal sign-up flow.
 
 ---
 

@@ -151,7 +151,7 @@ exports.initiatePayment = async (req, res) => {
                 .slice(0, 35); // Leave room for "Payment for " prefix
             const sanitizedDescription = `Payment for ${courseTitle}`.slice(0, 50);
 
-            const userEmail = req.user.accountEmail || req.user.email || 'student@emare.com';
+            const userEmail = req.user.accountEmail || req.user.email || 'payments@emareicthub.com';
             const userFirstName = (req.user.fullName || '').split(' ')[0] || 'Student';
             const userLastName = (req.user.fullName || '').split(' ')[1] || 'User';
 
