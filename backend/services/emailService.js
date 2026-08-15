@@ -31,6 +31,7 @@ const createTransporter = () => {
             host: smtpHost,
             port: smtpPort,
             secure: smtpSecure,
+            family: 4,          // Force IPv4 — prevents ENETUNREACH on IPv6-blocked networks
             auth: {
                 user: smtpUser,
                 pass: smtpPass
@@ -51,7 +52,10 @@ const createTransporter = () => {
     if (hasRealEmailCredentials(process.env.EMAIL_USER, process.env.EMAIL_PASSWORD)) {
         emailConfigured = true;
         return nodemailer.createTransport({
-            service: process.env.EMAIL_SERVICE || 'gmail',
+            host: 'smtp.gmail.com',
+            port: 587,
+            secure: false,
+            family: 4,          // Force IPv4 — prevents ENETUNREACH on IPv6-blocked networks
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASSWORD

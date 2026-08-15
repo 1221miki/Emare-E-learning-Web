@@ -56,6 +56,8 @@ app.use(helmet({
 }));                           // Set secure HTTP response headers
 const allowedOrigins = [
     process.env.FRONTEND_URL || 'http://localhost:3000',
+    'https://ayires.onrender.com',        // Render production (current)
+    'https://asamenew.onrender.com',      // Render production (previous)
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:3002',
@@ -70,7 +72,6 @@ const allowedOrigins = [
     'http://127.0.0.1:5173',
     'http://127.0.0.1:5176',
     'http://127.0.0.1:5177',
-    // Network IP — allows phone/tablet on same WiFi to access the app
     'http://10.18.56.22:5173',
     'http://10.18.56.22:5000',
     'http://192.168.137.1:5173',
@@ -79,7 +80,7 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:') || origin.startsWith('http://10.') || origin.startsWith('http://192.168.')) {
+        if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:') || origin.startsWith('http://10.') || origin.startsWith('http://192.168.') || origin.endsWith('.onrender.com')) {
             return callback(null, true);
         }
         callback(new Error(`CORS policy blocked origin: ${origin}`));

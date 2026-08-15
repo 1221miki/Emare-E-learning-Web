@@ -1,8 +1,10 @@
 import axios from 'axios';
 
 const API = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://10.18.56.22:5000/api',
-    withCredentials: true,  // Send HTTP-Only cookies with every request
+    // In production (same-origin deployment): VITE_API_URL is empty → uses relative /api
+    // In local dev: set VITE_API_URL=http://localhost:5000/api in client/.env
+    baseURL: import.meta.env.VITE_API_URL || '/api',
+    withCredentials: true,
     headers: { 'Content-Type': 'application/json' }
 });
 
@@ -381,7 +383,7 @@ export const getPdfUrl = (rawUrl = '') => {
     try {
         const url = new URL(trimmed);
         const storagePath = url.pathname.replace(/^\//, ''); // e.g. courses/pdfs/notes.pdf
-        const base = (import.meta.env.VITE_API_URL || 'http://10.18.56.22:5000/api').replace(/\/api$/, '');
+        const base = (import.meta.env.VITE_API_URL || '/api').replace(/\/api$/, '');
         return `${base}/api/pdf-proxy/${storagePath}`;
     } catch {
         return trimmed; // fallback: return original if URL parsing fails

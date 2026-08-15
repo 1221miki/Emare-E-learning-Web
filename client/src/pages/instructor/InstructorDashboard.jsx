@@ -549,7 +549,7 @@ export default function InstructorDashboard() {
 
             console.log('Uploading thumbnail for course:', selectedCourse._id);
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL || 'http://10.18.56.22:5000/api'}/courses/${selectedCourse._id}/thumbnail`,
+                `${import.meta.env.VITE_API_URL || '/api'}/courses/${selectedCourse._id}/thumbnail`,
                 {
                     method: 'POST',
                     credentials: 'include',
