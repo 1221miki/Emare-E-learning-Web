@@ -93,19 +93,14 @@ const createTransporter = () => {
 const transporter = createTransporter();
 
 const logEmailTransportStatus = () => {
-    // Run verify in background without blocking
-    if (typeof transporter.verify === 'function') {
-        setImmediate(() => {
-            transporter.verify((error, success) => {
-                if (error) {
-                    console.warn('📧 Email transporter verification failed:', error.message || error);
-                } else {
-                    console.log('📧 Email transporter is configured and ready.');
-                }
-            });
-        });
+    // Skip verify() — it opens its own TCP connection and may resolve
+    // to IPv6 even when family:4 is set on the transporter pool,
+    // causing a false ENETUNREACH warning. Actual sendMail() calls
+    // work correctly because they use the transporter's configured options.
+    if (emailConfigured) {
+        console.log('📧 Email transporter is configured and ready.');
     } else {
-        console.warn('📧 Email service is running in fallback mode.');
+        console.warn('📧 Email service is running in fallback/dev mode (SMTP not configured).');
     }
 };
 
