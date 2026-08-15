@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { FaEye, FaEyeSlash, FaGoogle, FaGithub, FaMicrosoft, FaFacebook, FaArrowLeft } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaGoogle, FaGithub, FaArrowLeft } from 'react-icons/fa';
 
 export default function LoginPage() {
     const { login, socialAuth, requestPasswordReset, resetPassword } = useAuth();
@@ -223,41 +223,23 @@ export default function LoginPage() {
                 <div style={styles.socialContainer}>
                     <p style={{ ...styles.socialText, color: colors.textMuted }}>Or continue with</p>
                     <div style={styles.socialButtons}>
-                        <button 
-                            type="button" 
-                            title="Sign in with Google" 
-                            onClick={() => openSocialModal('Google')} 
+                        <button
+                            type="button"
+                            title="Sign in with Google"
+                            onClick={() => openSocialModal('Google')}
                             style={styles.socialBtn}
                             disabled={socialLoading}
                         >
                             <FaGoogle style={{ color: '#ea4335' }} />
                         </button>
-                        <button 
-                            type="button" 
-                            title="Sign in with GitHub" 
-                            onClick={() => openSocialModal('GitHub')} 
+                        <button
+                            type="button"
+                            title="Sign in with GitHub"
+                            onClick={() => openSocialModal('GitHub')}
                             style={styles.socialBtn}
                             disabled={socialLoading}
                         >
                             <FaGithub style={{ color: '#24292e' }} />
-                        </button>
-                        <button 
-                            type="button" 
-                            title="Sign in with Microsoft" 
-                            onClick={() => openSocialModal('Microsoft')} 
-                            style={styles.socialBtn}
-                            disabled={socialLoading}
-                        >
-                            <FaMicrosoft style={{ color: '#00a4ef' }} />
-                        </button>
-                        <button 
-                            type="button" 
-                            title="Sign in with Facebook" 
-                            onClick={() => openSocialModal('Facebook')} 
-                            style={styles.socialBtn}
-                            disabled={socialLoading}
-                        >
-                            <FaFacebook style={{ color: '#1877f2' }} />
                         </button>
                     </div>
                 </div>

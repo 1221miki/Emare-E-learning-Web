@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { FaGoogle, FaGithub, FaMicrosoft, FaFacebook, FaEye, FaEyeSlash, FaArrowLeft } from 'react-icons/fa';
+import { FaGoogle, FaGithub, FaEye, FaEyeSlash, FaArrowLeft } from 'react-icons/fa';
 
 export default function RegisterPage() {
     const { register, socialAuth } = useAuth();
@@ -162,10 +162,6 @@ export default function RegisterPage() {
                 return <FaGoogle style={{ color: '#ea4335' }} />;
             case 'GitHub':
                 return <FaGithub style={{ color: '#24292e' }} />;
-            case 'Microsoft':
-                return <FaMicrosoft style={{ color: '#00a4ef' }} />;
-            case 'Facebook':
-                return <FaFacebook style={{ color: '#1877f2' }} />;
             default:
                 return null;
         }
@@ -326,8 +322,6 @@ export default function RegisterPage() {
                     <div style={styles.socialButtons}>
                         <button type="button" onClick={() => openSocialModal('Google')} style={styles.socialBtn} title="Register with Google"><FaGoogle style={{ color: '#ea4335' }} /></button>
                         <button type="button" onClick={() => openSocialModal('GitHub')} style={styles.socialBtn} title="Register with GitHub"><FaGithub style={{ color: '#24292e' }} /></button>
-                        <button type="button" onClick={() => openSocialModal('Microsoft')} style={styles.socialBtn} title="Register with Microsoft"><FaMicrosoft style={{ color: '#00a4ef' }} /></button>
-                        <button type="button" onClick={() => openSocialModal('Facebook')} style={styles.socialBtn} title="Register with Facebook"><FaFacebook style={{ color: '#1877f2' }} /></button>
                     </div>
                 </div>
 
