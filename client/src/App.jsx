@@ -70,7 +70,6 @@ const HelpPage              = lazy(() => import('./pages/HelpPage'));
 const PrivacyPage           = lazy(() => import('./pages/PrivacyPage'));
 const TermsPage             = lazy(() => import('./pages/TermsPage'));
 const CookiePage            = lazy(() => import('./pages/CookiePage'));
-const DevelopersPage        = lazy(() => import('./pages/DevelopersPage'));
 
 // Student pages
 const StudentDashboard      = lazy(() => import('./pages/student/StudentDashboard'));
@@ -134,7 +133,6 @@ function AppRoutes() {
                 <Route path="/reset-password"        element={<ResetPasswordPage />} />
                 <Route path="/verify-email"          element={<VerifyEmailPage />} />
                 <Route path="/about"                 element={<AboutPage />} />
-                <Route path="/developers"            element={<DevelopersPage />} />
                 <Route path="/contact"               element={<ContactPage />} />
                 <Route path="/help"                  element={<HelpPage />} />
                 <Route path="/privacy"               element={<PrivacyPage />} />
