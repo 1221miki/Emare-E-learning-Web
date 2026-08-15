@@ -42,6 +42,33 @@ function buildStatusPayload(sub) {
     };
 }
 
+// ── Persistent subscription cookie ────────────────────────────────────────────
+//
+// httpOnly cookie carrying the subscriber's random token so the SAME browser is
+// automatically recognized as subscribed on later visits (no email needed).
+// Account linking (userId) still covers "logged in from any browser/device".
+const SUBSCRIPTION_COOKIE = 'emare_sub';
+const SUBSCRIPTION_COOKIE_MAX_AGE = 365 * 24 * 60 * 60 * 1000; // 1 year
+
+function setSubscriptionCookie(res, token) {
+    if (!token || !res) return;
+    try {
+        res.cookie(SUBSCRIPTION_COOKIE, token, {
+            httpOnly: true,
+            maxAge: SUBSCRIPTION_COOKIE_MAX_AGE,
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            secure: process.env.NODE_ENV === 'production',
+            path: '/'
+        });
+    } catch (err) {
+        console.warn('[subscriptionController] Failed to set subscription cookie:', err.message);
+    }
+}
+
+function getSubscriptionToken(req) {
+    return req?.cookies?.[SUBSCRIPTION_COOKIE] || null;
+}
+
 // ── GET /api/subscriptions/status ─────────────────────────────────────────────
 //
 // PRIMARY cross-browser status endpoint.
@@ -51,7 +78,9 @@ function buildStatusPayload(sub) {
 //   1. Authenticated user  → look up by userId in DiscountSubscription
 //   2. Authenticated user  → also check by account email as fallback
 //      (handles the case where they subscribed before logging in)
-//   3. Anonymous           → return { isSubscribed: false, requiresEmail: true }
+//   3. Any visitor         → look up by the persistent subscription cookie
+//      (recognizes a returning browser without re-entering an email)
+//   4. Anonymous           → return { isSubscribed: false, requiresEmail: true }
 //      (frontend must ask the user to enter their email to check)
 //
 // Security: never returns the coupon code itself — only metadata.
@@ -82,7 +111,22 @@ exports.getSubscriptionStatus = async (req, res) => {
             return res.json({ success: true, isSubscribed: false });
         }
 
-        // ── Path 2: Anonymous user ─────────────────────────────────────────
+        // ── Path 1.5: Persistent cookie token (authenticated OR anonymous) ─
+        // A returning visitor whose browser carries the subscription cookie is
+        // recognized without re-entering their email.
+        const cookieToken = getSubscriptionToken(req);
+        if (cookieToken) {
+            let sub = await DiscountSubscription.findOne({ subscriptionToken: cookieToken }).lean();
+            if (sub) {
+                // Backfill userId now that we know they're the same person
+                if (req.user && !sub.userId) {
+                    DiscountSubscription.findByIdAndUpdate(sub._id, { userId: req.user._id }).catch(() => {});
+                }
+                return res.json({ success: true, ...buildStatusPayload(sub) });
+            }
+        }
+
+        // ── Path 2: Anonymous user without a known identity ───────────────
         // We cannot reliably identify anonymous users cross-browser.
         // Tell the frontend to prompt for email verification instead.
         return res.json({
@@ -118,12 +162,23 @@ exports.checkEmailStatus = async (req, res) => {
         }
 
         const sub = await DiscountSubscription.findOne({ email: rawEmail })
-            .select('status expiresAt couponUsed createdAt email')
+            .select('status expiresAt couponUsed createdAt email subscriptionToken')
             .lean();
 
         if (!sub) {
             return res.json({ success: true, isSubscribed: false });
         }
+
+        // Bind this browser to the subscription so future visits on this
+        // machine are recognized automatically (persistent cookie).
+        // Legacy subscriptions (pre-token) get a token backfilled on first check.
+        let token = sub.subscriptionToken;
+        if (!token) {
+            token = crypto.randomBytes(32).toString('hex');
+            DiscountSubscription.findByIdAndUpdate(sub._id, { subscriptionToken: token })
+                .catch(() => {});
+        }
+        setSubscriptionCookie(res, token);
 
         return res.json({ success: true, ...buildStatusPayload(sub) });
 
@@ -224,6 +279,9 @@ exports.subscribeForDiscount = async (req, res) => {
         });
 
         // ── 8. Create DiscountSubscription (unique indexes as final guard) ─
+        // Persistent token for the httpOnly cookie — recognizes this browser
+        // on future visits (and can be matched later via "Check Status").
+        const subscriptionToken = crypto.randomBytes(32).toString('hex');
         let subscription;
         try {
             subscription = await DiscountSubscription.create({
@@ -235,6 +293,7 @@ exports.subscribeForDiscount = async (req, res) => {
                 deviceFingerprint: fingerprint,
                 source: 'homepage',
                 emailSent: false,
+                subscriptionToken,
                 userId   // null for anonymous, ObjectId for authenticated
             });
         } catch (dbErr) {
@@ -265,7 +324,10 @@ exports.subscribeForDiscount = async (req, res) => {
             }
         });
 
-        // ── 10. Respond — coupon code intentionally NOT in response ───────
+        // ── 10. Bind this browser via a persistent cookie ─────────────────
+        setSubscriptionCookie(res, subscriptionToken);
+
+        // ── 11. Respond — coupon code intentionally NOT in response ────────
         return res.status(201).json({
             success: true,
             message: 'You have successfully subscribed! Your discount coupon code has been sent to your email.',

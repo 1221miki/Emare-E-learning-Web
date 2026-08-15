@@ -1,7 +1,36 @@
 const Coupon = require('../models/Coupon');
 const CouponUsage = require('../models/CouponUsage');
 const Transaction = require('../models/Transaction');
+const DiscountSubscription = require('../models/DiscountSubscription');
 const mongoose = require('mongoose');
+
+/**
+ * Best-effort marking of a redeemed coupon as USED.
+ * - Marks the Coupon document's metadata so admins can see it was redeemed.
+ * - Marks the linked DiscountSubscription (by couponRef) as status:'used' +
+ *   couponUsed:true so the subscription status reflects the redemption.
+ * Never throws — redemption success must not depend on this housekeeping.
+ */
+async function markCouponAndSubscriptionUsed(couponId) {
+    try {
+        await Coupon.findByIdAndUpdate(couponId, {
+            $set: {
+                'metadata.redeemed': true,
+                'metadata.redeemedAt': new Date()
+            }
+        });
+    } catch (err) {
+        console.warn('[couponService] Failed to mark coupon as used:', err.message);
+    }
+    try {
+        await DiscountSubscription.findOneAndUpdate(
+            { couponRef: couponId },
+            { $set: { status: 'used', couponUsed: true } }
+        );
+    } catch (err) {
+        console.warn('[couponService] Failed to mark subscription as used:', err.message);
+    }
+}
 
 async function calculateDiscount(coupon, price) {
     if (!coupon) return { discountAmount: 0, finalAmount: price };
@@ -126,6 +155,10 @@ async function recordUsageIfNeeded(couponObj, tx, options = {}) {
         }, transactionOptions).catch(err => { throw err; });
 
         if (startedSession && session) session.endSession();
+
+        // Mark coupon + linked subscription as USED (single-use rule)
+        await markCouponAndSubscriptionUsed(couponId);
+
         return { ok: true, usage: Array.isArray(resultUsage) ? resultUsage[0] : resultUsage };
     }
 
@@ -175,6 +208,9 @@ async function recordUsageIfNeeded(couponObj, tx, options = {}) {
     } catch (err) {
         // ignore
     }
+
+    // Mark coupon + linked subscription as USED (single-use rule)
+    await markCouponAndSubscriptionUsed(couponId);
 
     return { ok: true, usage };
 }

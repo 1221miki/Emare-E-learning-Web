@@ -730,7 +730,7 @@ const sendDiscountEmail = async (toEmail, couponCode, expiresAt) => {
               <div class="coupon-detail">
                 <strong>10% OFF</strong> any course &nbsp;&bull;&nbsp; Max discount: 500 ETB
               </div>
-              <div class="coupon-detail" style="margin-top:6px;">Single use &nbsp;&bull;&nbsp; Valid until <strong>${expiryStr}</strong></div>
+              <div class="coupon-detail" style="margin-top:6px;">One-time use on a single course &nbsp;&bull;&nbsp; Valid until <strong>${expiryStr}</strong></div>
             </div>
 
             <div class="expiry-note">
@@ -741,11 +741,15 @@ const sendDiscountEmail = async (toEmail, couponCode, expiresAt) => {
             <div class="how-to">
               <h4>📋 How to use your coupon:</h4>
               <ol>
-                <li>Browse our course catalog and pick a course</li>
-                <li>Add the course to your cart and proceed to checkout</li>
+                <li>Browse our course catalog and pick the course you want</li>
+                <li>Proceed to checkout for that course</li>
                 <li>Enter the coupon code <strong>${couponCode}</strong> in the discount field</li>
-                <li>Your 10% discount will be applied automatically</li>
+                <li>Your 10% discount is applied to that single course only</li>
               </ol>
+              <p style="font-size:12px; color:#6b7280; margin-top:8px;">
+                The discount applies to <strong>one course</strong> per checkout and
+                cannot be combined with other offers or reused after checkout.
+              </p>
             </div>
 
             <div style="text-align:center; margin-top: 28px;">
@@ -781,13 +785,14 @@ const sendDiscountEmail = async (toEmail, couponCode, expiresAt) => {
                 ``,
                 `Details:`,
                 `  - 10% OFF any course (max 500 ETB)`,
-                `  - Single use`,
+                `  - One-time use on a single course`,
                 `  - Valid until: ${expiryStr}`,
                 ``,
                 `How to use:`,
                 `  1. Go to ${coursesUrl}`,
                 `  2. Choose a course and proceed to checkout`,
                 `  3. Enter the code ${couponCode} in the discount field`,
+                `  4. The discount is applied to that single course only`,
                 ``,
                 `Best regards,`,
                 `The Emare ICT Hub Team`

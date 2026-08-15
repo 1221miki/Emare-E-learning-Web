@@ -70,6 +70,16 @@ const DiscountSubscriptionSchema = new mongoose.Schema(
             default: false
         },
 
+        // Persistent token issued to the browser via an httpOnly cookie.
+        // Lets the same browser be recognized as subscribed on later visits
+        // without re-entering an email address. Sparse + unique because many
+        // subscribers may not have one (pre-cookie records).
+        subscriptionToken: {
+            type: String,
+            default: null,
+            trim: true
+        },
+
         // Linked user account (populated when the subscriber is logged in at subscribe time)
         // Sparse: many subscribers may be anonymous at subscription time
         userId: {
@@ -99,6 +109,9 @@ DiscountSubscriptionSchema.index({ deviceFingerprint: 1 }, { unique: true });
 
 // For status/expiry queries
 DiscountSubscriptionSchema.index({ status: 1, expiresAt: 1 });
+
+// Persistent cookie token lookup (sparse: only records that have a token)
+DiscountSubscriptionSchema.index({ subscriptionToken: 1 }, { unique: true, sparse: true });
 
 // --- Static helpers --------------------------------------------------------
 
