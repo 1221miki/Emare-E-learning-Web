@@ -119,7 +119,7 @@ export default function Navbar() {
                     <Link to="/about" style={s.navLink}>About</Link>
                     <Link to="/developers" style={s.navLink}>Emare Developers</Link>
                     <Link to="/courses" style={s.navLink}>Course Catalogs</Link>
-                    <Link to="/career-tracks" style={s.navLink}>Career Tracks</Link>
+                    <a href="/#services" style={s.navLink} onClick={e => { e.preventDefault(); const el = document.getElementById('services'); if (el) el.scrollIntoView({ behavior: 'smooth' }); else { window.location.href = '/#services'; } }}>Services</a>
                     <Link to="/search" style={s.navLink}>Search</Link>
                 </div>
 
@@ -173,7 +173,7 @@ export default function Navbar() {
                     <Link to="/about" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>About</Link>
                     <Link to="/developers" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Emare Developers</Link>
                     <Link to="/courses" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Course Catalogs</Link>
-                    <Link to="/career-tracks" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Career Tracks</Link>
+                    <a href="/#services" style={s.navLink} onClick={e => { e.preventDefault(); setIsMobileMenuOpen(false); const el = document.getElementById('services'); if (el) el.scrollIntoView({ behavior: 'smooth' }); else { window.location.href = '/#services'; } }}>Services</a>
                     <Link to="/search" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Search</Link>
                     {!isAuthenticated && (
                         <>

@@ -369,6 +369,145 @@ export default function LandingPage() {
                 </div>
             </section>
 
+            {/* ── Services Section ─────────────────────────────────────────── */}
+            <section id="services" style={{
+                background: theme === 'dark' ? '#0d1117' : '#0f1b2d',
+                padding: '80px 5%',
+                width: '100%',
+                boxSizing: 'border-box'
+            }}>
+                {/* Badge */}
+                <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                    <span style={{
+                        display: 'inline-block',
+                        background: 'rgba(34,197,94,0.12)',
+                        color: '#22c55e',
+                        border: '1px solid rgba(34,197,94,0.3)',
+                        borderRadius: '999px',
+                        padding: '5px 18px',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase'
+                    }}>OUR SERVICES</span>
+                </div>
+
+                {/* Heading */}
+                <h2 style={{
+                    textAlign: 'center',
+                    color: '#ffffff',
+                    fontSize: 'clamp(28px, 5vw, 44px)',
+                    fontWeight: '800',
+                    margin: '0 0 56px',
+                    lineHeight: 1.2
+                }}>
+                    Explore unlimited possibilities
+                </h2>
+
+                {/* 7 Service Cards — responsive grid */}
+                <div style={{
+                    maxWidth: '1200px',
+                    margin: '0 auto',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                    gap: '20px'
+                }}>
+                    {[
+                        {
+                            icon: '💻',
+                            title: 'Mobile & Web Development',
+                            desc: 'We develop high-quality mobile apps and websites tailored to client requirements.'
+                        },
+                        {
+                            icon: '🎓',
+                            title: 'Training Programs',
+                            desc: 'Regular courses in software development, web design, graphic design, digital marketing, and more.'
+                        },
+                        {
+                            icon: '🚀',
+                            title: 'Business Incubation',
+                            desc: 'Support for startups and entrepreneurs through mentorship and access to funding opportunities.'
+                        },
+                        {
+                            icon: '🤝',
+                            title: 'Networking Events',
+                            desc: 'Opportunities for collaboration and networking among tech professionals and local businesses.'
+                        },
+                        {
+                            icon: '🌍',
+                            title: 'Community Outreach',
+                            desc: 'Programs targeting schools and communities to promote ICT literacy.'
+                        },
+                        {
+                            icon: '🖥️',
+                            title: 'Online Trainings',
+                            desc: 'Opportunities for those who want to train online and earn a certificate.'
+                        },
+                        {
+                            icon: '🏢',
+                            title: 'Co-working Spaces',
+                            desc: 'A collaborative workspace equipped with computers, high-speed internet, and essential software.'
+                        }
+                    ].map((service, i) => (
+                        <div
+                            key={i}
+                            style={{
+                                background: '#161d2b',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                                borderRadius: '16px',
+                                padding: '32px 28px',
+                                transition: 'border-color 0.25s, transform 0.25s',
+                                cursor: 'default'
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.borderColor = 'rgba(34,197,94,0.45)';
+                                e.currentTarget.style.transform = 'translateY(-4px)';
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                            }}
+                        >
+                            {/* Icon */}
+                            <div style={{
+                                width: '52px',
+                                height: '52px',
+                                borderRadius: '14px',
+                                background: 'rgba(34,197,94,0.1)',
+                                border: '1px solid rgba(34,197,94,0.25)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '24px',
+                                marginBottom: '20px'
+                            }}>
+                                {service.icon}
+                            </div>
+
+                            {/* Title */}
+                            <h3 style={{
+                                color: '#ffffff',
+                                fontSize: '17px',
+                                fontWeight: '700',
+                                margin: '0 0 12px'
+                            }}>
+                                {service.title}
+                            </h3>
+
+                            {/* Description */}
+                            <p style={{
+                                color: '#94a3b8',
+                                fontSize: '14px',
+                                lineHeight: '1.65',
+                                margin: 0
+                            }}>
+                                {service.desc}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
             {/* 5. Popular Categories */}
             <section style={p.section}>
                 <div style={p.sectionHeader}>
