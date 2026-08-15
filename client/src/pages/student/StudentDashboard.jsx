@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     LayoutDashboard, GraduationCap, Heart, ClipboardList, BrainCircuit,
     BarChart3, Video, MessageSquare, Trophy, Mail, Award, CreditCard,
-    Settings, BookOpen, Library
+    Settings, BookOpen, Library, SendHorizonal, MessagesSquare, Bell, Bot
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/Sidebar';
@@ -141,8 +141,15 @@ export default function StudentDashboard() {
     // Leaderboard Tab States
     const [leaderboard, setLeaderboard] = useState([]);
 
-    // Messages Tab States
-    const [conversations, setConversations] = useState([]);
+    // Messages sub-section state (controls which sub-tab is shown in MessagesTab)
+    // Values: 'inbox' | 'sent' | 'discussions' | 'notifications' | 'ai'
+    const [messagesSection, setMessagesSection] = useState('inbox');
+
+    // Helper: navigate to Messages tab and open a specific sub-section
+    const openMessagesSection = (section) => {
+        setMessagesSection(section);
+        setActiveTab('messages');
+    };
     const [activeConversation, setActiveConversation] = useState(null);
     const [conversationMessages, setConversationMessages] = useState([]);
     const [messageInput, setMessageInput] = useState('');
@@ -392,7 +399,7 @@ export default function StudentDashboard() {
     const quizCount = quizzesList.length;
     const liveSessionCount = liveSessions?.length || 0;
     const unreadMessagesCount = conversations.length;
-    const notificationBadgeCount = notifications.filter(n => !n?.isRead).length;
+    const notificationBadgeCount = notifications.filter(n => !n?.isRead && !n?.read).length;
     const activeEnrollmentCount = enrollments.filter(e => (e.completionPercentage || 0) < 100).length;
 
     const handleLogout = async () => {
@@ -712,6 +719,9 @@ export default function StudentDashboard() {
         courseAwareness,
         badges,
         styles,
+        messagesSection,
+        setMessagesSection,
+        openMessagesSection,
     };
 
     // Render the active tab. The "learning" tab stays inline in the return below
@@ -750,13 +760,30 @@ export default function StudentDashboard() {
                     { key: 'live', label: 'Live Sessions', icon: <Video size={18} aria-hidden="true" />, badge: liveSessionCount > 0 ? `${liveSessionCount}` : null },
                     { key: 'discussions', label: 'Discussions', icon: <MessageSquare size={18} aria-hidden="true" /> },
                     { key: 'leaderboard', label: 'Leaderboard', icon: <Trophy size={18} aria-hidden="true" /> },
-                    { key: 'messages', label: 'Messages', icon: <Mail size={18} aria-hidden="true" />, badge: unreadMessagesCount > 0 ? `${unreadMessagesCount}` : null },
+                    // ── Communication section ────────────────────────────────────────────
+                    { key: 'messages',       label: 'Inbox',               icon: <Mail size={18} aria-hidden="true" />, badge: unreadMessagesCount > 0 ? `${unreadMessagesCount}` : null },
+                    { key: 'msg:sent',        label: 'Sent Messages',        icon: <SendHorizonal size={18} aria-hidden="true" /> },
+                    { key: 'msg:discussions', label: 'Course Discussions',   icon: <MessagesSquare size={18} aria-hidden="true" /> },
+                    { key: 'msg:notifications', label: 'Notification Center', icon: <Bell size={18} aria-hidden="true" />, badge: notificationBadgeCount > 0 ? `${notificationBadgeCount}` : null },
+                    { key: 'msg:ai',          label: 'AI Tutor',             icon: <Bot size={18} aria-hidden="true" /> },
+                    // ────────────────────────────────────────────────────────────────────
                     { key: 'certificates', label: 'Certificates', icon: <Award size={18} aria-hidden="true" /> },
                     { key: 'payments', label: 'Payments', icon: <CreditCard size={18} aria-hidden="true" /> },
                     { key: 'settings', label: 'Settings', icon: <Settings size={18} aria-hidden="true" /> }
                 ]}
-                activeTab={activeTab} 
-                onTabChange={setActiveTab}
+                activeTab={
+                    activeTab === 'messages'
+                        ? (messagesSection === 'inbox' ? 'messages' : `msg:${messagesSection}`)
+                        : activeTab
+                }
+                onTabChange={(key) => {
+                    if (key.startsWith('msg:')) {
+                        const section = key.replace('msg:', '');
+                        openMessagesSection(section);
+                    } else {
+                        setActiveTab(key);
+                    }
+                }}
                     extraBottomButtons={
                     <button onClick={() => navigate('/courses')} style={styles.catalogBtn}>
                         <Library size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} aria-hidden="true" />

@@ -44,7 +44,8 @@ exports.getCourseDiscussions = async (req, res) => {
 // @access  Private
 exports.createDiscussion = async (req, res) => {
     try {
-        const { courseId, title, body, category = 'Question', tags = [], attachments = [] } = req.body;
+        const { courseId: bodyId, courseRef, title, body, category = 'Question', tags = [], attachments = [] } = req.body;
+        const courseId = bodyId || courseRef;  // accept both field names from frontend
         const normalizedTags = Array.isArray(tags)
             ? tags.map((tag) => tag.trim()).filter(Boolean)
             : String(tags).split(',').map((tag) => tag.trim()).filter(Boolean);

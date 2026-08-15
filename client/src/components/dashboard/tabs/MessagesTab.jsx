@@ -20,10 +20,14 @@ const TYPE_META = {
 };
 
 export default function MessagesTab(dash) {
-    const { user, colors, styles, enrollments } = dash;
+
+    const { user, colors, styles, enrollments, messagesSection, setMessagesSection } = dash;
     const uid = String(user?._id || user?.id || '');
 
-    const [section, setSection] = useState('inbox');
+    // section is driven by the parent (messagesSection from StudentDashboard)
+    // so clicking sidebar items like "Sent Messages" immediately shows that sub-section
+    const section = messagesSection || 'inbox';
+    const setSection = (s) => { if (setMessagesSection) setMessagesSection(s); };
     const [conversations, setConversations] = useState([]);
     const [convsLoading, setConvsLoading] = useState(true);
     const [activeConv, setActiveConv] = useState(null);
@@ -35,6 +39,9 @@ export default function MessagesTab(dash) {
 
     const [sentLoading, setSentLoading] = useState(false);
     const [sentList, setSentList] = useState([]);
+    const [sentSearch, setSentSearch] = useState('');
+    const [sentSort, setSentSort] = useState('newest');  // 'newest' | 'oldest'
+    const [expandedSent, setExpandedSent] = useState(null);
 
     const [notifs, setNotifs] = useState([]);
     const [notifLoading, setNotifLoading] = useState(true);
@@ -48,6 +55,7 @@ export default function MessagesTab(dash) {
 
     const [aiConvos, setAiConvos] = useState([]);
     const [activeAiConv, setActiveAiConv] = useState(null);
+    const [aiThread, setAiThread] = useState([]);   // separate from inbox thread
     const [aiInput, setAiInput] = useState('');
     const [aiLoading, setAiLoading] = useState(false);
 
@@ -162,15 +170,18 @@ export default function MessagesTab(dash) {
 
     const openAiConv = async (convId) => {
         setActiveAiConv(convId);
-        setAiConvos(prev => prev.map(c => c.conversationId === convId ? { ...c, expanded: true } : c));
+        if (!convId) return;
         try {
-            const res = await aiService.getHistory(convId ? { conversationId: convId } : undefined);
+            const res = await aiService.getHistory({ conversationId: convId });
             const hist = res.data.data || [];
-            const mapped = hist.map(h => ({ id: h._id, role: 'user', body: h.question, createdAt: h.createdAt }));
-            const mappedAnswers = hist.map(h => ({ id: (h._id || '') + 'a', role: 'ai', body: h.answer, createdAt: h.createdAt }));
-            setThread(mapped.reduce((acc, m, i) => { acc.push(m); if (mappedAnswers[i]) acc.push(mappedAnswers[i]); return acc; }, []));
+            const messages = [];
+            hist.forEach(h => {
+                messages.push({ id: h._id, role: 'user', body: h.question, createdAt: h.createdAt });
+                if (h.answer) messages.push({ id: (h._id || '') + 'a', role: 'ai', body: h.answer, createdAt: h.createdAt });
+            });
+            setAiThread(messages);
         } catch {
-            setThread([]);
+            setAiThread([]);
         }
     };
 
@@ -198,22 +209,25 @@ export default function MessagesTab(dash) {
         const q = aiInput.trim();
         setAiInput('');
         setAiLoading(true);
-        setThread(prev => [...prev, { id: Date.now(), role: 'user', body: q, createdAt: new Date().toISOString() }]);
+        setAiThread(prev => [...prev, { id: Date.now(), role: 'user', body: q, createdAt: new Date().toISOString() }]);
         try {
-            const res = await aiService.askQuestion({ question: q, courseContext: {} });
+            const res = await aiService.askQuestion({ question: q, courseContext: {}, conversationId: activeAiConv || undefined });
             const ans = res.data?.data || {};
-            setThread(prev => [...prev, { id: (ans.timestamp || Date.now()) + 'a', role: 'ai', body: ans.answer, createdAt: ans.timestamp }]);
+            setAiThread(prev => [...prev, { id: (ans.timestamp || Date.now()) + 'a', role: 'ai', body: ans.answer || 'No response.', createdAt: ans.timestamp }]);
             if (ans.conversationId) {
                 setAiConvos(prev => {
                     const exists = prev.some(c => c.conversationId === ans.conversationId);
                     if (!exists) return [{ conversationId: ans.conversationId, title: ans.conversationTitle || 'AI Tutor Chat', count: 1, last: ans.timestamp, expanded: true }, ...prev];
                     return prev.map(c => c.conversationId === ans.conversationId ? { ...c, count: c.count + 1, last: ans.timestamp } : c);
                 });
-                setActiveAiConv(ans.conversationId);
+                if (!activeAiConv) setActiveAiConv(ans.conversationId);
             }
             scrollToBottom();
-        } catch {
-            setThread(prev => [...prev, { id: Date.now(), role: 'ai', body: 'Sorry, the AI tutor could not answer right now. Please try again.', createdAt: new Date().toISOString() }]);
+        } catch (err) {
+            const errMsg = err?.response?.status === 503 || err?.response?.status === 500
+                ? 'The AI service is temporarily unavailable. Please try again in a moment.'
+                : 'Sorry, the AI tutor could not answer right now. Please try again.';
+            setAiThread(prev => [...prev, { id: Date.now() + 'err', role: 'ai', body: errMsg, createdAt: new Date().toISOString() }]);
         } finally {
             setAiLoading(false);
         }
@@ -335,38 +349,116 @@ export default function MessagesTab(dash) {
         </div>
     );
 
-    const renderSent = () => (
-        <div style={styles.panelCard}>
-            <h3 style={{ ...styles.panelCardTitle, fontSize: '16px' }}>Messages You've Sent</h3>
-            {sentLoading ? <div style={{ color: colors.textMuted, fontSize: '13px' }}>Loading sent messages...</div> : sentList.length === 0 ? (
-                <div style={styles.emptyContent}>
-                    <SendHorizonal size={40} color={colors.textMuted} style={{ marginBottom: '12px' }} aria-hidden="true" />
-                    <p style={styles.emptyText}>No sent messages yet. Send a message to an instructor or the support team from the Inbox tab.</p>
+    const renderSent = () => {
+        const sorted = sentList.slice().sort((a, b) =>
+            sentSort === 'newest'
+                ? new Date(b.createdAt) - new Date(a.createdAt)
+                : new Date(a.createdAt) - new Date(b.createdAt)
+        );
+        const filtered = sorted.filter(m =>
+            !sentSearch || (m.body || '').toLowerCase().includes(sentSearch.toLowerCase())
+                || convTitle(m.conv).toLowerCase().includes(sentSearch.toLowerCase())
+        );
+
+        return (
+            <div>
+                <div style={styles.tabHeader}>
+                    <h2 style={{ ...styles.tabTitle, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <SendHorizonal size={20} aria-hidden="true" /> Sent Messages
+                    </h2>
+                    <p style={styles.tabSubtitle}>All messages you have sent to instructors and the support team</p>
                 </div>
-            ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {sentList.slice().reverse().map(m => (
-                        <div key={m._id} style={{ padding: '14px 16px', borderRadius: '10px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                                    <span style={{ color: colors.primary, fontWeight: '700', fontSize: '13px' }}>To: {convTitle(m.conv)}</span>
-                                    <span style={{ color: colors.textMuted, fontSize: '11px' }}>· {m.createdAt ? new Date(m.createdAt).toLocaleString() : ''}</span>
-                                    <span style={{ fontSize: '10px', fontWeight: '800', color: '#10b981' }}>SENT</span>
+
+                {/* Search + Sort toolbar */}
+                <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+                    <input
+                        value={sentSearch}
+                        onChange={e => setSentSearch(e.target.value)}
+                        placeholder="Search sent messages..."
+                        style={{ flex: 1, minWidth: 200, background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, padding: '10px 14px', borderRadius: 10, fontSize: 13, outline: 'none' }}
+                    />
+                    <select
+                        value={sentSort}
+                        onChange={e => setSentSort(e.target.value)}
+                        style={{ ...styles.select, width: 160 }}
+                    >
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                    </select>
+                </div>
+
+                {sentLoading ? (
+                    <div style={{ color: colors.textMuted, fontSize: 13, padding: 24 }}>Loading sent messages...</div>
+                ) : filtered.length === 0 ? (
+                    <div style={styles.emptyContent}>
+                        <SendHorizonal size={40} color={colors.textMuted} style={{ marginBottom: 12 }} aria-hidden="true" />
+                        <p style={styles.emptyText}>
+                            {sentSearch ? 'No sent messages match your search.' : 'No sent messages yet. Send a message to an instructor or support from the Inbox tab.'}
+                        </p>
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {filtered.map(m => {
+                            const isExpanded = expandedSent === m._id;
+                            return (
+                                <div key={m._id} style={{ borderRadius: 12, background: colors.bgCard, border: `1px solid ${colors.border}`, overflow: 'hidden' }}>
+                                    {/* Header row */}
+                                    <div
+                                        onClick={() => setExpandedSent(isExpanded ? null : m._id)}
+                                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '14px 18px', cursor: 'pointer', flexWrap: 'wrap' }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                                            <div style={{ width: 36, height: 36, borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>
+                                                {convTitle(m.conv)?.[0]?.toUpperCase() || 'T'}
+                                            </div>
+                                            <div style={{ minWidth: 0 }}>
+                                                <div style={{ color: colors.text, fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    To: {convTitle(m.conv)}
+                                                </div>
+                                                <div style={{ color: colors.textMuted, fontSize: 12 }}>
+                                                    {m.createdAt ? new Date(m.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : ''}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                                            <span style={{ fontSize: 10, fontWeight: 800, color: '#10b981', background: '#10b98120', borderRadius: 99, padding: '3px 10px' }}>SENT</span>
+                                            <span style={{ color: colors.textMuted, fontSize: 12 }}>{isExpanded ? '▲' : '▼'}</span>
+                                        </div>
+                                    </div>
+                                    {/* Preview or full body */}
+                                    <div style={{ padding: '0 18px', maxHeight: isExpanded ? 'none' : 48, overflow: 'hidden', transition: 'max-height 0.2s' }}>
+                                        <p style={{ color: colors.text, fontSize: 13, margin: '0 0 12px', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                            {m.body}
+                                        </p>
+                                    </div>
+                                    {/* Footer actions */}
+                                    <div style={{ padding: '10px 18px', borderTop: `1px solid ${colors.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                                        <button
+                                            onClick={() => { setActiveConv(m.conv); setSection('inbox'); openThread(m.conv); }}
+                                            style={{ background: 'transparent', border: `1px solid ${colors.primary}`, color: colors.primary, borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                                        >
+                                            View Thread →
+                                        </button>
+                                    </div>
                                 </div>
-                                <button onClick={() => { setActiveConv(m.conv); setSection('inbox'); openThread(m.conv); }} style={{ background: 'transparent', border: `1px solid ${colors.primary}`, color: colors.primary, borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>Reply in Thread</button>
-                            </div>
-                            <p style={{ color: colors.text, fontSize: '13px', margin: '8px 0 0' }}>{m.body}</p>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     const renderDiscussions = () => (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                <h3 style={{ color: colors.text, fontSize: '16px', fontWeight: '700', margin: 0 }}>Course Forums & Classroom Discussions</h3>
+            <div style={styles.tabHeader}>
+                <h2 style={{ ...styles.tabTitle, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <MessagesSquare size={20} aria-hidden="true" /> Course Discussions
+                </h2>
+                <p style={styles.tabSubtitle}>Ask questions and engage with peers and instructors in your enrolled courses</p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
+                <h3 style={{ color: colors.text, fontSize: 16, fontWeight: 700, margin: 0 }}>Course Forums</h3>
                 <select value={discCourse} onChange={e => setDiscCourse(e.target.value)} style={{ ...styles.select, width: '280px' }}>
                     {!enrollments?.length && <option value="">No enrolled courses</option>}
                     {enrollments.map(e => {
@@ -441,70 +533,113 @@ export default function MessagesTab(dash) {
     );
 
     const renderNotifications = () => (
-        <div style={styles.panelCard}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
-                <h3 style={{ ...styles.panelCardTitle, margin: 0 }}>Notification Center</h3>
-                <button onClick={markAllNotifsRead} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.primary, borderRadius: '8px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+        <div>
+            <div style={styles.tabHeader}>
+                <h2 style={{ ...styles.tabTitle, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Bell size={20} aria-hidden="true" /> Notification Center
+                    {notifs.filter(n => n.isRead === false || n.read === false).length > 0 && (
+                        <span style={{ background: DANGER, color: '#fff', fontSize: 11, fontWeight: 800, borderRadius: 99, padding: '2px 10px' }}>
+                            {notifs.filter(n => n.isRead === false || n.read === false).length} unread
+                        </span>
+                    )}
+                </h2>
+                <p style={styles.tabSubtitle}>Assignment reminders, quiz deadlines, instructor announcements and system updates</p>
+            </div>
+            <div style={styles.panelCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
+                <span style={{ color: colors.textMuted, fontSize: 13 }}>{notifs.length} notification{notifs.length !== 1 ? 's' : ''}</span>
+                <button onClick={markAllNotifsRead} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.primary, borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                     <CheckCircle2 size={14} aria-hidden="true" /> Mark All Read
                 </button>
             </div>
-            {notifLoading ? <div style={{ color: colors.textMuted, fontSize: '13px' }}>Loading notifications...</div> : notifs.length === 0 ? (
+            {notifLoading ? <div style={{ color: colors.textMuted, fontSize: 13 }}>Loading notifications...</div> : notifs.length === 0 ? (
                 <div style={styles.emptyContent}>
-                    <Bell size={40} color={colors.textMuted} style={{ marginBottom: '12px' }} aria-hidden="true" />
+                    <Bell size={40} color={colors.textMuted} style={{ marginBottom: 12 }} aria-hidden="true" />
                     <p style={styles.emptyText}>No notifications yet. Assignment reminders, quiz deadlines, and payment updates will appear here.</p>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {notifs.map(n => {
                         const meta = TYPE_META[n.type] || TYPE_META.default;
                         const unread = n.isRead === false || n.read === false;
                         return (
-                            <div key={n._id} onClick={() => markNotifRead(n._id)} style={{ display: 'flex', gap: '14px', padding: '14px 16px', borderRadius: '12px', background: unread ? `${colors.primary}08` : colors.bgInput, border: `1px solid ${unread ? `${colors.primary}30` : colors.border}`, cursor: 'pointer', alignItems: 'flex-start' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: `${meta.color}15`, color: meta.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>{meta.icon}</div>
+                            <div key={n._id} onClick={() => markNotifRead(n._id)} style={{ display: 'flex', gap: 14, padding: '14px 16px', borderRadius: 12, background: unread ? `${colors.primary}08` : colors.bgInput, border: `1px solid ${unread ? `${colors.primary}30` : colors.border}`, cursor: 'pointer', alignItems: 'flex-start', transition: 'background 0.15s' }}>
+                                <div style={{ width: 40, height: 40, borderRadius: 12, background: `${meta.color}15`, color: meta.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{meta.icon}</div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
-                                        <span style={{ color: colors.text, fontSize: '14px', fontWeight: unread ? '800' : '600' }}>{n.title || 'Notification'}</span>
-                                        <span style={{ color: colors.textMuted, fontSize: '11px', flexShrink: 0 }}>{n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                                        <span style={{ color: colors.text, fontSize: 14, fontWeight: unread ? 800 : 600 }}>{n.title || 'Notification'}</span>
+                                        <span style={{ color: colors.textMuted, fontSize: 11, flexShrink: 0 }}>{n.createdAt ? new Date(n.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : ''}</span>
                                     </div>
-                                    <p style={{ color: colors.textMuted, fontSize: '13px', margin: '4px 0 0', lineHeight: 1.5 }}>{n.message || n.body}</p>
-                                    {unread && <span style={{ display: 'inline-block', marginTop: '6px', background: colors.primary, color: '#fff', fontSize: '9px', fontWeight: '800', padding: '2px 8px', borderRadius: '99px' }}>NEW</span>}
+                                    <p style={{ color: colors.textMuted, fontSize: 13, margin: '4px 0 0', lineHeight: 1.5 }}>{n.message || n.body}</p>
+                                    {unread && <span style={{ display: 'inline-block', marginTop: 6, background: colors.primary, color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 99 }}>NEW</span>}
                                 </div>
                             </div>
                         );
                     })}
                 </div>
             )}
+            </div>
         </div>
     );
 
     const renderAi = () => (
-        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '20px', height: '620px' }}>
-            <div style={{ background: colors.bgCard, borderRadius: '16px', border: `1px solid ${colors.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ padding: '16px 20px', borderBottom: `1px solid ${colors.border}` }}>
-                    <h3 style={{ color: colors.text, fontSize: '15px', fontWeight: '700', margin: 0 }}>AI Tutor Conversations</h3>
-                </div>
-                <div style={{ flex: 1, overflowY: 'auto' }}>
-                    {aiConvos.length === 0 ? <div style={{ padding: '24px', color: colors.textMuted, fontSize: '13px' }}>No AI conversations yet. Ask your first question!</div> : aiConvos.map(c => (
-                        <div key={c.conversationId} onClick={() => setActiveAiConv(c.conversationId)} style={{ padding: '14px 20px', cursor: 'pointer', borderBottom: `1px solid ${colors.border}`, background: activeAiConv === c.conversationId ? `${colors.primary}10` : 'transparent' }}>
-                            <div style={{ color: colors.text, fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}><Bot size={14} aria-hidden="true" /> {c.title}</div>
-                            <div style={{ color: colors.textMuted, fontSize: '11px', marginTop: '4px' }}>{c.count} messages · {c.last ? new Date(c.last).toLocaleDateString() : ''}</div>
-                        </div>
-                    ))}
-                </div>
+        <div>
+            <div style={styles.tabHeader}>
+                <h2 style={{ ...styles.tabTitle, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Bot size={20} aria-hidden="true" /> AI Tutor
+                </h2>
+                <p style={styles.tabSubtitle}>Ask the AI tutor anything about your courses, concepts, quizzes, or assignments</p>
             </div>
-            <div style={{ background: colors.bg, borderRadius: '16px', border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                {chatHeader('AI Learning Assistant', 'Powered by Emare AI · Ask any course question')}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {thread.length === 0 ? (
-                        <div style={{ textAlign: 'center', color: colors.textMuted, fontSize: '13px', padding: '40px 20px', lineHeight: 1.6 }}>
-                            <Bot size={40} color={colors.textMuted} style={{ marginBottom: '10px' }} aria-hidden="true" />
-                            Ask the AI tutor anything about your courses, concepts, quizzes, or assignments.
-                        </div>
-                    ) : thread.map(messageBubble)}
-                    {aiLoading && <div style={{ color: colors.textMuted, fontSize: '12px' }}>AI Tutor is typing...</div>}
-                    <div ref={threadEndRef} />
+            <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 20, height: 580 }}>
+                {/* Conversation list */}
+                <div style={{ background: colors.bgCard, borderRadius: 16, border: `1px solid ${colors.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ padding: '16px 20px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h3 style={{ color: colors.text, fontSize: 15, fontWeight: 700, margin: 0 }}>Conversations</h3>
+                        <button
+                            onClick={() => { setActiveAiConv(null); setAiThread([]); }}
+                            title="New conversation"
+                            style={{ background: `${colors.primary}15`, border: `1px solid ${colors.primary}40`, color: colors.primary, borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                        >+ New</button>
+                    </div>
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                        {aiConvos.length === 0
+                            ? <div style={{ padding: 24, color: colors.textMuted, fontSize: 13 }}>No conversations yet. Ask your first question!</div>
+                            : aiConvos.map(c => (
+                                <div key={c.conversationId} onClick={() => setActiveAiConv(c.conversationId)} style={{ padding: '14px 20px', cursor: 'pointer', borderBottom: `1px solid ${colors.border}`, background: activeAiConv === c.conversationId ? `${colors.primary}10` : 'transparent' }}>
+                                    <div style={{ color: colors.text, fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        <Bot size={13} aria-hidden="true" /> {c.title}
+                                    </div>
+                                    <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 3 }}>{c.count} messages · {c.last ? new Date(c.last).toLocaleDateString() : ''}</div>
+                                </div>
+                            ))
+                        }
+                    </div>
                 </div>
-                {chatInput(aiInput, setAiInput, handleAiSend, aiLoading, 'Ask the AI tutor a question...')}
+
+                {/* Chat panel */}
+                <div style={{ background: colors.bg, borderRadius: 16, border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    {chatHeader('AI Learning Assistant', 'Powered by Emare AI · Ask any course question')}
+                    <div style={{ flex: 1, overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {aiThread.length === 0 ? (
+                            <div style={{ textAlign: 'center', color: colors.textMuted, fontSize: 13, padding: '40px 20px', lineHeight: 1.7 }}>
+                                <Bot size={44} color={colors.textMuted} style={{ marginBottom: 12 }} aria-hidden="true" />
+                                <p style={{ margin: 0 }}>Ask the AI tutor anything about your courses, concepts, quizzes, or assignments.</p>
+                                <p style={{ margin: '12px 0 0', fontSize: 12 }}>Try: "Explain recursion", "Summarize chapter 3", "Help me with my assignment"</p>
+                            </div>
+                        ) : aiThread.map(msg => messageBubble(msg))}
+                        {aiLoading && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: colors.textMuted, fontSize: 13 }}>
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                    {[0,1,2].map(i => <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: colors.primary, animation: `bounce 1s ease-in-out ${i * 0.2}s infinite alternate`, display: 'inline-block' }} />)}
+                                </div>
+                                AI Tutor is typing...
+                                <style>{`@keyframes bounce{to{transform:translateY(-4px)}}`}</style>
+                            </div>
+                        )}
+                        <div ref={threadEndRef} />
+                    </div>
+                    {chatInput(aiInput, setAiInput, handleAiSend, aiLoading, 'Ask the AI tutor a question...')}
+                </div>
             </div>
         </div>
     );

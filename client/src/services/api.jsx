@@ -345,7 +345,7 @@ export const learningProgressService = {
 // ── AI Tutor API Calls ─────────────────────────────────────
 export const aiService = {
     askQuestion: (data) => API.post('/ai/ask', data),
-    getHistory: () => API.get('/ai/history'),
+    getHistory: (params) => API.get('/ai/history', { params }),   // params may include { conversationId }
     clearHistory: () => API.delete('/ai/history/clear'),
     generateLearningPath: (data) => API.post('/ai/learning-path', data),
     recommendCourses: (data) => API.post('/ai/recommend-courses', data),
