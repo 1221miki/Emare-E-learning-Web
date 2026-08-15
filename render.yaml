@@ -3,10 +3,10 @@ services:
     name: emare-elms-backend
     env: node
     region: oregon
-    # Build: install backend deps + build the React frontend
-    buildCommand: npm install && cd ../client && npm install && npm run build
-    startCommand: node server.js
-    rootDir: backend
+    # rootDir is the repo root so both backend/ and client/ are accessible
+    # Build: install all dependencies and build the React SPA
+    buildCommand: cd backend && npm install && cd ../client && npm install && npm run build
+    startCommand: node backend/server.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -21,8 +21,7 @@ services:
       - key: JWT_EXPIRE
         value: 120m
       - key: FRONTEND_URL
-        value: https://ayires.onrender.com/api
+        value: https://ayires.onrender.com
       - key: APP_BASE_URL
-        value: https://asamenew.onrender.com
-      # NOTE: VITE_API_URL is intentionally NOT set here.
-      # The frontend uses relative /api paths in production (same-origin).
+        value: https://ayires.onrender.com
+      # VITE_API_URL is intentionally NOT set — frontend uses relative /api paths in production

@@ -150,35 +150,69 @@ app.get('/api/health', (req, res) => {
 });
 
 // ── 404 Handler for API routes ──────────────────────────────
+// This MUST be before the SPA catch-all so unknown /api/* routes get a JSON 404
+// instead of index.html.
 app.all('/api/*', (req, res) => {
     res.status(404).json({ success: false, message: `API Route ${req.originalUrl} not found on this server.` });
 });
 
-// ── Serve Frontend in Production ───────────────────────────
+// ── Serve Frontend in Production (SPA catch-all) ────────────
+// In production the Express server serves the Vite-built React SPA AND
+// acts as the API server.  Every non-/api/* GET request must return
+// index.html so that React Router handles client-side navigation.
+//
+// This fixes the "404 on browser refresh" problem:
+//   GET /login   → index.html  → React Router renders <LoginPage>
+//   GET /register → index.html → React Router renders <RegisterPage>
+//   etc.
+//
+// Static assets (JS/CSS/images) are served first by express.static and
+// never reach the catch-all.
 if (process.env.NODE_ENV === 'production') {
-    // Serve static files from the React app build directory
     const fs = require('fs');
+
+    // Resolve the dist directory relative to this file (backend/server.js).
+    // Works whether rootDir is "backend" or the repo root.
     const viteDist = path.join(__dirname, '../client/dist');
-    const craBuild = path.join(__dirname, '../client/build');
-    const staticDir = fs.existsSync(viteDist) ? viteDist : craBuild;
+    const altDist  = path.join(__dirname, 'client/dist'); // fallback if layout differs
 
-    if (fs.existsSync(staticDir)) {
-        app.use(express.static(staticDir));
+    const staticDir = fs.existsSync(viteDist) ? viteDist
+                    : fs.existsSync(altDist)   ? altDist
+                    : null;
 
-        // The "catchall" handler: for any request that doesn't match one above,
-        // send back the client's index.html file from the resolved static directory.
+    if (staticDir) {
+        // Serve hashed JS/CSS/image assets with long-lived cache headers
+        app.use('/assets', express.static(path.join(staticDir, 'assets'), {
+            maxAge: '1y',
+            immutable: true
+        }));
+
+        // Serve everything else in dist (favicon, manifest, etc.) without caching
+        app.use(express.static(staticDir, { index: false }));
+
+        // SPA catch-all — MUST be last, after all /api/* routes
+        // Handles: browser refresh, direct URL entry, Back/Forward navigation
         app.get('*', (req, res) => {
             res.sendFile(path.resolve(staticDir, 'index.html'));
         });
-    } else {
-        console.warn('Production build not found: expected', viteDist, 'or', craBuild);
-    }
 
-    // The "catchall" handler: for any request that doesn't
-    // match one above, send back React's index.html file.
+        console.log(`✅ Serving React SPA from: ${staticDir}`);
+    } else {
+        // Dist not built yet — still register a catch-all so Render doesn't
+        // show its own nginx 404 page. Client will see a plain text message.
+        console.warn('⚠️  Production build not found — run: cd client && npm run build');
+        app.get('*', (req, res) => {
+            if (req.originalUrl.startsWith('/api/')) {
+                res.status(404).json({ success: false, message: 'API route not found.' });
+            } else {
+                res.status(503).send('Application build not found. Please contact the administrator.');
+            }
+        });
+    }
 } else {
+    // Development: frontend is served by Vite dev server on port 5173.
     app.get('/', (req, res) => {
-        res.send('API is running in development mode. Please run the React client separately.');
+        res.send('API is running in development mode. Run the React client separately (npm run dev in /client).');
     });
 }
 
