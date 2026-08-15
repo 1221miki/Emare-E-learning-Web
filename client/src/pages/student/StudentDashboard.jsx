@@ -800,79 +800,19 @@ export default function StudentDashboard() {
                                     <LearningHistory recentlyViewed={recentlyViewed} enrollments={enrollments} />
                                 </div>
 
-                                <div style={{ marginTop: 20 }}>
-                                    <div style={{ background: colors.bgCard, padding: 12, borderRadius: 10, border: `1px solid ${colors.border}` }}>
-                                        <h4 style={{ margin: '0 0 8px 0', color: colors.text }}>Upcoming Assignments</h4>
-                                        {assignmentsList.length === 0 ? (
-                                            <div style={{ color: colors.textMuted }}>No upcoming assignments.</div>
-                                        ) : (
-                                            assignmentsList.slice(0,5).map(a => {
-                                                const due = a.dueDate ? new Date(a.dueDate) : null;
-                                                const remaining = due ? Math.max(0, Math.floor((due.getTime() - Date.now()) / (1000*60*60*24))) : null;
-                                                const submitted = mySubmissions.find(s => s.assignmentRef?._id === a._id || (s.assignmentRef === a._id));
-                                                return (
-                                                    <div key={a._id} style={{ display: 'flex', justifyContent: 'space-between', padding: 8, borderRadius: 8, background: colors.bgInput, border: `1px solid ${colors.border}`, marginBottom: 8 }}>
-                                                        <div>
-                                                            <div style={{ fontWeight: 800, color: colors.text }}>{a.title}</div>
-                                                            <div style={{ fontSize: 12, color: colors.textMuted }}>{a.courseRef?.courseTitle || 'Course'}</div>
-                                                        </div>
-                                                        <div style={{ textAlign: 'right' }}>
-                                                            <div style={{ fontSize: 12, color: colors.textMuted }}>{due ? due.toLocaleString() : 'No due date'}</div>
-                                                            <div style={{ fontWeight: 800, color: submitted ? colors.success : colors.primary }}>{submitted ? 'Submitted' : (due ? (remaining <= 0 ? 'Due' : `${remaining}d left`) : 'Open')}</div>
-                                                            <div style={{ marginTop: 6 }}><a href={`/student/assignments/${a._id}`} style={{ color: colors.primary, fontWeight: 800 }}>Open</a></div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div style={{ marginTop: 20 }}>
-                                    <PaymentHistory />
-                                    <div style={{ marginTop: 16 }}>
-                                        <CertificateList />
-                                    </div>
-                                    <div style={{ marginTop: 16 }}>
-                                        <MyReviews />
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, marginTop: 20 }}>
-                                    <div style={{ background: colors.bgCard, padding: 12, borderRadius: 10, border: `1px solid ${colors.border}` }}>
-                                        <h4 style={{ margin: '0 0 8px 0', color: colors.text }}>Active Projects</h4>
-                                        {projectsList.length === 0 ? (
-                                            <div style={{ color: colors.textMuted }}>No active projects.</div>
-                                        ) : (
-                                            projectsList.slice(0,5).map(p => (
-                                                <div key={p._id} style={{ display: 'flex', justifyContent: 'space-between', padding: 8, borderRadius: 8, background: colors.bgInput, border: `1px solid ${colors.border}`, marginBottom: 8 }}>
-                                                    <div>
-                                                        <div style={{ fontWeight: 800, color: colors.text }}>{p.title}</div>
-                                                        <div style={{ fontSize: 12, color: colors.textMuted }}>{p.difficulty} • {p.dueDate ? new Date(p.dueDate).toLocaleDateString() : 'No due date'}</div>
-                                                    </div>
-                                                    <div><a href={`/student/projects/${p._id}`} style={{ color: colors.primary, fontWeight: 800 }}>Open</a></div>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-
-                                    <div style={{ background: colors.bgCard, padding: 12, borderRadius: 10, border: `1px solid ${colors.border}` }}>
-                                        <h4 style={{ margin: '0 0 8px 0', color: colors.text }}>Team Projects</h4>
-                                        <div style={{ color: colors.textMuted }}>Manage or join teams from project pages.</div>
-                                    </div>
-                                </div>
-                                <CourseDiscoveryChecklist enrolledCount={enrollments.length} wishlistCount={wishlist.length} />
-                                <AccountProfileChecklist setActiveTab={setActiveTab} />
-                                <PromptLibrary onSelectPrompt={(promptText) => {
-                                    setActiveTab('overview');
-                                    setAssistantPrompt({ prompt: promptText, id: Date.now() });
-                                }} />
-                                <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr 320px', gap: 20, marginTop: 20 }}>
-                                    <Inbox onSelectConversation={(c)=>{ setActiveTab('messages'); setSelectedConversation(c); }} />
-                                    <div style={{ minHeight: 240, borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.bgCard }}>
-                                        {selectedConversation ? <ConversationView conversation={selectedConversation} /> : <div style={{ padding: 16, color: colors.textMuted }}>Select a conversation to view messages.</div>}
-                                    </div>
-                                    <NotificationsPanel />
+                                {/* Quick-navigation shortcuts to dedicated tabs */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginTop: 20 }}>
+                                    {[
+                                        { label: '📋 Assignments', tab: 'assignments', desc: 'View & submit assignments' },
+                                        { label: '💳 Payments',    tab: 'payments',    desc: 'Payment history & invoices' },
+                                        { label: '🏆 Certificates',tab: 'certificates',desc: 'Your earned certificates' },
+                                        { label: '✉️ Messages',    tab: 'messages',    desc: 'Inbox & notifications' },
+                                    ].map(({ label, tab, desc }) => (
+                                        <button key={tab} onClick={() => setActiveTab(tab)} style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: 10, padding: '14px 16px', cursor: 'pointer', textAlign: 'left', color: colors.text }}>
+                                            <div style={{ fontWeight: 700, fontSize: 14 }}>{label}</div>
+                                            <div style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>{desc}</div>
+                                        </button>
+                                    ))}
                                 </div>
                             </>
                         ) : (
