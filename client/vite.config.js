@@ -22,6 +22,7 @@ export default defineConfig({
         host: '0.0.0.0',   // accept connections from phone/other devices on the network
         port: 5173,
         hmr: {
+            host: '10.18.56.22',  // HMR client connects back to correct network IP (not localhost)
             overlay: false,
         },
     },

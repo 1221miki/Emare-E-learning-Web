@@ -19,6 +19,45 @@ const PageShell = () => (
     </div>
 );
 
+// ── Chunk-load error boundary: retries once on network failure ─────────────
+class ChunkErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false, retried: false };
+    }
+    static getDerivedStateFromError() { return { hasError: true }; }
+    componentDidCatch(err) {
+        // Chunk failed to load (network issue) — reload once to retry
+        if (!this.state.retried && err && err.message && (
+            err.message.includes('Failed to fetch') ||
+            err.message.includes('Load failed') ||
+            err.message.includes('Loading chunk') ||
+            err.message.includes('dynamically imported module')
+        )) {
+            this.setState({ retried: true, hasError: false });
+            window.location.reload();
+        }
+    }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div style={{ minHeight:'100vh', background:'#0f172a', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', color:'#fff', padding:24, fontFamily:'system-ui,sans-serif' }}>
+                    <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+                    <h2 style={{ margin:'0 0 12px', fontSize:22 }}>Page failed to load</h2>
+                    <p style={{ color:'#94a3b8', marginBottom:20, textAlign:'center' }}>A network error occurred loading this page.</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        style={{ background:'#6366f1', color:'#fff', border:'none', borderRadius:10, padding:'12px 28px', fontSize:15, fontWeight:700, cursor:'pointer' }}
+                    >
+                        Reload Page
+                    </button>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
+
 // ── Lazy-loaded pages (each gets its own JS chunk) ─────────────────────────
 const LandingPage           = lazy(() => import('./pages/LandingPage'));
 const LoginPage             = lazy(() => import('./pages/LoginPage'));
@@ -85,7 +124,8 @@ const PrivateRoute = ({ children, allowedRoles }) => {
 
 function AppRoutes() {
     return (
-        <Suspense fallback={<PageShell />}>
+        <ChunkErrorBoundary>
+            <Suspense fallback={<PageShell />}>
             <Routes>
                 {/* ── Public Routes ──────────────────────────────────── */}
                 <Route path="/"                      element={<LandingPage />} />
@@ -164,6 +204,7 @@ function AppRoutes() {
                 } />
             </Routes>
         </Suspense>
+        </ChunkErrorBoundary>
     );
 }
 
