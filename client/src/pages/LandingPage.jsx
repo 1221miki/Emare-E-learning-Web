@@ -11,6 +11,7 @@ export default function LandingPage() {
     const [allCourses, setAllCourses] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFaq, setActiveFaq] = useState(null);
+    const [coursesVisible, setCoursesVisible] = useState(8); // pagination: show 8 initially
     const navigate = useNavigate();
 
     // ── Subscription state ─────────────────────────────────────────────────
@@ -243,15 +244,7 @@ export default function LandingPage() {
         </div>
     );
 
-    const featuredList = allCourses.slice(0, 4);
-    const freeCourses = allCourses.filter(c => c.price === 0);
-    const paidCourses = allCourses.filter(c => c.price > 0);
-    const freeList = [
-        ...freeCourses.slice(0, 3),
-        ...paidCourses.slice(0, Math.max(0, 4 - freeCourses.slice(0, 3).length))
-    ];
-    const newList = allCourses.slice(0, 4);  // Mock slice
-    const trendingList = allCourses.slice(2, 6); // Mock slice
+    // allCourses is the single source — unified grid handles all display logic
 
     // ── STYLES ──────────────────────────────────────────────────────────────
 
@@ -535,48 +528,67 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* 6. Featured Courses */}
+            {/* 6. Explore Our Courses — unified, deduplicated */}
             <section style={{ ...p.section, background: colors.bgCard }}>
                 <div style={p.sectionHeader}>
-                    <span style={p.sectionBadge}>Top Rated</span>
-                    <h2 style={p.sectionTitle}>Featured Courses</h2>
+                    <span style={p.sectionBadge}>EXPLORE COURSES</span>
+                    <h2 style={p.sectionTitle}>Explore Our Courses</h2>
+                    <p style={p.sectionSubtitle}>Discover all available courses — enroll and start learning today</p>
                 </div>
-                <div style={p.grid4}>
-                    {featuredList.map(c => renderCourseCard(c, 'FEATURED', colors.primary))}
-                </div>
-            </section>
 
-            {/* 11. Free Courses */}
-            <section style={p.section}>
-                <div style={p.sectionHeader}>
-                    <span style={p.sectionBadge}>Start For Free</span>
-                    <h2 style={p.sectionTitle}>Free Courses</h2>
-                </div>
-                <div style={p.grid4}>
-                    {freeList.map(c => renderCourseCard(c, 'FREE', colors.success))}
-                </div>
-            </section>
+                {allCourses.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '48px 0', color: colors.textMuted }}>
+                        <span style={{ fontSize: '48px', display: 'block', marginBottom: '16px' }}>📚</span>
+                        <p style={{ fontSize: '16px' }}>No courses available yet. Check back soon!</p>
+                    </div>
+                ) : (
+                    <>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                            gap: '24px',
+                            maxWidth: '1200px',
+                            margin: '0 auto'
+                        }}>
+                            {allCourses.slice(0, coursesVisible).map(c => renderCourseCard(c, c.price === 0 ? 'FREE' : 'COURSE', c.price === 0 ? colors.success : colors.primary))}
+                        </div>
 
-            {/* 12. New Courses */}
-            <section style={{ ...p.section, background: colors.bgCard }}>
-                <div style={p.sectionHeader}>
-                    <span style={p.sectionBadge}>Just Added</span>
-                    <h2 style={p.sectionTitle}>New Courses</h2>
-                </div>
-                <div style={p.grid4}>
-                    {newList.map(c => renderCourseCard(c, 'NEW', colors.accent))}
-                </div>
-            </section>
-
-            {/* 13. Trending Courses */}
-            <section style={p.section}>
-                <div style={p.sectionHeader}>
-                    <span style={p.sectionBadge}>Hot Right Now</span>
-                    <h2 style={p.sectionTitle}>Trending Courses</h2>
-                </div>
-                <div style={p.grid4}>
-                    {trendingList.map(c => renderCourseCard(c, 'TRENDING', colors.warning))}
-                </div>
+                        {/* Load More / Show Less */}
+                        {allCourses.length > 8 && (
+                            <div style={{ textAlign: 'center', marginTop: '40px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                {coursesVisible < allCourses.length && (
+                                    <button
+                                        onClick={() => setCoursesVisible(v => Math.min(v + 8, allCourses.length))}
+                                        style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', border: 'none', padding: '13px 32px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
+                                    >
+                                        Load More Courses ({allCourses.length - coursesVisible} remaining)
+                                    </button>
+                                )}
+                                {coursesVisible > 8 && (
+                                    <button
+                                        onClick={() => setCoursesVisible(8)}
+                                        style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, padding: '13px 24px', borderRadius: '10px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
+                                    >
+                                        Show Less
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => navigate('/courses')}
+                                    style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, padding: '13px 24px', borderRadius: '10px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
+                                >
+                                    View Full Catalog →
+                                </button>
+                            </div>
+                        )}
+                        {allCourses.length <= 8 && (
+                            <div style={{ textAlign: 'center', marginTop: '32px' }}>
+                                <button onClick={() => navigate('/courses')} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, padding: '12px 28px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>
+                                    View Full Catalog →
+                                </button>
+                            </div>
+                        )}
+                    </>
+                )}
             </section>
 
             {/* 14. Upcoming Live Classes */}
