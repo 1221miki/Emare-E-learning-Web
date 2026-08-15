@@ -246,13 +246,13 @@ const socialLogin = async (req, res, next) => {
             ? provider.toLowerCase()
             : 'google';
 
-        // Check if user exists by email or socialId
-        let user = await User.findOne({ 
-            $or: [
-                { accountEmail: normalizedEmail },
-                { socialId: socialId || `sim_${validProvider}_${normalizedEmail}` }
-            ]
-        });
+        // Always find by email first (most reliable — email is unique)
+        let user = await User.findOne({ accountEmail: normalizedEmail });
+
+        // If not found by email, try by socialId as fallback
+        if (!user && socialId) {
+            user = await User.findOne({ socialId });
+        }
 
         if (user) {
             if (!user.isActive) {
@@ -275,11 +275,11 @@ const socialLogin = async (req, res, next) => {
                 firstName,
                 lastName,
                 username: reqUsername || `${validProvider}_${Date.now().toString().slice(-6)}`,
-                accountEmail: email.toLowerCase(),
+                accountEmail: normalizedEmail,
                 securedPassword: tempPassword,
                 assignedRole: role || 'Student',
                 socialProvider: validProvider,
-                socialId: socialId || `sim_${validProvider}_${email}`,
+                socialId: socialId || `sim_${validProvider}_${normalizedEmail}`,
                 country: country || '',
                 city: city || '',
                 address: address || '',
