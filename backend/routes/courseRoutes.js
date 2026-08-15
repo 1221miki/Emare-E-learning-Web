@@ -58,14 +58,14 @@ router.post('/:id/enroll', protect, denySuspendedActions, authorizeRoles('Studen
 // ── Instructor Routes (must be above /:id to avoid param capture) ──
 router.get('/instructor/mine', protect, authorizeRoles('Instructor'), getInstructorCourses);
 router.get('/instructor/analytics', protect, authorizeRoles('Instructor'), getInstructorAnalytics);
-router.post('/', protect, denySuspendedActions, authorizeRoles('Instructor'), createCourse);
-router.put('/:id', protect, denySuspendedActions, authorizeRoles('Instructor'), updateCourse);
-router.post('/:id/thumbnail', protect, denySuspendedActions, authorizeRoles('Instructor'), upload.single('thumbnail'), uploadCourseThumbnail);
+router.post('/', protect, denySuspendedActions, authorizeRoles('Instructor', 'Admin'), createCourse);
+router.put('/:id', protect, denySuspendedActions, authorizeRoles('Instructor', 'Admin'), updateCourse);
+router.post('/:id/thumbnail', protect, denySuspendedActions, authorizeRoles('Instructor', 'Admin'), upload.single('thumbnail'), uploadCourseThumbnail);
 router.delete('/:id', protect, denySuspendedActions, authorizeRoles('Instructor', 'Admin'), deleteCourse);
-router.patch('/:id/submit', protect, denySuspendedActions, authorizeRoles('Instructor'), submitCourseForReview);
+router.patch('/:id/submit', protect, denySuspendedActions, authorizeRoles('Instructor', 'Admin'), submitCourseForReview);
 router.patch('/:id/archive', protect, denySuspendedActions, authorizeRoles('Instructor','Admin'), archiveCourse);
 router.patch('/:id/unpublish', protect, denySuspendedActions, authorizeRoles('Instructor','Admin'), unpublishCourse);
-router.post('/:id/duplicate', protect, denySuspendedActions, authorizeRoles('Instructor'), duplicateCourse);
+router.post('/:id/duplicate', protect, denySuspendedActions, authorizeRoles('Instructor', 'Admin'), duplicateCourse);
 
 // ── Admin Routes ────────────────────────────────────────────
 router.patch('/:id/approve', protect, denySuspendedActions, authorizeRoles('Admin'), approveCourse);

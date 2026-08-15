@@ -173,8 +173,8 @@ const updateCourse = async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Course not found.' });
         }
 
-        // Ownership check
-        if (course.creatorRef.toString() !== req.user.id) {
+        // Ownership check — Admin can update any course, Instructor must own it
+        if (req.user.assignedRole !== 'Admin' && course.creatorRef.toString() !== req.user.id) {
             return res.status(403).json({ success: false, message: 'You are not the owner of this course.' });
         }
 

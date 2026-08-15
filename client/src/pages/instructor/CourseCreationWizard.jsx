@@ -480,7 +480,7 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
 
 // ── Main Wizard ───────────────────────────────────────────────────────────────
 
-export default function CourseCreationWizard() {
+export default function CourseCreationWizard({ adminMode = false, onComplete = null }) {
     const { colors } = useTheme();
     const navigate   = useNavigate();
 
@@ -649,11 +649,22 @@ export default function CourseCreationWizard() {
             let id = courseId;
             if (!id) id = await createDraftCourse();
             await courseService.update(id, buildUpdatePayload());
-            await courseService.submitForReview(id);
-            setStatusMessage('Course submitted for review.');
-            navigate('/instructor/dashboard');
+
+            if (adminMode) {
+                // Admin path: publish the course directly without review
+                await courseService.publishCourse(id);
+                setStatusMessage('Course published successfully!');
+                if (onComplete) onComplete(id);
+                else navigate('/instructor/dashboard');
+            } else {
+                // Instructor path: submit for admin review
+                await courseService.submitForReview(id);
+                setStatusMessage('Course submitted for review.');
+                if (onComplete) onComplete(id);
+                else navigate('/instructor/dashboard');
+            }
         } catch (e) {
-            setErrorMessage(e.response?.data?.message || 'Unable to submit course for review.');
+            setErrorMessage(e.response?.data?.message || (adminMode ? 'Unable to publish course.' : 'Unable to submit course for review.'));
         } finally {
             setIsSaving(false);
         }
@@ -889,11 +900,11 @@ export default function CourseCreationWizard() {
             <div style={{ maxWidth: 1120, margin: '0 auto' }}>
                 <header style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
                     <div>
-                        <p style={{ color: colors.primary, fontWeight: 700, marginBottom: 8 }}>Instructor Course Builder</p>
+                        <p style={{ color: colors.primary, fontWeight: 700, marginBottom: 8 }}>{adminMode ? 'Admin Course Builder' : 'Instructor Course Builder'}</p>
                         <h1 style={{ margin: 0, fontSize: 32 }}>Create & launch your course</h1>
                         <p style={{ color: colors.textMuted, marginTop: 6 }}>A guided wizard to build a professional learning experience.</p>
                     </div>
-                    <button onClick={() => navigate('/instructor/dashboard')} style={{ ...styles.secondaryBtn, minWidth: 140 }}>
+                    <button onClick={() => onComplete ? onComplete(null) : navigate('/instructor/dashboard')} style={{ ...styles.secondaryBtn, minWidth: 140 }}>
                         Back to Dashboard
                     </button>
                 </header>
@@ -940,7 +951,7 @@ export default function CourseCreationWizard() {
                             </button>
                         ) : (
                             <button type="button" onClick={handleSubmitCourse} disabled={isSaving || isUploading} style={styles.primaryBtn}>
-                                {isSaving ? 'Submitting…' : 'Submit for Review'}
+                                {isSaving ? 'Submitting…' : (adminMode ? 'Publish Course' : 'Submit for Review')}
                             </button>
                         )}
                     </div>

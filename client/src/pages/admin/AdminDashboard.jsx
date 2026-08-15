@@ -8,6 +8,7 @@ import AdminSystemSettings from '../../components/admin/AdminSystemSettings';
 import { AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { LayoutDashboard, BarChart3, Users, UserCog, Building2, BookOpen, FolderTree, NotebookPen, Video, FileQuestion, ClipboardList, Award, Wallet, Receipt, DollarSign, TicketPercent, FileBarChart, Bell, Megaphone, MessageSquare, MessagesSquare, Bot, LifeBuoy, Settings, ShieldCheck, ClipboardCheck, DatabaseBackup, PlugZap, KeyRound, UserCircle, LogOut, TrendingUp, Clock3, Activity, PlusCircle, FilePen, Upload, Archive, Trash2, UserPlus, UserMinus, ShieldAlert, RotateCcw, CreditCard, PieChart as LucidePieChart, Mail, Eye, EyeOff, AlertTriangle, Palette, Languages, MoonStar, Database, BadgeInfo, CircleCheck, Server, GraduationCap, Search, Download, Monitor, Lock, Shield, MoreVertical, CheckCircle2, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown, Edit, Image, User, Copy, Star, Settings2, DownloadCloud, Trash, Wand2, PartyPopper, FileText, HelpCircle, Clipboard, Pin, Headphones, File, Radio, XCircle, Flag, Package, MessageCircle, Folder, RefreshCw, ScrollText, X, Trophy, CheckSquare, Check, FileEdit, Scale, Repeat, Calendar, Ban, Medal, Plus, Rocket, Zap, Book, Library, Clock, Save, FolderOpen, Link, Circle, Bookmark, Building, Eraser, Sparkles, Pause } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import CourseCreationWizard from '../instructor/CourseCreationWizard';
 
 export default function AdminDashboard() {
     const { colors, theme } = useTheme();
@@ -2720,259 +2721,26 @@ export default function AdminDashboard() {
     };
 
     const renderCourseBuilder = () => {
+        // Reuse the full CourseCreationWizard component used by instructors.
+        // adminMode=true enables:
+        //   - Direct publish (no "Submit for Review" step)
+        //   - Admin ownership bypass on updateCourse
+        // onComplete refreshes the admin course list and returns to courses tab.
+        const handleWizardComplete = async (courseId) => {
+            try {
+                const res = await courseService.getAdminAll();
+                setAllCourses(res.data.data || []);
+            } catch { /* non-fatal */ }
+            setActiveTab('courses');
+            if (courseId) showNotification('Course created and published successfully!');
+        };
+
         return (
-            <div style={{ background: colors.bg, minHeight: '100%', borderRadius: '16px', padding: '32px 40px', animation: 'fadeIn 0.3s' }}>
-                {/* Header & Back Button */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                    <div>
-                        <button onClick={() => setActiveTab('courses')} style={{ background: 'transparent', border: 'none', color: '#2563eb', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                            <ChevronLeft size={16} /> Back to Course Management
-                        </button>
-                        <h2 style={{ fontSize: '26px', fontWeight: '700', color: colors.text, margin: 0 }}>Course Creation Wizard</h2>
-                    </div>
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                        <button onClick={() => setActiveTab('courses')} style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, padding: '9px 18px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', color: colors.text, cursor: 'pointer' }}>Cancel</button>
-                        <button onClick={async () => {
-                            if (!courseBuilderForm.courseTitle.trim()) return alert('Course title is required.');
-                            try {
-                                await courseService.create({
-                                    ...courseBuilderForm,
-                                    publicationState: 'Published'
-                                });
-                                showNotification('Course created and published successfully!');
-                                const res = await courseService.getAdminAll();
-                                setAllCourses(res.data.data || []);
-                                setActiveTab('courses');
-                            } catch (err) {
-                                alert(err.response?.data?.message || 'Failed to create course.');
-                            }
-                        }} style={{ background: '#2563eb', border: 'none', color: colors.text, padding: '9px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 10px rgba(37,99,235,0.3)' }}>Publish Course</button>
-                    </div>
-                </div>
-
-                {/* Wizard Stepper */}
-                <div style={{ display: 'flex', borderBottom: `1px solid ${colors.border}`, marginBottom: '32px' }}>
-                    {[
-                        { step: 1, label: '1. Basic Info & Pricing' },
-                        { step: 2, label: '2. Curriculum Builder' },
-                        { step: 3, label: '3. Audience & Outcomes' },
-                        { step: 4, label: '4. Review & Publish' }
-                    ].map(sItem => (
-                        <button
-                            key={sItem.step}
-                            onClick={() => setBuilderStep(sItem.step)}
-                            style={{ flex: 1, padding: '14px', border: 'none', background: 'transparent', borderBottom: builderStep === sItem.step ? '3px solid #2563eb' : '3px solid transparent', color: builderStep === sItem.step ? '#2563eb' : colors.textMuted, fontWeight: builderStep === sItem.step ? '700' : '500', fontSize: '14px', cursor: 'pointer' }}
-                        >
-                            {sItem.label}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Step 1: Basic Info */}
-                {builderStep === 1 && (
-                    <div style={{ background: colors.bgCard, borderRadius: '14px', padding: '28px', border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        <h3 style={{ fontSize: '18px', fontWeight: '700', color: colors.text, margin: 0 }}>Course Landing Page Info</h3>
-                        
-                        <div>
-                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: colors.text, marginBottom: '6px' }}>Course Title *</label>
-                            <input
-                                type="text"
-                                value={courseBuilderForm.courseTitle}
-                                onChange={e => setCourseBuilderForm({ ...courseBuilderForm, courseTitle: e.target.value })}
-                                placeholder="e.g. Master Full-Stack Web Development"
-                                style={{ width: '100%', padding: '10px 14px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', outline: 'none' }}
-                                required
-                            />
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: colors.text, marginBottom: '6px' }}>Category *</label>
-                                <select value={courseBuilderForm.technicalCategory} onChange={e => setCourseBuilderForm({ ...courseBuilderForm, technicalCategory: e.target.value })} style={{ width: '100%', padding: '10px 12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', outline: 'none' }}>
-                                    <option value="Programming" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Programming</option>
-                                    <option value="AI & ML" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>AI & Machine Learning</option>
-                                    <option value="Database" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Database Management</option>
-                                    <option value="Design" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>UI/UX Design</option>
-                                    <option value="Security" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Cybersecurity</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: colors.text, marginBottom: '6px' }}>Difficulty Level</label>
-                                <select value={courseBuilderForm.difficultyLevel} onChange={e => setCourseBuilderForm({ ...courseBuilderForm, difficultyLevel: e.target.value })} style={{ width: '100%', padding: '10px 12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', outline: 'none' }}>
-                                    <option value="Beginner" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Beginner Level</option>
-                                    <option value="Intermediate" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Intermediate Level</option>
-                                    <option value="Advanced" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Advanced Level</option>
-                                    <option value="All Levels" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Skill Levels</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: colors.text, marginBottom: '6px' }}>Course Price ($USD)</label>
-                                <input
-                                    type="number"
-                                    value={courseBuilderForm.price}
-                                    onChange={e => setCourseBuilderForm({ ...courseBuilderForm, price: Number(e.target.value) })}
-                                    placeholder="0 for Free"
-                                    style={{ width: '100%', padding: '10px 14px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', outline: 'none' }}
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: colors.text, marginBottom: '6px' }}>Course Description</label>
-                            <textarea
-                                value={courseBuilderForm.description}
-                                onChange={e => setCourseBuilderForm({ ...courseBuilderForm, description: e.target.value })}
-                                placeholder="Provide a comprehensive summary of what students will learn..."
-                                rows={4}
-                                style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '13px', outline: 'none', resize: 'vertical' }}
-                            />
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
-                            <button onClick={() => setBuilderStep(2)} style={{ background: '#2563eb', color: colors.text, border: 'none', padding: '10px 24px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Next: Curriculum Builder →</button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Step 2: Curriculum Builder */}
-                {builderStep === 2 && (
-                    <div style={{ background: colors.bgCard, borderRadius: '14px', padding: '28px', border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ fontSize: '18px', fontWeight: '700', color: colors.text, margin: 0 }}>Modules & Lessons Structure</h3>
-                            <button onClick={() => {
-                                const newMod = { id: Date.now(), title: `Module ${courseBuilderForm.modules.length + 1}: New Module`, lessons: [] };
-                                setCourseBuilderForm({ ...courseBuilderForm, modules: [...courseBuilderForm.modules, newMod] });
-                            }} style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>+ Add Module</button>
-                        </div>
-
-                        {courseBuilderForm.modules.map((mod) => (
-                            <div key={mod.id} style={{ border: `1px solid ${colors.border}`, borderRadius: '10px', padding: '16px', background: colors.bg }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                    <input
-                                        type="text"
-                                        value={mod.title}
-                                        onChange={e => {
-                                            const updated = courseBuilderForm.modules.map(m => m.id === mod.id ? { ...m, title: e.target.value } : m);
-                                            setCourseBuilderForm({ ...courseBuilderForm, modules: updated });
-                                        }}
-                                        style={{ fontSize: '15px', fontWeight: '700', color: colors.text, border: 'none', background: 'transparent', borderBottom: `1px solid ${colors.border}`, padding: '4px 0', width: '70%', outline: 'none' }}
-                                    />
-                                    <button onClick={() => {
-                                        const updated = courseBuilderForm.modules.filter(m => m.id !== mod.id);
-                                        setCourseBuilderForm({ ...courseBuilderForm, modules: updated });
-                                    }} style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '12px', cursor: 'pointer' }}>Remove Module</button>
-                                </div>
-
-                                {mod.lessons?.map((les) => (
-                                    <div key={les.id} style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '8px 12px', background: colors.bgCard, borderRadius: '6px', marginBottom: '6px', border: `1px solid ${colors.border}` }}>
-                                        <Video size={16} color="#3b82f6" />
-                                        <input
-                                            type="text"
-                                            value={les.title}
-                                            onChange={e => {
-                                                const updated = courseBuilderForm.modules.map(m => {
-                                                    if (m.id === mod.id) {
-                                                        const lUpdated = m.lessons.map(l => l.id === les.id ? { ...l, title: e.target.value } : l);
-                                                        return { ...m, lessons: lUpdated };
-                                                    }
-                                                    return m;
-                                                });
-                                                setCourseBuilderForm({ ...courseBuilderForm, modules: updated });
-                                            }}
-                                            style={{ flex: 1, border: 'none', outline: 'none', fontSize: '13px', color: colors.text }}
-                                        />
-                                        <span style={{ fontSize: '12px', color: colors.textMuted }}>{les.duration}</span>
-                                    </div>
-                                ))}
-
-                                <button onClick={() => {
-                                    const newL = { id: Date.now(), title: `Lesson ${mod.lessons.length + 1}: New Topic`, duration: '15 min', type: 'video' };
-                                    const updated = courseBuilderForm.modules.map(m => m.id === mod.id ? { ...m, lessons: [...m.lessons, newL] } : m);
-                                    setCourseBuilderForm({ ...courseBuilderForm, modules: updated });
-                                }} style={{ background: 'transparent', border: 'none', color: '#2563eb', fontSize: '12px', fontWeight: '600', cursor: 'pointer', marginTop: '6px' }}>+ Add Lesson to Module</button>
-                            </div>
-                        ))}
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
-                            <button onClick={() => setBuilderStep(1)} style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, color: colors.text, padding: '10px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>← Back</button>
-                            <button onClick={() => setBuilderStep(3)} style={{ background: '#2563eb', color: colors.text, border: 'none', padding: '10px 24px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Next: Audience & Outcomes →</button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Step 3: Audience & Outcomes */}
-                {builderStep === 3 && (
-                    <div style={{ background: colors.bgCard, borderRadius: '14px', padding: '28px', border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        <h3 style={{ fontSize: '18px', fontWeight: '700', color: colors.text, margin: 0 }}>Target Audience & Requirements</h3>
-
-                        <div>
-                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: colors.text, marginBottom: '6px' }}>Learning Outcomes (Key Takeaways)</label>
-                            <textarea
-                                value={courseBuilderForm.learningOutcomes}
-                                onChange={e => setCourseBuilderForm({ ...courseBuilderForm, learningOutcomes: e.target.value })}
-                                placeholder="What will students be able to do after completing this course?"
-                                rows={3}
-                                style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '13px', outline: 'none' }}
-                            />
-                        </div>
-
-                        <div>
-                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: colors.text, marginBottom: '6px' }}>Prerequisites</label>
-                            <textarea
-                                value={courseBuilderForm.prerequisites}
-                                onChange={e => setCourseBuilderForm({ ...courseBuilderForm, prerequisites: e.target.value })}
-                                placeholder="List any tools, knowledge, or prior experience required..."
-                                rows={3}
-                                style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '13px', outline: 'none' }}
-                            />
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
-                            <button onClick={() => setBuilderStep(2)} style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, color: colors.text, padding: '10px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>← Back</button>
-                            <button onClick={() => setBuilderStep(4)} style={{ background: '#2563eb', color: colors.text, border: 'none', padding: '10px 24px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Next: Review & Publish →</button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Step 4: Review & Publish */}
-                {builderStep === 4 && (
-                    <div style={{ background: colors.bgCard, borderRadius: '14px', padding: '28px', border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        <h3 style={{ fontSize: '18px', fontWeight: '700', color: colors.text, margin: 0 }}>Review Course Summary</h3>
-
-                        <div style={{ padding: '20px', background: colors.bg, borderRadius: '12px', border: `1px solid ${colors.border}` }}>
-                            <h4 style={{ margin: '0 0 6px 0', fontSize: '16px', color: colors.text }}>{courseBuilderForm.courseTitle || 'Untitled Course'}</h4>
-                            <div style={{ fontSize: '13px', color: colors.textMuted, marginBottom: '12px' }}>{courseBuilderForm.technicalCategory} • {courseBuilderForm.difficultyLevel} • {courseBuilderForm.price ? `$${courseBuilderForm.price}` : 'Free'}</div>
-                            <p style={{ fontSize: '13px', color: colors.text, margin: 0 }}>{courseBuilderForm.description || 'No description provided.'}</p>
-                            <div style={{ marginTop: '12px', fontSize: '12px', color: '#2563eb', fontWeight: '600' }}>
-                                {courseBuilderForm.modules.length} Module(s) • {courseBuilderForm.modules.reduce((acc, m) => acc + (m.lessons?.length || 0), 0)} Lesson(s) total
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
-                            <button onClick={() => setBuilderStep(3)} style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, color: colors.text, padding: '10px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>← Back</button>
-                            <button
-                                onClick={async () => {
-                                    if (!courseBuilderForm.courseTitle.trim()) return alert('Course title is required.');
-                                    try {
-                                        await courseService.create({
-                                            ...courseBuilderForm,
-                                            publicationState: 'Published'
-                                        });
-                                        showNotification('Course created and published successfully!');
-                                        const res = await courseService.getAdminAll();
-                                        setAllCourses(res.data.data || []);
-                                        setActiveTab('courses');
-                                    } catch (err) {
-                                        alert(err.response?.data?.message || 'Failed to create course.');
-                                    }
-                                }}
-                                style={{ background: '#10b981', color: colors.text, border: 'none', padding: '10px 28px', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.35)' }}
-                            >
-                                Publish Course Live  <PartyPopper size={16} style={{ marginRight: '6px' }} /> 
-                            </button>
-                        </div>
-                    </div>
-                )}
+            <div style={{ minHeight: '100%' }}>
+                <CourseCreationWizard
+                    adminMode={true}
+                    onComplete={handleWizardComplete}
+                />
             </div>
         );
     };
