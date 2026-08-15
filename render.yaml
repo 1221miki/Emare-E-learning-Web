@@ -21,8 +21,8 @@ services:
       - key: JWT_EXPIRE
         value: 120m
       - key: FRONTEND_URL
-        value: https://ayires.onrender.com
+        value: https://ayires.onrender.com/api
       - key: APP_BASE_URL
-        value: https://ayires.onrender.com
+        value: https://asamenew.onrender.com
       # NOTE: VITE_API_URL is intentionally NOT set here.
       # The frontend uses relative /api paths in production (same-origin).
