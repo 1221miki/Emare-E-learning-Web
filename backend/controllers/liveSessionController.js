@@ -108,6 +108,60 @@ exports.createLiveSession = async (req, res) => {
     }
 };
 
+// @desc    Get upcoming live sessions for published courses (public landing page)
+// @route   GET /api/live-sessions/upcoming
+// @access  Public (optionally flags reservations when logged in)
+exports.getUpcomingSessions = async (req, res) => {
+    try {
+        const now = new Date();
+        const sessions = await LiveSession.find({ startTime: { $gte: now } })
+            .populate('instructorRef', 'fullName')
+            .populate('courseRef', 'courseTitle publicationState')
+            .sort('startTime')
+            .limit(10);
+
+        const published = sessions
+            .filter(s => s.courseRef && ['Published', 'Active'].includes(s.courseRef.publicationState))
+            .slice(0, 6);
+
+        const data = published.map(s => {
+            const obj = s.toObject();
+            const isReserved = req.user
+                ? (s.reservations || []).some(r => r.userRef && r.userRef.toString() === req.user.id)
+                : false;
+            return { ...obj, isReserved };
+        });
+
+        res.status(200).json({ success: true, count: data.length, data });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// @desc    Reserve a seat for a live session
+// @route   POST /api/live-sessions/:id/reserve
+// @access  Private (idempotent — no duplicate reservations)
+exports.reserveSession = async (req, res) => {
+    try {
+        const session = await LiveSession.findById(req.params.id);
+        if (!session) return res.status(404).json({ success: false, message: 'Live session not found.' });
+
+        const alreadyReserved = (session.reservations || []).some(r => r.userRef && r.userRef.toString() === req.user.id);
+        if (!alreadyReserved) {
+            session.reservations = session.reservations || [];
+            session.reservations.push({ userRef: req.user.id });
+            await session.save();
+        }
+
+        const populated = await LiveSession.findById(session._id)
+            .populate('instructorRef', 'fullName')
+            .populate('courseRef', 'courseTitle');
+        res.status(200).json({ success: true, data: { ...populated.toObject(), isReserved: true } });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 // @desc    Record attendance for a live session
 // @route   PUT /api/live-sessions/:id/attendance
 // @access  Private

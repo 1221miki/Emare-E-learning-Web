@@ -169,9 +169,13 @@ export default function CourseCatalog() {
         }), [sectionCourses, filterCategory, filterLevel, filterLanguage, filterPrice, filterRating, filterDuration, filterInstructor, filterCertificate, searchQuery, sortBy]);
 
     useEffect(() => {
+        setFilterCategory(urlParams.get('category') || 'All');
+        setFilterLevel(urlParams.get('level') || 'All');
+        setFilterPrice(urlParams.get('free') === 'true' ? 'Free' : 'All');
         setFilterCertificate(urlParams.get('certificates') === 'true');
+        setSearchQuery(urlParams.get('search') || '');
         setActiveSection(urlParams.get('section') || (urlParams.get('certificates') === 'true' ? 'certificates' : 'all'));
-    }, [urlParams]);
+    }, [urlParams.toString()]);
 
     const clearFilters = () => { setFilterCategory('All'); setFilterLevel('All'); setFilterLanguage('All'); setFilterPrice('All'); setFilterRating(0); setFilterDuration('All'); setFilterInstructor('All'); setFilterCertificate(false); setSearchQuery(''); setSortBy('newest'); };
     const hasActiveFilters = filterCategory !== 'All' || filterLevel !== 'All' || filterLanguage !== 'All' || filterPrice !== 'All' || filterRating > 0 || filterDuration !== 'All' || filterInstructor !== 'All' || filterCertificate || searchQuery;

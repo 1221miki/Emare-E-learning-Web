@@ -650,4 +650,53 @@ const uploadUserAvatar = async (req, res, next) => {
     }
 };
 
-module.exports = { getAllUsers, getUserById, createUser, updateUser, resetUserPassword, deleteUser, getAnalytics, updateInstructorProfile, uploadUserAvatar };
+module.exports = { getAllUsers, getUserById, createUser, updateUser, resetUserPassword, deleteUser, getAnalytics, updateInstructorProfile, uploadUserAvatar, getPublicStats };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// @desc    Get real platform stats for the public landing page (no auth needed)
+// @route   GET /api/stats
+// @access  Public
+// ─────────────────────────────────────────────────────────────────────────────
+async function getPublicStats(req, res, next) {
+    try {
+        const [
+            totalCourses,
+            totalStudents,
+            totalInstructors,
+            totalCertificates,
+            totalEnrollments,
+            totalCountries,
+            learningHoursAgg
+        ] = await Promise.all([
+            Course.countDocuments({ publicationState: { $in: ['Published', 'Active'] } }),
+            User.countDocuments({ assignedRole: 'Student', isActive: true }),
+            User.countDocuments({ assignedRole: 'Instructor', isActive: true }),
+            Certificate.countDocuments(),
+            Enrollment.countDocuments(),
+            User.distinct('country').then(countries => countries.filter(Boolean).length),
+            Enrollment.aggregate([
+                { $lookup: { from: 'courses', localField: 'courseRef', foreignField: '_id', as: 'course' } },
+                { $unwind: '$course' },
+                { $group: { _id: null, total: { $sum: { $multiply: [{ $ifNull: ['$completionPercentage', 0] }, { $ifNull: ['$course.estimatedDurationHours', 0] }] } } } }
+            ])
+        ]);
+
+        // Learning hours = completion% × course duration, summed across all enrollments (real DB data)
+        const learningHours = Math.round((learningHoursAgg?.[0]?.total || 0) / 100);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                totalCourses,
+                totalStudents,
+                totalInstructors,
+                totalCertificates,
+                totalEnrollments,
+                totalCountries,
+                learningHours
+            }
+        });
+    } catch (err) {
+        next(err);
+    }
+}

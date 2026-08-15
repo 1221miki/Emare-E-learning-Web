@@ -65,11 +65,11 @@ const RegisterPage          = lazy(() => import('./pages/RegisterPage'));
 const ResetPasswordPage     = lazy(() => import('./pages/ResetPasswordPage'));
 const VerifyEmailPage       = lazy(() => import('./pages/VerifyEmailPage'));
 const AboutPage             = lazy(() => import('./pages/AboutPage'));
-const ContactPage           = lazy(() => import('./pages/ContactPage'));
 const HelpPage              = lazy(() => import('./pages/HelpPage'));
 const PrivacyPage           = lazy(() => import('./pages/PrivacyPage'));
 const TermsPage             = lazy(() => import('./pages/TermsPage'));
 const CookiePage            = lazy(() => import('./pages/CookiePage'));
+const DevelopersPage        = lazy(() => import('./pages/DevelopersPage'));
 
 // Student pages
 const StudentDashboard      = lazy(() => import('./pages/student/StudentDashboard'));
@@ -133,7 +133,8 @@ function AppRoutes() {
                 <Route path="/reset-password"        element={<ResetPasswordPage />} />
                 <Route path="/verify-email"          element={<VerifyEmailPage />} />
                 <Route path="/about"                 element={<AboutPage />} />
-                <Route path="/contact"               element={<ContactPage />} />
+                <Route path="/developers"            element={<DevelopersPage />} />
+                <Route path="/contact"               element={<Navigate to="/#contact" replace />} />
                 <Route path="/help"                  element={<HelpPage />} />
                 <Route path="/privacy"               element={<PrivacyPage />} />
                 <Route path="/terms"                 element={<TermsPage />} />

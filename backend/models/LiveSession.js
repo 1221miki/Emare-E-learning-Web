@@ -53,6 +53,16 @@ const LiveSessionSchema = new mongoose.Schema({
             type: Date,
             default: Date.now
         }
+    }],
+    reservations: [{
+        userRef: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        reservedAt: {
+            type: Date,
+            default: Date.now
+        }
     }]
 }, { timestamps: true });
 

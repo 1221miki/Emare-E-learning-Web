@@ -106,7 +106,8 @@ export const userService = {
     getProfile: () => API.get('/auth/me'),
     resetPassword: (id, newPassword) => API.patch(`/users/${id}/reset-password`, { newPassword }),
     deactivate: (id) => API.delete(`/users/${id}`),
-    updateInstructorProfile: (data) => API.put('/users/instructor/profile', data)
+    updateInstructorProfile: (data) => API.put('/users/instructor/profile', data),
+    getPublicStats: () => API.get('/users/stats/public')   // public — no auth needed
 };
 
 // ── Enrollment & Payment API Calls ─────────────────────────
@@ -325,8 +326,10 @@ export const leaderboardService = {
 export const liveSessionService = {
     getCourseSessions: (courseId) => API.get(`/live-sessions/course/${courseId}`),
     getMySessions: () => API.get('/live-sessions/me'),
+    getUpcoming: () => API.get('/live-sessions/upcoming'),
     createSession: (data) => API.post('/live-sessions', data),
     markAttendance: (id) => API.put(`/live-sessions/${id}/attendance`),
+    reserveSeat: (id) => API.post(`/live-sessions/${id}/reserve`),
     createGoogleMeet: (data) => API.post('/live-sessions/google/create', data),
     deleteSession: (id) => API.delete(`/live-sessions/${id}`)
 };

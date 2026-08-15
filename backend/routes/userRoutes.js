@@ -11,11 +11,15 @@ const {
     deleteUser,
     getAnalytics,
     updateInstructorProfile,
-    uploadUserAvatar
+    uploadUserAvatar,
+    getPublicStats
 } = require('../controllers/userController');
 
 // ── User Avatar Upload ─────────────────────────────────────────────
 router.post('/avatar', protect, upload.single('avatar'), uploadUserAvatar);
+
+// ── Public Stats (no auth — used by landing page) ─────────────────
+router.get('/stats/public', getPublicStats);
 
 // ── User Self Profile Management (Student/Instructor/Admin) ──
 router.patch('/profile', protect, (req, res, next) => {

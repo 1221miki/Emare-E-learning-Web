@@ -1,7 +1,11 @@
 const router = require('express').Router();
-const { protect, authorizeRoles, denySuspendedActions } = require('../middleware/auth');
-const { getCourseSessions, getMyLiveSessions, createLiveSession, markLiveSessionAttendance, deleteLiveSession } = require('../controllers/liveSessionController');
+const { protect, optionalProtect, authorizeRoles, denySuspendedActions } = require('../middleware/auth');
+const { getUpcomingSessions, getCourseSessions, getMyLiveSessions, createLiveSession, markLiveSessionAttendance, deleteLiveSession, reserveSession } = require('../controllers/liveSessionController');
 const { createGoogleMeetEvent } = require('../controllers/googleMeetController');
+
+// Public: upcoming live sessions for the landing page (optional auth flags reservations)
+router.get('/upcoming', optionalProtect, getUpcomingSessions);
+router.post('/:id/reserve', protect, denySuspendedActions, reserveSession);
 
 router.use(protect);
 router.get('/course/:courseId', getCourseSessions);

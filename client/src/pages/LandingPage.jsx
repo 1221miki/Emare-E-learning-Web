@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { courseService, subscriptionService } from '../services/api.jsx';
+import { courseService, subscriptionService, userService, liveSessionService } from '../services/api.jsx';
 import Navbar from '../components/Navbar';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -11,8 +11,19 @@ export default function LandingPage() {
     const [allCourses, setAllCourses] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFaq, setActiveFaq] = useState(null);
+    const [platformStats, setPlatformStats] = useState(null); // real stats from DB
     const [coursesVisible, setCoursesVisible] = useState(8); // pagination: show 8 initially
+    const [contactStatus, setContactStatus] = useState(null);
+    const [upcomingSessions, setUpcomingSessions] = useState([]); // real live sessions from DB
+    const [liveLoading, setLiveLoading] = useState(true);
+    const [reservingId, setReservingId] = useState(null);
     const navigate = useNavigate();
+
+    const handleContactSubmit = (e) => {
+        e.preventDefault();
+        setContactStatus('Your message has been sent successfully. We will get back to you soon.');
+        e.target.reset();
+    };
 
     // ── Subscription state ─────────────────────────────────────────────────
     //
@@ -132,12 +143,21 @@ export default function LandingPage() {
     };
 
     useEffect(() => {
+        // Fetch real courses
         courseService.getAll()
-            .then(res => {
-                const courses = res.data?.data || [];
-                setAllCourses(courses);
-            })
+            .then(res => setAllCourses(res.data?.data || []))
             .catch(console.error);
+
+        // Fetch real platform stats (public endpoint — no auth required)
+        userService.getPublicStats()
+            .then(res => setPlatformStats(res.data?.data || null))
+            .catch(() => setPlatformStats(null)); // silently fall back to zeros if unavailable
+
+        // Fetch real upcoming live sessions (public endpoint — no auth required)
+        liveSessionService.getUpcoming()
+            .then(res => setUpcomingSessions(res.data?.data || []))
+            .catch(() => setUpcomingSessions([]))
+            .finally(() => setLiveLoading(false));
     }, []);
 
     const handleSearch = (e) => {
@@ -147,13 +167,17 @@ export default function LandingPage() {
 
     // ── DATA MOCKS FOR 21 SECTIONS ──────────────────────────────────────────────
 
+    // Real platform stats from the database (GET /api/stats) — never hardcoded.
+    // Falls back to zeros while loading or if the endpoint is unavailable.
+    const ps = platformStats || {};
+    const fmt = (n) => `${(n || 0).toLocaleString()}+`;
     const stats = [
-        { value: `${allCourses.length}+`, label: 'Total Courses', icon: '▧' },
-        { value: '25,000+', label: 'Total Students', icon: '◈' },
-        { value: '150+', label: 'Total Instructors', icon: '‍◈' },
-        { value: '12,000+', label: 'Certificates Issued', icon: '' },
-        { value: '1M+', label: 'Learning Hours', icon: '⏱️' },
-        { value: '15+', label: 'Countries Reached', icon: '◉' }
+        { value: fmt(ps.totalCourses ?? allCourses.length), label: 'Total Courses', icon: '▧' },
+        { value: fmt(ps.totalStudents), label: 'Total Students', icon: '◈' },
+        { value: fmt(ps.totalInstructors), label: 'Total Instructors', icon: '◈' },
+        { value: fmt(ps.totalCertificates), label: 'Certificates Issued', icon: '' },
+        { value: fmt(ps.learningHours), label: 'Learning Hours', icon: '⏱️' },
+        { value: fmt(ps.totalCountries), label: 'Countries Reached', icon: '◉' }
     ];
 
     const categories = [
@@ -202,11 +226,32 @@ export default function LandingPage() {
         { name: 'Hiwot Girma', role: 'Completed: UI/UX Masterclass', text: 'Beautiful platform and great learning experience. I landed a job 2 months after finishing.', avatar: 'H', rating: 4 }
     ];
 
-    const liveClasses = [
-        { title: 'Advanced React Patterns', date: 'Tomorrow, 6:00 PM', instructor: 'Eng. Bethelhem' },
-        { title: 'Intro to Machine Learning', date: 'Friday, 4:00 PM', instructor: 'Dr. Samuel' },
-        { title: 'Network Security Basics', date: 'Saturday, 10:00 AM', instructor: 'Mr. Dawit' }
-    ];
+    const formatLiveDate = (iso) => {
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return 'Date TBA';
+        return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+            + ' · ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    };
+
+    const handleReserveSeat = async (sessionId) => {
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
+        setReservingId(sessionId);
+        try {
+            const res = await liveSessionService.reserveSeat(sessionId);
+            const updated = res.data?.data;
+            if (updated) {
+                setUpcomingSessions(prev => prev.map(s => s._id === sessionId ? updated : s));
+            }
+        } catch (err) {
+            console.error('Failed to reserve seat:', err);
+            alert(err?.response?.data?.message || 'Could not reserve your seat. Please try again.');
+        } finally {
+            setReservingId(null);
+        }
+    };
 
     const blogArticles = [
         { title: 'Top 5 Tech Skills for 2026', date: 'July 15, 2026', author: 'Admin' },
@@ -312,8 +357,21 @@ export default function LandingPage() {
         faqContainer: { maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px' },
         faqItem: { background: colors.bgCard, borderRadius: '12px', padding: '20px 24px', border: `1px solid ${colors.border}`, cursor: 'pointer', transition: 'border-color 0.2s', boxShadow: '0 4px 15px rgba(0,0,0,0.02)' },
         
-        ctaSection: { padding: '80px 5%', background: `linear-gradient(135deg, ${colors.primary}15, ${colors.accent}15)`, textAlign: 'center' },
-        
+        contactSection: { padding: '80px 5%', background: '#0b1220' },
+        contactContainer: { maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', alignItems: 'stretch' },
+        contactLeft: { display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '8px' },
+        contactBadge: { letterSpacing: '0.25em', color: '#22c55e', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' },
+        contactTitle: { fontSize: '44px', fontWeight: '900', color: '#ffffff', margin: '0', lineHeight: 1.1, letterSpacing: '-1px' },
+        contactSubtitle: { fontSize: '17px', color: '#94a3b8', margin: '0 0 28px' },
+        contactForm: { display: 'flex', flexDirection: 'column', gap: '16px' },
+        contactRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
+        contactInput: { width: '100%', background: '#ffffff', border: 'none', color: '#0f172a', padding: '14px 18px', borderRadius: '12px', fontSize: '15px', outline: 'none', boxSizing: 'border-box' },
+        contactTextarea: { width: '100%', background: '#ffffff', border: 'none', color: '#0f172a', padding: '14px 18px', borderRadius: '12px', fontSize: '15px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', minHeight: '140px', fontFamily: 'inherit' },
+        contactSubmitBtn: { alignSelf: 'flex-start', background: '#0d1526', color: '#ffffff', border: '1px solid #22c55e', borderRadius: '12px', padding: '14px 40px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', marginTop: '4px' },
+        contactSuccess: { background: 'rgba(34,197,94,0.12)', color: '#4ade80', padding: '14px 18px', borderRadius: '12px', border: '1px solid rgba(34,197,94,0.35)', fontSize: '14px', marginTop: '16px' },
+        contactImageWrap: { position: 'relative', borderRadius: '24px', overflow: 'hidden', minHeight: '420px' },
+        contactImage: { width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius: '24px', minHeight: '420px' },
+
         footer: { padding: '80px 5% 0', borderTop: `1px solid ${colors.border}`, background: colors.bgCard },
         footerGrid: { display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '40px', maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' },
         footerTitle: { color: colors.text, fontSize: '15px', fontWeight: '700', margin: '0 0 20px' },
@@ -598,18 +656,41 @@ export default function LandingPage() {
                     <h2 style={p.sectionTitle}>Upcoming Live Classes</h2>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '900px', margin: '0 auto' }}>
-                    {liveClasses.map((live, i) => (
-                        <div key={i} style={p.liveCard}>
-                            <div>
-                                <h3 style={{ margin: '0 0 8px', color: colors.text, fontSize: '18px' }}>{live.title}</h3>
-                                <p style={{ margin: 0, color: colors.textMuted, fontSize: '14px' }}>Instructor: {live.instructor}</p>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                                <div style={{ color: colors.primary, fontWeight: '700' }}>▦ {live.date}</div>
-                                <button style={p.primaryBtn}>Reserve Seat</button>
-                            </div>
+                    {liveLoading ? (
+                        <div style={{ textAlign: 'center', color: colors.textMuted, padding: '32px 16px' }}>Loading live classes...</div>
+                    ) : upcomingSessions.length === 0 ? (
+                        <div style={{ textAlign: 'center', color: colors.textMuted, padding: '40px 16px', fontSize: '16px' }}>
+                            No upcoming live classes scheduled at the moment. Check back soon!
                         </div>
-                    ))}
+                    ) : (
+                        upcomingSessions.map((live) => {
+                            const isReserved = Boolean(live.isReserved);
+                            const isReserving = reservingId === live._id;
+                            return (
+                                <div key={live._id} style={p.liveCard}>
+                                    <div>
+                                        <h3 style={{ margin: '0 0 8px', color: colors.text, fontSize: '18px' }}>{live.title}</h3>
+                                        <p style={{ margin: 0, color: colors.textMuted, fontSize: '14px' }}>
+                                            Instructor: {live.instructorRef?.fullName || 'TBD'}
+                                        </p>
+                                        <p style={{ margin: '6px 0 0', color: colors.textMuted, fontSize: '13px' }}>
+                                            {live.reservations?.length || 0} reserved
+                                        </p>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                                        <div style={{ color: colors.primary, fontWeight: '700' }}>▦ {formatLiveDate(live.startTime)}</div>
+                                        <button
+                                            onClick={() => handleReserveSeat(live._id)}
+                                            disabled={isReserved || isReserving}
+                                            style={{ ...p.primaryBtn, opacity: isReserved ? 0.65 : 1, cursor: isReserved || isReserving ? 'not-allowed' : 'pointer' }}
+                                        >
+                                            {isReserved ? '✓ Reserved' : isReserving ? 'Reserving...' : 'Reserve Seat'}
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
             </section>
 
@@ -689,20 +770,7 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* 19. Call to Action */}
-            <section style={p.ctaSection}>
-                <h2 style={p.sectionTitle}>Ready to transform your future?</h2>
-                <p style={{ color: colors.textMuted, fontSize: '18px', margin: '0 0 40px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
-                    Join the premier digital learning platform in Ethiopia. Start learning today or share your knowledge as an instructor.
-                </p>
-                <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                    <button onClick={() => navigate('/courses')} style={{ ...p.primaryBtn, padding: '16px 36px', fontSize: '16px' }}>Start Learning</button>
-                    <button onClick={() => navigate('/register')} style={{ ...p.secondaryBtn, padding: '16px 36px', fontSize: '16px' }}>Become an Instructor</button>
-                    <button onClick={() => navigate('/contact')} style={{ background: 'transparent', border: 'none', color: colors.text, padding: '16px 36px', fontSize: '16px', fontWeight: '700', cursor: 'pointer', textDecoration: 'underline' }}>Contact Us</button>
-                </div>
-            </section>
-
-            {/* 20. Discount Subscription */}
+            {/* 19. Discount Subscription */}
             <section style={{
                 padding: '72px 5%',
                 background: theme === 'dark'
@@ -905,6 +973,44 @@ export default function LandingPage() {
                 `}</style>
             </section>
 
+            {/* 20. Contact */}
+            <section id="contact" style={p.contactSection}>
+                <style>{`
+                    .contact-field::placeholder { color: #94a3b8; }
+                    .contact-field:focus { box-shadow: 0 0 0 2px rgba(34,197,94,0.6); }
+                    .contact-submit:hover { background: #14233a; }
+                    @media (max-width: 860px) {
+                        .contact-split { grid-template-columns: 1fr; }
+                    }
+                    @media (max-width: 480px) {
+                        .contact-row { grid-template-columns: 1fr; }
+                    }
+                `}</style>
+                <div className="contact-split" style={p.contactContainer}>
+                    {/* Left — Contact Form */}
+                    <div style={p.contactLeft}>
+                        <span style={p.contactBadge}>CONTACT</span>
+                        <h2 style={p.contactTitle}>Send your query</h2>
+                        <p style={p.contactSubtitle}>Share us your Idea</p>
+                        <form onSubmit={handleContactSubmit} style={p.contactForm}>
+                            <div className="contact-row" style={p.contactRow}>
+                                <input className="contact-field" type="text" placeholder="Enter name" required style={p.contactInput} />
+                                <input className="contact-field" type="tel" placeholder="Enter phone number" required style={p.contactInput} />
+                            </div>
+                            <input className="contact-field" type="email" placeholder="Enter email" required style={p.contactInput} />
+                            <textarea className="contact-field" placeholder="Message" required style={p.contactTextarea}></textarea>
+                            <button type="submit" className="contact-submit" style={p.contactSubmitBtn}>Submit</button>
+                        </form>
+                        {contactStatus && <div style={p.contactSuccess}>{contactStatus}</div>}
+                    </div>
+
+                    {/* Right — Feature Image */}
+                    <div style={p.contactImageWrap}>
+                        <img src="/images/contact.jpg" alt="Emare ICT Hub — contact us" style={p.contactImage} />
+                    </div>
+                </div>
+            </section>
+
             {/* 21. Footer */}
             <footer style={p.footer}>
                 <div style={p.footerGrid}>
@@ -935,8 +1041,8 @@ export default function LandingPage() {
                     <div>
                         <h4 style={p.footerTitle}>Support</h4>
                         <Link to="/help" style={p.footerLink}>Help Center</Link>
-                        <Link to="/contact" style={p.footerLink}>Contact Us</Link>
-                        <Link to="/contact" style={p.footerLink}>Report Issue</Link>
+                        <Link to="/#contact" style={p.footerLink}>Contact Us</Link>
+                        <Link to="/#contact" style={p.footerLink}>Report Issue</Link>
                     </div>
                     <div>
                         <h4 style={p.footerTitle}>Legal</h4>

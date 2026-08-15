@@ -117,9 +117,10 @@ export default function Navbar() {
                 <div className="emare-nav-center" style={s.navCenter}>
                     <Link to="/" style={s.navLink}>Home</Link>
                     <Link to="/about" style={s.navLink}>About</Link>
+                    <Link to="/developers" style={s.navLink}>Emare Developers</Link>
                     <Link to="/courses" style={s.navLink}>Course Catalogs</Link>
                     <a href="/#services" style={s.navLink} onClick={e => { e.preventDefault(); const el = document.getElementById('services'); if (el) el.scrollIntoView({ behavior: 'smooth' }); else { window.location.href = '/#services'; } }}>Services</a>
-                    <Link to="/search" style={s.navLink}>Search</Link>
+                    <a href="/#contact" style={s.navLink} onClick={e => { e.preventDefault(); const el = document.getElementById('contact'); if (el) el.scrollIntoView({ behavior: 'smooth' }); else { window.location.href = '/#contact'; } }}>Contact</a>
                 </div>
 
                 <div className="emare-nav-right" style={s.navRight}>
@@ -170,9 +171,10 @@ export default function Navbar() {
                 <div className="emare-mobile-drawer">
                     <Link to="/" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
                     <Link to="/about" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>About</Link>
+                    <Link to="/developers" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Emare Developers</Link>
                     <Link to="/courses" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Course Catalogs</Link>
                     <a href="/#services" style={s.navLink} onClick={e => { e.preventDefault(); setIsMobileMenuOpen(false); const el = document.getElementById('services'); if (el) el.scrollIntoView({ behavior: 'smooth' }); else { window.location.href = '/#services'; } }}>Services</a>
-                    <Link to="/search" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Search</Link>
+                    <a href="/#contact" style={s.navLink} onClick={e => { e.preventDefault(); setIsMobileMenuOpen(false); const el = document.getElementById('contact'); if (el) el.scrollIntoView({ behavior: 'smooth' }); else { window.location.href = '/#contact'; } }}>Contact</a>
                     {!isAuthenticated && (
                         <>
                             <Link to="/login" style={s.loginBtn} onClick={() => setIsMobileMenuOpen(false)}>Login</Link>
