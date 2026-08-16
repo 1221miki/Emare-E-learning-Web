@@ -306,9 +306,9 @@ export default function LandingPage() {
             pointerEvents: 'none'
         },
         heroContent: { flex: '1 1 520px', maxWidth: '700px', zIndex: 2, position: 'relative', textAlign: 'left', minWidth: '280px' },
-        heroImageWrapper: { flex: '0 0 520px', width: '100%', maxWidth: '520px', minHeight: '500px', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative' },
-        heroImageOverlay: { position: 'absolute', inset: 0, borderRadius: '32px', background: 'linear-gradient(180deg, rgba(6,10,78,0.10), rgba(6,10,78,0.35))', pointerEvents: 'none' },
-        heroImage: { width: '100%', height: '100%', maxHeight: '620px', minHeight: '360px', borderRadius: '32px', objectFit: 'cover', boxShadow: '0 40px 120px rgba(0,0,0,0.18)', border: `1px solid ${colors.border}` },
+        heroImageWrapper: { flex: '0 0 520px', width: '100%', maxWidth: '520px', height: '420px', borderRadius: '32px', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative' },
+        heroImageOverlay: { position: 'absolute', inset: 0, borderRadius: '32px', background: 'linear-gradient(180deg, rgba(6,10,78,0.0) 55%, rgba(6,10,78,0.45) 100%)', pointerEvents: 'none' },
+        heroImage: { width: '100%', height: '100%', borderRadius: '32px', objectFit: 'cover', objectPosition: 'center top', display: 'block' },
         heroTitle: { fontSize: '60px', fontWeight: '900', lineHeight: 1.1, margin: '0 0 16px', letterSpacing: '-2px', color: colors.text },
         heroSubtitleAnimated: { fontSize: '32px', fontWeight: '700', lineHeight: 1.2, margin: '0 0 40px', maxWidth: '600px', color: colors.primary, minHeight: '50px' },
         heroSubtitle: { fontSize: '18px', color: colors.textMuted, lineHeight: 1.7, margin: '0 0 32px', maxWidth: '600px' },
