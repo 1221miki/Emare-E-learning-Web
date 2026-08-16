@@ -287,7 +287,24 @@ export default function LandingPage() {
 
     const p = {
         page: { minHeight: '100vh', fontFamily: "'Outfit', 'Inter', sans-serif", overflowX: 'hidden' },
-        hero: { position: 'relative', padding: '120px 5% 100px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '40px', overflow: 'hidden', textAlign: 'center' },
+        hero: { 
+            position: 'relative', 
+            padding: '120px 5% 100px', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            flexWrap: 'wrap', 
+            gap: '40px', 
+            overflow: 'hidden',
+            minHeight: '700px'
+        },
+        heroOverlay: { 
+            position: 'absolute', 
+            inset: 0, 
+            background: 'linear-gradient(135deg, rgba(6,10,78,0.75), rgba(20,30,100,0.65))',
+            zIndex: 1,
+            pointerEvents: 'none'
+        },
         heroContent: { flex: '1 1 520px', maxWidth: '700px', zIndex: 2, position: 'relative', textAlign: 'left', minWidth: '280px' },
         heroImageWrapper: { flex: '0 0 520px', width: '100%', maxWidth: '520px', minHeight: '500px', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative' },
         heroImageOverlay: { position: 'absolute', inset: 0, borderRadius: '32px', background: 'linear-gradient(180deg, rgba(6,10,78,0.10), rgba(6,10,78,0.35))', pointerEvents: 'none' },
@@ -390,6 +407,9 @@ export default function LandingPage() {
 
             {/* 3. Hero Section */}
             <section className="landing-hero" style={p.hero}>
+                {/* Background overlay for better text readability */}
+                <div style={p.heroOverlay} />
+                
                 <div className="landing-hero-content" style={p.heroContent}>
                     <h1 style={p.heroTitle}>Welcome to Emare ICT Hub</h1>
                     <h2 style={p.heroSubtitleAnimated}>
@@ -405,7 +425,15 @@ export default function LandingPage() {
                     </div>
                 </div>
                 <div className="landing-hero-image-wrapper" style={p.heroImageWrapper}>
-                    <img className="landing-hero-image" src="/images/home.avif" alt="Emare ICT Hub home" style={p.heroImage} />
+                    <video
+                        className="landing-hero-image"
+                        src="/videos/hero.mp4"
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        style={p.heroImage}
+                    />
                     <div style={p.heroImageOverlay} />
                 </div>
             </section>
