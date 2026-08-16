@@ -5,7 +5,7 @@ services:
     region: oregon
     # rootDir is the repo root so both backend/ and client/ are accessible
     # Build: install all dependencies and build the React SPA
-    buildCommand: npm install && npm --prefix backend install && npm --prefix client install && NODE_ENV=production npm run build:client && echo "✅ Build complete: client/dist/ is ready"
+    buildCommand: bash -c 'set -e && echo "Installing root deps..." && npm install && echo "Installing backend deps..." && npm --prefix backend install && echo "Installing client deps..." && npm --prefix client install && echo "Building React SPA..." && NODE_ENV=production npm --prefix client run build && echo "Verifying build..." && test -d client/dist && echo "✅ Build successful: client/dist exists" || (echo "❌ Build failed: client/dist not found" && exit 1)'
     startCommand: node backend/server.js
     envVars:
       - key: NODE_ENV

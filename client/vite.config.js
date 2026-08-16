@@ -34,6 +34,7 @@ export default defineConfig({
         },
     },
     build: {
+        outDir: 'dist',  // Explicitly output to client/dist
         // Split into separate chunks so the browser only downloads what each page needs
         rollupOptions: {
             output: {

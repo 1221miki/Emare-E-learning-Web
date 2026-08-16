@@ -172,13 +172,28 @@ if (process.env.NODE_ENV === 'production') {
     const fs = require('fs');
 
     // Resolve the dist directory relative to this file (backend/server.js).
-    // Works whether rootDir is "backend" or the repo root.
-    const viteDist = path.join(__dirname, '../client/dist');
-    const altDist  = path.join(__dirname, 'client/dist'); // fallback if layout differs
+    // Try multiple possible paths depending on how Render deploys the app
+    const possiblePaths = [
+        path.join(__dirname, '../client/dist'),      // Standard: backend/../client/dist
+        path.join(__dirname, '../../client/dist'),   // Nested deployment
+        path.join(__dirname, '/app/client/dist'),    // Render's /app directory
+        path.resolve('/app/client/dist'),            // Absolute path on Render
+        path.resolve(process.cwd(), 'client/dist'),  // Current working directory
+    ];
 
-    const staticDir = fs.existsSync(viteDist) ? viteDist
-                    : fs.existsSync(altDist)   ? altDist
-                    : null;
+    let staticDir = null;
+    for (const dirPath of possiblePaths) {
+        if (fs.existsSync(dirPath)) {
+            staticDir = dirPath;
+            console.log(`✅ Found React SPA at: ${staticDir}`);
+            break;
+        }
+    }
+
+    if (!staticDir) {
+        console.warn('⚠️  Searched paths:');
+        possiblePaths.forEach(p => console.warn(`   - ${p} (not found)`));
+    }
 
     if (staticDir) {
         // Serve hashed JS/CSS/image assets with long-lived cache headers
@@ -187,25 +202,36 @@ if (process.env.NODE_ENV === 'production') {
             immutable: true
         }));
 
-        // Serve everything else in dist (favicon, manifest, etc.) without caching
-        app.use(express.static(staticDir, { index: false }));
+        // Serve all static files from dist (HTML, CSS, JS, images, etc.)
+        app.use(express.static(staticDir));
 
         // SPA catch-all — MUST be last, after all /api/* routes
         // Handles: browser refresh, direct URL entry, Back/Forward navigation
-        app.get('*', (req, res) => {
-            res.sendFile(path.resolve(staticDir, 'index.html'));
+        // This ensures ANY non-API, non-asset request serves index.html
+        app.use('*', (req, res) => {
+            const indexPath = path.resolve(staticDir, 'index.html');
+            if (fs.existsSync(indexPath)) {
+                res.sendFile(indexPath);
+            } else {
+                res.status(503).send(`Application error: index.html not found at ${indexPath}`);
+            }
         });
 
         console.log(`✅ Serving React SPA from: ${staticDir}`);
     } else {
         // Dist not built yet — still register a catch-all so Render doesn't
-        // show its own nginx 404 page. Client will see a plain text message.
-        console.warn('⚠️  Production build not found — run: cd client && npm run build');
-        app.get('*', (req, res) => {
+        // show its own nginx 404 page. Client will see a detailed error message.
+        console.warn('⚠️  Production build not found!');
+        app.use('*', (req, res) => {
             if (req.originalUrl.startsWith('/api/')) {
                 res.status(404).json({ success: false, message: 'API route not found.' });
             } else {
-                res.status(503).send('Application build not found. Please contact the administrator.');
+                const cwd = process.cwd();
+                res.status(503).json({ 
+                    success: false, 
+                    message: 'Application build not found. Please rebuild.',
+                    debug: { cwd, nodeEnv: process.env.NODE_ENV }
+                });
             }
         });
     }
