@@ -3,9 +3,8 @@ services:
     name: emare-elms-backend
     env: node
     region: oregon
-    # rootDir is the repo root so both backend/ and client/ are accessible
-    # Build: install all dependencies and build the React SPA
-    buildCommand: bash -c 'set -e && echo "Installing root deps..." && npm install && echo "Installing backend deps..." && npm --prefix backend install && echo "Installing client deps..." && npm --prefix client install && echo "Building React SPA..." && NODE_ENV=production npm --prefix client run build && echo "Verifying build..." && test -d client/dist && echo "✅ Build successful: client/dist exists" || (echo "❌ Build failed: client/dist not found" && exit 1)'
+    # Build from repo root — installs deps for both backend and client, then builds the SPA
+    buildCommand: npm install && npm --prefix backend install && npm --prefix client install && npm --prefix client run build
     startCommand: node backend/server.js
     envVars:
       - key: NODE_ENV
@@ -21,7 +20,6 @@ services:
       - key: JWT_EXPIRE
         value: 120m
       - key: FRONTEND_URL
-        value: https://ayires.onrender.com
+        value: https://asamenew.onrender.com
       - key: APP_BASE_URL
-        value: https://ayires.onrender.com
-      # VITE_API_URL is intentionally NOT set — frontend uses relative /api paths in production
+        value: https://asamenew.onrender.com
