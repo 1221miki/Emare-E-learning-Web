@@ -170,7 +170,11 @@ body.emare-sidebar-right main {
   }
 
   .landing-hero-image-wrapper {
-    display: none;
+    display: flex;
+    width: 100%;
+    max-width: 520px;
+    min-height: 260px;
+    margin: 0 auto;
   }
 
   .landing-hero-actions {

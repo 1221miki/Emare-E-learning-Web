@@ -17,6 +17,7 @@
     "@babel/parser": "^8.0.4",
     "@tailwindcss/forms": "^0.5.11",
     "axios": "^1.6.8",
+    "emare-e-learning-web": "file:..",
     "es-toolkit": "^1.50.0",
     "lucide-react": "^0.469.0",
     "react": "^18.2.0",

@@ -15,8 +15,9 @@ export default function LandingPage() {
     const [platformStats, setPlatformStats] = useState(null); // real stats from DB
     const [coursesVisible, setCoursesVisible] = useState(8); // pagination: show 8 initially
     const heroVideoRef = useRef(null);
-    const [heroMuted,   setHeroMuted]   = useState(true);   // start muted (browser policy)
-    const [heroPlaying, setHeroPlaying] = useState(true);
+    const [heroMuted,   setHeroMuted]   = useState(true);
+    const [heroPlaying, setHeroPlaying] = useState(false);
+    const [heroVideoEnded, setHeroVideoEnded] = useState(false);
     const [contactStatus, setContactStatus] = useState(null);
     const [upcomingSessions, setUpcomingSessions] = useState([]); // real live sessions from DB
     const [reservingId, setReservingId] = useState(null);
@@ -159,6 +160,53 @@ export default function LandingPage() {
     const handleSearch = (e) => {
         e.preventDefault();
         if (searchQuery.trim()) navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+    };
+
+    useEffect(() => {
+        const video = heroVideoRef.current;
+        if (!video) return;
+
+        video.muted = true;
+        video.pause();
+        video.currentTime = 0;
+        setHeroPlaying(false);
+    }, []);
+
+    const handleHeroVideoToggle = async () => {
+        const video = heroVideoRef.current;
+        if (!video) return;
+
+        if (video.ended) {
+            video.currentTime = 0;
+            await video.play();
+            setHeroPlaying(true);
+            setHeroVideoEnded(false);
+            return;
+        }
+
+        if (video.paused) {
+            video.muted = heroMuted;
+            try {
+                await video.play();
+                setHeroPlaying(true);
+                setHeroVideoEnded(false);
+            } catch (err) {
+                console.error('Hero video play failed:', err);
+            }
+            return;
+        }
+
+        video.pause();
+        setHeroPlaying(false);
+    };
+
+    const handleHeroVideoMuteToggle = () => {
+        const video = heroVideoRef.current;
+        if (!video) return;
+
+        const next = !heroMuted;
+        video.muted = next;
+        setHeroMuted(next);
     };
 
     // ── DATA MOCKS FOR 21 SECTIONS ──────────────────────────────────────────────
@@ -309,9 +357,9 @@ export default function LandingPage() {
             pointerEvents: 'none'
         },
         heroContent: { flex: '1 1 520px', maxWidth: '700px', zIndex: 2, position: 'relative', textAlign: 'left', minWidth: '280px' },
-        heroImageWrapper: { flex: '0 0 520px', width: '100%', maxWidth: '520px', height: '420px', borderRadius: '32px', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative', background: 'transparent' },
-        heroImageOverlay: { position: 'absolute', inset: 0, borderRadius: '32px', background: 'linear-gradient(180deg, rgba(6,10,78,0.0) 55%, rgba(6,10,78,0.45) 100%)', pointerEvents: 'none' },
-        heroImage: { width: '100%', height: '100%', borderRadius: '32px', objectFit: 'cover', objectPosition: 'center top', display: 'block', background: 'transparent' },
+        heroImageWrapper: { flex: '0 0 520px', width: '100%', maxWidth: '620px', aspectRatio: '4 / 5', minHeight: '500px', height: '100%', borderRadius: '30px', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative', background: '#0b1325', boxShadow: '0 30px 70px rgba(15,23,42,0.22)', border: '1px solid rgba(148,163,184,0.12)' },
+        heroImageOverlay: { position: 'absolute', inset: 0, borderRadius: '30px', background: 'linear-gradient(180deg, rgba(2,6,23,0.08) 0%, rgba(2,6,23,0.18) 100%)', pointerEvents: 'none' },
+        heroImage: { width: '100%', height: '100%', borderRadius: '30px', objectFit: 'cover', objectPosition: 'center center', display: 'block', background: '#020817' },
         heroTitle: { fontSize: '60px', fontWeight: '900', lineHeight: 1.1, margin: '0 0 16px', letterSpacing: '-2px', color: colors.text },
         heroSubtitleAnimated: { fontSize: '32px', fontWeight: '700', lineHeight: 1.2, margin: '0 0 40px', maxWidth: '600px', color: colors.primary, minHeight: '50px' },
         heroSubtitle: { fontSize: '18px', color: colors.textMuted, lineHeight: 1.7, margin: '0 0 32px', maxWidth: '600px' },
@@ -432,56 +480,107 @@ export default function LandingPage() {
                         ref={heroVideoRef}
                         className="landing-hero-image"
                         src="/videos/hero.mp4#t=0.001"
-                        autoPlay
                         muted
-                        loop
                         playsInline
-                        preload="auto"
+                        preload="metadata"
+                        controls
                         style={p.heroImage}
-                        onCanPlay={e => e.target.play().catch(() => {})}
+                        onPause={() => setHeroPlaying(false)}
+                        onPlay={() => setHeroPlaying(true)}
+                        onEnded={() => {
+                            setHeroPlaying(false);
+                            setHeroVideoEnded(true);
+                        }}
                     />
                     <div style={p.heroImageOverlay} />
 
-                    {/* ── Video Controls ── */}
-                    <div style={{
-                        position: 'absolute', bottom: '14px', left: '50%',
-                        transform: 'translateX(-50%)',
-                        display: 'flex', alignItems: 'center', gap: '10px',
-                        background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)',
-                        borderRadius: '999px', padding: '7px 18px',
-                        zIndex: 10
-                    }}>
-                        {/* Play / Pause */}
+                    {!heroPlaying && !heroVideoEnded && (
                         <button
-                            title={heroPlaying ? 'Pause' : 'Play'}
-                            onClick={() => {
-                                const v = heroVideoRef.current;
-                                if (!v) return;
-                                if (heroPlaying) { v.pause(); setHeroPlaying(false); }
-                                else             { v.play().catch(() => {}); setHeroPlaying(true); }
+                            type="button"
+                            title="Play"
+                            aria-label="Play video"
+                            onClick={handleHeroVideoToggle}
+                            style={{
+                                position: 'absolute',
+                                left: '50%',
+                                top: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                zIndex: 10,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '12px',
+                                background: 'rgba(245, 247, 250, 0.96)',
+                                border: 'none',
+                                color: '#0f172a',
+                                borderRadius: '999px',
+                                padding: '18px 30px',
+                                fontSize: '15px',
+                                fontWeight: '900',
+                                letterSpacing: '0.08em',
+                                textTransform: 'uppercase',
+                                cursor: 'pointer',
+                                boxShadow: '0 18px 45px rgba(15, 23, 42, 0.28)',
+                                backdropFilter: 'blur(8px)',
                             }}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer',
-                                     color: '#fff', fontSize: '18px', lineHeight: 1, padding: '2px 4px' }}
                         >
-                            {heroPlaying ? '⏸' : '▶'}
+                            <span aria-hidden="true" style={{ fontSize: '24px', lineHeight: 1, display: 'inline-block', transform: 'translateY(-1px)' }}>▶</span>
+                            <span>Play</span>
                         </button>
+                    )}
 
-                        {/* Sound toggle */}
-                        <button
-                            title={heroMuted ? 'Unmute' : 'Mute'}
-                            onClick={() => {
-                                const v = heroVideoRef.current;
-                                if (!v) return;
-                                const next = !heroMuted;
-                                v.muted = next;
-                                setHeroMuted(next);
-                            }}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer',
-                                     color: '#fff', fontSize: '18px', lineHeight: 1, padding: '2px 4px' }}
-                        >
-                            {heroMuted ? '🔇' : '🔊'}
-                        </button>
-                    </div>
+                    {heroVideoEnded && (
+                        <div style={{
+                            position: 'absolute',
+                            inset: 0,
+                            zIndex: 12,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'linear-gradient(180deg, rgba(2,6,23,0.18) 0%, rgba(2,6,23,0.42) 100%)',
+                            textAlign: 'center',
+                            padding: '24px',
+                            boxSizing: 'border-box'
+                        }}>
+                            <img
+                                src="/images/Emare-ICT-Hub-Logo.jpg"
+                                alt="Emare ICT Hub logo"
+                                style={{
+                                    display: 'block',
+                                    width: '100%',
+                                    maxWidth: '270px',
+                                    height: 'auto',
+                                    objectFit: 'contain',
+                                    marginBottom: '18px',
+                                    filter: 'drop-shadow(0 0 16px rgba(16, 185, 129, 0.28))'
+                                }}
+                            />
+                            <button
+                                type="button"
+                                onClick={handleHeroVideoToggle}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '12px',
+                                    padding: '14px 20px',
+                                    borderRadius: '999px',
+                                    background: 'rgba(255,255,255,0.92)',
+                                    color: '#0f172a',
+                                    fontWeight: 900,
+                                    letterSpacing: '0.08em',
+                                    textTransform: 'uppercase',
+                                    boxShadow: '0 16px 40px rgba(15, 23, 42, 0.25)',
+                                    border: 'none',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <span aria-hidden="true" style={{ fontSize: '20px', lineHeight: 1 }}>▶</span>
+                                <span>Play Again</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
             </section>
 

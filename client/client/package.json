@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "emare-elms-client": "file:.."
+  }
+}
