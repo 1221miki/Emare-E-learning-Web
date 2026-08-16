@@ -3,8 +3,21 @@ services:
     name: emare-elms-backend
     env: node
     region: oregon
-    # Build from repo root — installs deps for both backend and client, then builds the SPA
-    buildCommand: npm install && npm --prefix backend install && npm --prefix client install && npm --prefix client run build
+    # Build: Install dependencies and build React SPA with proper error handling
+    # Exit immediately if any step fails (set -e)
+    buildCommand: |
+      bash -c 'set -e
+      echo "📦 Installing root dependencies..."
+      npm install --omit=dev
+      echo "📦 Installing backend dependencies..."
+      npm --prefix backend install --omit=dev
+      echo "📦 Installing client dependencies..."
+      npm --prefix client install --omit=dev
+      echo "🔨 Building React SPA with Vite..."
+      npm --prefix client run build
+      echo "✅ Verifying build output..."
+      test -f client/dist/index.html || (echo "❌ ERROR: client/dist/index.html not found!" && exit 1)
+      echo "✅ BUILD SUCCESSFUL - SPA is ready to serve"'
     startCommand: node backend/server.js
     envVars:
       - key: NODE_ENV

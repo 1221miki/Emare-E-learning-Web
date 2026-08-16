@@ -149,20 +149,36 @@ app.get('/api/health', (req, res) => {
     res.status(200).json({ success: true, message: 'Emare ELMS Backend is running.' });
 });
 
-// ── 404 Handler for API routes ──────────────────────────────
-// This MUST be before the SPA catch-all so unknown /api/* routes get a JSON 404
-// instead of index.html.
+// ── 404 Handler for unknown API routes ─────────────────────
+// CRITICAL: Must be BEFORE the SPA catch-all to prevent API 404s 
+// from serving index.html (which would break React Router initialization)
 app.all('/api/*', (req, res) => {
-    res.status(404).json({ success: false, message: `API Route ${req.originalUrl} not found on this server.` });
+    res.status(404).json({ 
+        success: false, 
+        message: `API Route ${req.originalUrl} not found on this server.`,
+        method: req.method,
+        path: req.path
+    });
 });
 
 // ── Serve Frontend in Production (SPA catch-all) ────────────────────────────
-// Every non-/api/* request returns index.html so React Router works on refresh.
+// CRITICAL: This MUST be AFTER /api/* routes so API 404s work correctly.
+// Every non-/api/* GET/POST/etc. request returns index.html so React Router 
+// can handle client-side navigation on refresh, reload, and direct URLs.
+//
+// Examples of what works on refresh with this setup:
+//   GET /courses     → index.html → React Router renders Course page
+//   GET /dashboard   → index.html → React Router renders Dashboard
+//   GET /login       → index.html → React Router renders Login form
+//   POST /api/auth   → backend API handles it normally
+//   GET /api/courses → backend API handles it normally
+//   GET /api/xyz     → 404 JSON from API handler above
+//
 if (process.env.NODE_ENV === 'production') {
     const fs = require('fs');
 
-    // Search every plausible location Render might place client/dist
-    const __server = __dirname;  // backend/
+    // Search for client/dist in all plausible Render deployment locations
+    const __server = __dirname;  // backend/ directory
     const __root   = path.resolve(__server, '..');  // repo root
     const __cwd    = process.cwd();
 
@@ -176,48 +192,104 @@ if (process.env.NODE_ENV === 'production') {
     ];
 
     let staticDir = null;
-    console.log('🔍 Searching for client/dist...');
+    console.log('\n🔍 Searching for built React SPA (client/dist)...');
     for (const p of candidates) {
+        const indexPath = path.join(p, 'index.html');
         try {
-            if (fs.existsSync(p) && fs.existsSync(path.join(p, 'index.html'))) {
+            if (fs.existsSync(p) && fs.existsSync(indexPath)) {
                 staticDir = p;
-                console.log(`✅ Found React SPA at: ${staticDir}`);
+                console.log(`✅ FOUND React SPA at: ${staticDir}\n`);
                 break;
             }
-            console.log(`   ✗ Not found: ${p}`);
-        } catch { /* skip */ }
+        } catch (err) { 
+            // ignore errors, just skip this path
+        }
     }
 
     if (staticDir) {
-        // 1. Hashed assets — long cache
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // SERVE STATIC ASSETS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        
+        // 1. Hashed assets (JS/CSS with content hashes) — cache for 1 year
+        //    These filenames never change for the same content, so it's safe.
         app.use('/assets', express.static(path.join(staticDir, 'assets'), {
-            maxAge: '1y', immutable: true
+            maxAge: '1y',
+            immutable: true,
+            etag: false  // Hashed names + immutable is enough
         }));
 
-        // 2. Everything else in dist (favicon, manifest, images, etc.)
-        app.use(express.static(staticDir, { index: false }));
+        // 2. Everything else in dist (favicon.ico, manifest.json, images, fonts, etc.)
+        //    Served without caching to catch updates quickly
+        app.use(express.static(staticDir, { 
+            index: false,  // Don't automatically serve index.html for dirs
+            etag: false    // Let browser decide with Last-Modified
+        }));
 
-        // 3. SPA catch-all — serves index.html for ALL non-API GET requests
-        //    This is what makes /login, /register, /dashboard etc. work on refresh.
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // SPA CATCH-ALL — Handles client-side routing
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        
+        // This middleware catches ALL non-/api/* requests and serves index.html.
+        // React Router on the client then determines which page to render based on URL.
+        // 
+        // Use app.use('*', ...) not app.get('*', ...) to catch all HTTP methods,
+        // though typically only GET requests would reach here (POST/PUT to /api/* 
+        // are caught by API routes above).
+        //
+        // Critical: Only respond to non-API, non-static requests. Static assets
+        // are already served above by express.static before this middleware runs.
         app.use('*', (req, res) => {
-            res.sendFile(path.resolve(staticDir, 'index.html'));
+            const indexPath = path.resolve(staticDir, 'index.html');
+            
+            // Verify index.html still exists before serving
+            if (!fs.existsSync(indexPath)) {
+                console.error(`❌ index.html missing at: ${indexPath}`);
+                res.status(500).send('Internal Server Error: Missing index.html');
+                return;
+            }
+            
+            // Serve index.html for SPA routing
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.sendFile(indexPath);
         });
 
+        console.log('✅ SPA routing configured:');
+        console.log('   /api/*        → backend API (protected)');
+        console.log('   /assets/*     → hashed assets (1 year cache)');
+        console.log('   /other-static → static files (no cache)');
+        console.log('   /* (other)    → index.html (SPA routing)\n');
+
     } else {
-        console.error('❌ client/dist not found! Build may have failed.');
-        console.error('   cwd:', __cwd);
-        console.error('   __dirname:', __server);
+        // Build failed or dist not found
+        console.error('\n❌ FATAL: client/dist not found!');
+        console.error('   The React SPA build may have failed.');
+        console.error('\n   Checked these locations:');
+        candidates.forEach(p => console.error(`   - ${p}`));
+        console.error('\n   Fix: Check Render build logs at https://dashboard.render.com\n');
+        
         // Catch-all so Render doesn't show a naked 404
         app.use('*', (_req, res) => {
-            res.status(503).send(
-                '<h2>Build not found</h2>' +
-                '<p>The React app was not built. Check build logs on Render.</p>'
-            );
+            res.status(503).json({
+                success: false,
+                error: 'Build not found',
+                message: 'The React SPA was not built successfully. Check build logs.',
+                debug: {
+                    nodeEnv: process.env.NODE_ENV,
+                    cwd: __cwd,
+                    __dirname: __server
+                }
+            });
         });
     }
 } else {
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // DEVELOPMENT MODE
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // In development, Vite dev server runs separately on port 5173
+    // Backend only serves API routes
     app.get('/', (_req, res) => {
-        res.send('API is running in development mode. Run the React client separately.');
+        res.send('ℹ️  API is running in development mode.\n\nTo start the React client:\n  cd client && npm run dev\n\nClient will run on http://localhost:5173\nAPI on http://localhost:5000');
     });
 }
 
