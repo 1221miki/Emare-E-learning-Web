@@ -14,6 +14,9 @@ export default function LandingPage() {
     const [activeFaq, setActiveFaq] = useState(null);
     const [platformStats, setPlatformStats] = useState(null); // real stats from DB
     const [coursesVisible, setCoursesVisible] = useState(8); // pagination: show 8 initially
+    const heroVideoRef = useRef(null);
+    const [heroMuted,   setHeroMuted]   = useState(true);   // start muted (browser policy)
+    const [heroPlaying, setHeroPlaying] = useState(true);
     const [contactStatus, setContactStatus] = useState(null);
     const [upcomingSessions, setUpcomingSessions] = useState([]); // real live sessions from DB
     const [reservingId, setReservingId] = useState(null);
@@ -306,9 +309,9 @@ export default function LandingPage() {
             pointerEvents: 'none'
         },
         heroContent: { flex: '1 1 520px', maxWidth: '700px', zIndex: 2, position: 'relative', textAlign: 'left', minWidth: '280px' },
-        heroImageWrapper: { flex: '0 0 520px', width: '100%', maxWidth: '520px', height: '420px', borderRadius: '32px', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative' },
+        heroImageWrapper: { flex: '0 0 520px', width: '100%', maxWidth: '520px', height: '420px', borderRadius: '32px', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative', background: 'transparent' },
         heroImageOverlay: { position: 'absolute', inset: 0, borderRadius: '32px', background: 'linear-gradient(180deg, rgba(6,10,78,0.0) 55%, rgba(6,10,78,0.45) 100%)', pointerEvents: 'none' },
-        heroImage: { width: '100%', height: '100%', borderRadius: '32px', objectFit: 'cover', objectPosition: 'center top', display: 'block' },
+        heroImage: { width: '100%', height: '100%', borderRadius: '32px', objectFit: 'cover', objectPosition: 'center top', display: 'block', background: 'transparent' },
         heroTitle: { fontSize: '60px', fontWeight: '900', lineHeight: 1.1, margin: '0 0 16px', letterSpacing: '-2px', color: colors.text },
         heroSubtitleAnimated: { fontSize: '32px', fontWeight: '700', lineHeight: 1.2, margin: '0 0 40px', maxWidth: '600px', color: colors.primary, minHeight: '50px' },
         heroSubtitle: { fontSize: '18px', color: colors.textMuted, lineHeight: 1.7, margin: '0 0 32px', maxWidth: '600px' },
@@ -426,15 +429,59 @@ export default function LandingPage() {
                 </div>
                 <div className="landing-hero-image-wrapper" style={p.heroImageWrapper}>
                     <video
+                        ref={heroVideoRef}
                         className="landing-hero-image"
-                        src="/videos/hero.mp4"
+                        src="/videos/hero.mp4#t=0.001"
                         autoPlay
                         muted
                         loop
                         playsInline
+                        preload="auto"
                         style={p.heroImage}
+                        onCanPlay={e => e.target.play().catch(() => {})}
                     />
                     <div style={p.heroImageOverlay} />
+
+                    {/* ── Video Controls ── */}
+                    <div style={{
+                        position: 'absolute', bottom: '14px', left: '50%',
+                        transform: 'translateX(-50%)',
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)',
+                        borderRadius: '999px', padding: '7px 18px',
+                        zIndex: 10
+                    }}>
+                        {/* Play / Pause */}
+                        <button
+                            title={heroPlaying ? 'Pause' : 'Play'}
+                            onClick={() => {
+                                const v = heroVideoRef.current;
+                                if (!v) return;
+                                if (heroPlaying) { v.pause(); setHeroPlaying(false); }
+                                else             { v.play().catch(() => {}); setHeroPlaying(true); }
+                            }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer',
+                                     color: '#fff', fontSize: '18px', lineHeight: 1, padding: '2px 4px' }}
+                        >
+                            {heroPlaying ? '⏸' : '▶'}
+                        </button>
+
+                        {/* Sound toggle */}
+                        <button
+                            title={heroMuted ? 'Unmute' : 'Mute'}
+                            onClick={() => {
+                                const v = heroVideoRef.current;
+                                if (!v) return;
+                                const next = !heroMuted;
+                                v.muted = next;
+                                setHeroMuted(next);
+                            }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer',
+                                     color: '#fff', fontSize: '18px', lineHeight: 1, padding: '2px 4px' }}
+                        >
+                            {heroMuted ? '🔇' : '🔊'}
+                        </button>
+                    </div>
                 </div>
             </section>
 
