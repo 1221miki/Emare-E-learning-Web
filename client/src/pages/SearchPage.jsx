@@ -35,7 +35,6 @@ export default function SearchPage() {
     const [courses, setCourses] = useState([]);
     const [instructors, setInstructors] = useState([]);
     const [categories, setCategories] = useState([]);
-    const [loading, setLoading] = useState(false);
 
     const [activeTab, setActiveTab] = useState('courses');
     const [filterLevel, setFilterLevel] = useState('All');
@@ -46,7 +45,6 @@ export default function SearchPage() {
 
     useEffect(() => {
         const fetchData = async () => {
-            setLoading(true);
             try {
                 const [courseRes, userRes, catRes] = await Promise.all([
                     courseService.getAll(),
@@ -59,8 +57,6 @@ export default function SearchPage() {
                 setCategories(catRes.data?.data || []);
             } catch (e) {
                 console.error(e);
-            } finally {
-                setLoading(false);
             }
         };
         fetchData();
@@ -263,10 +259,7 @@ export default function SearchPage() {
                         </div>
                     )}
 
-                    {loading ? (
-                        <div style={s.empty}><div style={{ fontSize: '48px', marginBottom: '12px' }}>⏳</div>Searching...</div>
-                    ) : (
-                        <>
+                    <>
                             {/* Courses Tab */}
                             {activeTab === 'courses' && (
                                 filteredCourses.length === 0 ? (
@@ -362,8 +355,7 @@ export default function SearchPage() {
                                     </div>
                                 )
                             )}
-                        </>
-                    )}
+                    </>
                 </div>
             </div>
         </div>

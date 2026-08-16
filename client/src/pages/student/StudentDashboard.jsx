@@ -150,6 +150,7 @@ export default function StudentDashboard() {
         setMessagesSection(section);
         setActiveTab('messages');
     };
+    const [conversations, setConversations] = useState([]);
     const [activeConversation, setActiveConversation] = useState(null);
     const [conversationMessages, setConversationMessages] = useState([]);
     const [messageInput, setMessageInput] = useState('');
@@ -803,9 +804,7 @@ export default function StudentDashboard() {
                     <div style={styles.avatar}>{user?.fullName?.[0]?.toUpperCase() || 'S'}</div>
                 </header>
 
-                {/* Loading State */}
-                {!loading && (
-                    <div>
+                <div>
                         {activeTab === 'learning' ? (
                             <>
                                 <MyCoursesHub 
@@ -845,8 +844,7 @@ export default function StudentDashboard() {
                         ) : (
                             renderTab()
                         )}
-                    </div>
-                )}
+                </div>
             </main>
         </div>
     );

@@ -16,7 +16,6 @@ export default function CourseDetailPage() {
     const [course, setCourse] = useState(null);
     const [reviews, setReviews] = useState([]);
     const [inWishlist, setInWishlist] = useState(false);
-    const [loading, setLoading] = useState(true);
     const [enrolling, setEnrolling] = useState(false);
     const [isEnrolled, setIsEnrolled] = useState(false);
     const [guestModal, setGuestModal] = useState({ open: false, action: '' });
@@ -72,8 +71,6 @@ export default function CourseDetailPage() {
             }
         }).catch(() => {
             console.error('Failed to load enrollment or wishlist state.');
-        }).finally(() => {
-            setLoading(false);
         });
     }, [courseId, isAuthenticated, isStudent]);
 
@@ -125,8 +122,11 @@ export default function CourseDetailPage() {
         }
     };
 
-    if (loading) return <div style={{ minHeight: '100vh', background: colors.bg, color: colors.text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading course details...</div>;
-    if (!course) return <div style={{ minHeight: '100vh', background: colors.bg, color: colors.text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Course not found.</div>;
+    if (!course) return (
+        <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: "'Segoe UI', sans-serif'" }}>
+            <Navbar />
+        </div>
+    );
 
     return (
         <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: "'Segoe UI', sans-serif" }}>

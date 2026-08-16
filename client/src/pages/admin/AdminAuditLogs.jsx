@@ -83,7 +83,6 @@ export default function AdminAuditLogs() {
 
     const [logs,       setLogs]       = useState([]);
     const [stats,      setStats]      = useState(null);
-    const [loading,    setLoading]    = useState(true);
     const [error,      setError]      = useState('');
     const [search,     setSearch]     = useState('');
     const [category,   setCategory]   = useState('');
@@ -99,7 +98,6 @@ export default function AdminAuditLogs() {
 
     // ── Fetch ──────────────────────────────────────────────────────────────
     const fetchLogs = useCallback(async (params = {}) => {
-        setLoading(true);
         setError('');
         try {
             const res = await auditService.getLogs({
@@ -116,8 +114,6 @@ export default function AdminAuditLogs() {
             setLogs(MOCK_LOGS);
             setPagination({ total: MOCK_LOGS.length, totalPages: 1 });
             setUsingMock(true);
-        } finally {
-            setLoading(false);
         }
     }, [category, severity, search, dateFrom, dateTo, page]);
 
@@ -399,20 +395,8 @@ export default function AdminAuditLogs() {
                         ))}
                     </div>
 
-                    {/* Loading */}
-                    {loading && (
-                        <div style={{ padding: '60px 0', textAlign: 'center' }}>
-                            <div style={{
-                                width: 40, height: 40, border: '3px solid rgba(139,92,246,0.2)',
-                                borderTop: '3px solid #8b5cf6', borderRadius: '50%',
-                                animation: 'auditSpin 0.8s linear infinite', margin: '0 auto 16px'
-                            }} />
-                            <p style={{ color: muted, fontSize: 14 }}>Loading audit logs…</p>
-                        </div>
-                    )}
-
                     {/* Empty */}
-                    {!loading && logs.length === 0 && (
+                    {logs.length === 0 && (
                         <div style={{ padding: '60px 0', textAlign: 'center' }}>
                             <Shield size={48} color={muted} style={{ marginBottom: 16, opacity: 0.4 }} />
                             <p style={{ color: muted, fontSize: 15, fontWeight: 600 }}>No audit logs match your filters</p>
@@ -421,7 +405,7 @@ export default function AdminAuditLogs() {
                     )}
 
                     {/* Rows */}
-                    {!loading && logs.map((log, idx) => {
+                    {logs.map((log, idx) => {
                         const sev     = SEV_META[log.severity] || SEV_META.info;
                         const catMeta = CAT_META[log.category] || CAT_META['System & Diagnostics'];
                         const CatIcon = catMeta.icon;

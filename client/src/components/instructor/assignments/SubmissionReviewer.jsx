@@ -33,7 +33,6 @@ function RelTime({ date }) {
 
 export default function SubmissionReviewer({ assignment, allSubmissions, onGrade, onBack, onUpdated }) {
     const [submissions, setSubmissions] = useState([]);
-    const [loading, setLoading]         = useState(false);
     const [search, setSearch]           = useState('');
     const [filter, setFilter]           = useState('all');
     const [updating, setUpdating]       = useState(null);
@@ -43,11 +42,9 @@ export default function SubmissionReviewer({ assignment, allSubmissions, onGrade
         // Use cached submissions from parent, or fetch fresh
         const cached = allSubmissions.filter(s => (s.assignmentRef?._id || s.assignmentRef) === assignment._id);
         if (cached.length > 0) { setSubmissions(cached); return; }
-        setLoading(true);
         assignmentService.getSubmissions(assignment._id)
             .then(r => setSubmissions(r.data.data || []))
-            .catch(console.error)
-            .finally(() => setLoading(false));
+            .catch(console.error);
     }, [assignment, allSubmissions]);
 
     const updateStatus = async (sub, newStatus) => {
@@ -132,9 +129,7 @@ export default function SubmissionReviewer({ assignment, allSubmissions, onGrade
 
             {/* Table */}
             <div style={{ ...card, overflow: 'hidden' }}>
-                {loading ? (
-                    <div style={{ padding: '40px', textAlign: 'center', color: '#475569' }}>Loading submissions…</div>
-                ) : filtered.length === 0 ? (
+                {filtered.length === 0 ? (
                     <div style={{ padding: '60px', textAlign: 'center' }}>
                         <FileText size={40} color="#1e293b" style={{ display: 'block', margin: '0 auto 12px' }} aria-hidden="true" />
                         <p style={{ color: '#475569', fontSize: '14px', margin: 0 }}>No submissions match your filters.</p>

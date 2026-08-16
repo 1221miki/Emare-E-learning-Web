@@ -58,7 +58,6 @@ export default function PaymentsTab(dash) {
 
     const [section, setSection] = useState('history');
     const [transactions, setTransactions] = useState([]);
-    const [txLoading, setTxLoading] = useState(true);
 
     const [methods, setMethods] = useState(() => readLocal(METHODS_KEY, []));
     const [methodProvider, setMethodProvider] = useState('cbe');
@@ -67,7 +66,6 @@ export default function PaymentsTab(dash) {
 
     const [activeInvoice, setActiveInvoice] = useState(null);
     const [invoiceData, setInvoiceData] = useState(null);
-    const [invoiceLoading, setInvoiceLoading] = useState(false);
 
     const [refundTxId, setRefundTxId] = useState('');
     const [refundReason, setRefundReason] = useState('');
@@ -91,8 +89,7 @@ export default function PaymentsTab(dash) {
     useEffect(() => {
         paymentService.history()
             .then(res => setTransactions(res.data.data || []))
-            .catch(() => setTransactions([]))
-            .finally(() => setTxLoading(false));
+            .catch(() => setTransactions([]));
     }, []);
 
     const totalPaid = transactions
@@ -120,14 +117,11 @@ export default function PaymentsTab(dash) {
     const openInvoice = async (tx) => {
         setActiveInvoice(tx._id);
         setInvoiceData(null);
-        setInvoiceLoading(true);
         try {
             const res = await paymentService.invoice(tx._id);
             setInvoiceData(res.data.data || null);
         } catch {
             setInvoiceData(null);
-        } finally {
-            setInvoiceLoading(false);
         }
     };
 
@@ -206,9 +200,7 @@ export default function PaymentsTab(dash) {
                     <h3 style={{ margin: 0, color: colors.text, fontSize: '16px', fontWeight: '700' }}>Transaction History</h3>
                     <span style={{ color: colors.textMuted, fontSize: '12px' }}>{transactions.length} payment record(s)</span>
                 </div>
-                {txLoading ? (
-                    <div style={{ padding: '32px', color: colors.textMuted, fontSize: '13px' }}>Loading payment history...</div>
-                ) : transactions.length === 0 ? (
+                {transactions.length === 0 ? (
                     <div style={styles.emptyContent}>
                         <CreditCard size={40} color={colors.textMuted} style={{ marginBottom: '12px' }} aria-hidden="true" />
                         <p style={styles.emptyText}>No payment transactions yet. Enroll in a course and complete a payment to see it here.</p>
@@ -347,9 +339,7 @@ export default function PaymentsTab(dash) {
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${colors.border}` }}>
                 <h3 style={{ margin: 0, color: colors.text, fontSize: '16px', fontWeight: '700' }}>Invoices & Receipts</h3>
             </div>
-            {txLoading ? (
-                <div style={{ padding: '32px', color: colors.textMuted, fontSize: '13px' }}>Loading invoices...</div>
-            ) : transactions.length === 0 ? (
+            {transactions.length === 0 ? (
                 <div style={styles.emptyContent}>
                     <FileText size={40} color={colors.textMuted} style={{ marginBottom: '12px' }} aria-hidden="true" />
                     <p style={styles.emptyText}>No invoices yet. Completed payments generate a downloadable receipt automatically.</p>
@@ -395,9 +385,7 @@ export default function PaymentsTab(dash) {
                             </h3>
                             <button onClick={() => setActiveInvoice(null)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.textMuted, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>Close</button>
                         </div>
-                        {invoiceLoading ? (
-                            <div style={{ padding: '40px 0', color: colors.textMuted, fontSize: '13px', textAlign: 'center' }}>Loading invoice...</div>
-                        ) : invoiceData ? (
+                        {invoiceData ? (
                             <div>
                                 <div style={{ background: colors.bgInput, borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}><span style={{ color: colors.textMuted, fontSize: '13px' }}>Invoice Number</span><span style={{ color: colors.text, fontWeight: '700' }}>{invoiceData.invoiceNumber}</span></div>

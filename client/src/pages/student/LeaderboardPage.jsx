@@ -8,7 +8,6 @@ export default function LeaderboardPage() {
     const { colors } = useTheme();
     const { user } = useAuth();
     const [leaders, setLeaders] = useState([]);
-    const [loading, setLoading] = useState(true);
 
     const navItems = [
         { label: 'Dashboard', path: '/student/dashboard', key: 'dashboard' },
@@ -23,8 +22,7 @@ export default function LeaderboardPage() {
     useEffect(() => {
         leaderboardService.getTop()
             .then(res => setLeaders(res.data.data))
-            .catch(err => console.error(err))
-            .finally(() => setLoading(false));
+            .catch(err => console.error(err));
     }, []);
 
     const getRankStyle = (idx) => {
@@ -47,10 +45,7 @@ export default function LeaderboardPage() {
                         <p style={{ color: colors.textMuted, fontSize: '18px' }}>Top 50 Students by Gamification XP</p>
                     </div>
 
-                    {loading ? (
-                        <div style={{ textAlign: 'center', color: colors.textMuted }}>Loading rankings...</div>
-                    ) : (
-                        <div style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+                    <div style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '16px', overflow: 'hidden' }}>
                             {leaders.map((student, idx) => (
                                 <div key={student._id} style={{
                                     display: 'flex', alignItems: 'center', padding: '20px', gap: '20px',
@@ -81,7 +76,6 @@ export default function LeaderboardPage() {
                                 </div>
                             ))}
                         </div>
-                    )}
                 </div>
             </main>
         </div>

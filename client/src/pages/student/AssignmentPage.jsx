@@ -9,7 +9,6 @@ export default function AssignmentPage() {
     const { colors } = useTheme();
     const [assignments, setAssignments] = useState([]);
     const [mySubmissions, setMySubmissions] = useState([]);
-    const [loading, setLoading] = useState(true);
 
     const [activeAssignment, setActiveAssignment] = useState(null);
     const [fileUrl, setFileUrl] = useState('');
@@ -29,7 +28,7 @@ export default function AssignmentPage() {
         ]).then(([resAssignments, resSubmissions]) => {
             setAssignments(resAssignments.data.data);
             setMySubmissions(resSubmissions.data.data);
-        }).catch(console.error).finally(() => setLoading(false));
+        }).catch(console.error);
     }, [courseId]);
 
     const handleFileChange = (e) => {
@@ -70,9 +69,7 @@ export default function AssignmentPage() {
             <main style={{ marginLeft: '260px', padding: '40px', flex: 1, maxWidth: '900px' }}>
                 <h1 style={{ color: colors.text, fontSize: '28px', fontWeight: '800', marginBottom: '32px' }}>Course Assignments</h1>
 
-                {loading ? (
-                    <div style={{ color: colors.textMuted }}>Loading assignments...</div>
-                ) : assignments.length === 0 ? (
+                {assignments.length === 0 ? (
                     <div style={{ color: colors.textMuted, padding: '40px', textAlign: 'center', border: `1px solid ${colors.border}`, borderRadius: '12px' }}>No assignments for this course.</div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

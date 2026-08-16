@@ -1,23 +1,7 @@
-import React, { lazy, Suspense } from 'react';
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-
-// ── Instant page-shell fallback (shows immediately, no white flash) ────────
-const PageShell = () => (
-    <div style={{
-        minHeight: '100vh', background: '#0f172a',
-        display: 'flex', alignItems: 'center', justifyContent: 'center'
-    }}>
-        <div style={{
-            width: 36, height: 36, borderRadius: '50%',
-            border: '3px solid rgba(99,102,241,0.25)',
-            borderTopColor: '#6366f1',
-            animation: 'spin 0.7s linear infinite'
-        }} />
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-    </div>
-);
 
 // ── Chunk-load error boundary: retries once on network failure ─────────────
 class ChunkErrorBoundary extends React.Component {
@@ -58,60 +42,60 @@ class ChunkErrorBoundary extends React.Component {
     }
 }
 
-// ── Lazy-loaded pages (each gets its own JS chunk) ─────────────────────────
-const LandingPage           = lazy(() => import('./pages/LandingPage'));
-const LoginPage             = lazy(() => import('./pages/LoginPage'));
-const RegisterPage          = lazy(() => import('./pages/RegisterPage'));
-const ResetPasswordPage     = lazy(() => import('./pages/ResetPasswordPage'));
-const VerifyEmailPage       = lazy(() => import('./pages/VerifyEmailPage'));
-const AboutPage             = lazy(() => import('./pages/AboutPage'));
-const HelpPage              = lazy(() => import('./pages/HelpPage'));
-const PrivacyPage           = lazy(() => import('./pages/PrivacyPage'));
-const TermsPage             = lazy(() => import('./pages/TermsPage'));
-const CookiePage            = lazy(() => import('./pages/CookiePage'));
-const DevelopersPage        = lazy(() => import('./pages/DevelopersPage'));
+// ── Pages (static imports, so nothing lazy-loads and no spinner is shown) ──
+import LandingPage           from './pages/LandingPage';
+import LoginPage             from './pages/LoginPage';
+import RegisterPage          from './pages/RegisterPage';
+import ResetPasswordPage     from './pages/ResetPasswordPage';
+import VerifyEmailPage       from './pages/VerifyEmailPage';
+import AboutPage             from './pages/AboutPage';
+import HelpPage              from './pages/HelpPage';
+import PrivacyPage           from './pages/PrivacyPage';
+import TermsPage             from './pages/TermsPage';
+import CookiePage            from './pages/CookiePage';
+import DevelopersPage        from './pages/DevelopersPage';
 
 // Student pages
-const StudentDashboard      = lazy(() => import('./pages/student/StudentDashboard'));
-const LearningWorkspace     = lazy(() => import('./pages/student/LearningWorkspace'));
-const CourseCatalog         = lazy(() => import('./pages/student/CourseCatalog'));
-const CourseDetailPage      = lazy(() => import('./pages/student/CourseDetailPage'));
-const QuizPage              = lazy(() => import('./pages/student/QuizPage'));
-const PaymentPage           = lazy(() => import('./pages/student/PaymentPage'));
-const WishlistPage          = lazy(() => import('./pages/student/WishlistPage'));
-const CertificatesPage      = lazy(() => import('./pages/student/CertificatesPage'));
-const ProfilePage           = lazy(() => import('./pages/student/ProfilePage'));
-const LeaderboardPage       = lazy(() => import('./pages/student/LeaderboardPage'));
-const DiscussionPage        = lazy(() => import('./pages/student/DiscussionPage'));
-const AssignmentPage        = lazy(() => import('./pages/student/AssignmentPage'));
-const MockCheckoutPage      = lazy(() => import('./pages/student/MockCheckoutPage'));
-const Checkout              = lazy(() => import('./pages/student/Checkout'));
-const PaymentCallbackPage   = lazy(() => import('./pages/student/PaymentCallbackPage'));
-const PaymentSuccess        = lazy(() => import('./pages/student/PaymentSuccess'));
-const PaymentFailed         = lazy(() => import('./pages/student/PaymentFailed'));
+import StudentDashboard      from './pages/student/StudentDashboard';
+import LearningWorkspace     from './pages/student/LearningWorkspace';
+import CourseCatalog         from './pages/student/CourseCatalog';
+import CourseDetailPage      from './pages/student/CourseDetailPage';
+import QuizPage              from './pages/student/QuizPage';
+import PaymentPage           from './pages/student/PaymentPage';
+import WishlistPage          from './pages/student/WishlistPage';
+import CertificatesPage      from './pages/student/CertificatesPage';
+import ProfilePage           from './pages/student/ProfilePage';
+import LeaderboardPage       from './pages/student/LeaderboardPage';
+import DiscussionPage        from './pages/student/DiscussionPage';
+import AssignmentPage        from './pages/student/AssignmentPage';
+import MockCheckoutPage      from './pages/student/MockCheckoutPage';
+import Checkout              from './pages/student/Checkout';
+import PaymentCallbackPage   from './pages/student/PaymentCallbackPage';
+import PaymentSuccess        from './pages/student/PaymentSuccess';
+import PaymentFailed         from './pages/student/PaymentFailed';
 
 // Instructor pages
-const InstructorDashboard   = lazy(() => import('./pages/instructor/InstructorDashboard'));
-const InstructorSettings    = lazy(() => import('./pages/instructor/InstructorSettings'));
-const AssignmentBuilder     = lazy(() => import('./pages/instructor/AssignmentBuilder'));
-const CourseCreationWizard  = lazy(() => import('./pages/instructor/CourseCreationWizard'));
-const QuizManagementDashboard = lazy(() => import('./pages/instructor/QuizManagementDashboard'));
+import InstructorDashboard   from './pages/instructor/InstructorDashboard';
+import InstructorSettings    from './pages/instructor/InstructorSettings';
+import AssignmentBuilder     from './pages/instructor/AssignmentBuilder';
+import CourseCreationWizard  from './pages/instructor/CourseCreationWizard';
+import QuizManagementDashboard from './pages/instructor/QuizManagementDashboard';
 
 // Admin pages
-const AdminDashboard        = lazy(() => import('./pages/admin/AdminDashboard'));
-const AdminAuditLogs        = lazy(() => import('./pages/admin/AdminAuditLogs'));
-const AdminUserProfilePage  = lazy(() => import('./pages/admin/AdminUserProfilePage'));
-const AdminCoupons          = lazy(() => import('./pages/admin/Coupons'));
-const CouponDetail          = lazy(() => import('./pages/admin/CouponDetail'));
+import AdminDashboard        from './pages/admin/AdminDashboard';
+import AdminAuditLogs        from './pages/admin/AdminAuditLogs';
+import AdminUserProfilePage  from './pages/admin/AdminUserProfilePage';
+import AdminCoupons          from './pages/admin/Coupons';
+import CouponDetail          from './pages/admin/CouponDetail';
 
 // Shared pages
-const VerifyCertificatePage = lazy(() => import('./pages/VerifyCertificatePage'));
-const MessageInboxPage      = lazy(() => import('./pages/MessageInboxPage'));
-const LiveSessionsPage      = lazy(() => import('./pages/LiveSessionsPage'));
-const CategoriesPage        = lazy(() => import('./pages/CategoriesPage'));
-const CareerTracksPage      = lazy(() => import('./pages/CareerTracksPage'));
-const SearchPage            = lazy(() => import('./pages/SearchPage'));
-const InstructorProfilePage = lazy(() => import('./pages/InstructorProfilePage'));
+import VerifyCertificatePage from './pages/VerifyCertificatePage';
+import MessageInboxPage      from './pages/MessageInboxPage';
+import LiveSessionsPage      from './pages/LiveSessionsPage';
+import CategoriesPage        from './pages/CategoriesPage';
+import CareerTracksPage      from './pages/CareerTracksPage';
+import SearchPage            from './pages/SearchPage';
+import InstructorProfilePage from './pages/InstructorProfilePage';
 
 // ── Route Guard ────────────────────────────────────────────────────────────
 const PrivateRoute = ({ children, allowedRoles }) => {
@@ -124,7 +108,6 @@ const PrivateRoute = ({ children, allowedRoles }) => {
 function AppRoutes() {
     return (
         <ChunkErrorBoundary>
-            <Suspense fallback={<PageShell />}>
             <Routes>
                 {/* ── Public Routes ──────────────────────────────────── */}
                 <Route path="/"                      element={<LandingPage />} />
@@ -202,7 +185,6 @@ function AppRoutes() {
                     </div>
                 } />
             </Routes>
-        </Suspense>
         </ChunkErrorBoundary>
     );
 }

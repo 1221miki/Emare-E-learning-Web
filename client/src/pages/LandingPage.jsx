@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { courseService, subscriptionService, userService, liveSessionService } from '../services/api.jsx';
+import { courseService, subscriptionService, userService } from '../services/api.jsx';
 import Navbar from '../components/Navbar';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 
 export default function LandingPage() {
     const { colors, theme } = useTheme();
@@ -15,7 +16,6 @@ export default function LandingPage() {
     const [coursesVisible, setCoursesVisible] = useState(8); // pagination: show 8 initially
     const [contactStatus, setContactStatus] = useState(null);
     const [upcomingSessions, setUpcomingSessions] = useState([]); // real live sessions from DB
-    const [liveLoading, setLiveLoading] = useState(true);
     const [reservingId, setReservingId] = useState(null);
     const navigate = useNavigate();
 
@@ -27,13 +27,12 @@ export default function LandingPage() {
 
     // ── Subscription state ─────────────────────────────────────────────────
     //
-    // subPhase controls exactly what the section renders — prevents any flash:
-    //   'loading'       → skeleton / spinner (initial state, shown until DB responds)
+    // subPhase controls exactly what the section renders — no loading skeleton:
     //   'subscribed'    → "You're subscribed!" card
     //   'email_check'   → small "enter email to check status" form (anonymous only)
     //   'form'          → full subscription form
     //
-    const [subPhase, setSubPhase] = useState('loading');
+    const [subPhase, setSubPhase] = useState('form');
     const [subEmail, setSubEmail] = useState('');
     const [subLoading, setSubLoading] = useState(false);
     const [subMessage, setSubMessage] = useState('');
@@ -72,13 +71,13 @@ export default function LandingPage() {
                 // Network error — fall back to showing the form (safe default)
                 setSubPhase('form');
             });
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []);
 
     // ── Email-check handler (anonymous path) ──────────────────────────────
     const handleCheckEmail = async (e) => {
         e.preventDefault();
         const email = checkEmail.trim().toLowerCase();
-        const emailRe = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+        const emailRe = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!email || !emailRe.test(email)) {
             setCheckError('Please enter a valid email address.');
             return;
@@ -110,7 +109,7 @@ export default function LandingPage() {
     const handleSubscribe = async (e) => {
         e.preventDefault();
         const email = subEmail.trim().toLowerCase();
-        const emailRe = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+        const emailRe = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!email) { setSubError('Please enter your email address.'); return; }
         if (!emailRe.test(email)) { setSubError('Please enter a valid email address.'); return; }
 
@@ -151,13 +150,7 @@ export default function LandingPage() {
         // Fetch real platform stats (public endpoint — no auth required)
         userService.getPublicStats()
             .then(res => setPlatformStats(res.data?.data || null))
-            .catch(() => setPlatformStats(null)); // silently fall back to zeros if unavailable
-
-        // Fetch real upcoming live sessions (public endpoint — no auth required)
-        liveSessionService.getUpcoming()
-            .then(res => setUpcomingSessions(res.data?.data || []))
-            .catch(() => setUpcomingSessions([]))
-            .finally(() => setLiveLoading(false));
+            .catch(() => setPlatformStats(null));
     }, []);
 
     const handleSearch = (e) => {
@@ -167,17 +160,16 @@ export default function LandingPage() {
 
     // ── DATA MOCKS FOR 21 SECTIONS ──────────────────────────────────────────────
 
-    // Real platform stats from the database (GET /api/stats) — never hardcoded.
-    // Falls back to zeros while loading or if the endpoint is unavailable.
+    // Real platform stats from the database (GET /api/users/stats/public) — never hardcoded.
+    // Falls back to course count from already-loaded allCourses while loading.
     const ps = platformStats || {};
-    const fmt = (n) => `${(n || 0).toLocaleString()}+`;
+    const fmt = (n) => n != null && n > 0 ? `${n.toLocaleString()}+` : '0+';
     const stats = [
-        { value: fmt(ps.totalCourses ?? allCourses.length), label: 'Total Courses', icon: '▧' },
-        { value: fmt(ps.totalStudents), label: 'Total Students', icon: '◈' },
-        { value: fmt(ps.totalInstructors), label: 'Total Instructors', icon: '◈' },
-        { value: fmt(ps.totalCertificates), label: 'Certificates Issued', icon: '' },
-        { value: fmt(ps.learningHours), label: 'Learning Hours', icon: '⏱️' },
-        { value: fmt(ps.totalCountries), label: 'Countries Reached', icon: '◉' }
+        { value: fmt(ps.totalCourses ?? allCourses.length), label: 'Total Courses',     icon: '▧' },
+        { value: fmt(ps.totalStudents),                      label: 'Total Students',    icon: '◈' },
+        { value: fmt(ps.totalInstructors),                   label: 'Total Instructors', icon: '◈' },
+        { value: fmt(ps.totalCertificates),                  label: 'Certificates Issued', icon: '' },
+        { value: fmt(ps.totalEnrollments),                   label: 'Total Enrollments', icon: '⏱️' }
     ];
 
     const categories = [
@@ -371,6 +363,17 @@ export default function LandingPage() {
         contactSuccess: { background: 'rgba(34,197,94,0.12)', color: '#4ade80', padding: '14px 18px', borderRadius: '12px', border: '1px solid rgba(34,197,94,0.35)', fontSize: '14px', marginTop: '16px' },
         contactImageWrap: { position: 'relative', borderRadius: '24px', overflow: 'hidden', minHeight: '420px' },
         contactImage: { width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius: '24px', minHeight: '420px' },
+
+        // Contact banner + map (just above the footer)
+        contactBanner: { background: '#212832', padding: '56px 5%', borderTop: `1px solid ${colors.border}` },
+        contactBannerGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '32px', maxWidth: '1400px', margin: '0 auto' },
+        contactItem: { display: 'flex', alignItems: 'flex-start', gap: '14px', color: '#f8fafc' },
+        contactIconBox: { width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(0,230,153,0.12)', border: '1px solid rgba(0,230,153,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#00E699' },
+        contactItemHeader: { margin: '0 0 8px', fontSize: '13px', fontWeight: '800', letterSpacing: '1.2px', color: '#00E699' },
+        contactItemText: { margin: '0', fontSize: '15px', lineHeight: 1.6, color: '#f8fafc', wordBreak: 'break-word' },
+        contactItemLink: { color: '#f8fafc', textDecoration: 'none', transition: 'color 0.2s', fontSize: '15px', lineHeight: 1.6, display: 'block' },
+        contactMap: { display: 'block', width: '100%', height: '380px', border: '0' },
+        contactMapWrap: { width: '100%', lineHeight: 0 },
 
         footer: { padding: '80px 5% 0', borderTop: `1px solid ${colors.border}`, background: colors.bgCard },
         footerGrid: { display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '40px', maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' },
@@ -656,9 +659,7 @@ export default function LandingPage() {
                     <h2 style={p.sectionTitle}>Upcoming Live Classes</h2>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '900px', margin: '0 auto' }}>
-                    {liveLoading ? (
-                        <div style={{ textAlign: 'center', color: colors.textMuted, padding: '32px 16px' }}>Loading live classes...</div>
-                    ) : upcomingSessions.length === 0 ? (
+                    {upcomingSessions.length === 0 ? (
                         <div style={{ textAlign: 'center', color: colors.textMuted, padding: '40px 16px', fontSize: '16px' }}>
                             No upcoming live classes scheduled at the moment. Check back soon!
                         </div>
@@ -787,16 +788,6 @@ export default function LandingPage() {
                 <div style={{ position: 'absolute', bottom: '-60px', right: '-60px', width: '240px', height: '240px', background: 'radial-gradient(circle, rgba(59,130,246,0.12), transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
 
                 <div style={{ position: 'relative', maxWidth: '600px', margin: '0 auto' }}>
-
-                    {/* ── PHASE: loading ── skeleton, no flash */}
-                    {subPhase === 'loading' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '20px 0' }}>
-                            <div style={{ width: '120px', height: '20px', borderRadius: '10px', background: theme === 'dark' ? 'rgba(255,255,255,0.08)' : '#e2e8f0', animation: 'pulse 1.4s ease-in-out infinite' }} />
-                            <div style={{ width: '280px', height: '32px', borderRadius: '10px', background: theme === 'dark' ? 'rgba(255,255,255,0.08)' : '#e2e8f0', animation: 'pulse 1.4s ease-in-out infinite' }} />
-                            <div style={{ width: '400px', maxWidth: '90%', height: '16px', borderRadius: '8px', background: theme === 'dark' ? 'rgba(255,255,255,0.06)' : '#e2e8f0', animation: 'pulse 1.4s ease-in-out infinite' }} />
-                            <div style={{ width: '340px', maxWidth: '90%', height: '16px', borderRadius: '8px', background: theme === 'dark' ? 'rgba(255,255,255,0.06)' : '#e2e8f0', animation: 'pulse 1.4s ease-in-out infinite' }} />
-                        </div>
-                    )}
 
                     {/* ── PHASE: subscribed ── shown regardless of browser */}
                     {subPhase === 'subscribed' && (
@@ -1010,6 +1001,61 @@ export default function LandingPage() {
                     </div>
                 </div>
             </section>
+
+            {/* 21a. Contact Banner + Map (above footer) */}
+            <section className="contact-banner" style={p.contactBanner}>
+                <div className="contact-banner-grid" style={p.contactBannerGrid}>
+                    {/* Address */}
+                    <div style={p.contactItem}>
+                        <div style={p.contactIconBox}><MapPin size={20} aria-hidden="true" /></div>
+                        <div>
+                            <h4 style={p.contactItemHeader}>ADDRESS</h4>
+                            <p style={p.contactItemText}>Debre Berhan</p>
+                        </div>
+                    </div>
+
+                    {/* Call For Query */}
+                    <div style={p.contactItem}>
+                        <div style={p.contactIconBox}><Phone size={20} aria-hidden="true" /></div>
+                        <div>
+                            <h4 style={p.contactItemHeader}>CALL FOR QUERY</h4>
+                            <a href="tel:+251914362720" style={p.contactItemLink}>+251 914 362 720</a>
+                            <a href="tel:+251905050698" style={p.contactItemLink}>+251 905 050 698</a>
+                        </div>
+                    </div>
+
+                    {/* Send Us Message */}
+                    <div style={p.contactItem}>
+                        <div style={p.contactIconBox}><Mail size={20} aria-hidden="true" /></div>
+                        <div>
+                            <h4 style={p.contactItemHeader}>SEND US MESSAGE</h4>
+                            <a href="mailto:info@emareicthub.com" style={p.contactItemLink}>info@emareicthub.com</a>
+                            <a href="mailto:emareicthub@gmail.com" style={p.contactItemLink}>emareicthub@gmail.com</a>
+                        </div>
+                    </div>
+
+                    {/* Opening Hours */}
+                    <div style={p.contactItem}>
+                        <div style={p.contactIconBox}><Clock size={20} aria-hidden="true" /></div>
+                        <div>
+                            <h4 style={p.contactItemHeader}>OPENING HOURS</h4>
+                            <p style={p.contactItemText}>08:30 AM - 18:00 PM</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* 21b. Map Embed */}
+            <div style={p.contactMapWrap}>
+                <iframe
+                    src="https://maps.google.com/maps?q=Emare%20ICT%20Hub%2C%20Debre%20Berhan%2C%20Ethiopia&t=&z=14&ie=UTF8&iwloc=&output=embed"
+                    style={p.contactMap}
+                    title="Emare ICT Hub, Debre Berhan, Ethiopia"
+                    loading="lazy"
+                    allowFullScreen
+                    referrerPolicy="no-referrer-when-downgrade"
+                />
+            </div>
 
             {/* 21. Footer */}
             <footer style={p.footer}>

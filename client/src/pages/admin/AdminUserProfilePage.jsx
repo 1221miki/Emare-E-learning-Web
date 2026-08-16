@@ -9,19 +9,15 @@ export default function AdminUserProfilePage() {
     const navigate = useNavigate();
     const { colors } = useTheme();
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
         const fetchUser = async () => {
-            setLoading(true);
             try {
                 const res = await userService.getById(id);
                 setUser(res.data?.data || null);
             } catch (err) {
                 setError(err.response?.data?.message || 'Failed to load user profile.');
-            } finally {
-                setLoading(false);
             }
         };
 
@@ -52,17 +48,6 @@ export default function AdminUserProfilePage() {
         }
         return <span style={{ ...styles.badge, background: `${colors.success}15`, color: colors.success }}>Active</span>;
     };
-
-    if (loading) {
-        return (
-            <div style={styles.page}>
-                <Sidebar />
-                <main style={styles.main}>
-                    <div style={{ color: colors.textMuted, fontSize: '16px' }}>Loading user profile...</div>
-                </main>
-            </div>
-        );
-    }
 
     if (error) {
         return (

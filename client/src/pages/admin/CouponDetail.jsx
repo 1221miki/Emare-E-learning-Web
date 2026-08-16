@@ -52,7 +52,7 @@ export default function CouponDetail() {
         } catch (err) { console.error(err); }
     }
 
-    if (!coupon) return <div style={{ padding: 24 }}>Loading…</div>;
+    if (!coupon) return <div style={{ padding: 24 }} />;
 
     return (
         <div style={{ padding: 24 }}>

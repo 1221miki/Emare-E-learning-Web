@@ -18,19 +18,15 @@ export default function CertificatesPage() {
     const { colors, theme } = useTheme();
     const navigate = useNavigate();
     const [certificates, setCertificates] = useState([]);
-    const [loading, setLoading]           = useState(true);
     const [downloadingId, setDownloadingId] = useState(null);
     const [copyMsg, setCopyMsg]           = useState('');
 
     const fetchCertificates = useCallback(async () => {
-        setLoading(true);
         try {
             const res = await certificateService.getMine();
             setCertificates(res.data?.data || []);
         } catch (err) {
             console.error('[CertificatesPage] fetch failed:', err);
-        } finally {
-            setLoading(false);
         }
     }, []);
 
@@ -87,11 +83,7 @@ export default function CertificatesPage() {
                     </p>
                 </div>
 
-                {loading ? (
-                    <div style={{ color: colors.textMuted, padding: 40, textAlign: 'center' }}>
-                        Loading your certificates…
-                    </div>
-                ) : certificates.length === 0 ? (
+                {certificates.length === 0 ? (
                     <div style={{
                         padding: 48, background: colors.bgCard,
                         border: `1px solid ${colors.border}`, borderRadius: 16,

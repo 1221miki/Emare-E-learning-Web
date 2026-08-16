@@ -9,7 +9,6 @@ export default function Checkout() {
     const { colors, theme } = useTheme();
 
     const [course, setCourse] = useState(null);
-    const [pageLoading, setPageLoading] = useState(true);
     const [payLoading, setPayLoading] = useState(false);
     const [payError, setPayError] = useState('');
 
@@ -29,11 +28,9 @@ export default function Checkout() {
     }, [courseId]);
 
     useEffect(() => {
-        setPageLoading(true);
         courseService.getById(courseId)
             .then(res => setCourse(res.data.data))
-            .catch(() => setPayError('Unable to load course details. Please refresh the page.'))
-            .finally(() => setPageLoading(false));
+            .catch(() => setPayError('Unable to load course details. Please refresh the page.'));
     }, [courseId]);
 
     // ── Coupon apply ──────────────────────────────────────────────────────────
@@ -134,24 +131,16 @@ export default function Checkout() {
         minWidth: 0
     };
 
-    // ── Loading skeleton ──────────────────────────────────────────────────────
-    if (pageLoading) {
+    if (!course) {
         return (
             <div style={{ minHeight: '80vh', background: colors.bg, color: colors.text, padding: '40px', fontFamily: "'Segoe UI', sans-serif" }}>
                 <div style={{ maxWidth: '720px', margin: '0 auto', textAlign: 'center' }}>
-                    <h2 style={{ fontSize: '24px', marginBottom: '16px' }}>Loading checkout…</h2>
-                    <p style={{ color: colors.textMuted }}>Fetching course details, please wait.</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (!course && payError) {
-        return (
-            <div style={{ minHeight: '80vh', background: colors.bg, color: colors.text, padding: '40px', fontFamily: "'Segoe UI', sans-serif" }}>
-                <div style={{ maxWidth: '720px', margin: '0 auto', textAlign: 'center' }}>
-                    <p style={{ color: '#ef4444', fontWeight: '600' }}>{payError}</p>
-                    <button onClick={() => navigate(-1)} style={{ marginTop: '20px', padding: '12px 24px', borderRadius: '10px', border: `1px solid ${colors.border}`, background: 'transparent', color: colors.text, cursor: 'pointer', fontWeight: '600' }}>Go Back</button>
+                    {payError && (
+                        <>
+                            <p style={{ color: '#ef4444', fontWeight: '600' }}>{payError}</p>
+                            <button onClick={() => navigate(-1)} style={{ marginTop: '20px', padding: '12px 24px', borderRadius: '10px', border: `1px solid ${colors.border}`, background: 'transparent', color: colors.text, cursor: 'pointer', fontWeight: '600' }}>Go Back</button>
+                        </>
+                    )}
                 </div>
             </div>
         );

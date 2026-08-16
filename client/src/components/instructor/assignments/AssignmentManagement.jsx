@@ -13,7 +13,7 @@ import LateSubmissions    from './LateSubmissions';
 import AssignmentAnalytics from './AssignmentAnalytics';
 
 // ── Stat card ────────────────────────────────────────────────
-function StatCard({ icon, color, label, value, sub, loading }) {
+function StatCard({ icon, color, label, value, sub }) {
     return (
         <div
             style={{ ...card, padding: '20px 22px', borderTop: `3px solid ${color}`, cursor: 'default', transition: 'transform 0.18s, box-shadow 0.18s' }}
@@ -25,10 +25,7 @@ function StatCard({ icon, color, label, value, sub, loading }) {
                     {React.cloneElement(icon, { size: 19, color, 'aria-hidden': true })}
                 </div>
             </div>
-            {loading
-                ? <div style={{ height: '28px', borderRadius: '6px', background: '#e0e7ff', marginBottom: '6px' }} />
-                : <div style={{ color: '#1e293b', fontSize: '28px', fontWeight: '800', lineHeight: 1, marginBottom: '5px' }}>{value}</div>
-            }
+            <div style={{ color: '#1e293b', fontSize: '28px', fontWeight: '800', lineHeight: 1, marginBottom: '5px' }}>{value}</div>
             <div style={{ color: '#64748b', fontSize: '12px', fontWeight: '600', marginBottom: '2px' }}>{label}</div>
             {sub && <div style={{ color: '#64748b', fontSize: '11px' }}>{sub}</div>}
         </div>
@@ -43,7 +40,6 @@ export default function AssignmentManagement({ courses: propCourses = [] }) {
     const [selectedCourse, setCourse]     = useState(null);
     const [assignments, setAssignments]   = useState([]);
     const [allSubmissions, setAllSubs]    = useState([]);  // flat across all assignments
-    const [loading, setLoading]           = useState(false);
     const [refreshKey, setRefresh]        = useState(0);
 
     // Selected items passed down to sub-views
@@ -69,7 +65,6 @@ export default function AssignmentManagement({ courses: propCourses = [] }) {
     // ── Load assignments when course changes ─────────────────
     const loadAssignments = useCallback(async (courseId) => {
         if (!courseId) return;
-        setLoading(true);
         try {
             const res = await assignmentService.getByCourse(courseId);
             const list = res.data.data || [];
@@ -82,8 +77,6 @@ export default function AssignmentManagement({ courses: propCourses = [] }) {
             setAllSubs(subsArrays.flat());
         } catch (err) {
             console.error('Assignment load error:', err);
-        } finally {
-            setLoading(false);
         }
     }, []);
 
@@ -171,7 +164,7 @@ export default function AssignmentManagement({ courses: propCourses = [] }) {
 
             {/* ── Stat cards ───────────────────────────────── */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))', gap: '14px', marginBottom: '24px' }}>
-                {stats.map((s, i) => <StatCard key={i} {...s} loading={loading} />)}
+                {stats.map((s, i) => <StatCard key={i} {...s} />)}
             </div>
 
             {/* ── Sub-nav tabs (not shown on create/grading) ── */}
@@ -220,7 +213,6 @@ export default function AssignmentManagement({ courses: propCourses = [] }) {
                 <AssignmentList
                     assignments={assignments}
                     allSubmissions={allSubmissions}
-                    loading={loading}
                     courses={courses}
                     selectedCourse={selectedCourse}
                     onViewSubmissions={openSubmissions}

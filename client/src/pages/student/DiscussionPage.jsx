@@ -15,8 +15,6 @@ export default function DiscussionPage() {
     const [enrollments, setEnrollments] = useState([]);
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [discussions, setDiscussions] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [coursesLoading, setCoursesLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('');
     const [resolvedFilter, setResolvedFilter] = useState('');
@@ -62,20 +60,16 @@ export default function DiscussionPage() {
     }, [selectedCourse, categoryFilter, resolvedFilter, search]);
 
     const loadEnrollments = async () => {
-        setCoursesLoading(true);
         try {
             const res = await courseService.getStudentEnrollments();
             setEnrollments(res.data.data || []);
-            setCoursesLoading(false);
         } catch (err) {
             console.error('Failed to load enrolled courses', err);
-            setCoursesLoading(false);
         }
     };
 
     const fetchDiscussions = async () => {
         if (!selectedCourse) return;
-        setLoading(true);
         try {
             const query = {};
             if (categoryFilter) query.category = categoryFilter;
@@ -85,8 +79,6 @@ export default function DiscussionPage() {
             setDiscussions(res.data.data);
         } catch (err) {
             console.error(err);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -193,11 +185,8 @@ export default function DiscussionPage() {
             <Sidebar navItems={navItems} activeTab="qa" />
 
             <main style={{ marginLeft: '260px', padding: '40px', flex: 1, maxWidth: '1000px' }}>
-                {coursesLoading ? (
-                    <div style={{ color: colors.textMuted, padding: '40px', textAlign: 'center' }}>Loading courses…</div>
-                ) : (
-                    <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap', marginBottom: '24px' }}>
+                <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap', marginBottom: '24px' }}>
                             <div>
                                 <h1 style={{ color: colors.text, fontSize: '28px', fontWeight: '800', margin: 0 }}>Course Q&A Discussions</h1>
                                 <p style={{ color: colors.textMuted, fontSize: '14px', margin: '8px 0 0' }}>Search, filter, and collaborate on course questions with instructor badges and best answer highlights.</p>
@@ -277,9 +266,7 @@ export default function DiscussionPage() {
                             </form>
                         )}
 
-                        {loading ? (
-                            <div style={{ color: colors.textMuted }}>Loading discussions...</div>
-                        ) : discussions.length === 0 ? (
+                        {discussions.length === 0 ? (
                             <div style={{ color: colors.textMuted, textAlign: 'center', padding: '40px', border: `1px solid ${colors.border}`, borderRadius: '12px' }}>No discussions yet. Start the first thread for this course.</div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -386,8 +373,7 @@ export default function DiscussionPage() {
                                 })}
                             </div>
                         )}
-                    </div>
-                )}
+                </div>
             </main>
         </div>
     );

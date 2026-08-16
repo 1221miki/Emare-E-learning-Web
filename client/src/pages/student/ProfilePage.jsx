@@ -8,7 +8,6 @@ export default function ProfilePage() {
     const { user, updateUser } = useAuth();
     const { colors } = useTheme();
     const [profile, setProfile] = useState(null);
-    const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [avatarError, setAvatarError] = useState(false);
     const fileInputRef = useRef(null);
@@ -26,8 +25,7 @@ export default function ProfilePage() {
     useEffect(() => {
         userService.getProfile()
             .then(res => setProfile(res.data.data))
-            .catch(err => console.error(err))
-            .finally(() => setLoading(false));
+            .catch(err => console.error(err));
     }, []);
 
     const handleAvatarUpload = async (e) => {

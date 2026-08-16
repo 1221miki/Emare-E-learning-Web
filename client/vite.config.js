@@ -21,8 +21,15 @@ export default defineConfig({
     server: {
         host: '0.0.0.0',   // accept connections from phone/other devices on the network
         port: 5173,
+        // Proxy API calls to the backend so the app works on ANY network IP
+        // (the backend is always reached via localhost on this machine).
+        proxy: {
+            '/api': {
+                target: 'http://localhost:5000',
+                changeOrigin: true,
+            },
+        },
         hmr: {
-            host: '192.168.8.100',  // HMR client connects back to correct network IP (not localhost)
             overlay: false,
         },
     },

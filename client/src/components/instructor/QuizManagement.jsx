@@ -4,7 +4,6 @@ import { FileQuestion, PlusCircle, Edit3, Trash2, ArrowUp, ArrowDown } from 'luc
 
 export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
     const [quizzes, setQuizzes] = useState([]);
-    const [quizLoading, setQuizLoading] = useState(true);
     const [quizSearch, setQuizSearch] = useState('');
     const [quizCourseFilter, setQuizCourseFilter] = useState('all');
     const [showQuizCreateModal, setShowQuizCreateModal] = useState(false);
@@ -46,7 +45,6 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
     }, []);
 
     const fetchQuizzes = async () => {
-        setQuizLoading(true);
         try {
             const res = await quizService.getInstructorQuizzes();
             setQuizzes(res.data.data || []);
@@ -54,7 +52,6 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
             console.error('Failed to fetch quizzes:', err);
             setQuizzes([]);
         }
-        setQuizLoading(false);
     };
 
     // Filter quizzes
@@ -271,9 +268,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
 
             {/* Quizzes Table */}
             <div style={s.tableCard}>
-                {quizLoading ? (
-                    <div style={{ padding: '60px', textAlign: 'center', color: colors.textMuted }}>Loading quizzes...</div>
-                ) : filteredQuizzes.length === 0 ? (
+                {filteredQuizzes.length === 0 ? (
                     <div style={{ ...s.emptyBox, margin: '20px' }}>
                         <FileQuestion size={40} style={{ color: colors.textMuted, marginBottom: '12px' }} />
                         <p style={s.emptyText}>{quizzes.length === 0 ? 'No quizzes yet. Create your first quiz!' : 'No quizzes match your search.'}</p>

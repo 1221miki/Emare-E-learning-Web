@@ -39,7 +39,6 @@ export default function QuizPage() {
     const [quiz, setQuiz] = useState(null);
     const [answers, setAnswers] = useState({});
     const [timeLeft, setTimeLeft] = useState(0);
-    const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [result, setResult] = useState(null);
 
@@ -54,8 +53,7 @@ export default function QuizPage() {
             .catch(err => {
                 alert("Quiz not found or you don't have access.");
                 navigate('/student/dashboard');
-            })
-            .finally(() => setLoading(false));
+            });
     }, [quizId, navigate]);
 
     // Timer logic
@@ -116,8 +114,7 @@ export default function QuizPage() {
         submitPayload();
     };
 
-    if (loading) return <div style={{ ...styles.centerContainer, background: colors.bg, color: colors.text }}>Loading Quiz...</div>;
-    if (!quiz) return <div style={{ ...styles.centerContainer, background: colors.bg, color: colors.text }}>Quiz not found.</div>;
+    if (!quiz) return <div style={{ ...styles.centerContainer, background: colors.bg, color: colors.text }} />;
 
     if (result) {
         return (

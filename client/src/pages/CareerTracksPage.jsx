@@ -44,7 +44,6 @@ export default function CareerTracksPage() {
 
     const [tracks, setTracks] = useState([]);
     const [courses, setCourses] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [selectedTrack, setSelectedTrack] = useState(null);
 
     useEffect(() => {
@@ -72,8 +71,7 @@ export default function CareerTracksPage() {
                     setSelectedTrack(fetchedTracks[0]);
                 }
             })
-            .catch(err => console.error('Failed to load tracks:', err))
-            .finally(() => setLoading(false));
+            .catch(err => console.error('Failed to load tracks:', err));
     }, []);
 
     const coursesForTrack = (trackName) => {
@@ -138,17 +136,6 @@ export default function CareerTracksPage() {
             fontSize: '14px', fontWeight: '700', cursor: 'pointer'
         })
     };
-
-    if (loading) {
-        return (
-            <div style={s.page}>
-                <Navbar />
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.textMuted, fontSize: '18px', fontWeight: '600' }}>
-                    Loading Career Tracks...
-                </div>
-            </div>
-        );
-    }
 
     const currentTrackColor = selectedTrack ? (TRACK_COLORS[selectedTrack.name] || colors.primary) : colors.primary;
 

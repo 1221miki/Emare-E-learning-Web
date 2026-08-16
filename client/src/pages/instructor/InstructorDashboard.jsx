@@ -113,7 +113,6 @@ export default function InstructorDashboard() {
     };
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('overview');
-    const [loading, setLoading] = useState(true);
 
     // Data States
     const [courses, setCourses] = useState([]);
@@ -203,7 +202,6 @@ export default function InstructorDashboard() {
     }, []);
 
     const fetchDashboardData = async () => {
-        setLoading(true);
         try {
             const [coursesRes, analyticsRes, notificationsRes] = await Promise.all([
                 courseService.getInstructorCourses(),
@@ -225,8 +223,6 @@ export default function InstructorDashboard() {
             }
         } catch (err) {
             console.error('Dashboard fetch error:', err);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -1353,20 +1349,16 @@ export default function InstructorDashboard() {
                     <div style={s.avatar}>{user?.fullName?.[0]?.toUpperCase()}</div>
                 </header>
 
-                {!loading && (
-                    <>
-                        {activeTab === 'overview' && renderOverview()}
-                        {activeTab === 'courses' && renderCourses()}
-                        {activeTab === 'students' && renderStudents()}
-                        {activeTab === 'assignments' && renderAssignments()}
-                        {activeTab === 'quizzes' && renderQuizzes()}
-                        {activeTab === 'live' && renderLiveClasses()}
-                        {activeTab === 'analytics' && renderAnalytics()}
-                        {activeTab === 'messages' && renderMessages()}
-                        {activeTab === 'reviews' && renderReviews()}
-                        {activeTab === 'settings' && renderSettings()}
-                    </>
-                )}
+                {activeTab === 'overview' && renderOverview()}
+                {activeTab === 'courses' && renderCourses()}
+                {activeTab === 'students' && renderStudents()}
+                {activeTab === 'assignments' && renderAssignments()}
+                {activeTab === 'quizzes' && renderQuizzes()}
+                {activeTab === 'live' && renderLiveClasses()}
+                {activeTab === 'analytics' && renderAnalytics()}
+                {activeTab === 'messages' && renderMessages()}
+                {activeTab === 'reviews' && renderReviews()}
+                {activeTab === 'settings' && renderSettings()}
             </main>
 
             {/* ═══════════════════════════════════════════════════ */}

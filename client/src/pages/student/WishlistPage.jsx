@@ -8,7 +8,6 @@ export default function WishlistPage() {
     const { colors } = useTheme();
     const navigate = useNavigate();
     const [wishlist, setWishlist] = useState([]);
-    const [loading, setLoading] = useState(true);
 
     const navItems = [
         { label: 'Dashboard', path: '/student/dashboard', key: 'dashboard' },
@@ -30,8 +29,6 @@ export default function WishlistPage() {
             setWishlist(res.data.data);
         } catch (err) {
             console.error(err);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -51,9 +48,7 @@ export default function WishlistPage() {
             <main style={{ marginLeft: '260px', padding: '40px', flex: 1 }}>
                 <h1 style={{ color: colors.text, fontSize: '28px', fontWeight: '800', marginBottom: '30px' }}>My Wishlist</h1>
 
-                {loading ? (
-                    <div style={{ color: colors.textMuted }}>Loading wishlist...</div>
-                ) : wishlist.length === 0 ? (
+                {wishlist.length === 0 ? (
                     <div style={{
                         padding: '40px', background: colors.bgCard, border: `1px solid ${colors.border}`,
                         borderRadius: '12px', textAlign: 'center', color: colors.textMuted

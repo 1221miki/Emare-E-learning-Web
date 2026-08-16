@@ -10,7 +10,6 @@ export default function AdminCoupons() {
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
     const [limit] = useState(25);
-    const [loading, setLoading] = useState(false);
     const [showCreate, setShowCreate] = useState(false);
     const [stats, setStats] = useState(null);
     const [form, setForm] = useState({ 
@@ -32,7 +31,6 @@ export default function AdminCoupons() {
     useEffect(() => { load(); }, [page]);
 
     async function load() {
-        setLoading(true);
         try {
             const res = await adminCouponService.list({ page, limit });
             if (res.data.success) {
@@ -40,7 +38,6 @@ export default function AdminCoupons() {
                 setTotal(res.data.data.total || 0);
             }
         } catch (err) { console.error(err); }
-        setLoading(false);
     }
 
     useEffect(() => { loadStats(); }, []);
@@ -293,8 +290,7 @@ Start learning now! 🚀`
             )}
 
             <div style={{ marginTop: 24 }}>
-                {loading ? <div>Loading…</div> : (
-                    <>
+                <>
                     <div style={{ overflowX: 'auto', borderRadius: 12, border: `1px solid ${colors.border}` }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
@@ -355,8 +351,7 @@ Start learning now! 🚀`
                         </div>
                         <div style={{ color: colors.textMuted, fontWeight: 600 }}>Total: {total} coupons</div>
                     </div>
-                    </>
-                )}
+                </>
             </div>
 
             {/* Share Modal */}

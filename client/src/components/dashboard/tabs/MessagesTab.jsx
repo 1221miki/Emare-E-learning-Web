@@ -29,26 +29,21 @@ export default function MessagesTab(dash) {
     const section = messagesSection || 'inbox';
     const setSection = (s) => { if (setMessagesSection) setMessagesSection(s); };
     const [conversations, setConversations] = useState([]);
-    const [convsLoading, setConvsLoading] = useState(true);
     const [activeConv, setActiveConv] = useState(null);
     const [thread, setThread] = useState([]);
-    const [threadLoading, setThreadLoading] = useState(false);
     const [draft, setDraft] = useState('');
     const [sending, setSending] = useState(false);
     const [search, setSearch] = useState('');
 
-    const [sentLoading, setSentLoading] = useState(false);
     const [sentList, setSentList] = useState([]);
     const [sentSearch, setSentSearch] = useState('');
     const [sentSort, setSentSort] = useState('newest');  // 'newest' | 'oldest'
     const [expandedSent, setExpandedSent] = useState(null);
 
     const [notifs, setNotifs] = useState([]);
-    const [notifLoading, setNotifLoading] = useState(true);
 
     const [discCourse, setDiscCourse] = useState('');
     const [discussions, setDiscussions] = useState([]);
-    const [discLoading, setDiscLoading] = useState(false);
     const [expandedDisc, setExpandedDisc] = useState(null);
     const [replyDrafts, setReplyDrafts] = useState({});
     const [discMsg, setDiscMsg] = useState('');
@@ -68,14 +63,11 @@ export default function MessagesTab(dash) {
     const scrollToBottom = () => setTimeout(() => threadEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
 
     const loadConversations = useCallback(async () => {
-        setConvsLoading(true);
         try {
             const res = await messageService.getConversations();
             setConversations(res.data.data || []);
         } catch {
             setConversations([]);
-        } finally {
-            setConvsLoading(false);
         }
     }, []);
 
@@ -84,8 +76,7 @@ export default function MessagesTab(dash) {
     useEffect(() => {
         notificationService.getAll()
             .then(res => setNotifs(res.data.data || []))
-            .catch(() => setNotifs([]))
-            .finally(() => setNotifLoading(false));
+            .catch(() => setNotifs([]));
     }, []);
 
     useEffect(() => {
@@ -96,28 +87,23 @@ export default function MessagesTab(dash) {
 
     useEffect(() => {
         if (!discCourse) return;
-        setDiscLoading(true);
         setDiscussions([]);
         setExpandedDisc(null);
         discussionService.getByCourse(discCourse)
             .then(res => setDiscussions(res.data.data || []))
-            .catch(() => setDiscussions([]))
-            .finally(() => setDiscLoading(false));
+            .catch(() => setDiscussions([]));
     }, [discCourse]);
 
     useEffect(() => {
         if (!activeConv) return;
-        setThreadLoading(true);
         messageService.getMessagesRaw(activeConv._id)
             .then(res => setThread(res.data.data || []))
-            .catch(() => setThread([]))
-            .finally(() => setThreadLoading(false));
+            .catch(() => setThread([]));
         scrollToBottom();
     }, [activeConv]);
 
     const loadSent = async () => {
         if (!conversations.length) return;
-        setSentLoading(true);
         const convs = conversations.slice(0, 15);
         const results = await Promise.allSettled(convs.map(c => messageService.getMessagesRaw(c._id)));
         const sent = [];
@@ -129,7 +115,6 @@ export default function MessagesTab(dash) {
             });
         });
         setSentList(sent);
-        setSentLoading(false);
     };
 
     useEffect(() => { if (section === 'sent' && !sentList.length) loadSent(); }, [section, conversations, sentList.length]);
@@ -299,7 +284,7 @@ export default function MessagesTab(dash) {
                     <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search conversations..." style={{ width: '100%', background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, padding: '10px 12px', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto' }}>
-                    {convsLoading ? <div style={{ padding: '24px', color: colors.textMuted, fontSize: '13px' }}>Loading conversations...</div> : filteredConvs.length === 0 ? (
+                    {filteredConvs.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '40px 16px', color: colors.textMuted, fontSize: '13px' }}>
                             <MessagesSquare size={32} style={{ marginBottom: '8px' }} aria-hidden="true" />
                             {search ? 'No conversations match your search.' : 'No conversations yet. Instructors and support will appear here.'}
@@ -332,7 +317,7 @@ export default function MessagesTab(dash) {
                     <>
                         {chatHeader(convTitle(activeConv), `${convRole(activeConv)} · ${(activeConv.participants || []).length} participant(s)`)}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {threadLoading ? <div style={{ color: colors.textMuted, fontSize: '13px' }}>Loading messages...</div> : thread.length === 0 ? (
+                            {thread.length === 0 ? (
                                 <div style={{ textAlign: 'center', color: colors.textMuted, fontSize: '13px', padding: '40px' }}>No messages in this conversation yet. Say hello!</div>
                             ) : thread.map(messageBubble)}
                             <div ref={threadEndRef} />
@@ -387,9 +372,7 @@ export default function MessagesTab(dash) {
                     </select>
                 </div>
 
-                {sentLoading ? (
-                    <div style={{ color: colors.textMuted, fontSize: 13, padding: 24 }}>Loading sent messages...</div>
-                ) : filtered.length === 0 ? (
+                {filtered.length === 0 ? (
                     <div style={styles.emptyContent}>
                         <SendHorizonal size={40} color={colors.textMuted} style={{ marginBottom: 12 }} aria-hidden="true" />
                         <p style={styles.emptyText}>
@@ -467,7 +450,7 @@ export default function MessagesTab(dash) {
                     })}
                 </select>
             </div>
-            {discLoading ? <div style={{ color: colors.textMuted, fontSize: '13px' }}>Loading discussions...</div> : discussions.length === 0 ? (
+            {discussions.length === 0 ? (
                 <div style={styles.emptyContent}>
                     <MessagesSquare size={40} color={colors.textMuted} style={{ marginBottom: '12px' }} aria-hidden="true" />
                     <p style={styles.emptyText}>No discussions yet in this course. Check back when instructors or classmates post.</p>
@@ -552,7 +535,7 @@ export default function MessagesTab(dash) {
                     <CheckCircle2 size={14} aria-hidden="true" /> Mark All Read
                 </button>
             </div>
-            {notifLoading ? <div style={{ color: colors.textMuted, fontSize: 13 }}>Loading notifications...</div> : notifs.length === 0 ? (
+            {notifs.length === 0 ? (
                 <div style={styles.emptyContent}>
                     <Bell size={40} color={colors.textMuted} style={{ marginBottom: 12 }} aria-hidden="true" />
                     <p style={styles.emptyText}>No notifications yet. Assignment reminders, quiz deadlines, and payment updates will appear here.</p>

@@ -50,7 +50,6 @@ export default function CourseCatalog() {
     const [courses, setCourses] = useState([]);
     const [categories, setCategories] = useState([]);
     const [wishlistIds, setWishlistIds] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [activeSection, setActiveSection] = useState(urlParams.get('section') || (urlParams.get('certificates') === 'true' ? 'certificates' : 'all'));
 
     // Filters
@@ -107,9 +106,6 @@ export default function CourseCatalog() {
                 }
             } catch (e) { 
                 console.error('Error fetching data:', e); 
-            }
-            finally { 
-                setLoading(false); 
             }
         };
         
@@ -511,7 +507,7 @@ export default function CourseCatalog() {
                     {/* Top bar */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
                         <span style={{ color: colors.textMuted, fontSize: '13px' }}>
-                            {loading ? 'Loading...' : `${filtered.length} course${filtered.length !== 1 ? 's' : ''} found`}
+                            {`${filtered.length} course${filtered.length !== 1 ? 's' : ''} found`}
                             {activeSection !== 'all' && <span style={{ color: colors.primary, fontWeight: '700', marginLeft: '6px' }}>• {activeSection.charAt(0).toUpperCase() + activeSection.slice(1)}</span>}
                         </span>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -528,11 +524,7 @@ export default function CourseCatalog() {
                     <CourseDiscoveryChecklist wishlistCount={wishlistIds.length} />
 
                     {/* Course Grid */}
-                    {loading ? (
-                        <div style={{ textAlign: 'center', padding: '72px', color: colors.textMuted }}>
-                            <div style={{ fontSize: '44px', marginBottom: '14px' }}>⏳</div><p>Loading courses...</p>
-                        </div>
-                    ) : filtered.length === 0 ? (
+                    {filtered.length === 0 ? (
                         <div style={s.emptyBox}>
                             <div style={{ fontSize: '52px', marginBottom: '14px' }}>⌕</div>
                             <h3 style={{ color: colors.text, margin: '0 0 8px', fontSize: '18px', fontWeight: '800' }}>No courses found</h3>

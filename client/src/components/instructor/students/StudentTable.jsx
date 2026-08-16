@@ -129,17 +129,7 @@ const COLS = [
     { label: 'Actions',         width: '60px' },
 ];
 
-const SkeletonRow = () => (
-    <tr>
-        {COLS.map((_, i) => (
-            <td key={i} style={{ padding: '14px 18px' }}>
-                <div style={{ height: '14px', borderRadius: '6px', background: 'rgba(51,65,85,0.35)', animation: 'pulse 1.4s ease-in-out infinite' }} />
-            </td>
-        ))}
-    </tr>
-);
-
-export default function StudentTable({ students = [], loading, onViewProfile, onMessage, onRemove }) {
+export default function StudentTable({ students = [], onViewProfile, onMessage, onRemove }) {
     const { colors, theme } = useTheme();
 
     return (
@@ -166,9 +156,7 @@ export default function StudentTable({ students = [], loading, onViewProfile, on
                     </thead>
 
                     <tbody>
-                        {loading && Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
-
-                        {!loading && students.length === 0 && (
+                        {students.length === 0 && (
                             <tr>
                                 <td colSpan={COLS.length} style={{ padding: '60px 20px', textAlign: 'center' }}>
                                     <GraduationCap size={40} color={colors.textMuted} style={{ display: 'block', margin: '0 auto 12px' }} aria-hidden="true" />
@@ -177,7 +165,7 @@ export default function StudentTable({ students = [], loading, onViewProfile, on
                             </tr>
                         )}
 
-                        {!loading && students.map((student, idx) => (
+                        {students.map((student, idx) => (
                             <tr
                                 key={student._id}
                                 style={{ borderBottom: `2px solid ${colors.border}`, transition: 'background 0.15s' }}
@@ -250,7 +238,7 @@ export default function StudentTable({ students = [], loading, onViewProfile, on
             </div>
 
             {/* Footer row */}
-            {!loading && students.length > 0 && (
+            {students.length > 0 && (
                 <div style={{ padding: '12px 20px', borderTop: `1px solid ${colors.border}`, color: colors.textMuted, fontSize: '12px' }}>
                     Showing {students.length} student{students.length !== 1 ? 's' : ''}
                 </div>

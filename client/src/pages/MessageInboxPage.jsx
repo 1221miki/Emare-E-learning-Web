@@ -11,7 +11,6 @@ export default function MessageInboxPage() {
     const [activeConvo, setActiveConvo] = useState(null);
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
-    const [loading, setLoading] = useState(true);
     
     // For creating new message
     const [showNewMsgMenu, setShowNewMsgMenu] = useState(false);
@@ -38,8 +37,6 @@ export default function MessageInboxPage() {
             setConversations(res.data.data);
         } catch (err) {
             console.error(err);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -110,7 +107,7 @@ export default function MessageInboxPage() {
                     )}
 
                     <div style={{ flex: 1, overflowY: 'auto' }}>
-                        {loading ? <div style={{ padding: '24px', color: colors.textMuted }}>Loading...</div> : conversations.length === 0 ? <div style={{ padding: '24px', color: colors.textMuted }}>No conversations yet.</div> : (
+                        {conversations.length === 0 ? <div style={{ padding: '24px', color: colors.textMuted }}>No conversations yet.</div> : (
                             conversations.map(convo => {
                                 const isActive = activeConvo?._id === convo._id;
                                 return (

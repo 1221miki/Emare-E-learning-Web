@@ -11,11 +11,9 @@ export default function InstructorProfilePage() {
 
     const [instructor, setInstructor] = useState(null);
     const [courses, setCourses] = useState([]);
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchInstructor = async () => {
-            setLoading(true);
             try {
                 const [instrRes, coursesRes] = await Promise.all([
                     userService.getById(id),
@@ -29,8 +27,6 @@ export default function InstructorProfilePage() {
                 setCourses(instrCourses);
             } catch (err) {
                 console.error('Failed to load instructor:', err);
-            } finally {
-                setLoading(false);
             }
         };
         fetchInstructor();
@@ -65,15 +61,6 @@ export default function InstructorProfilePage() {
         infoTitle: { fontSize: '18px', fontWeight: '700', color: colors.text, margin: '0 0 16px' },
         infoText: { color: colors.textMuted, fontSize: '14px', lineHeight: 1.8, margin: 0 }
     };
-
-    if (loading) return (
-        <div style={s.page}>
-            <Navbar />
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: colors.textMuted, fontSize: '16px' }}>
-                Loading instructor profile...
-            </div>
-        </div>
-    );
 
     if (!instructor) return (
         <div style={s.page}>

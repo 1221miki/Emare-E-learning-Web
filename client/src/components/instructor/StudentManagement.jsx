@@ -80,7 +80,6 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
     const [enrollments, setEnrollments]       = useState([]);
     const [grades, setGrades]                 = useState([]);
     const [assignments, setAssignments]       = useState([]);
-    const [loading, setLoading]               = useState(false);
     const [refreshKey, setRefreshKey]         = useState(0);
 
     // Filters
@@ -112,7 +111,6 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
     // ── Load enrollments when course changes ─────────────────
     const loadCourseData = useCallback(async (courseId) => {
         if (!courseId) return;
-        setLoading(true);
         try {
             const [enrollRes, gradeRes, assignRes] = await Promise.all([
                 enrollmentService.getAll({ courseId }).catch(() => ({ data: { data: [] } })),
@@ -124,8 +122,6 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
             setAssignments(assignRes.data.data || []);
         } catch (err) {
             console.error('StudentManagement data load error:', err);
-        } finally {
-            setLoading(false);
         }
     }, []);
 
@@ -279,7 +275,7 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
             </div>
 
             {/* ── Statistics Cards ─────────────────────────── */}
-            <StudentStatisticsCards analytics={analytics} loading={loading} />
+            <StudentStatisticsCards analytics={analytics} />
 
             {/* ── Course Selector ──────────────────────────── */}
             <CourseSelector
@@ -346,7 +342,6 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
             {/* ── Student Table ────────────────────────────── */}
             <StudentTable
                 students={filtered}
-                loading={loading}
                 onViewProfile={setProfileStudent}
                 onMessage={setMessageStudent}
                 onRemove={setRemoveConfirm}

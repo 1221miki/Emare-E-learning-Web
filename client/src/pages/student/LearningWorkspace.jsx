@@ -172,7 +172,6 @@ export default function LearningWorkspace() {
 
     // ── Core state ────────────────────────────────────────────────────────────
     const [course,          setCourse]          = useState(null);
-    const [pageLoading,     setPageLoading]     = useState(true);
     const [pageError,       setPageError]       = useState(null);
 
     // Progress — source of truth from backend
@@ -246,7 +245,6 @@ export default function LearningWorkspace() {
     // ── Load course + backend progress ────────────────────────────────────────
     useEffect(() => {
         let cancelled = false;
-        setPageLoading(true);
         Promise.all([
             courseService.getById(courseId),
             learningProgressService.getCourseProgress(courseId).catch(() => ({ data: { data: null } }))
@@ -266,11 +264,8 @@ export default function LearningWorkspace() {
             if (pct >= 100 && flat.length > 0) setShowCompletion(true);
         }).catch(err => {
             if (!cancelled) setPageError(err.response?.data?.message || 'Failed to load workspace.');
-        }).finally(() => {
-            if (!cancelled) setPageLoading(false);
         });
         return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [courseId]);
 
     // ── Load video whenever active lesson changes ─────────────────────────────
@@ -398,14 +393,7 @@ export default function LearningWorkspace() {
         });
     };
 
-    // ── Loading / error screens ───────────────────────────────────────────────
-    if (pageLoading) return (
-        <div style={{ background: '#0f172a', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', border: '3px solid #334155', borderTop: '3px solid #6366f1', animation: 'spin 0.8s linear infinite' }} />
-            <p style={{ color: '#94a3b8', fontFamily: 'Inter, sans-serif', margin: 0 }}>Loading workspace…</p>
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        </div>
-    );
+    // ── Error screens ─────────────────────────────────────────────────────────
     if (pageError) return <div style={{ color: '#ef4444', padding: 40, textAlign: 'center' }}>{pageError}</div>;
     if (!course)   return <div style={{ color: '#ef4444', padding: 40, textAlign: 'center' }}>Course not found.</div>;
 

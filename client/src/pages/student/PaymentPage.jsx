@@ -126,7 +126,6 @@ export default function PaymentPage() {
     };
     
     const [enrollments, setEnrollments] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [selectedEnrollmentId, setSelectedEnrollmentId] = useState('');
     const [file, setFile] = useState(null);
@@ -143,7 +142,6 @@ export default function PaymentPage() {
     }, []);
 
     const fetchStatus = () => {
-        setLoading(true);
         enrollmentService.getMyStatus()
             .then((res) => {
                 const data = res.data.data || [];
@@ -154,8 +152,7 @@ export default function PaymentPage() {
             })
             .catch(() => {
                 setFeedbackMessage('Unable to load payment activity right now.');
-            })
-            .finally(() => setLoading(false));
+            });
     };
 
     const selectedEnrollment = useMemo(
@@ -636,9 +633,7 @@ export default function PaymentPage() {
                 <section style={styles.timelineSection}>
                     <div style={styles.card}>
                         <h2 style={styles.cardTitle}>Payment History</h2>
-                        {loading ? (
-                            <p style={styles.emptyText}>Loading payment history…</p>
-                        ) : enrollments.length === 0 ? (
+                        {enrollments.length === 0 ? (
                             <p style={styles.emptyText}>No payment history available yet.</p>
                         ) : (
                             <div style={styles.tableWrapper}>

@@ -43,9 +43,8 @@ export default function CategoriesPage() {
     const { colors, theme } = useTheme();
     const navigate = useNavigate();
 
-    const [categories, setCategories] = useState([]);
+    const [categories, setCategories] = useState(FALLBACK_CATEGORIES);
     const [courses, setCourses] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [searchCat, setSearchCat] = useState('');
     const [hoveredCategory, setHoveredCategory] = useState(null);
     const [platformStats, setPlatformStats] = useState(null); // real stats from DB
@@ -60,8 +59,7 @@ export default function CategoriesPage() {
             })
             .catch(() => {
                 setCategories(FALLBACK_CATEGORIES);
-            })
-            .finally(() => setLoading(false));
+            });
     }, []);
 
     const filteredCats = categories.filter(c =>
@@ -150,11 +148,8 @@ export default function CategoriesPage() {
                 <h2 style={s.sectionTitle}>All Categories</h2>
                 <p style={s.sectionSub}>Click on a category to explore its courses</p>
 
-                {loading ? (
-                    <div style={s.emptyMsg}>Loading categories...</div>
-                ) : (
-                    <div style={s.grid}>
-                        {displayCats.map((cat, i) => {
+                <div style={s.grid}>
+                    {displayCats.map((cat, i) => {
                             const count = coursesForCat(cat.name).length;
                             const hasCourses = count > 0;
                             const meta = CATEGORY_META[cat.name] || CATEGORY_META[cat.technicalCategory] || { icon: BookOpen, description: 'Explore this learning path and discover new courses.' };
@@ -188,9 +183,8 @@ export default function CategoriesPage() {
                                     </div>
                                 </div>
                             );
-                        })}
-                    </div>
-                )}
+                    })}
+                </div>
             </div>
         </div>
     );

@@ -113,7 +113,7 @@ function EditModal({ assignment, onSave, onClose }) {
 
 const COLS = ['Assignment', 'Course', 'Due Date', 'Submissions', 'Avg Score', 'Status', ''];
 
-export default function AssignmentList({ assignments, allSubmissions, loading, courses, selectedCourse, onViewSubmissions, onUpdated, onDeleted, onCreateNew }) {
+export default function AssignmentList({ assignments, allSubmissions, courses, selectedCourse, onViewSubmissions, onUpdated, onDeleted, onCreateNew }) {
     const [editTarget, setEditTarget] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
 
@@ -148,7 +148,7 @@ export default function AssignmentList({ assignments, allSubmissions, loading, c
         }
     };
 
-    if (!loading && assignments.length === 0) {
+    if (assignments.length === 0) {
         return (
             <div style={{ ...card, padding: '60px 40px', textAlign: 'center' }}>
                 <ClipboardList size={48} color="#1e293b" style={{ display: 'block', margin: '0 auto 16px' }} aria-hidden="true" />
@@ -172,16 +172,7 @@ export default function AssignmentList({ assignments, allSubmissions, loading, c
                             </tr>
                         </thead>
                         <tbody>
-                            {loading && Array.from({ length: 4 }).map((_, i) => (
-                                <tr key={i}>
-                                    {COLS.map((_, j) => (
-                                        <td key={j} style={{ padding: '14px 18px' }}>
-                                            <div style={{ height: '13px', borderRadius: '6px', background: 'rgba(51,65,85,0.35)', animation: 'pulse 1.4s ease-in-out infinite' }} />
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
-                            {!loading && assignments.map(asgn => {
+                            {assignments.map(asgn => {
                                 const subs = subMap[asgn._id] || [];
                                 const graded = subs.filter(s => s.grade != null);
                                 const avgScore = graded.length ? Math.round(graded.reduce((a, s) => a + (s.grade || 0), 0) / graded.length) : null;

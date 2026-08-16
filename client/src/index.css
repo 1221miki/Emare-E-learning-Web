@@ -253,3 +253,22 @@ body.emare-sidebar-right main {
     gap: 14px;
   }
 }
+
+/* ── Contact banner + map (home page, above footer) ────────────── */
+@media (max-width: 1024px) {
+  .contact-banner-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 24px !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .contact-banner-grid {
+    grid-template-columns: 1fr !important;
+    gap: 22px !important;
+  }
+
+  .contact-banner {
+    padding: 40px 5% !important;
+  }
+}
