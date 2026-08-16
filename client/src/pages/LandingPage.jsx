@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { courseService, subscriptionService, userService } from '../services/api.jsx';
+import { courseService, subscriptionService, userService, liveSessionService } from '../services/api.jsx';
 import Navbar from '../components/Navbar';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
