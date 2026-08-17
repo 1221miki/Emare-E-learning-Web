@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment variables (secrets)
+.env
+**/.env
+.env.local
+.env.production
+
+# Build outputs
+dist/
+build/
+client/dist/
+
+# Logs
+*.log
+npm-debug.log*
+crash.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Temp/debug files
+build-debug*.txt
+build-debug*.log
+build.log
+out.js
+vite-inspect.json
+vite-inspect.txt
+temp_*.js
+check_*.mjs
+check-*.mjs
+
