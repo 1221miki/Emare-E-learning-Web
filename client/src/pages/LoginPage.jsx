@@ -35,7 +35,10 @@ export default function LoginPage() {
     const [socialRole, setSocialRole] = useState('Student');
     const [socialError, setSocialError] = useState('');
 
-    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+    const handleChange = (e) => {
+        if (error) setError('');                       // Clear error banner once user types again
+        setForm({ ...form, [e.target.name]: e.target.value });
+    };
 
     const handleRedirect = (user) => {
         if (user.assignedRole === 'Admin') navigate('/admin/dashboard');
@@ -53,7 +56,7 @@ export default function LoginPage() {
             handleRedirect(user);
         } catch (err) {
             console.error('Login error:', err);
-            const serverMsg = err.response?.data?.message || (err.response && JSON.stringify(err.response.data)) || err.message || 'Login failed. Please try again.';
+            const serverMsg = err.response?.data?.message || err.response?.data?.error || (err.response && JSON.stringify(err.response.data)) || err.message || 'Login failed. Please try again.';
             setError(serverMsg);
         } finally {
             setLoading(false);
@@ -72,20 +75,31 @@ export default function LoginPage() {
     const handleSocialSubmit = async (e) => {
         e.preventDefault();
         setSocialError('');
+
+        // Normalize + validate the provider profile before hitting the backend.
+        // If your OAuth SDK returns a token (Google "credential"/idToken, GitHub code,
+        // etc.), forward it as `idToken` so the backend can verify it — otherwise the
+        // user profile object is sent and email is used to match the account.
+        const email = (socialEmail || '').trim().toLowerCase();
+        if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+            setSocialError('A valid email address is required for social sign-in.');
+            return;
+        }
+
         setSocialLoading(true);
         try {
-            const mockData = {
+            const payload = {
                 provider: socialProvider.toLowerCase(),
-                email: socialEmail,
-                name: socialName,
+                email,
+                name: socialName.trim(),
                 socialId: `soc_${socialProvider.toLowerCase()}_${Date.now()}`,
                 role: socialRole
             };
-            const user = await socialAuth(mockData);
+            const user = await socialAuth(payload);
             setShowSocialModal(false);
             handleRedirect(user);
         } catch (err) {
-            setSocialError(err.response?.data?.message || `Social login with ${socialProvider} failed.`);
+            setSocialError(err.response?.data?.message || err.response?.data?.error || `Social login with ${socialProvider} failed.`);
         } finally {
             setSocialLoading(false);
         }

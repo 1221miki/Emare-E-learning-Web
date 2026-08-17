@@ -62,6 +62,7 @@ export default function RegisterPage() {
 
     const handleChange = e => {
         const { name, value, files } = e.target;
+        if (error) setError('');                       // Clear error banner once user types again
         if (files) {
             setForm(prev => ({ ...prev, [name]: files[0] }));
         } else {
@@ -111,7 +112,7 @@ export default function RegisterPage() {
             const response = await register(payload);
             navigate(`/verify-email?email=${encodeURIComponent(form.accountEmail.trim().toLowerCase())}`);
         } catch (err) {
-            setError(err.response?.data?.message || 'Registration failed. Please try again.');
+            setError(err.response?.data?.message || err.response?.data?.error || 'Registration failed. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -133,16 +134,28 @@ export default function RegisterPage() {
     const handleSocialSubmit = async (e) => {
         e.preventDefault();
         setSocialError('');
+
+        // Normalize + validate the provider profile before hitting the backend.
+        // Forward an OAuth token as `idToken` when your provider SDK returns one
+        // (Google "credential"/idToken); otherwise the profile object is sent and
+        // the email is used to match or create the account.
+        const email = (socialEmail || '').trim().toLowerCase();
+        if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+            setSocialError('A valid email address is required for social registration.');
+            return;
+        }
+
         setSocialLoading(true);
         try {
-            const mockData = {
+            const payload = {
                 provider: socialProvider.toLowerCase(),
-                email: socialEmail,
-                name: socialName,
+                email,
+                name: socialName.trim(),
+                socialId: `soc_${socialProvider.toLowerCase()}_${Date.now()}`,
                 role: socialRole,
             };
 
-            const user = await socialAuth(mockData);
+            const user = await socialAuth(payload);
 
             if (user.assignedRole === 'Admin') {
                 navigate('/admin/dashboard');
@@ -150,7 +163,7 @@ export default function RegisterPage() {
                 navigate('/student/dashboard');
             }
         } catch (err) {
-            setSocialError(err.response?.data?.message || `Unable to authorize ${socialProvider}. Please try again.`);
+            setSocialError(err.response?.data?.message || err.response?.data?.error || `Unable to authorize ${socialProvider}. Please try again.`);
         } finally {
             setSocialLoading(false);
         }

@@ -229,22 +229,39 @@ const getMe = async (req, res, next) => {
 // ─────────────────────────────────────────────
 const socialLogin = async (req, res, next) => {
     try {
+        console.log('Social login body:', req.body);
+
         const { 
             provider, email, accountEmail, name, socialId, role,
+            idToken, credential, accessToken,
             firstName: reqFirstName, lastName: reqLastName, username: reqUsername,
             country, city, address, educationLevel, institution, fieldOfStudy,
             learningInterests, preferredLanguage, professionalTitle, biography, skills
         } = req.body;
 
         const normalizedEmail = (accountEmail || email || '').trim().toLowerCase();
+        const oauthToken = idToken || credential || accessToken;
 
-        if (!provider || !normalizedEmail) {
-            return res.status(400).json({ success: false, message: 'Provider and email are required for social login.' });
+        if (!provider) {
+            return res.status(400).json({ success: false, message: 'Invalid or missing OAuth provider.' });
+        }
+
+        if (!normalizedEmail) {
+            return res.status(400).json({
+                success: false,
+                message: oauthToken
+                    ? 'Could not extract an email address from the OAuth token payload. Please re-authenticate with the provider.'
+                    : 'Invalid or missing OAuth token — no email was provided. Please re-authenticate with the provider.'
+            });
         }
 
         const validProvider = ['google', 'github', 'microsoft', 'facebook'].includes(provider.toLowerCase())
             ? provider.toLowerCase()
-            : 'google';
+            : null;
+
+        if (!validProvider) {
+            return res.status(400).json({ success: false, message: `Unsupported social provider: ${provider}. Supported providers: google, github, microsoft, facebook.` });
+        }
 
         // Always find by email first (most reliable — email is unique)
         let user = await User.findOne({ accountEmail: normalizedEmail });
@@ -260,7 +277,7 @@ const socialLogin = async (req, res, next) => {
             }
             // Update social provider details if needed
             user.socialProvider = validProvider;
-            user.socialId = socialId || user.socialId || `sim_${validProvider}_${email}`;
+            user.socialId = socialId || user.socialId || `sim_${validProvider}_${normalizedEmail}`;
             user.lastLoginTimestamp = Date.now();
             await user.save({ validateBeforeSave: false });
         } else {

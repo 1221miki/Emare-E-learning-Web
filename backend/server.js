@@ -273,25 +273,16 @@ if (process.env.NODE_ENV === 'production') {
         console.log('   /* (other)    → index.html (SPA routing)\n');
 
     } else {
-        // Build failed or dist not found
-        console.error('\n❌ FATAL: client/dist not found!');
-        console.error('   The React SPA build may have failed.');
-        console.error('\n   Checked these locations:');
-        candidates.forEach(p => console.error(`   - ${p}`));
-        console.error('\n   Fix: Check Render build logs at https://dashboard.render.com\n');
-        
-        // Catch-all so Render doesn't show a naked 404
-        app.use('*', (_req, res) => {
-            res.status(503).json({
-                success: false,
-                error: 'Build not found',
-                message: 'The React SPA was not built successfully. Check build logs.',
-                debug: {
-                    nodeEnv: process.env.NODE_ENV,
-                    cwd: __cwd,
-                    __dirname: __server
-                }
-            });
+        // Frontend is hosted separately (e.g., Netlify), so client/dist isn't
+        // built on this server. The backend keeps running and serves ONLY the API —
+        // static file serving and the SPA catch-all are skipped.
+        console.warn('\n⚠️  client/dist not found — skipping SPA static serving.');
+        console.warn('   The frontend is expected to be hosted separately (e.g., Netlify).');
+        console.warn('   This backend will serve API endpoints only.\n');
+
+        // Root endpoint confirms the API is alive (no SPA to serve).
+        app.get('/', (_req, res) => {
+            res.send('API Server is running...');
         });
     }
 } else {
