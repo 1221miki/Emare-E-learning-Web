@@ -1,9 +1,18 @@
 import axios from 'axios';
 
+// Resolve the backend API base URL in order of priority:
+//   1. VITE_API_URL env var if explicitly set (e.g. http://localhost:5000/api in dev)
+//   2. Relative /api — ONLY safe in dev, where the Vite proxy forwards /api → backend
+//   3. Production fallback → Render backend (Netlify has NO same-origin proxy)
+const API_BASE_URL = (() => {
+    const fromEnv = (import.meta.env.VITE_API_URL || '').trim();
+    if (fromEnv) return fromEnv;
+    if (import.meta.env.DEV) return '/api';
+    return 'https://ayires.onrender.com/api';
+})();
+
 const API = axios.create({
-    // In production (same-origin deployment): VITE_API_URL is empty → uses relative /api
-    // In local dev: set VITE_API_URL=http://localhost:5000/api in client/.env
-    baseURL: import.meta.env.VITE_API_URL || '/api',
+    baseURL: API_BASE_URL,
     withCredentials: true,
     headers: { 'Content-Type': 'application/json' }
 });
@@ -386,7 +395,7 @@ export const getPdfUrl = (rawUrl = '') => {
     try {
         const url = new URL(trimmed);
         const storagePath = url.pathname.replace(/^\//, ''); // e.g. courses/pdfs/notes.pdf
-        const base = (import.meta.env.VITE_API_URL || '/api').replace(/\/api$/, '');
+        const base = API_BASE_URL.replace(/\/api$/, '');
         return `${base}/api/pdf-proxy/${storagePath}`;
     } catch {
         return trimmed; // fallback: return original if URL parsing fails
