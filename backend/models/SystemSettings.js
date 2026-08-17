@@ -60,7 +60,6 @@ const systemSettingsSchema = new mongoose.Schema({
     // 8. Payment Settings
     paymentGatewayActive: { type: Boolean, default: true },
     multiCurrencySupport: { type: Boolean, default: true },
-    autoRefundsEnabled: { type: Boolean, default: false },
     invoiceGeneration: { type: Boolean, default: true },
     taxCalculationEnabled: { type: Boolean, default: true },
 

@@ -27,12 +27,10 @@ export const promptLibrary = [
             'Check course ratings and reviews before enrolling.',
             '📚 Recommended for you: [Course Name] based on your interests.',
             'Trending this week: [Course Name] - Join 500+ learners!',
-            'Add courses to your wishlist and enroll later.',
             'Enroll now in this free course and start learning today!',
             'Purchase this course to unlock all premium content.',
             'Congratulations! You have successfully enrolled in [Course Name].',
             'Ready to start? Click Go to Course and begin your journey.',
-            '⏰ Your wishlist has 3 courses waiting. Enroll now!',
             'Don\'t miss out! The course [Course Name] is ending soon.',
             'Enrollment deadline approaching: [Course Name] closes in 2 days.'
         ]

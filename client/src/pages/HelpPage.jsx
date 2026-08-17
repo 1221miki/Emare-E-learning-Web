@@ -11,8 +11,7 @@ export default function HelpPage() {
         { q: 'How do I register?', a: 'Click the "Get Started" button on the top right, fill in your details, and verify your email address.' },
         { q: 'Can I download videos?', a: 'Currently, videos can only be streamed online to protect the intellectual property of our instructors. Downloadable resources like PDFs are available.' },
         { q: 'Are certificates accredited?', a: 'Our certificates verify your completion and the skills acquired, but they are not university degrees. They are widely recognized by local employers.' },
-        { q: 'How do I reset my password?', a: 'On the login page, click "Forgot Password". Enter your email and follow the instructions sent to you.' },
-        { q: 'Can I get a refund?', a: 'We offer a 7-day money-back guarantee for most courses if you have completed less than 20% of the content.' }
+        { q: 'How do I reset my password?', a: 'On the login page, click "Forgot Password". Enter your email and follow the instructions sent to you.' }
     ];
 
     const s = {

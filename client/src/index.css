@@ -4,6 +4,8 @@
   box-sizing: border-box;
 }
 
+@tailwind utilities;
+
 html {
   overflow-x: hidden;
 }

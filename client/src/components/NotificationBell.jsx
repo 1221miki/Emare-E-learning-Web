@@ -69,7 +69,8 @@ export default function NotificationBell() {
 
             {isOpen && (
                 <div style={{
-                    position: 'absolute', top: '100%', right: 0, width: '360px',
+                    position: 'absolute', top: '100%', right: 0, marginTop: '8px',
+                    width: '280px', maxWidth: 'calc(100vw - 32px)',
                     maxHeight: '460px', overflowY: 'auto',
                     background: colors.bgCard, border: `1px solid ${colors.border}`,
                     borderRadius: '12px', boxShadow: '0 12px 32px rgba(0,0,0,0.3)',

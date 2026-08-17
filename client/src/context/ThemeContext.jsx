@@ -7,6 +7,7 @@ export const ThemeProvider = ({ children }) => {
 
     useEffect(() => {
         localStorage.setItem('elms_theme', theme);
+        document.documentElement.setAttribute('data-theme', theme);
         document.body.style.background = theme === 'dark' ? '#0b1220' : '#f8fafc';
         document.body.style.color = theme === 'dark' ? '#eef2ff' : '#0f172a';
     }, [theme]);

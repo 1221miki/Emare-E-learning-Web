@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { paymentService } from '../../../services/api';
-import { History, BookOpen, CreditCard, Receipt, Undo2, DollarSign, CheckCircle2, Clock, Building2, Smartphone, AlertCircle, FileText } from 'lucide-react';
+import { History, BookOpen, CreditCard, Receipt, DollarSign, CheckCircle2, Clock, Building2, Smartphone, FileText } from 'lucide-react';
 
 const WARN = '#f59e0b';
 const DANGER = '#ef4444';
@@ -17,7 +17,6 @@ const STATUS_META = {
 };
 
 const METHODS_KEY = 'emare_payment_methods';
-const REFUNDS_KEY = 'emare_refund_requests';
 
 function readLocal(key, fallback) {
     try {
@@ -67,11 +66,6 @@ export default function PaymentsTab(dash) {
     const [activeInvoice, setActiveInvoice] = useState(null);
     const [invoiceData, setInvoiceData] = useState(null);
 
-    const [refundTxId, setRefundTxId] = useState('');
-    const [refundReason, setRefundReason] = useState('');
-    const [refundMsg, setRefundMsg] = useState('');
-    const [refundErr, setRefundErr] = useState('');
-    const [localRefunds, setLocalRefunds] = useState(() => readLocal(REFUNDS_KEY, []));
     const enrollmentList = useMemo(() => (Array.isArray(enrollments) ? enrollments : []), [enrollments]);
     const statusList = useMemo(() => (Array.isArray(paymentStatusList) ? paymentStatusList : []), [paymentStatusList]);
 
@@ -136,28 +130,6 @@ export default function PaymentsTab(dash) {
         URL.revokeObjectURL(url);
     };
 
-    const submitRefund = async () => {
-        if (!refundTxId || !refundReason.trim()) { setRefundErr('Select a completed transaction and write a reason.'); return; }
-        setRefundErr('');
-        try {
-            const res = await paymentService.requestRefund({ transactionId: refundTxId, reason: refundReason.trim() });
-            const rr = res.data?.data || {};
-            const next = [...localRefunds, { _id: rr._id || Date.now(), transactionId: refundTxId, reason: refundReason.trim(), createdAt: new Date().toISOString() }];
-            setLocalRefunds(next);
-            writeLocal(REFUNDS_KEY, next);
-            setTransactions(prev => prev.map(t => t._id === refundTxId ? { ...t, status: 'Refunded' } : t));
-            setRefundTxId('');
-            setRefundReason('');
-            setRefundMsg('Refund request submitted. Our finance team will review it within 2–3 business days.');
-        } catch {
-            setRefundErr('Refund request failed. Please try again.');
-        }
-    };
-
-    const eligibleForRefund = transactions.filter(t => t.status === 'Completed');
-    const refundHistory = transactions.filter(t => t.status === 'Refunded');
-    const combinedRefunds = [...refundHistory, ...localRefunds.filter(l => !refundHistory.some(t => String(t._id) === String(l.transactionId)))];
-
     const statusBadge = (status) => {
         const meta = STATUS_META[status] || { color: colors.textMuted, label: status };
         return (
@@ -171,8 +143,7 @@ export default function PaymentsTab(dash) {
         { key: 'history', label: 'Payment History', icon: <History size={15} aria-hidden="true" /> },
         { key: 'enrollments', label: 'My Enrollments', icon: <BookOpen size={15} aria-hidden="true" /> },
         { key: 'methods', label: 'Payment Methods', icon: <CreditCard size={15} aria-hidden="true" /> },
-        { key: 'invoices', label: 'Invoices & Receipts', icon: <Receipt size={15} aria-hidden="true" /> },
-        { key: 'refunds', label: 'Refund Requests', icon: <Undo2 size={15} aria-hidden="true" /> }
+        { key: 'invoices', label: 'Invoices & Receipts', icon: <Receipt size={15} aria-hidden="true" /> }
     ];
 
     const renderHistory = () => (
@@ -412,63 +383,13 @@ export default function PaymentsTab(dash) {
         </div>
     );
 
-    const renderRefunds = () => (
-        <div>
-            <div style={styles.panelCard}>
-                <h3 style={{ ...styles.panelCardTitle, fontSize: '16px' }}>Request a Refund</h3>
-                <p style={{ color: colors.textMuted, fontSize: '13px', margin: '-12px 0 20px', lineHeight: 1.6 }}>
-                    Refunds are reviewed by the finance team within 2–3 business days for completed transactions on courses you no longer want.
-                </p>
-                {refundMsg && <div style={{ ...styles.successAlert }}>{refundMsg}</div>}
-                {refundErr && <div style={{ background: `${DANGER}15`, border: `1px solid ${DANGER}30`, color: DANGER, padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '14px', fontWeight: '600' }}>{refundErr}</div>}
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>Transaction</label>
-                    <select value={refundTxId} onChange={e => setRefundTxId(e.target.value)} style={styles.select}>
-                        <option value="">Select a completed transaction</option>
-                        {eligibleForRefund.map(t => (
-                            <option key={t._id} value={t._id}>{courseTitle(t.courseRef)} · {(t.amount || 0).toLocaleString()} {t.currency || 'ETB'} · {new Date(t.createdAt || Date.now()).toLocaleDateString()}</option>
-                        ))}
-                    </select>
-                </div>
-                <div style={{ ...styles.formGroup, marginTop: '16px' }}>
-                    <label style={styles.label}>Reason for Refund</label>
-                    <textarea value={refundReason} onChange={e => setRefundReason(e.target.value)} rows="3" placeholder="Briefly explain why you want a refund..." style={{ ...styles.input, resize: 'vertical', width: '100%', boxSizing: 'border-box' }} />
-                </div>
-                <button onClick={submitRefund} disabled={!refundTxId || !refundReason.trim()} style={{ ...styles.resumeBtn, marginTop: '20px', opacity: (!refundTxId || !refundReason.trim()) ? 0.5 : 1 }}>Submit Refund Request</button>
-            </div>
-
-            <div style={styles.panelCard}>
-                <h3 style={{ ...styles.panelCardTitle, fontSize: '16px' }}>Refund History</h3>
-                {combinedRefunds.length === 0 ? (
-                    <div style={styles.emptyContent}>
-                        <Undo2 size={40} color={colors.textMuted} style={{ marginBottom: '12px' }} aria-hidden="true" />
-                        <p style={styles.emptyText}>No refunds yet. Refunded transactions will appear here with their status.</p>
-                    </div>
-                ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {combinedRefunds.map((r, i) => (
-                            <div key={r._id || i} style={{ padding: '14px 16px', borderRadius: '10px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                                    <span style={{ color: colors.text, fontSize: '13px', fontWeight: '700' }}>{courseTitle(transactions.find(t => String(t._id) === String(r.transactionId))?.courseRef)}</span>
-                                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#8b5cf6', padding: '4px 10px', borderRadius: '6px', background: '#8b5cf615' }}>UNDER REVIEW</span>
-                                </div>
-                                <p style={{ color: colors.textMuted, fontSize: '12px', margin: '6px 0 0' }}>{r.reason}</p>
-                                <p style={{ color: colors.textMuted, fontSize: '11px', margin: '6px 0 0' }}>{r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}</p>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-
     return (
         <div>
             <div style={styles.tabHeader}>
                 <h2 style={{ ...styles.tabTitle, display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <CreditCard size={20} aria-hidden="true" /> Tuition &amp; Payments
                 </h2>
-                <p style={styles.tabSubtitle}>Track your transactions, manage payment methods, download receipts, and request refunds</p>
+                <p style={styles.tabSubtitle}>Track your transactions, manage payment methods, and download receipts</p>
             </div>
 
             <div style={{ display: 'flex', borderBottom: `1px solid ${colors.border}`, marginBottom: '24px', gap: '4px', flexWrap: 'wrap' }}>
@@ -500,7 +421,6 @@ export default function PaymentsTab(dash) {
             {section === 'enrollments' && renderEnrollments()}
             {section === 'methods' && renderMethods()}
             {section === 'invoices' && renderInvoices()}
-            {section === 'refunds' && renderRefunds()}
         </div>
     );
 }

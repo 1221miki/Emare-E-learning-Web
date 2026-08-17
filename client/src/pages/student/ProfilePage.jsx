@@ -15,7 +15,6 @@ export default function ProfilePage() {
     const navItems = [
         { label: 'Dashboard', path: '/student/dashboard', key: 'dashboard' },
         { label: 'My Courses', path: '/student/dashboard?tab=my_courses', key: 'courses' },
-        { label: 'Wishlist', path: '/student/wishlist', key: 'wishlist' },
         { label: 'Certificates', path: '/student/certificates', key: 'certificates' },
         { label: 'Profile', path: '/student/profile', key: 'profile' },
         { label: 'Leaderboard', path: '/leaderboard', key: 'leaderboard' },

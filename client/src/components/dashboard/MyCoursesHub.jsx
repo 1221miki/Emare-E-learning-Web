@@ -7,7 +7,6 @@ import ProfessionalCourseCard from './ProfessionalCourseCard';
 export default function MyCoursesHub({ 
     enrollments, 
     allCourses,
-    wishlist,
     recentlyViewed,
     setActiveTab,
     togglePinCourse,
@@ -190,14 +189,6 @@ export default function MyCoursesHub({
                 <div style={s.section}>
                     <div style={s.sectionHeader}>
                         <h3 style={s.sectionTitle}><Lightbulb size={20} aria-hidden="true" /> Recommended for You</h3>
-                        <button 
-                            style={s.viewAllBtn}
-                            onClick={() => navigate('/career-tracks')}
-                            onMouseEnter={e => e.currentTarget.style.background = `${colors.primary}15`}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                            Browse Career Tracks →
-                        </button>
                     </div>
                     <div style={s.grid}>
                         {recommendations.map(course => (
@@ -237,14 +228,8 @@ export default function MyCoursesHub({
                     </div>
                     <h2 style={{ fontSize: '24px', fontWeight: '900', color: colors.text, margin: '0 0 12px' }}>Your Learning Journey Starts Here</h2>
                     <p style={{ color: colors.textMuted, fontSize: '15px', maxWidth: '400px', margin: '0 auto 24px', lineHeight: 1.6 }}>
-                        Enroll in a professional career track and gain the skills needed for today's digital economy.
+                        Enroll in professional courses and gain the skills needed for today's digital economy.
                     </p>
-                    <button 
-                        style={{ ...s.resumeBtn, boxShadow: 'none' }}
-                        onClick={() => navigate('/career-tracks')}
-                    >
-                        Explore Career Tracks
-                    </button>
                 </div>
             )}
         </div>

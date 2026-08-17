@@ -1206,12 +1206,6 @@ export default function AdminDashboard() {
         document.body.removeChild(link);
     };
 
-    const handleGrantRefund = (enrId) => {
-        if (!window.confirm('Grant full refund for this student enrollment?')) return;
-        showNotification('Refund granted successfully. Receipt issued.');
-        setManagedStudents(prev => prev.map(s => s._id === enrId ? { ...s, paymentStatus: 'refunded' } : s));
-    };
-
     const handleRevokeAccess = async (enrId) => {
         if (!window.confirm('Revoke access for this student?')) return;
         try {
@@ -3643,12 +3637,11 @@ export default function AdminDashboard() {
         <div style={s.tabContent}>
             <div style={s.sectionHeader}>
                 <h2 style={s.sectionTitle}>Finances & Revenue</h2>
-                <p style={s.sectionSub}>Manage payments, manual clearings, instructor payouts, and refunds.</p>
+                <p style={s.sectionSub}>Manage payments, manual clearings, and instructor payouts.</p>
             </div>
             <div style={s.statsGrid}>
                 <StatCard label="Total Revenue" value={`ETB ${(analytics?.clearedEnrollments || 0) * 1500}`} color={colors.success} icon={<Wallet size={24} aria-hidden="true" />} />
                 <StatCard label="Pending Payouts" value="ETB 0" color={colors.warning} icon={<Clock3 size={24} aria-hidden="true" />} />
-                <StatCard label="Refunds Processed" value="0" color={colors.danger} icon={<RotateCcw size={24} aria-hidden="true" />} />
             </div>
             <div style={s.card}>
                 <h3 style={s.cardTitle}>Recent Transactions</h3>
@@ -5214,7 +5207,6 @@ export default function AdminDashboard() {
                                             </td>
                                             <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                                                 <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                                                    <button onClick={() => handleGrantRefund(enr._id)} title="Grant Refund" style={{ padding: '4px 8px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: '#d97706' }}> <RefreshCw size={16} style={{ marginRight: '6px' }} />  Refund</button>
                                                     <button onClick={() => handleRevokeAccess(enr._id)} title="Revoke Access" style={{ padding: '4px 8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: '#ef4444' }}> <Ban size={16} style={{ marginRight: '6px', color: '#ef4444' }} />  Revoke</button>
                                                     <button onClick={() => handleResetProgress(enr._id)} title="Reset Progress" style={{ padding: '4px 8px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: colors.text }}> <Eraser size={16} style={{ marginRight: '6px' }} />  Reset</button>
                                                     <button onClick={() => handleResendWelcomeEmail(enr._id)} title="Resend Email" style={{ padding: '4px 8px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: '#2563eb' }}> <Mail size={16} style={{ marginRight: '6px' }} /> ️ Email</button>

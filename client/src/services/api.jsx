@@ -39,7 +39,7 @@ API.interceptors.response.use(
         if (error.response?.status === 401) {
             localStorage.removeItem('elms_token');
             localStorage.removeItem('elms_user');
-            const publicPaths = ['/login', '/register', '/', '/about', '/contact', '/help', '/privacy', '/terms', '/cookies', '/courses', '/search', '/career-tracks', '/categories', '/leaderboard', '/payment/callback', '/payment/success', '/payment/failed'];
+            const publicPaths = ['/login', '/register', '/', '/about', '/contact', '/help', '/privacy', '/terms', '/cookies', '/courses', '/search', '/categories', '/leaderboard', '/payment/callback', '/payment/success', '/payment/failed'];
             const currentPath = window.location.pathname;
             const isPublic = publicPaths.some(p => currentPath === p || currentPath.startsWith('/courses/') || currentPath.startsWith('/instructors/') || currentPath.startsWith('/payment/'));
             if (!isPublic && currentPath !== '/login') {
@@ -193,12 +193,6 @@ export const subscriptionService = {
      * GET /api/subscriptions/discount/check  (legacy — device fingerprint only)
      */
     checkDeviceSubscription: () => API.get('/subscriptions/discount/check')
-};
-
-// ── Wishlist API Calls ─────────────────────────────────────
-export const wishlistService = {
-    getMyWishlist: () => API.get('/wishlist'),
-    toggle: (courseId) => API.post('/wishlist/toggle', { courseId })
 };
 
 // ── Category API Calls ─────────────────────────────────────
@@ -410,7 +404,6 @@ export const paymentService = {
     verifyChapa: (txRef) => API.get(`/payments/chapa/verify/${txRef}`),
     history: () => API.get('/payments/history'),
     invoice: (id) => API.get(`/payments/invoice/${id}`),
-    requestRefund: (data) => API.post('/payments/refund', data),
     applyCoupon: (data) => API.post('/payments/coupon', data)
 };
 

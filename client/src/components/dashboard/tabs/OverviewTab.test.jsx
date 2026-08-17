@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import OverviewTab from './OverviewTab';
 
 const styles = new Proxy({}, { get: () => ({}) });
@@ -11,7 +11,6 @@ function renderTab(overrides = {}) {
         colors,
         setActiveTab: vi.fn(),
         enrollments: [],
-        wishlist: [],
         grades: [],
         certificates: [],
         allCourses: [],
@@ -30,7 +29,6 @@ function renderTab(overrides = {}) {
         toggleWidgetVisibility: vi.fn(),
         togglePinCourse: vi.fn(),
         triggerAssistantPrompt: vi.fn(),
-        handleToggleWishlist: vi.fn(),
         handleMarkNotificationAsRead: vi.fn(),
         handleUpdateStudyTarget: vi.fn(),
         completedCoursesCount: 0,
@@ -70,17 +68,17 @@ describe('OverviewTab', () => {
         expect(screen.queryByText('Old Homework')).not.toBeInTheDocument();
     });
 
-    it('keeps the 7-Day Streak badge locked instead of hardcoding it as earned', () => {
-        renderTab();
-        const streakCard = screen.getByText('7-Day Streak').closest('div');
-        expect(streakCard).not.toBeNull();
-        expect(within(streakCard).getByText('▣ LOCKED')).toBeInTheDocument();
+    it('shows the four KPI stat cards in a compact row', () => {
+        renderTab({ activeCourses: [{ _id: 'e1' }], upcomingAssignmentsCount: 3, quizAverage: 78, xpPoints: 420 });
+        expect(screen.getByText('In Progress Courses')).toBeInTheDocument();
+        expect(screen.getByText('Assignments Due')).toBeInTheDocument();
+        expect(screen.getByText('Quiz Average')).toBeInTheDocument();
+        expect(screen.getByText('XP Earned')).toBeInTheDocument();
     });
 
-    it('shows the real Learning Activity Snapshot grid', () => {
+    it('does not render the locked badges gallery on the overview', () => {
         renderTab();
-        expect(screen.getByText('Learning Activity Snapshot')).toBeInTheDocument();
-        expect(screen.getByText('Courses In Progress')).toBeInTheDocument();
-        expect(screen.getByText('Certificates Earned')).toBeInTheDocument();
+        expect(screen.queryByText('7-Day Streak')).not.toBeInTheDocument();
+        expect(screen.queryByText('LOCKED')).not.toBeInTheDocument();
     });
 });

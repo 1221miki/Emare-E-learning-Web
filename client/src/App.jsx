@@ -62,7 +62,6 @@ import CourseCatalog         from './pages/student/CourseCatalog';
 import CourseDetailPage      from './pages/student/CourseDetailPage';
 import QuizPage              from './pages/student/QuizPage';
 import PaymentPage           from './pages/student/PaymentPage';
-import WishlistPage          from './pages/student/WishlistPage';
 import CertificatesPage      from './pages/student/CertificatesPage';
 import ProfilePage           from './pages/student/ProfilePage';
 import LeaderboardPage       from './pages/student/LeaderboardPage';
@@ -93,7 +92,6 @@ import VerifyCertificatePage from './pages/VerifyCertificatePage';
 import MessageInboxPage      from './pages/MessageInboxPage';
 import LiveSessionsPage      from './pages/LiveSessionsPage';
 import CategoriesPage        from './pages/CategoriesPage';
-import CareerTracksPage      from './pages/CareerTracksPage';
 import SearchPage            from './pages/SearchPage';
 import InstructorProfilePage from './pages/InstructorProfilePage';
 
@@ -125,7 +123,6 @@ function AppRoutes() {
                 <Route path="/courses"               element={<CourseCatalog />} />
                 <Route path="/courses/:courseId"     element={<CourseDetailPage />} />
                 <Route path="/search"                element={<SearchPage />} />
-                <Route path="/career-tracks"         element={<CareerTracksPage />} />
                 <Route path="/categories"            element={<CategoriesPage />} />
                 <Route path="/instructors/:id"       element={<InstructorProfilePage />} />
                 <Route path="/instructors"           element={<SearchPage />} />
@@ -139,7 +136,6 @@ function AppRoutes() {
                 <Route path="/student/learn/:courseId"       element={<PrivateRoute allowedRoles={['Student']}><LearningWorkspace /></PrivateRoute>} />
                 <Route path="/student/quiz/:quizId"          element={<PrivateRoute allowedRoles={['Student']}><QuizPage /></PrivateRoute>} />
                 <Route path="/student/payments"              element={<PrivateRoute allowedRoles={['Student']}><PaymentPage /></PrivateRoute>} />
-                <Route path="/student/wishlist"              element={<PrivateRoute allowedRoles={['Student']}><WishlistPage /></PrivateRoute>} />
                 <Route path="/student/certificates"          element={<PrivateRoute allowedRoles={['Student']}><CertificatesPage /></PrivateRoute>} />
                 <Route path="/student/profile"               element={<PrivateRoute allowedRoles={['Student']}><ProfilePage /></PrivateRoute>} />
                 <Route path="/student/discussions"           element={<PrivateRoute allowedRoles={['Student']}><DiscussionPage /></PrivateRoute>} />

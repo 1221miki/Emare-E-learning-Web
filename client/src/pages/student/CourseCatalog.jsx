@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { courseService, categoryService, wishlistService } from '../../services/api';
+import { courseService, categoryService } from '../../services/api';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import GuestModal from '../../components/GuestModal';
@@ -49,7 +49,6 @@ export default function CourseCatalog() {
 
     const [courses, setCourses] = useState([]);
     const [categories, setCategories] = useState([]);
-    const [wishlistIds, setWishlistIds] = useState([]);
     const [activeSection, setActiveSection] = useState(urlParams.get('section') || (urlParams.get('certificates') === 'true' ? 'certificates' : 'all'));
 
     // Filters
@@ -95,15 +94,6 @@ export default function CourseCatalog() {
                 // Force React to re-render by creating a new array
                 setCourses([...coursesData]);
                 setCategories([{ name: 'All' }, ...(resCats.data?.data || [])]);
-                
-                if (isAuthenticated) {
-                    try {
-                        const wRes = await wishlistService.getMyWishlist();
-                        setWishlistIds((wRes.data?.data || []).map(w => w.courseRef?._id || w.courseRef || w._id));
-                    } catch (e) { 
-                        console.warn('Wishlist fetch error:', e);
-                    }
-                }
             } catch (e) { 
                 console.error('Error fetching data:', e); 
             }
@@ -185,15 +175,6 @@ export default function CourseCatalog() {
         return (ratings.reduce((sum, value) => sum + value, 0) / ratings.length).toFixed(1);
     }, [courses]);
 
-    const toggleWishlist = async (e, courseId) => {
-        e.stopPropagation();
-        if (!isAuthenticated) { setGuestModal({ open: true, action: 'save this course to your wishlist' }); return; }
-        try {
-            await wishlistService.toggle(courseId);
-            setWishlistIds(prev => prev.includes(courseId) ? prev.filter(id => id !== courseId) : [...prev, courseId]);
-        } catch (e) { console.error(e); }
-    };
-
     const getEmoji = (c) => EMOJI_MAP[c.technicalCategory] || EMOJIS[(c._id?.charCodeAt(0) || 0) % EMOJIS.length] || '◈';
 
     const renderStars = (rating = 0) => {
@@ -243,7 +224,6 @@ export default function CourseCatalog() {
         cFoot: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: `1px solid ${colors.border}`, marginTop: 'auto' },
         price: { fontSize: '16px', fontWeight: '800', color: colors.text },
         enrollBtn: { background: `linear-gradient(135deg,${colors.primary},${colors.accent})`, color: '#fff', border: 'none', padding: '7px 14px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '11px', transition: 'opacity 0.2s' },
-        wishBtn: { position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.45)', border: 'none', borderRadius: '8px', padding: '4px 7px', cursor: 'pointer', fontSize: '13px', backdropFilter: 'blur(4px)', transition: 'transform 0.15s' },
         emptyBox: { textAlign: 'center', padding: '72px 32px', background: colors.bgCard, borderRadius: '16px', border: `1px solid ${colors.border}` },
         filterTag: { display: 'inline-flex', alignItems: 'center', gap: '5px', background: `${colors.primary}10`, border: `1px solid ${colors.primary}25`, color: colors.primary, padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' },
         guestBanner: { background: `linear-gradient(135deg,${colors.primary}08,${colors.accent}06)`, border: `1px solid ${colors.primary}18`, borderRadius: '12px', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', gap: '12px' },
@@ -255,7 +235,6 @@ export default function CourseCatalog() {
     const priceBtnStyle = (active) => ({ flex: 1, padding: '5px 4px', borderRadius: '7px', border: `1px solid ${active ? colors.primary : colors.border}`, background: active ? `${colors.primary}12` : 'transparent', color: active ? colors.primary : colors.textMuted, fontWeight: '700', cursor: 'pointer', fontSize: '11px' });
 
     const CourseCard = ({ course, isList }) => {
-        const inWish = wishlistIds.includes(course._id);
         const isNew = course.creationTimestamp && (Date.now() - new Date(course.creationTimestamp).getTime()) < 30 * 24 * 3600 * 1000;
         const ratingValue = typeof course.averageRating === 'number' ? course.averageRating : 0;
         const hasRating = typeof course.averageRating === 'number' && !Number.isNaN(course.averageRating);
@@ -302,7 +281,6 @@ export default function CourseCatalog() {
                         />
                     )}
                     {!hasThumbnail && <span>{getEmoji(course)}</span>}
-                    {!isList && <button style={{ ...s.wishBtn, color: inWish ? '#ef4444' : '#fff' }} onClick={e => toggleWishlist(e, course._id)}>{inWish ? '️' : ''}</button>}
                     {course.previewVideoUrl && !isList && (
                         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.15)', opacity: 0, transition: 'opacity 0.2s' }}
                             onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
@@ -521,7 +499,7 @@ export default function CourseCatalog() {
                         </div>
                     </div>
 
-                    <CourseDiscoveryChecklist wishlistCount={wishlistIds.length} />
+                    <CourseDiscoveryChecklist />
 
                     {/* Course Grid */}
                     {filtered.length === 0 ? (

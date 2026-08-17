@@ -118,7 +118,6 @@ export default function PaymentPage() {
         historyCell: { padding: '12px 8px', color: colors.text, fontSize: '14px' },
         historyTableTh: { textAlign: 'left', padding: '10px 8px', color: colors.textMuted, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.08em' },
         receiptBtn: { border: '1px solid rgba(129,140,248,0.4)', background: 'rgba(99,102,241,0.12)', color: '#c7d2fe', padding: '8px 10px', borderRadius: '10px', cursor: 'pointer' },
-        refundForm: { display: 'grid', gap: '10px' },
         label: { color: colors.text, fontWeight: '600', fontSize: '13px' },
         input: { background: colors.bgInput, border: `1px solid ${colors.border}`, borderRadius: '12px', color: colors.text, padding: '12px 14px', width: '100%' },
         statusPill: { padding: '6px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: '700' },
@@ -134,8 +133,6 @@ export default function PaymentPage() {
     const [paymentMethods, setPaymentMethods] = useState(defaultPaymentMethods);
     const [copyMessage, setCopyMessage] = useState('');
     const [feedbackMessage, setFeedbackMessage] = useState('');
-    const [refundCourseId, setRefundCourseId] = useState('');
-    const [refundReason, setRefundReason] = useState('');
 
     useEffect(() => {
         fetchStatus();
@@ -355,17 +352,6 @@ export default function PaymentPage() {
         win.document.close();
         win.focus();
         win.print();
-    };
-
-    const handleRefundRequest = (e) => {
-        e.preventDefault();
-        if (!refundCourseId || !refundReason) {
-            alert('Please select a course and describe your reason.');
-            return;
-        }
-        setFeedbackMessage('Refund request sent. The support team will review it shortly.');
-        setRefundCourseId('');
-        setRefundReason('');
     };
 
     const formatDate = (value) => {
@@ -672,22 +658,6 @@ export default function PaymentPage() {
                                 </table>
                             </div>
                         )}
-                    </div>
-
-                    <div style={styles.card}>
-                        <h2 style={styles.cardTitle}>Refund Request</h2>
-                        <form onSubmit={handleRefundRequest} style={styles.refundForm}>
-                            <label style={styles.label}>Course</label>
-                            <select style={styles.input} value={refundCourseId} onChange={(e) => setRefundCourseId(e.target.value)}>
-                                <option value="">Select a course</option>
-                                {enrollments.map((e) => (
-                                    <option key={e._id} value={e._id}>{e.courseRef?.courseTitle || 'Course'}</option>
-                                ))}
-                            </select>
-                            <label style={styles.label}>Reason</label>
-                            <textarea style={{ ...styles.input, minHeight: '100px' }} value={refundReason} onChange={(e) => setRefundReason(e.target.value)} placeholder="Tell us why you want a refund." />
-                            <button type="submit" style={styles.primaryBtn}>Request Refund</button>
-                        </form>
                     </div>
                 </section>
             </main>

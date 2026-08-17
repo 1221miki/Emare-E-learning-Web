@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { courseService, reviewService, wishlistService, enrollmentService } from '../../services/api';
+import { courseService, reviewService, enrollmentService } from '../../services/api';
 import Navbar from '../../components/Navbar';
 import GuestModal from '../../components/GuestModal';
 import LearningContentAccessChecklist from '../../components/dashboard/LearningContentAccessChecklist';
@@ -15,7 +15,6 @@ export default function CourseDetailPage() {
 
     const [course, setCourse] = useState(null);
     const [reviews, setReviews] = useState([]);
-    const [inWishlist, setInWishlist] = useState(false);
     const [enrolling, setEnrolling] = useState(false);
     const [isEnrolled, setIsEnrolled] = useState(false);
     const [guestModal, setGuestModal] = useState({ open: false, action: '' });
@@ -55,10 +54,6 @@ export default function CourseDetailPage() {
             }
 
             if (isAuthenticated && isStudent) {
-                wishlistService.getMyWishlist().then(res => {
-                    const exists = res.data.data.some(w => w.courseRef?._id === courseId || w.courseRef === courseId);
-                    setInWishlist(exists);
-                });
                 // Check if already enrolled
                 enrollmentService.getMyStatus().then(res => {
                     const enrollments = res.data?.data || [];
@@ -70,7 +65,7 @@ export default function CourseDetailPage() {
                 }).catch(() => {});
             }
         }).catch(() => {
-            console.error('Failed to load enrollment or wishlist state.');
+            console.error('Failed to load enrollment state.');
         });
     }, [courseId, isAuthenticated, isStudent]);
 
@@ -90,23 +85,6 @@ export default function CourseDetailPage() {
 
         setEnrolling(true);
         navigate(`/checkout/${course._id}`);
-    };
-
-    const handleToggleWishlist = async () => {
-        if (isSuspended) {
-            alert('Your account is suspended. Wishlist updates are disabled.');
-            return;
-        }
-        if (!isAuthenticated) {
-            setGuestModal({ open: true, action: 'save this course to your wishlist' });
-            return;
-        }
-        try {
-            const res = await wishlistService.toggle(courseId);
-            setInWishlist(res.data.added);
-        } catch (err) {
-            alert('Failed to update wishlist');
-        }
     };
 
     const submitReview = async (e) => {
@@ -193,9 +171,6 @@ export default function CourseDetailPage() {
                                 ◈ Start Learning
                             </button>
                         )}
-                        <button onClick={handleToggleWishlist} style={{ width: '100%', padding: '14px', background: isAuthenticated ? 'transparent' : 'rgba(255,255,255,0.05)', color: colors.text, border: `1px solid ${colors.border}`, borderRadius: '12px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}>
-                            {inWishlist ? '️ In Wishlist' : ' Save to Wishlist'}
-                        </button>
                         <ul style={{ listStyle: 'none', padding: 0, margin: '24px 0 0', color: colors.textMuted, fontSize: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             <li>⏱️ {course.estimatedDurationHours} hours of on-demand video</li>
                             {course.resources?.length > 0 ? (

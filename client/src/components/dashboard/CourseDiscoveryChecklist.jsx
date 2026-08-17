@@ -2,7 +2,7 @@ import React from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 
-export default function CourseDiscoveryChecklist({ enrolledCount = 0, wishlistCount = 0 }) {
+export default function CourseDiscoveryChecklist() {
     const { colors } = useTheme();
     const navigate = useNavigate();
 
@@ -14,22 +14,10 @@ export default function CourseDiscoveryChecklist({ enrolledCount = 0, wishlistCo
             onClick: () => navigate('/categories')
         },
         {
-            title: 'Review career tracks',
-            description: 'Check career-focused learning paths and choose a track that aligns with your goals.',
-            actionLabel: 'View career tracks',
-            onClick: () => navigate('/career-tracks')
-        },
-        {
             title: 'Search with intent',
             description: 'Use keywords like React, Python, design, or certification to narrow your course choices.',
             actionLabel: 'Search courses',
             onClick: () => navigate('/search')
-        },
-        {
-            title: 'Save promising courses',
-            description: 'Add courses to your wishlist so you can compare options and enroll later.',
-            actionLabel: 'Open wishlist',
-            onClick: () => navigate('/student/wishlist')
         },
         {
             title: 'Compare course details',
@@ -51,13 +39,8 @@ export default function CourseDiscoveryChecklist({ enrolledCount = 0, wishlistCo
                 <div style={{ maxWidth: '660px' }}>
                     <h2 style={{ fontSize: '20px', color: colors.text, margin: 0, fontWeight: '900' }}>Course Discovery & Enrollment Checklist</h2>
                     <p style={{ color: colors.textMuted, fontSize: '14px', margin: '10px 0 0', lineHeight: 1.7 }}>
-                        Follow these steps to choose high-value courses, save your favorites, and enroll with confidence.
+                        Follow these steps to choose high-value courses and enroll with confidence.
                     </p>
-                </div>
-                <div style={{ display: 'grid', gap: '10px', textAlign: 'right' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: colors.textMuted }}>Saved in wishlist</span>
-                    <span style={{ fontSize: '28px', fontWeight: '900', color: colors.primary }}>{wishlistCount}</span>
-                    <span style={{ fontSize: '12px', color: colors.textMuted }}>/ {enrolledCount} enrolled</span>
                 </div>
             </div>
 

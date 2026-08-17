@@ -16,7 +16,7 @@ const resolveCategory = (action = '', description = '') => {
     const d = String(description || '').toLowerCase();
     if (['LOGIN_SUCCESS','LOGIN_FAILED','LOGIN_BLOCKED','LOGOUT','REGISTER','PASSWORD_RESET','ROLE_CHANGED','ACCOUNT_BLOCKED'].some(x => a.startsWith(x))) return 'User Security & Activity';
     if (['COURSE_APPROVED','COURSE_REJECTED','COURSE_PUBLISHED','COURSE_REVISION','COURSE_DELETED','COURSE_CREATED','COURSE_UPDATED','COURSE_ARCHIVED','COURSE_FLAGGED'].some(x => a.startsWith(x))) return 'Course Approvals & Content';
-    if (['CHAPA_PAYMENT','FREE_COURSE','ENROLLMENT','PAYMENT','REFUND','COUPON'].some(x => a.startsWith(x))) return 'Enrollment & Financial';
+    if (['CHAPA_PAYMENT','FREE_COURSE','ENROLLMENT','PAYMENT','COUPON'].some(x => a.startsWith(x))) return 'Enrollment & Financial';
     if (d.includes('error') || d.includes('system') || d.includes('api') || a === 'SYSTEM_LOG' || a === 'ERROR_LOG') return 'System & Diagnostics';
     return 'System & Diagnostics';
 };

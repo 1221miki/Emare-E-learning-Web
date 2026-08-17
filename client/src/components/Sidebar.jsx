@@ -5,10 +5,10 @@ import { useTheme } from '../context/ThemeContext';
 import NotificationBell from './NotificationBell';
 import { 
     Sun, Moon, BookOpen, Home, LogOut, LayoutDashboard, Award, 
-    Heart, Trophy, MessageSquare, Video, User, Settings, PlusCircle, FilePlus, Shield, HelpCircle 
+    Trophy, MessageSquare, Video, User, Settings, PlusCircle, FilePlus, Shield, HelpCircle 
 } from 'lucide-react';
 
-const SIDEBAR_WIDTH = 260;
+const SIDEBAR_WIDTH = 300;
 
 export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBottomButtons }) {
     const { user, logout } = useAuth();
@@ -43,7 +43,6 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
             return [
                 { key: 'dashboard', label: 'Dashboard', path: '/student/dashboard', icon: <LayoutDashboard size={20} /> },
                 { key: 'courses', label: 'Course Catalog', path: '/courses', icon: <BookOpen size={20} /> },
-                { key: 'wishlist', label: 'Wishlist', path: '/student/wishlist', icon: <Heart size={20} /> },
                 { key: 'certificates', label: 'Certificates', path: '/student/certificates', icon: <Award size={20} /> },
                 { key: 'leaderboard', label: 'Leaderboard', path: '/leaderboard', icon: <Trophy size={20} /> },
                 { key: 'messages', label: 'Messages', path: '/messages', icon: <MessageSquare size={20} /> },
@@ -126,9 +125,10 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
 
             {/* Header: Logo + Notifications + Theme Toggle */}
             <div style={styles.headerBox}>
-                <div style={styles.logoBox}>
-                    <img src="/images/emare-ict-hub-logo.svg" alt="Emare ICT Hub" style={{ width: '180px', height: '48px', objectFit: 'contain' }} />
-                </div>
+                <Link to="/" style={{ ...styles.logoBox, cursor: 'pointer', textDecoration: 'none' }} className="transition-opacity hover:opacity-90">
+                    <img src="/images/perfectEmarelogo.jpg" alt="Emare ICT Hub Logo" className="h-10 w-10 bg-transparent object-contain mix-blend-multiply dark:mix-blend-screen" />
+                    <span style={{ color: colors.text, fontSize: '20px', fontWeight: '700', whiteSpace: 'nowrap' }}>Emare ICT Hub</span>
+                </Link>
                 <div style={styles.actionsBox}>
                     <button onClick={toggleTheme} style={styles.iconBtn} title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'} aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
                         {theme === 'dark' ? <Sun size={26} /> : <Moon size={26} />}
@@ -303,8 +303,8 @@ const styles = {
         borderRadius: '50%',
         flexShrink: 0
     },
-    headerBox: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' },
-    logoBox: { display: 'flex', alignItems: 'center', gap: '10px' },
+    headerBox: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '32px', minWidth: 'max-content' },
+    logoBox: { display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 },
     logo: {
         width: '40px', height: '40px', borderRadius: '10px',
         background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
@@ -312,7 +312,7 @@ const styles = {
         fontWeight: '900', color: '#fff', fontSize: '18px'
     },
     logoText: { fontWeight: '700', fontSize: '16px' },
-    actionsBox: { display: 'flex', alignItems: 'center', gap: '8px' },
+    actionsBox: { display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 },
     iconBtn: { background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px', display: 'flex', alignItems: 'center' },
     nav: { display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflowY: 'auto' },
     navItem: {

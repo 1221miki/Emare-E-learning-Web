@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-    LayoutDashboard, GraduationCap, Heart, ClipboardList, BrainCircuit,
-    BarChart3, Video, MessageSquare, Trophy, Mail, Award, CreditCard,
-    Settings, BookOpen, Library, SendHorizonal, MessagesSquare, Bell, Bot
+    LayoutDashboard, GraduationCap, ClipboardList, BrainCircuit,
+    Video, MessageSquare, Trophy, Mail, Award, CreditCard,
+    Settings, BookOpen, Library
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/Sidebar';
 import { 
     courseService, 
-    wishlistService, 
     gradebookService, 
     certificateService, 
     enrollmentService,
@@ -45,10 +44,8 @@ import MyReviews from '../../components/reviews/MyReviews';
 import { getStudentStyles } from '../../components/dashboard/tabs/studentStyles';
 import OverviewTab from '../../components/dashboard/tabs/OverviewTab';
 import MyLearningTab from '../../components/dashboard/tabs/MyLearningTab';
-import WishlistTab from '../../components/dashboard/tabs/WishlistTab';
 import AssignmentsTab from '../../components/dashboard/tabs/AssignmentsTab';
 import QuizzesTab from '../../components/dashboard/tabs/QuizzesTab';
-import GradesTab from '../../components/dashboard/tabs/GradesTab';
 import CertificatesTab from '../../components/dashboard/tabs/CertificatesTab';
 import LiveSessionsTab from '../../components/dashboard/tabs/LiveSessionsTab';
 import DiscussionsTab from '../../components/dashboard/tabs/DiscussionsTab';
@@ -72,10 +69,8 @@ export default function StudentDashboard() {
             my_courses: 'learning',
             overview: 'overview',
             learning: 'learning',
-            wishlist: 'wishlist',
             assignments: 'assignments',
             quizzes: 'quizzes',
-            grades: 'grades',
             live: 'live',
             discussions: 'discussions',
             leaderboard: 'leaderboard',
@@ -90,7 +85,6 @@ export default function StudentDashboard() {
 
     // Data States
     const [enrollments, setEnrollments] = useState([]);
-    const [wishlist, setWishlist] = useState([]);
     const [grades, setGrades] = useState([]);
     const [certificates, setCertificates] = useState([]);
     const [paymentStatusList, setPaymentStatusList] = useState([]);
@@ -145,11 +139,6 @@ export default function StudentDashboard() {
     // Values: 'inbox' | 'sent' | 'discussions' | 'notifications' | 'ai'
     const [messagesSection, setMessagesSection] = useState('inbox');
 
-    // Helper: navigate to Messages tab and open a specific sub-section
-    const openMessagesSection = (section) => {
-        setMessagesSection(section);
-        setActiveTab('messages');
-    };
     const [conversations, setConversations] = useState([]);
     const [activeConversation, setActiveConversation] = useState(null);
     const [conversationMessages, setConversationMessages] = useState([]);
@@ -223,16 +212,6 @@ export default function StudentDashboard() {
     };
 
     // Handlers for Integrated Live Actions
-    const handleToggleWishlist = async (courseId) => {
-        try {
-            await wishlistService.toggle(courseId);
-            const wishRes = await wishlistService.getMyWishlist();
-            setWishlist(wishRes.data.data || []);
-        } catch (err) {
-            console.error('Failed to toggle wishlist:', err);
-        }
-    };
-
     const handleMarkNotificationAsRead = async (id) => {
         try {
             await notificationService.markAsRead(id);
@@ -278,7 +257,6 @@ export default function StudentDashboard() {
 
             const [
                 profile,
-                wishlist,
                 grades,
                 certs,
                 payStatus,
@@ -299,7 +277,6 @@ export default function StudentDashboard() {
                         console.error('Failed fetching profile:', err);
                         return {};
                     }),
-                safe(wishlistService.getMyWishlist(), 'wishlist'),
                 safe(gradebookService.getMyGrades(), 'grades'),
                 safe(certificateService.getMine(), 'certificates'),
                 typeof enrollmentService.getMyStatus === 'function'
@@ -345,7 +322,6 @@ export default function StudentDashboard() {
             }
             setState(setProfile)(profile);
 
-            setState(setWishlist)(wishlist);
             setState(setGrades)(grades);
             setState(setCertificates)(certs);
             setState(setPaymentStatusList)(payStatus);
@@ -400,7 +376,6 @@ export default function StudentDashboard() {
     const quizCount = quizzesList.length;
     const liveSessionCount = liveSessions?.length || 0;
     const unreadMessagesCount = conversations.length;
-    const notificationBadgeCount = notifications.filter(n => !n?.isRead && !n?.read).length;
     const activeEnrollmentCount = enrollments.filter(e => (e.completionPercentage || 0) < 100).length;
 
     const handleLogout = async () => {
@@ -541,8 +516,6 @@ export default function StudentDashboard() {
         searchParams,
         enrollments,
         setEnrollments,
-        wishlist,
-        setWishlist,
         grades,
         setGrades,
         certificates,
@@ -691,14 +664,12 @@ export default function StudentDashboard() {
         toggleWidgetVisibility,
         togglePinCourse,
         triggerAssistantPrompt,
-        handleToggleWishlist,
         handleMarkNotificationAsRead,
         handleUpdateStudyTarget,
         assignmentCount,
         quizCount,
         liveSessionCount,
         unreadMessagesCount,
-        notificationBadgeCount,
         activeEnrollmentCount,
         handleLogout,
         handleAvatarFileUpload,
@@ -722,7 +693,6 @@ export default function StudentDashboard() {
         styles,
         messagesSection,
         setMessagesSection,
-        openMessagesSection,
     };
 
     // Render the active tab. The "learning" tab stays inline in the return below
@@ -730,10 +700,8 @@ export default function StudentDashboard() {
     const renderTab = () => {
         switch (activeTab) {
             case 'overview': return <OverviewTab {...dash} />;
-            case 'wishlist': return <WishlistTab {...dash} />;
             case 'assignments': return <AssignmentsTab {...dash} />;
             case 'quizzes': return <QuizzesTab {...dash} />;
-            case 'grades': return <GradesTab {...dash} />;
             case 'live': return <LiveSessionsTab {...dash} />;
             case 'discussions': return <DiscussionsTab {...dash} />;
             case 'leaderboard': return <LeaderboardTab {...dash} />;
@@ -754,36 +722,22 @@ export default function StudentDashboard() {
                 navItems={[
                     { key: 'overview', label: 'Overview', icon: <LayoutDashboard size={18} aria-hidden="true" /> },
                     { key: 'learning', label: 'My Learning', icon: <GraduationCap size={18} aria-hidden="true" /> },
-                    { key: 'wishlist', label: 'Wishlist', icon: <Heart size={18} aria-hidden="true" /> },
                     { key: 'assignments', label: 'Assignments', icon: <ClipboardList size={18} aria-hidden="true" />, badge: assignmentCount > 0 ? `${assignmentCount}` : null },
                     { key: 'quizzes', label: 'Quizzes', icon: <BrainCircuit size={18} aria-hidden="true" />, badge: quizCount > 0 ? `${quizCount}` : null },
-                    { key: 'grades', label: 'Grades', icon: <BarChart3 size={18} aria-hidden="true" /> },
                     { key: 'live', label: 'Live Sessions', icon: <Video size={18} aria-hidden="true" />, badge: liveSessionCount > 0 ? `${liveSessionCount}` : null },
                     { key: 'discussions', label: 'Discussions', icon: <MessageSquare size={18} aria-hidden="true" /> },
                     { key: 'leaderboard', label: 'Leaderboard', icon: <Trophy size={18} aria-hidden="true" /> },
                     // ── Communication section ────────────────────────────────────────────
-                    { key: 'messages',       label: 'Inbox',               icon: <Mail size={18} aria-hidden="true" />, badge: unreadMessagesCount > 0 ? `${unreadMessagesCount}` : null },
-                    { key: 'msg:sent',        label: 'Sent Messages',        icon: <SendHorizonal size={18} aria-hidden="true" /> },
-                    { key: 'msg:discussions', label: 'Course Discussions',   icon: <MessagesSquare size={18} aria-hidden="true" /> },
-                    { key: 'msg:notifications', label: 'Notification Center', icon: <Bell size={18} aria-hidden="true" />, badge: notificationBadgeCount > 0 ? `${notificationBadgeCount}` : null },
-                    { key: 'msg:ai',          label: 'AI Tutor',             icon: <Bot size={18} aria-hidden="true" /> },
+                    { key: 'messages', label: 'Inbox', icon: <Mail size={18} aria-hidden="true" />, badge: unreadMessagesCount > 0 ? `${unreadMessagesCount}` : null },
                     // ────────────────────────────────────────────────────────────────────
                     { key: 'certificates', label: 'Certificates', icon: <Award size={18} aria-hidden="true" /> },
                     { key: 'payments', label: 'Payments', icon: <CreditCard size={18} aria-hidden="true" /> },
                     { key: 'settings', label: 'Settings', icon: <Settings size={18} aria-hidden="true" /> }
                 ]}
-                activeTab={
-                    activeTab === 'messages'
-                        ? (messagesSection === 'inbox' ? 'messages' : `msg:${messagesSection}`)
-                        : activeTab
-                }
+                activeTab={activeTab}
                 onTabChange={(key) => {
-                    if (key.startsWith('msg:')) {
-                        const section = key.replace('msg:', '');
-                        openMessagesSection(section);
-                    } else {
-                        setActiveTab(key);
-                    }
+                    if (key === 'messages') setMessagesSection('inbox');
+                    setActiveTab(key);
                 }}
                     extraBottomButtons={
                     <button onClick={() => navigate('/courses')} style={styles.catalogBtn}>
@@ -810,7 +764,6 @@ export default function StudentDashboard() {
                                 <MyCoursesHub 
                                     enrollments={enrollments}
                                     allCourses={allCourses}
-                                    wishlist={wishlist}
                                     recentlyViewed={recentlyViewed}
                                     setActiveTab={setActiveTab}
                                     togglePinCourse={togglePinCourse}

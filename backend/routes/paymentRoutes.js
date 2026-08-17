@@ -9,7 +9,6 @@ router.post('/verify', protect, paymentController.verifyPayment);
 router.post('/verify/:tx_ref', protect, paymentController.verifyChapa);
 router.get('/history', protect, paymentController.getMyTransactions);
 router.get('/invoice/:id', protect, paymentController.getInvoiceData);
-router.post('/refund', protect, paymentController.requestRefund);
 router.post('/coupon', protect, paymentController.applyCoupon);
 
 // Chapa-specific endpoints

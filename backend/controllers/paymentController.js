@@ -4,7 +4,6 @@ const crypto = require('crypto');
 const Transaction = require('../models/Transaction');
 const Payment = require('../models/Payment');
 const Coupon = require('../models/Coupon');
-const RefundRequest = require('../models/RefundRequest');
 const Enrollment = require('../models/Enrollment');
 const Course = require('../models/Course');
 const User = require('../models/User');
@@ -434,16 +433,6 @@ exports.getInvoiceData = async (req, res) => {
             student: tx.studentRef,
             transactionId: tx._id
         }});
-    } catch (err) { console.error(err); res.status(500).json({ success: false }); }
-};
-
-exports.requestRefund = async (req, res) => {
-    try {
-        const { transactionId, reason } = req.body;
-        const tx = await Transaction.findById(transactionId);
-        if (!tx) return res.status(404).json({ success: false, message: 'Transaction not found' });
-        const rr = await RefundRequest.create({ transactionRef: tx._id, studentRef: req.user._id, reason });
-        res.status(201).json({ success: true, data: rr });
     } catch (err) { console.error(err); res.status(500).json({ success: false }); }
 };
 
