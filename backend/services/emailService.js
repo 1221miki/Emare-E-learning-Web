@@ -1,107 +1,57 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 /**
  * Email Service - Handles all transactional emails
- * Supports both production and development/testing modes
+ * Uses the Resend API over HTTPS instead of Nodemailer/SMTP,
+ * which avoids Render's outbound SMTP connection timeouts (ENETUNREACH).
+ * Supports both production and development/testing modes.
  */
 
-let emailConfigured = false;
+const emailConfigured = !!process.env.RESEND_API_KEY;
+const resend = emailConfigured ? new Resend(process.env.RESEND_API_KEY) : null;
 
-const invalidCredentialPatterns = ['your-email', 'your-gmail-app-password', 'example.com', 'changeme', 'password'];
-const hasRealEmailCredentials = (user, pass) => {
-    if (!user || !pass) return false;
-    const lowerUser = user.toLowerCase();
-    const lowerPass = pass.toLowerCase();
-    return !invalidCredentialPatterns.some(pattern => lowerUser.includes(pattern) || lowerPass.includes(pattern));
-};
-
-// Create transporter based on environment
-const createTransporter = () => {
-    // If explicit SMTP settings are provided, use them.
-    const smtpHost = process.env.MAIL_HOST || process.env.SMTP_HOST || process.env.EMAIL_HOST;
-    const smtpPort = Number(process.env.MAIL_PORT || process.env.SMTP_PORT || process.env.EMAIL_PORT || 465);
-    const smtpSecure = process.env.MAIL_SECURE === 'true' || process.env.SMTP_SECURE === 'true' || smtpPort === 465;
-    const smtpUser = process.env.MAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
-    const smtpPass = process.env.MAIL_PASS || process.env.SMTP_PASS || process.env.EMAIL_PASSWORD;
-
-    // Direct SMTP connection (faster than service lookup)
-    if (smtpHost && hasRealEmailCredentials(smtpUser, smtpPass)) {
-        emailConfigured = true;
-        return nodemailer.createTransport({
-            host: smtpHost,
-            port: smtpPort,
-            secure: smtpSecure,
-            family: 4,          // Force IPv4 — prevents ENETUNREACH on IPv6-blocked networks
-            auth: {
-                user: smtpUser,
-                pass: smtpPass
-            },
-            pool: {
-                maxConnections: 10,
-                maxMessages: 200,
-                rateDelta: 500,
-                rateLimit: 10
-            },
-            socketTimeout: 5000,
-            connectionTimeout: 3000,
-            greetingTimeout: 3000
-        });
-    }
-
-    // Support direct email account login for common services such as Gmail
-    // Uses SSL on port 465 — Render blocks outbound SMTP on port 587 (ENETUNREACH).
-    if (hasRealEmailCredentials(process.env.EMAIL_USER, process.env.EMAIL_PASSWORD)) {
-        emailConfigured = true;
-        return nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 465,
-            secure: true,
-            family: 4,          // Force IPv4 — prevents ENETUNREACH on IPv6-blocked networks
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASSWORD
-            },
-            pool: {
-                maxConnections: 10,
-                maxMessages: 200,
-                rateDelta: 500,
-                rateLimit: 10
-            },
-            socketTimeout: 5000,
-            connectionTimeout: 3000,
-            greetingTimeout: 3000
-        });
-    }
-
-    // Fallback: Log email content for debugging when SMTP is not configured.
+/**
+ * Send an email via the Resend API.
+ * @param {{ to: string|string[], subject: string, html: string, text?: string }} options
+ * @returns {Promise<{ id: string }>} Resend message data
+ */
+const sendEmail = async ({ to, subject, html, text }) => {
+    // Fallback: Log email content for debugging when Resend is not configured.
     // In development mode this allows registration to proceed while still warning that email delivery is not available.
-    return {
-        sendMail: async (options) => {
-            console.warn('📧 [DEV MODE] SMTP is not configured. Email not sent.');
-            console.warn(`   To: ${options.to}`);
-            console.warn(`   Subject: ${options.subject}`);
-            console.warn(`   Body: ${options.html}`);
-            return {
-                success: true,
-                messageId: `dev_${Date.now()}`,
-                warning: 'SMTP not configured - email logged to console.',
-                fallback: true
-            };
-        }
-    };
-};
+    if (!emailConfigured) {
+        console.warn('📧 [DEV MODE] RESEND_API_KEY is not configured. Email not sent.');
+        console.warn(`   To: ${Array.isArray(to) ? to.join(', ') : to}`);
+        console.warn(`   Subject: ${subject}`);
+        return { id: `dev_${Date.now()}` };
+    }
 
-const transporter = createTransporter();
+    try {
+        // The Resend SDK returns { data, error } and does NOT throw on API errors.
+        const { data, error } = await resend.emails.send({
+            from: process.env.RESEND_FROM || process.env.EMAIL_FROM || 'Emare <onboarding@resend.dev>',
+            to: Array.isArray(to) ? to : [to],
+            subject,
+            html,
+            ...(text ? { text } : {})
+        });
+
+        if (error) {
+            console.error('Resend Email API Error:', error);
+            throw new Error(error.message || 'Failed to send email');
+        }
+
+        return data;
+    } catch (error) {
+        console.error('Resend Email API Error:', error);
+        throw new Error(error.message || 'Failed to send email');
+    }
+};
 
 const logEmailTransportStatus = () => {
-    // Skip verify() — it opens its own TCP connection and may resolve
-    // to IPv6 even when family:4 is set on the transporter pool,
-    // causing a false ENETUNREACH warning. Actual sendMail() calls
-    // work correctly because they use the transporter's configured options.
     if (emailConfigured) {
-        console.log('📧 Email transporter is configured and ready.');
+        console.log('📧 Email service is configured and ready (Resend API).');
     } else {
-        console.warn('📧 Email service is running in fallback/dev mode (SMTP not configured).');
+        console.warn('📧 Email service is running in fallback/dev mode (RESEND_API_KEY not set).');
     }
 };
 
@@ -182,16 +132,15 @@ const sendPasswordResetEmail = async (user, resetToken) => {
     `;
 
     try {
-        const info = await transporter.sendMail({
-            from: process.env.EMAIL_FROM || 'noreply@emare.com',
+        const data = await sendEmail({
             to: user.accountEmail,
             subject: '🔐 Reset Your Emare ELMS Password',
             html: htmlTemplate,
             text: `Hi ${user.fullName || user.accountEmail},\n\nReset your password using this link:\n${resetLink}\n\nThis link expires in 15 minutes.\n\nBest regards,\nThe Emare ELMS Team`
         });
 
-        console.log(`✅ Password reset email sent to ${user.accountEmail} (Message ID: ${info.messageId})`);
-        return { success: true, messageId: info.messageId };
+        console.log(`✅ Password reset email sent to ${user.accountEmail} (Message ID: ${data.id})`);
+        return { success: true, messageId: data.id };
     } catch (error) {
         console.error(`❌ Failed to send password reset email to ${user.accountEmail}:`, error.message);
         return { success: false, error: error.message };
@@ -272,16 +221,15 @@ const sendPasswordResetConfirmationEmail = async (user, newPassword) => {
     `;
 
     try {
-        const info = await transporter.sendMail({
-            from: process.env.EMAIL_FROM || 'noreply@emare.com',
+        const data = await sendEmail({
             to: user.accountEmail,
             subject: '✅ Your Emare ELMS Password Has Been Reset',
             html: htmlTemplate,
             text: `Hi ${user.fullName || user.accountEmail},\n\nYour password has been successfully reset.\n\nYour new temporary password is: ${newPassword}\n\nPlease change this password to something memorable after your first login.\n\nBest regards,\nThe Emare ELMS Team`
         });
 
-        console.log(`✅ Password confirmation email sent to ${user.accountEmail} (Message ID: ${info.messageId})`);
-        return { success: true, messageId: info.messageId };
+        console.log(`✅ Password confirmation email sent to ${user.accountEmail} (Message ID: ${data.id})`);
+        return { success: true, messageId: data.id };
     } catch (error) {
         console.error(`❌ Failed to send password confirmation email to ${user.accountEmail}:`, error.message);
         return { success: false, error: error.message };
@@ -350,16 +298,15 @@ const sendEmailVerification = async (user, verificationCode) => {
     `;
 
     try {
-        const info = await transporter.sendMail({
-            from: process.env.EMAIL_FROM || 'noreply@emare.com',
+        const data = await sendEmail({
             to: user.accountEmail,
             subject: '🔒 Verify your Emare ELMS email address',
             html: htmlTemplate,
             text: `Hi ${user.fullName || user.accountEmail},\n\nYour verification code is: ${verificationCode}\n\nThis code expires in 15 minutes.\n\nBest regards,\nThe Emare ELMS Team`
         });
 
-        console.log(`✅ Email verification sent to ${user.accountEmail} (Message ID: ${info.messageId})`);
-        return { success: true, messageId: info.messageId };
+        console.log(`✅ Email verification sent to ${user.accountEmail} (Message ID: ${data.id})`);
+        return { success: true, messageId: data.id };
     } catch (error) {
         console.error(`❌ Failed to send verification email to ${user.accountEmail}:`, error.message);
         return { success: false, error: error.message };
@@ -442,16 +389,15 @@ const sendAdminPasswordResetEmail = async (user, resetToken) => {
     `;
 
     try {
-        const info = await transporter.sendMail({
-            from: process.env.EMAIL_FROM || 'noreply@emare.com',
+        const data = await sendEmail({
             to: user.accountEmail,
             subject: '🔐 Admin Initiated: Reset Your Emare ELMS Password',
             html: htmlTemplate,
             text: `Hello ${user.fullName || user.accountEmail},\n\nAn administrator has initiated a password reset for your account.\n\nReset your password using this link:\n${resetLink}\n\nThis link expires in 15 minutes.\n\nBest regards,\nThe Emare ELMS Team`
         });
 
-        console.log(`✅ Admin password reset email sent to ${user.accountEmail} (Message ID: ${info.messageId})`);
-        return { success: true, messageId: info.messageId };
+        console.log(`✅ Admin password reset email sent to ${user.accountEmail} (Message ID: ${data.id})`);
+        return { success: true, messageId: data.id };
     } catch (error) {
         console.error(`❌ Failed to send admin password reset email to ${user.accountEmail}:`, error.message);
         return { success: false, error: error.message };
@@ -531,16 +477,15 @@ const sendAccountCreatedEmail = async (user, temporaryPassword) => {
     `;
 
     try {
-        const info = await transporter.sendMail({
-            from: process.env.EMAIL_FROM || 'noreply@emare.com',
+        const data = await sendEmail({
             to: user.accountEmail,
             subject: '👋 Welcome to Emare ELMS - Your Account is Ready',
             html: htmlTemplate,
             text: `Welcome to Emare ELMS, ${user.fullName}!\n\nYour account has been created. Your login credentials are:\n\nEmail: ${user.accountEmail}\nTemporary Password: ${temporaryPassword}\n\nPlease change your password after your first login.\n\nBest regards,\nThe Emare ELMS Team`
         });
 
-        console.log(`✅ Welcome email sent to ${user.accountEmail} (Message ID: ${info.messageId})`);
-        return { success: true, messageId: info.messageId };
+        console.log(`✅ Welcome email sent to ${user.accountEmail} (Message ID: ${data.id})`);
+        return { success: true, messageId: data.id };
     } catch (error) {
         console.error(`❌ Failed to send welcome email to ${user.accountEmail}:`, error.message);
         return { success: false, error: error.message };
@@ -551,7 +496,6 @@ const sendAccountCreatedEmail = async (user, temporaryPassword) => {
  * Send Course Enrollment Confirmation Email
  */
 const sendCourseEnrollmentEmail = async (user, course, txRef) => {
-    const transporter = createTransporter();
     const amount = typeof course.price !== 'undefined' ? `${course.price} ETB` : 'N/A';
     const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
     const courseUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/student/learn/${course._id}`;
@@ -605,16 +549,15 @@ const sendCourseEnrollmentEmail = async (user, course, txRef) => {
     `;
 
     try {
-        const info = await transporter.sendMail({
-            from: process.env.EMAIL_FROM || 'noreply@emare.com',
+        const data = await sendEmail({
             to: user.accountEmail,
             subject: `🎉 Enrollment Confirmed: ${course.courseTitle || course.title}`,
             html: htmlTemplate,
             text: `Hi ${user.fullName},\n\nYour payment for ${course.courseTitle || course.title} was successful (Ref: ${txRef}).\nYou can start learning now: ${courseUrl}\n\nBest regards,\nThe Emare ELMS Team`
         });
 
-        console.log(`✅ Enrollment email sent to ${user.accountEmail} (Message ID: ${info.messageId})`);
-        return { success: true, messageId: info.messageId };
+        console.log(`✅ Enrollment email sent to ${user.accountEmail} (Message ID: ${data.id})`);
+        return { success: true, messageId: data.id };
     } catch (error) {
         console.error(`❌ Failed to send enrollment email to ${user.accountEmail}:`, error.message);
         return { success: false, error: error.message };
@@ -773,8 +716,7 @@ const sendDiscountEmail = async (toEmail, couponCode, expiresAt) => {
     `;
 
     try {
-        const info = await transporter.sendMail({
-            from: process.env.EMAIL_FROM || 'noreply@emare.com',
+        const data = await sendEmail({
             to: toEmail,
             subject: '🎉 Your Exclusive 10% Discount Coupon — Emare ICT Hub',
             html: htmlTemplate,
@@ -800,8 +742,8 @@ const sendDiscountEmail = async (toEmail, couponCode, expiresAt) => {
             ].join('\n')
         });
 
-        console.log(`✅ Discount coupon email sent to ${toEmail} (Message ID: ${info.messageId})`);
-        return { success: true, messageId: info.messageId };
+        console.log(`✅ Discount coupon email sent to ${toEmail} (Message ID: ${data.id})`);
+        return { success: true, messageId: data.id };
     } catch (error) {
         console.error(`❌ Failed to send discount email to ${toEmail}:`, error.message);
         return { success: false, error: error.message };
@@ -809,6 +751,7 @@ const sendDiscountEmail = async (toEmail, couponCode, expiresAt) => {
 };
 
 module.exports = {
+    sendEmail,
     sendPasswordResetEmail,
     sendPasswordResetConfirmationEmail,
     sendAdminPasswordResetEmail,
