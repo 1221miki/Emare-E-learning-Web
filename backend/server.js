@@ -1,6 +1,18 @@
 require('dotenv').config({ path: require('path').join(__dirname, '.env'), override: true });
 // Ensure critical runtime files exist to prevent startup crashes from accidental deletions
 try { require('./utils/ensureFiles'); } catch (err) { console.warn('ensureFiles initialization failed:', err && err.message); }
+
+// Global process-level error logging.
+// Without these, async failures never passed to next(err) become "unhandled" and
+// Express replies with a raw HTML 500 — which the React client can't read as JSON.
+process.on('unhandledRejection', (reason) => {
+    console.error('❌ UNHANDLED PROMISE REJECTION (likely cause of silent 500s):');
+    console.error(reason instanceof Error ? reason.stack : reason);
+});
+process.on('uncaughtException', (err) => {
+    console.error('❌ UNCAUGHT EXCEPTION:', err);
+});
+
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
@@ -116,7 +128,10 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 app.use('/certificates', express.static(path.join(__dirname, 'public/certificates')));
 
 // ── Connect to MongoDB Atlas ───────────────────────────────
-connectDB();
+connectDB().catch(err => {
+    console.error('❌ Fatal database initialization error:', err);
+    process.exit(1);
+});
 
 // ── API Routes ─────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
@@ -301,7 +316,10 @@ app.use(errorHandler);
 
 // ── Start Server ───────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
+// Bind to IPv6 dual-stack ('::') so BOTH IPv6 (::1) and IPv4 (127.0.0.1) clients connect.
+// Fixes "connection refused" when a client resolves localhost to ::1 while the server
+// only listened on 0.0.0.0 (IPv4) — which surfaced as an unreadable 500 in the React app.
+app.listen(PORT, '::', () => {
     const ENV = (process.env.NODE_ENV || 'development').toUpperCase();
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗

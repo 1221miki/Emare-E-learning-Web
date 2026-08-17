@@ -43,6 +43,7 @@ export default function RegisterPage() {
         expertiseAreas: ''
     });
     const [error, setError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState({});
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -63,6 +64,13 @@ export default function RegisterPage() {
     const handleChange = e => {
         const { name, value, files } = e.target;
         if (error) setError('');                       // Clear error banner once user types again
+        if (fieldErrors[name]) {
+            setFieldErrors(prev => {
+                const next = { ...prev };
+                delete next[name];
+                return next;
+            });
+        }
         if (files) {
             setForm(prev => ({ ...prev, [name]: files[0] }));
         } else {
@@ -71,6 +79,26 @@ export default function RegisterPage() {
     };
 
     const normalizePhoneNumber = (phone) => phone.replace(/[-\s]/g, '').trim();
+
+    const getErrorMessage = (err) => {
+        // Backend returned a JSON body with a message — show it directly (e.g. "Username already taken").
+        if (err?.response?.data?.message) return err.response.data.message;
+        if (err?.response?.data?.error) return err.response.data.error;
+        // Backend responded, but the body wasn't the expected JSON (HTML/plain from the
+        // Vite proxy or Express default handler — usually means the API server isn't running).
+        if (err?.response) {
+            const status = err.response.status;
+            if (status >= 500 && typeof err.response.data === 'string') {
+                return `Backend returned HTTP ${status} without a readable response — the API server may be down. Check that it is running (e.g. localhost:5000) and try again.`;
+            }
+            return `Server error (HTTP ${status}). Please try again in a moment.`;
+        }
+        // No response at all — network/CORS/DNS failure before the request reached the backend.
+        if (err?.request) {
+            return 'Cannot reach the server. Check your connection — this is usually a CORS or network issue.';
+        }
+        return 'Registration failed. Please try again.';
+    };
 
     const validateForm = () => {
         if (!form.firstName.trim()) return 'First name is required.';
@@ -112,7 +140,15 @@ export default function RegisterPage() {
             const response = await register(payload);
             navigate(`/verify-email?email=${encodeURIComponent(form.accountEmail.trim().toLowerCase())}`);
         } catch (err) {
-            setError(err.response?.data?.message || err.response?.data?.error || 'Registration failed. Please try again.');
+            console.error('[Register] Registration failed:', err?.response?.data || err?.message || err);
+            setError(getErrorMessage(err));
+            const apiData = err?.response?.data;
+            if (apiData && apiData.field) {
+                const target = FIELD_MAP[apiData.field] || apiData.field;
+                setFieldErrors({ [target]: apiData.message || '' });
+            } else {
+                setFieldErrors({});
+            }
         } finally {
             setLoading(false);
         }
@@ -208,6 +244,21 @@ export default function RegisterPage() {
         color: colors.text
     };
 
+    // Maps backend error `field` names to this form's input names.
+    const FIELD_MAP = {
+        fullName: 'firstName',
+        accountEmail: 'accountEmail',
+        username: 'username',
+        securedPassword: 'securedPassword',
+        password: 'securedPassword'
+    };
+
+    // Returns inputStyle, but with a red border when the API flagged this field.
+    const fieldStyle = (name) => {
+        const target = FIELD_MAP[name] || name;
+        return fieldErrors[target] ? { ...inputStyle, border: '1px solid #ef4444' } : inputStyle;
+    };
+
     const modalStyle = {
         ...styles.modalContent,
         background: colors.bgCard,
@@ -235,16 +286,16 @@ export default function RegisterPage() {
                     <h3 style={sectionHeaderStyle}>Biographical Information</h3>
                     <div style={styles.fieldGroup}>
                         <label style={labelStyle}>First Name</label>
-                        <input name="firstName" type="text" required placeholder="John" value={form.firstName} onChange={handleChange} style={inputStyle} />
+                        <input name="firstName" type="text" required placeholder="John" value={form.firstName} onChange={handleChange} style={fieldStyle('firstName')} />
                     </div>
                     <div style={styles.fieldGroup}>
                         <label style={labelStyle}>Last Name</label>
-                        <input name="lastName" type="text" required placeholder="Doe" value={form.lastName} onChange={handleChange} style={inputStyle} />
+                        <input name="lastName" type="text" required placeholder="Doe" value={form.lastName} onChange={handleChange} style={fieldStyle('lastName')} />
                     </div>
 
                     <div style={styles.fieldGroup}>
                         <label style={labelStyle}>Gender</label>
-                        <select name="gender" value={form.gender} onChange={handleChange} style={{ ...inputStyle, cursor: 'pointer' }}>
+                        <select name="gender" value={form.gender} onChange={handleChange} style={{ ...fieldStyle('gender'), cursor: 'pointer' }}>
                             <option value="">Select</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
@@ -255,17 +306,17 @@ export default function RegisterPage() {
                     <h3 style={sectionHeaderStyle}>Security & Contact</h3>
                     <div style={styles.fieldGroup}>
                         <label style={labelStyle}>Username</label>
-                        <input name="username" type="text" required placeholder="johndoe" value={form.username} onChange={handleChange} style={inputStyle} />
+                        <input name="username" type="text" required placeholder="johndoe" value={form.username} onChange={handleChange} style={fieldStyle('username')} />
                     </div>
                     <div style={styles.fieldGroup}>
                         <label style={labelStyle}>Verified Email Address</label>
-                        <input name="accountEmail" type="email" required placeholder="you@example.com" value={form.accountEmail} onChange={handleChange} style={inputStyle} />
+                        <input name="accountEmail" type="email" required placeholder="you@example.com" value={form.accountEmail} onChange={handleChange} style={fieldStyle('accountEmail')} />
                     </div>
 
                     <div style={styles.fieldGroup}>
                         <label style={labelStyle}>Password</label>
                         <div style={styles.passwordWrapper}>
-                            <input name="securedPassword" type={showPassword ? 'text' : 'password'} required placeholder="••••••••" value={form.securedPassword} onChange={handleChange} style={{ ...inputStyle, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }} />
+                            <input name="securedPassword" type={showPassword ? 'text' : 'password'} required placeholder="••••••••" value={form.securedPassword} onChange={handleChange} style={{ ...fieldStyle('securedPassword'), width: '100%', paddingRight: '40px', boxSizing: 'border-box' }} />
                             <button type="button" onClick={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
                                 {showPassword ? <FaEyeSlash /> : <FaEye />}
                             </button>
@@ -274,7 +325,7 @@ export default function RegisterPage() {
                     <div style={styles.fieldGroup}>
                         <label style={labelStyle}>Confirm Password</label>
                         <div style={styles.passwordWrapper}>
-                            <input name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} required placeholder="••••••••" value={form.confirmPassword} onChange={handleChange} style={{ ...inputStyle, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }} />
+                            <input name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} required placeholder="••••••••" value={form.confirmPassword} onChange={handleChange} style={{ ...fieldStyle('confirmPassword'), width: '100%', paddingRight: '40px', boxSizing: 'border-box' }} />
                             <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
                                 {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                             </button>
@@ -283,7 +334,7 @@ export default function RegisterPage() {
 
                     <div style={styles.fieldGroup}>
                         <label style={labelStyle}>Verified Phone Number (Optional)</label>
-                        <input name="phoneNumber" type="tel" placeholder="09xxxxxxxx or +2519xxxxxxxx" value={form.phoneNumber} onChange={handleChange} style={inputStyle} />
+                        <input name="phoneNumber" type="tel" placeholder="09xxxxxxxx or +2519xxxxxxxx" value={form.phoneNumber} onChange={handleChange} style={fieldStyle('phoneNumber')} />
                     </div>
                     {/* ── Instructor-specific fields ── */}
                     {form.assignedRole === 'Instructor' && (<>

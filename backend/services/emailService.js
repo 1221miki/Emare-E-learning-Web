@@ -1,57 +1,93 @@
 const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
 /**
  * Email Service - Handles all transactional emails
- * Uses the Resend API over HTTPS instead of Nodemailer/SMTP,
- * which avoids Render's outbound SMTP connection timeouts (ENETUNREACH).
- * Supports both production and development/testing modes.
+ * Transport chain (first available wins):
+ *   1. Resend API (preferred for Render: HTTPS, no outbound SMTP restrictions)
+ *   2. SMTP via Nodemailer (used when RESEND_API_KEY is not set; works on localhost)
+ *   3. DEV MODE - log only (no real delivery)
  */
 
-const emailConfigured = !!process.env.RESEND_API_KEY;
-const resend = emailConfigured ? new Resend(process.env.RESEND_API_KEY) : null;
+const resendConfigured = !!process.env.RESEND_API_KEY;
+const resend = resendConfigured ? new Resend(process.env.RESEND_API_KEY) : null;
+
+const smtpConfigured = !!(process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASSWORD);
+const smtpPort = Number(process.env.EMAIL_PORT) || 587;
+const smtpTransport = smtpConfigured
+    ? nodemailer.createTransport({
+          host: process.env.EMAIL_HOST,
+          port: smtpPort,
+          secure: smtpPort === 465,
+          auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASSWORD },
+          connectionTimeout: 15000,
+          socketTimeout: 20000,
+          // family: 4 avoids ENETUNREACH / IPv6 resolution issues seen with some hosts.
+          connectionOptions: { family: 4 }
+      })
+    : null;
+
+const emailConfigured = resendConfigured || smtpConfigured;
 
 /**
- * Send an email via the Resend API.
+ * Send an email via the active transport.
  * @param {{ to: string|string[], subject: string, html: string, text?: string }} options
- * @returns {Promise<{ id: string }>} Resend message data
+ * @returns {Promise<{ id: string }>} message id
  */
 const sendEmail = async ({ to, subject, html, text }) => {
-    // Fallback: Log email content for debugging when Resend is not configured.
-    // In development mode this allows registration to proceed while still warning that email delivery is not available.
+    const recipients = Array.isArray(to) ? to : [to];
+
+    // DEV MODE: log email content when no provider is configured, so registration
+    // can still proceed while warning that real delivery is unavailable.
     if (!emailConfigured) {
-        console.warn('📧 [DEV MODE] RESEND_API_KEY is not configured. Email not sent.');
-        console.warn(`   To: ${Array.isArray(to) ? to.join(', ') : to}`);
+        console.warn('📧 [DEV MODE] No email provider configured (RESEND_API_KEY or EMAIL_* SMTP). Email not sent.');
+        console.warn(`   To: ${recipients.join(', ')}`);
         console.warn(`   Subject: ${subject}`);
-        return { id: `dev_${Date.now()}` };
+        return { id: `dev_${Date.now()}`, devMode: true };
     }
 
     try {
-        // The Resend SDK returns { data, error } and does NOT throw on API errors.
-        const { data, error } = await resend.emails.send({
-            from: process.env.RESEND_FROM || process.env.EMAIL_FROM || 'Emare <onboarding@resend.dev>',
-            to: Array.isArray(to) ? to : [to],
+        if (resendConfigured) {
+            // The Resend SDK returns { data, error } and does NOT throw on API errors.
+            const { data, error } = await resend.emails.send({
+                from: process.env.RESEND_FROM || process.env.EMAIL_FROM || 'Emare <onboarding@resend.dev>',
+                to: recipients,
+                subject,
+                html,
+                ...(text ? { text } : {})
+            });
+
+            if (error) {
+                console.error('Resend Email API Error:', error);
+                throw new Error(error.message || 'Failed to send email via Resend');
+            }
+
+            return data;
+        }
+
+        // SMTP fallback (e.g. Gmail). Gmail requires from == authenticated user.
+        const info = await smtpTransport.sendMail({
+            from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+            to: recipients,
             subject,
             html,
             ...(text ? { text } : {})
         });
 
-        if (error) {
-            console.error('Resend Email API Error:', error);
-            throw new Error(error.message || 'Failed to send email');
-        }
-
-        return data;
+        return { id: info.messageId };
     } catch (error) {
-        console.error('Resend Email API Error:', error);
+        console.error('Email API Error:', error);
         throw new Error(error.message || 'Failed to send email');
     }
 };
 
 const logEmailTransportStatus = () => {
-    if (emailConfigured) {
-        console.log('📧 Email service is configured and ready (Resend API).');
+    if (resendConfigured) {
+        console.log('📧 Email service configured: Resend API.');
+    } else if (smtpConfigured) {
+        console.log(`📧 Email service configured: SMTP (${process.env.EMAIL_HOST}:${smtpPort}).`);
     } else {
-        console.warn('📧 Email service is running in fallback/dev mode (RESEND_API_KEY not set).');
+        console.warn('📧 Email service running in fallback/dev mode (no RESEND_API_KEY or SMTP credentials).');
     }
 };
 
@@ -305,11 +341,14 @@ const sendEmailVerification = async (user, verificationCode) => {
             text: `Hi ${user.fullName || user.accountEmail},\n\nYour verification code is: ${verificationCode}\n\nThis code expires in 15 minutes.\n\nBest regards,\nThe Emare ELMS Team`
         });
 
-        console.log(`✅ Email verification sent to ${user.accountEmail} (Message ID: ${data.id})`);
-        return { success: true, messageId: data.id };
+        // The provider may resolve with no message id (dev mode, or a thin API
+        // response) — treat any resolved send as delivered; guard the read so a
+        // missing id can never turn this into an uncaught TypeError.
+        console.log(`✅ Email verification sent to ${user.accountEmail} (Message ID: ${data && data.id || 'n/a'})`);
+        return { success: true, messageId: data && data.id || null };
     } catch (error) {
         console.error(`❌ Failed to send verification email to ${user.accountEmail}:`, error.message);
-        return { success: false, error: error.message };
+        return { success: false, error: error.message || 'Unknown email delivery error.' };
     }
 };
 

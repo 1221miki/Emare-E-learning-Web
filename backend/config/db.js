@@ -17,6 +17,22 @@ async function canWrite() {
     }
 }
 
+let dbRetryTimer = null;
+
+// Schedules an automatic reconnect. The API stays UP in degraded mode while the
+// DB is unreachable so clients always receive a readable JSON error (via the
+// central error handler) instead of the process dying and the proxy answering
+// with an unreadable HTML 500.
+function scheduleDbRetry() {
+    if (dbRetryTimer) return;
+    console.log('⏳ Database is unreachable — retrying in 30s. The API stays up and answers with readable JSON 503s meanwhile.');
+    dbRetryTimer = setTimeout(() => {
+        dbRetryTimer = null;
+        connectDB();
+    }, 30000);
+    if (typeof dbRetryTimer.unref === 'function') dbRetryTimer.unref();
+}
+
 const connectDB = async () => {
     const configuredUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/emare-elms';
 
@@ -43,8 +59,10 @@ const connectDB = async () => {
                 await mongoose.disconnect();
                 throw new Error('READ_ONLY_ENDPOINT');
             }
-            console.error('❌ Aborting startup because this database cannot persist registered users.');
-            process.exit(1);
+            console.error('❌ This database cannot persist registered users — running in degraded mode.');
+            await mongoose.disconnect();
+            scheduleDbRetry();
+            return;
         }
 
         await seedDefaultData();
@@ -57,27 +75,33 @@ const connectDB = async () => {
             console.log('🔄 Starting In-Memory MongoDB for development...');
         } else {
             console.error('❌ No writable MongoDB available. Set a valid MONGODB_URI or enable USE_IN_MEMORY_DB=true for local development.');
-            process.exit(1);
+            console.error('   The API will keep running in degraded mode and answer with readable JSON 503 errors while the DB is unreachable.');
         }
     }
 
     // ── 2. Fallback: mongodb-memory-server ────────────────────────────────────
-    try {
-        const { MongoMemoryServer } = require('mongodb-memory-server');
-        const mongod = await MongoMemoryServer.create({
-            instance: { launchTimeout: 60000 },
-        });
-        const memoryUri = mongod.getUri();
+    if (process.env.USE_IN_MEMORY_DB === 'true') {
+        try {
+            const { MongoMemoryServer } = require('mongodb-memory-server');
+            const mongod = await MongoMemoryServer.create({
+                instance: { launchTimeout: 60000 },
+            });
+            const memoryUri = mongod.getUri();
 
-        const conn = await mongoose.connect(memoryUri);
-        console.log(`✅ In-Memory MongoDB Connected: ${conn.connection.host}`);
-        console.log('ℹ️  Note: Data will not persist between restarts (in-memory mode).');
+            const conn = await mongoose.connect(memoryUri);
+            console.log(`✅ In-Memory MongoDB Connected: ${conn.connection.host}`);
+            console.log('ℹ️  Note: Data will not persist between restarts (in-memory mode).');
 
-        await seedDefaultData();
-    } catch (memErr) {
-        console.error(`❌ Failed to start In-Memory MongoDB: ${memErr.message}`);
-        process.exit(1);
+            await seedDefaultData();
+            return;
+        } catch (memErr) {
+            console.error(`❌ Failed to start In-Memory MongoDB: ${memErr.message}`);
+        }
     }
+
+    // ── 3. Degraded mode: keep serving, retry the connection later ────────────
+    await mongoose.disconnect().catch(() => {});
+    scheduleDbRetry();
 };
 
 // ── Seed default accounts & category courses ──────────────────────────────────

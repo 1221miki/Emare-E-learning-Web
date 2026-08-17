@@ -11,6 +11,18 @@ const {
 } = require('../services/emailService');
 const { audit, resolveIp } = require('../utils/auditLogger');
 
+// Helper: Generate a fresh 6-digit verification code, its SHA-256 hash, and a
+// 15-minute expiry. Only the hash is persisted so a leaked DB never exposes
+// usable codes; the plaintext code is returned to the caller for delivery.
+const createEmailVerification = () => {
+    const code = crypto.randomInt(100000, 1000000).toString();
+    return {
+        code,
+        token: crypto.createHash('sha256').update(code).digest('hex'),
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000)
+    };
+};
+
 // Helper: Generate JWT and set as HTTP-Only cookie
 const sendTokenResponse = (user, statusCode, res) => {
     const token = jwt.sign(
@@ -55,39 +67,71 @@ const register = async (req, res, next) => {
         const normalizedEmail = (accountEmail || email || '').trim().toLowerCase();
         const newPassword = securedPassword || password;
 
-        // Validate required fields
+        // ── 1. Required-field validation → 400 ─────────────────────────────
         if (!fullName || !normalizedEmail || !newPassword) {
-            return res.status(400).json({ success: false, message: 'Please provide full name, email, and password.' });
+            const missing = !fullName ? 'fullName' : !normalizedEmail ? 'accountEmail' : 'securedPassword';
+            return res.status(400).json({
+                success: false,
+                message: missing === 'fullName'
+                    ? 'Please provide full name, email, and password.'
+                    : `Please provide ${missing}.`,
+                field: missing
+            });
         }
 
-        // Check for existing user
-        const existingUser = await User.findOne({ accountEmail: normalizedEmail });
+        // ── 2. Duplicate email → 409 ──────────────────────────────────────
+        const existingUser = await User.findOne({ accountEmail: normalizedEmail }).select('_id');
         if (existingUser) {
-            return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
+            return res.status(409).json({ success: false, message: 'An account with this email already exists.', field: 'accountEmail' });
+        }
+
+        // ── 3. Duplicate username (case-insensitive) → 409 ────────────────
+        if (username) {
+            const escaped = username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const existingUsername = await User.findOne({ username: { $regex: new RegExp(`^${escaped}$`, 'i') } }).select('_id');
+            if (existingUsername) {
+                return res.status(409).json({ success: false, message: 'Username already taken.', field: 'username' });
+            }
         }
 
         const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
         const hashedVerificationCode = crypto.createHash('sha256').update(verificationCode).digest('hex');
         const verificationExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
 
-        // Create new user - password is hashed via pre-save hook in User model
-        const user = await User.create({
-            fullName,
-            accountEmail: normalizedEmail,
-            securedPassword: newPassword,
-            assignedRole: assignedRole || 'Student',
-            username: username || undefined,
-            isEmailVerified: false,
-            emailVerificationToken: hashedVerificationCode,
-            emailVerificationExpire: verificationExpire
-        });
+        // ── 4. Create user (password is hashed in the pre-save hook) ───────
+        //     Explicitly catch duplicate-key races (two concurrent signups with
+        //     the same email) so they return 409 instead of a 500 crash.
+        let user;
+        try {
+            user = await User.create({
+                fullName,
+                accountEmail: normalizedEmail,
+                securedPassword: newPassword,
+                assignedRole: assignedRole || 'Student',
+                username: username || undefined,
+                isEmailVerified: false,
+                emailVerificationToken: hashedVerificationCode,
+                emailVerificationExpire: verificationExpire
+            });
+        } catch (createErr) {
+            if (createErr.code === 11000) {
+                const dupField = (createErr.keyValue && Object.keys(createErr.keyValue)[0]) || 'accountEmail';
+                const isUsername = dupField === 'username';
+                return res.status(409).json({
+                    success: false,
+                    message: isUsername ? 'Username already taken.' : 'An account with this email already exists.',
+                    field: isUsername ? 'username' : 'accountEmail'
+                });
+            }
+            throw createErr; // rethrown → central errorHandler logs it and returns a safe 500
+        }
 
-        // Audit: new account registered
+        // ── 5. Audit (fire-and-forget, never throws) ───────────────────────
         audit.security({ req, user, action: 'REGISTER', severity: 'info',
             description: `New ${user.assignedRole} account registered: ${user.fullName} (${user.accountEmail}).`,
             targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
 
-        // Build success payload
+        // ── 6. Build success payload ──────────────────────────────────────
         const responsePayload = {
             success: true,
             message: 'Registration successful. Please verify your email with the OTP sent to your inbox.'
@@ -97,17 +141,19 @@ const register = async (req, res, next) => {
             responsePayload.warning = 'SMTP is not configured. Use the code returned here to verify your account.';
         }
 
-        // Send verification email and only report success if it was actually delivered,
-        // so the UI never shows a false 'sent successfully' message on failure.
+        // ── 7. Verification email — roll back on failure so retries work ──
         const emailResult = await sendEmailVerification(user, verificationCode);
         if (!emailResult.success) {
             console.error(`❌ Failed to send verification email to ${user.accountEmail}: ${emailResult.error}`);
-            return res.status(500).json({ success: false, message: 'Failed to send email' });
+            await User.findByIdAndDelete(user._id).catch(() => {});
+            return res.status(500).json({ success: false, message: 'Failed to send email', field: 'accountEmail' });
         }
         console.log(`✅ Verification email sent to ${user.accountEmail}`);
 
         res.status(201).json(responsePayload);
     } catch (err) {
+        // Every DB / hash / save / unexpected error lands here and is
+        // formatted + logged by the central errorHandler (never a raw 500).
         next(err);
     }
 };
@@ -332,40 +378,70 @@ const resendVerificationCode = async (req, res, next) => {
 
         const user = await User.findOne({ accountEmail: normalizedEmail });
         if (!user) {
-            return res.status(400).json({ success: false, message: 'No account found with that email.' });
+            return res.status(404).json({ success: false, message: 'No account found with that email address.' });
         }
 
         if (user.isEmailVerified) {
-            return res.status(400).json({ success: false, message: 'Email is already verified.' });
+            return res.status(400).json({ success: false, message: 'This email is already verified. You can proceed to sign in.' });
         }
 
-        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const hashedVerificationCode = crypto.createHash('sha256').update(verificationCode).digest('hex');
-        const verificationExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
-
-        user.emailVerificationToken = hashedVerificationCode;
-        user.emailVerificationExpire = verificationExpire;
+        // Generate a fresh 6-digit code; persist only its SHA-256 hash + 15-minute
+        // expiry so a leaked DB never exposes usable codes. A new code is saved on
+        // every resend, invalidating any previously issued (possibly consumed) code.
+        const { code: verificationCode, token, expiresAt } = createEmailVerification();
+        user.emailVerificationToken = token;
+        user.emailVerificationExpire = expiresAt;
         await user.save({ validateBeforeSave: false });
 
-        const responsePayload = {
-            success: true,
-            message: 'A new verification code was sent. It expires in 15 minutes.'
-        };
+        // If the email service is NOT configured outside production, return the
+        // code directly so development / testing can proceed without a provider.
         if (!isEmailConfigured() && process.env.NODE_ENV !== 'production') {
-            responsePayload.verificationCode = verificationCode;
-            responsePayload.warning = 'SMTP is not configured. Use the code returned here to verify your account.';
+            console.log(`⚠️ Email service not configured. Development verification code for ${user.accountEmail}: ${verificationCode}`);
+            return res.status(200).json({
+                success: true,
+                message: 'Development Mode: Email service is not configured. Use the code shown here to verify your account.',
+                verificationCode,
+                warning: 'Email service is not configured. Use the code provided here to verify.'
+            });
         }
 
-        // Send verification email and only report success if it was actually delivered
-        const emailResult = await sendEmailVerification(user, verificationCode);
+        // Attempt delivery; sendEmailVerification already swallows transport
+        // failures and returns { success: false, error } instead of throwing.
+        // The defensive try/catch guards against an unexpected throw so the API
+        // ALWAYS replies with a clean JSON error payload — never an HTML 500.
+        let emailResult;
+        try {
+            emailResult = await sendEmailVerification(user, verificationCode);
+        } catch (emailErr) {
+            console.error(`❌ Resend verification email threw for ${user.accountEmail}:`, emailErr);
+            emailResult = { success: false, error: emailErr.message || 'Unknown email delivery error.' };
+        }
+
         if (!emailResult.success) {
-            console.error(`❌ Failed to resend verification email to ${user.accountEmail}: ${emailResult.error}`);
-            return res.status(500).json({ success: false, message: 'Failed to send email' });
-        }
-        console.log(`✅ Resend verification email sent to ${user.accountEmail}`);
+            console.error(`❌ Failed to resend verification email to ${user.accountEmail}:`, emailResult.error);
 
-        res.status(200).json(responsePayload);
+            // In non-production, never block the flow — hand the code back to the UI.
+            if (process.env.NODE_ENV !== 'production') {
+                return res.status(200).json({
+                    success: true,
+                    message: `Email delivery failed (${emailResult.error || 'unknown error'}). Dev verification code: ${verificationCode}`,
+                    verificationCode
+                });
+            }
+
+            return res.status(502).json({
+                success: false,
+                message: 'Failed to deliver the verification email. Please check your email service settings or try again later.'
+            });
+        }
+
+        console.log(`✅ Resend verification email sent successfully to ${user.accountEmail}`);
+        return res.status(200).json({
+            success: true,
+            message: 'A new verification code was sent to your email. It expires in 15 minutes.'
+        });
     } catch (err) {
+        console.error('❌ Error in resendVerificationCode controller:', err);
         next(err);
     }
 };

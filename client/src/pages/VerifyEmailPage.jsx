@@ -1,7 +1,67 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FaArrowLeft, FaCheckCircle, FaExclamationCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
+
+// Normalize + decode the email passed via the ?email= query parameter.
+// useSearchParams already URL-decodes the value; this is a defensive pass in case
+// the link was double-encoded, and it always trims + lowercases the result.
+const normalizeEmail = (raw = '') => {
+    if (!raw) return '';
+    try {
+        return decodeURIComponent(String(raw)).trim().toLowerCase();
+    } catch {
+        return String(raw).trim().toLowerCase();
+    }
+};
+
+// Friendly copy for common HTTP status codes, used when the API reply body
+// can't be parsed (e.g. a proxy or edge returned an HTML/empty 5xx page).
+const STATUS_MESSAGES = {
+    400: 'The request was invalid. Please check your details and try again.',
+    401: 'Your session has expired. Please sign in again.',
+    404: 'The requested resource was not found.',
+    429: 'Too many attempts. Please wait a moment and then try again.',
+    500: 'The server ran into an unexpected problem. Please try again later.',
+    502: 'The server is temporarily unavailable. Please try again in a moment.',
+    503: 'The service is temporarily unavailable. Please try again later.'
+};
+
+// Best-effort extraction of a human-readable message from any thrown error
+// (axios ApiError, network failure, or plain Error). Guaranteed to return a
+// non-empty string so the UI never shows a bare fallback.
+const extractErrorMessage = (err, fallback = 'Something went wrong. Please try again.') => {
+    if (!err) return fallback;
+
+    // 1. Structured JSON error body from our API.
+    const data = err.response?.data;
+    if (data && typeof data === 'object') {
+        if (data.message) return data.message;
+        if (data.error) return data.error;
+    }
+
+    // 2. Known axios failure codes.
+    if (err.code === 'ERR_NETWORK') {
+        return 'Network error: Unable to reach the server. Please check your connection and try again.';
+    }
+    if (err.code === 'ECONNABORTED') {
+        return 'The request timed out. Please try again.';
+    }
+
+    // 3. Map recognizable HTTP status codes to friendly copy.
+    if (err.response?.status && STATUS_MESSAGES[err.response.status]) {
+        return STATUS_MESSAGES[err.response.status];
+    }
+
+    // 4. Anything left with a real message (skip axios's generic
+    //    "Request failed with status code X" noise, handled above).
+    const rawMessage = typeof err.message === 'string' ? err.message.trim() : '';
+    if (rawMessage && !/^Request failed with status code \d+$/.test(rawMessage)) {
+        return rawMessage;
+    }
+
+    return fallback;
+};
 
 export default function VerifyEmailPage() {
     const { verifyEmail, resendVerification } = useAuth();
@@ -9,7 +69,11 @@ export default function VerifyEmailPage() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const email = searchParams.get('email') || '';
+    // Prefer the decoded URL query param; fall back to navigation state if present.
+    const email = useMemo(
+        () => normalizeEmail(searchParams.get('email') || location.state?.email || ''),
+        [searchParams, location.state]
+    );
     const [form, setForm] = useState({ accountEmail: email, verificationCode: '' });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(location.state?.success || '');
@@ -26,6 +90,11 @@ export default function VerifyEmailPage() {
             return;
         }
         setSecondsRemaining(30);
+    }, [email]);
+
+    // Keep the (disabled) email input in sync if the query param changes while mounted.
+    useEffect(() => {
+        setForm(prev => (prev.accountEmail === email ? prev : { ...prev, accountEmail: email }));
     }, [email]);
 
     useEffect(() => {
@@ -54,14 +123,15 @@ export default function VerifyEmailPage() {
             setSuccess(response.message || 'Email verified successfully. Redirecting to login...');
             setTimeout(() => navigate('/login', { state: { success: response.message || 'Email verified successfully. Please log in.' } }), 1300);
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to verify email. Please try again.');
+            setError(extractErrorMessage(err, 'Failed to verify email. Please try again.'));
         } finally {
             setLoading(false);
         }
     };
 
-    const handleResend = async () => {
-        if (!email) {
+    const handleResend = useCallback(async () => {
+        const currentEmail = form.accountEmail || email;
+        if (!currentEmail) {
             setResendError('Email is required to resend verification code.');
             return;
         }
@@ -71,15 +141,32 @@ export default function VerifyEmailPage() {
         setResendLoading(true);
 
         try {
-            const response = await resendVerification({ accountEmail: email.trim().toLowerCase() });
-            setResendSuccess(response.message || 'A new code was sent.');
+            const response = await resendVerification({ accountEmail: normalizeEmail(currentEmail) });
+
+            // Defensive: the server should signal failures via non-2xx, but if it
+            // ever replies 200 with success:false, surface the message instead of
+            // claiming success.
+            if (response && response.success === false) {
+                setResendError(response.message || 'Failed to resend verification code.');
+                return;
+            }
+
+            const successMessage = response?.message || 'A new verification code has been sent.';
+            setResendSuccess(successMessage);
+
+            // Dev-mode convenience: auto-fill the returned code so testing is friction-free.
+            if (response?.verificationCode && import.meta.env.DEV) {
+                console.log('Dev Verification Code:', response.verificationCode);
+                setForm(prev => ({ ...prev, verificationCode: response.verificationCode }));
+            }
+
             setSecondsRemaining(30);
         } catch (err) {
-            setResendError(err.response?.data?.message || 'Failed to resend verification code.');
+            setResendError(extractErrorMessage(err, 'Failed to resend verification code.'));
         } finally {
             setResendLoading(false);
         }
-    };
+    }, [form.accountEmail, email, resendVerification]);
 
     return (
         <div style={styles.page}>

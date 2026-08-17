@@ -25,7 +25,10 @@ export default defineConfig({
         // (the backend is always reached via localhost on this machine).
         proxy: {
             '/api': {
-                target: 'http://localhost:5000',
+                // Use the literal IPv4 loopback address. "localhost" can resolve to ::1
+                // (IPv6), but the backend historically bound 0.0.0.0 (IPv4-only) — that
+                // mismatch made the proxy return an unreadable 500 to the React app.
+                target: 'http://127.0.0.1:5000',
                 changeOrigin: true,
             },
         },
