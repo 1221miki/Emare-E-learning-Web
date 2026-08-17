@@ -55,9 +55,13 @@ app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" }
 }));                           // Set secure HTTP response headers
 const allowedOrigins = [
-    process.env.FRONTEND_URL || 'http://localhost:3000',
-    'https://ayires.onrender.com',        // Render production (current)
-    'https://asamenew.onrender.com',      // Render production (previous)
+    // Production frontend (Netlify)
+    'https://resplendent-profiterole-2ed049.netlify.app',
+    'https://6a82a9a-resplendent-profiterole-2ed049.netlify.app',
+    // Backend on Render
+    'https://ayires.onrender.com',
+    'https://asamenew.onrender.com',
+    // Local development
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:3002',
@@ -78,9 +82,17 @@ const allowedOrigins = [
     'http://192.168.137.1:5000'
 ];
 
+// Helper to match dynamic origins (Netlify preview deploys, localhost, LAN IPs)
+const isAllowedOrigin = (origin) =>
+    !origin ||                                                   // Server-to-server / curl, no Origin header
+    allowedOrigins.includes(origin) ||
+    origin.endsWith('.netlify.app') ||                           // All Netlify deploys & previews
+    origin.endsWith('.onrender.com') ||                          // All Render previews
+    /^http:\/\/(localhost|127\.0\.0\.1|10\.|192\.168\.)(:\d+)?$/.test(origin);
+
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:') || origin.startsWith('http://10.') || origin.startsWith('http://192.168.') || origin.endsWith('.onrender.com')) {
+        if (isAllowedOrigin(origin)) {
             return callback(null, true);
         }
         callback(new Error(`CORS policy blocked origin: ${origin}`));

@@ -1,4 +1,0 @@
-.env
-
-# Generated certificate PDFs (runtime files, not source code)
-public/certificates/
