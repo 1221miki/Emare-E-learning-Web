@@ -87,7 +87,7 @@ const register = async (req, res, next) => {
             description: `New ${user.assignedRole} account registered: ${user.fullName} (${user.accountEmail}).`,
             targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
 
-        // Send response immediately without waiting for email (fire-and-forget)
+        // Build success payload
         const responsePayload = {
             success: true,
             message: 'Registration successful. Please verify your email with the OTP sent to your inbox.'
@@ -97,18 +97,16 @@ const register = async (req, res, next) => {
             responsePayload.warning = 'SMTP is not configured. Use the code returned here to verify your account.';
         }
 
-        res.status(201).json(responsePayload);
+        // Send verification email and only report success if it was actually delivered,
+        // so the UI never shows a false 'sent successfully' message on failure.
+        const emailResult = await sendEmailVerification(user, verificationCode);
+        if (!emailResult.success) {
+            console.error(`❌ Failed to send verification email to ${user.accountEmail}: ${emailResult.error}`);
+            return res.status(500).json({ success: false, message: 'Failed to send email' });
+        }
+        console.log(`✅ Verification email sent to ${user.accountEmail}`);
 
-        // Send verification email in background (non-blocking)
-        sendEmailVerification(user, verificationCode).then(emailResult => {
-            if (emailResult.success) {
-                console.log(`✅ Verification email sent to ${user.accountEmail}`);
-            } else {
-                console.error(`❌ Failed to send verification email to ${user.accountEmail}: ${emailResult.error}`);
-            }
-        }).catch(error => {
-            console.error(`❌ Verification email error for ${user.accountEmail}:`, error.message);
-        });
+        res.status(201).json(responsePayload);
     } catch (err) {
         next(err);
     }
@@ -349,7 +347,6 @@ const resendVerificationCode = async (req, res, next) => {
         user.emailVerificationExpire = verificationExpire;
         await user.save({ validateBeforeSave: false });
 
-        // Send response immediately (non-blocking)
         const responsePayload = {
             success: true,
             message: 'A new verification code was sent. It expires in 15 minutes.'
@@ -359,18 +356,15 @@ const resendVerificationCode = async (req, res, next) => {
             responsePayload.warning = 'SMTP is not configured. Use the code returned here to verify your account.';
         }
 
-        res.status(200).json(responsePayload);
+        // Send verification email and only report success if it was actually delivered
+        const emailResult = await sendEmailVerification(user, verificationCode);
+        if (!emailResult.success) {
+            console.error(`❌ Failed to resend verification email to ${user.accountEmail}: ${emailResult.error}`);
+            return res.status(500).json({ success: false, message: 'Failed to send email' });
+        }
+        console.log(`✅ Resend verification email sent to ${user.accountEmail}`);
 
-        // Send verification email in background (non-blocking)
-        sendEmailVerification(user, verificationCode).then(emailResult => {
-            if (emailResult.success) {
-                console.log(`✅ Resend verification email sent to ${user.accountEmail}`);
-            } else {
-                console.error(`❌ Failed to resend verification email to ${user.accountEmail}: ${emailResult.error}`);
-            }
-        }).catch(error => {
-            console.error(`❌ Resend verification email error for ${user.accountEmail}:`, error.message);
-        });
+        res.status(200).json(responsePayload);
     } catch (err) {
         next(err);
     }
