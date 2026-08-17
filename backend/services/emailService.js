@@ -19,7 +19,7 @@ const hasRealEmailCredentials = (user, pass) => {
 const createTransporter = () => {
     // If explicit SMTP settings are provided, use them.
     const smtpHost = process.env.MAIL_HOST || process.env.SMTP_HOST || process.env.EMAIL_HOST;
-    const smtpPort = Number(process.env.MAIL_PORT || process.env.SMTP_PORT || process.env.EMAIL_PORT || 587);
+    const smtpPort = Number(process.env.MAIL_PORT || process.env.SMTP_PORT || process.env.EMAIL_PORT || 465);
     const smtpSecure = process.env.MAIL_SECURE === 'true' || process.env.SMTP_SECURE === 'true' || smtpPort === 465;
     const smtpUser = process.env.MAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
     const smtpPass = process.env.MAIL_PASS || process.env.SMTP_PASS || process.env.EMAIL_PASSWORD;
@@ -49,12 +49,13 @@ const createTransporter = () => {
     }
 
     // Support direct email account login for common services such as Gmail
+    // Uses SSL on port 465 — Render blocks outbound SMTP on port 587 (ENETUNREACH).
     if (hasRealEmailCredentials(process.env.EMAIL_USER, process.env.EMAIL_PASSWORD)) {
         emailConfigured = true;
         return nodemailer.createTransport({
             host: 'smtp.gmail.com',
-            port: 587,
-            secure: false,
+            port: 465,
+            secure: true,
             family: 4,          // Force IPv4 — prevents ENETUNREACH on IPv6-blocked networks
             auth: {
                 user: process.env.EMAIL_USER,
