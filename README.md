@@ -46,18 +46,6 @@ npm run dev
 ```
 
 ---
-
-## 🔐 Admin Access
-
-| Account        | Email                          |
-|----------------|--------------------------------|
-| **Master Admin** | Ayireszebene8877@gmail.com   |
-
-> **Note:** The Master Admin account is created automatically on first server startup. The initial password is set via environment configuration. Demo/seed accounts (`admin@emare.com`, `student@emare.com`, `instructor@emare.com`) have been removed and will not be recreated.
-> Students and Instructors register through the normal sign-up flow.
-
----
-
 ## 🏗️ Architecture
 
 ```
