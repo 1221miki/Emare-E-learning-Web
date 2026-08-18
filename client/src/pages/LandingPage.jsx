@@ -356,7 +356,7 @@ export default function LandingPage() {
         heroOverlay: { 
             position: 'absolute', 
             inset: 0, 
-            background: 'linear-gradient(135deg, rgba(6,10,78,0.55), rgba(20,30,100,0.50))',
+            background: 'linear-gradient(135deg, rgba(6,10,78,0.25), rgba(20,30,100,0.20))',
             zIndex: 1,
             pointerEvents: 'none'
         },
@@ -373,8 +373,8 @@ export default function LandingPage() {
         heroActions: { display: 'flex', gap: '16px', justifyContent: 'flex-start', flexWrap: 'wrap' },
         primaryBtn: { background: colors.text, color: colors.bg, border: 'none', padding: '14px 32px', borderRadius: '12px', fontSize: '15px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' },
         secondaryBtn: { background: colors.bgInput, color: colors.text, border: `1px solid ${colors.border}`, padding: '14px 32px', borderRadius: '12px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' },
-        heroGlow1: { position: 'absolute', width: '600px', height: '600px', background: colors.primary, filter: 'blur(150px)', opacity: theme === 'dark' ? 0.12 : 0.05, top: '-200px', left: '-100px', borderRadius: '50%' },
-        heroGlow2: { position: 'absolute', width: '500px', height: '500px', background: colors.accent, filter: 'blur(150px)', opacity: theme === 'dark' ? 0.12 : 0.05, bottom: '-100px', right: '-100px', borderRadius: '50%' },
+        heroGlow1: { position: 'absolute', width: '600px', height: '600px', background: colors.primary, filter: 'blur(150px)', opacity: 0, top: '-200px', left: '-100px', borderRadius: '50%', pointerEvents: 'none' },
+        heroGlow2: { position: 'absolute', width: '500px', height: '500px', background: colors.accent, filter: 'blur(150px)', opacity: 0, bottom: '-100px', right: '-100px', borderRadius: '50%', pointerEvents: 'none' },
 
         statsSection: { padding: '40px 5%', background: colors.bgCard, borderBottom: `1px solid ${colors.border}` },
         statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '20px', maxWidth: '1400px', margin: '0 auto' },
@@ -525,7 +525,6 @@ export default function LandingPage() {
                                 textTransform: 'uppercase',
                                 cursor: 'pointer',
                                 boxShadow: '0 18px 45px rgba(15, 23, 42, 0.28)',
-                                backdropFilter: 'blur(8px)',
                             }}
                         >
                             <span aria-hidden="true" style={{ fontSize: '24px', lineHeight: 1, display: 'inline-block', transform: 'translateY(-1px)' }}>▶</span>
