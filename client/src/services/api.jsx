@@ -2,13 +2,19 @@ import axios from 'axios';
 
 // Resolve the backend API base URL in order of priority:
 //   1. VITE_API_URL env var if explicitly set (e.g. http://localhost:5000/api in dev)
-//   2. Relative /api — ONLY safe in dev, where the Vite proxy forwards /api → backend
-//   3. Production fallback → Render backend (Netlify has NO same-origin proxy)
+//   2. Relative /api — same origin. Safe in dev (Vite proxy) AND in production
+//      when the Express backend serves BOTH the built SPA and the API (Render
+//      combined deploys). This is required for certificate verification QR codes,
+//      which load the SPA from the same origin the certificates were issued on.
+//   3. Netlify only — no same-origin proxy, so fall back to the Render API host.
 const API_BASE_URL = (() => {
     const fromEnv = (import.meta.env.VITE_API_URL || '').trim();
     if (fromEnv) return fromEnv;
     if (import.meta.env.DEV) return '/api';
-    return 'https://ayires.onrender.com/api';
+    if (window.location.hostname.endsWith('.netlify.app')) {
+        return 'https://ayires.onrender.com/api';
+    }
+    return '/api';
 })();
 
 const API = axios.create({

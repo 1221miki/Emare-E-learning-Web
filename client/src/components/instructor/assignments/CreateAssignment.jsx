@@ -48,7 +48,6 @@ export default function CreateAssignment({ courses, defaultCourse, onCreated, on
         latePenalty:    0,
         // Access
         access:         'all',
-        published:      false,
         // Rubric items
         rubricItems:    [],
     });
@@ -81,7 +80,7 @@ export default function CreateAssignment({ courses, defaultCourse, onCreated, on
     const removeRubric  = (i) => set('rubricItems', form.rubricItems.filter((_, idx) => idx !== i));
 
     /* ── Submit ─────────────────────────────────────── */
-    const handleSubmit = async (publish) => {
+    const handleSubmit = async () => {
         if (!form.courseRef) return setError('Please select a course.');
         if (!form.title.trim()) return setError('Assignment title is required.');
         setSaving(true); setError('');
@@ -108,7 +107,7 @@ export default function CreateAssignment({ courses, defaultCourse, onCreated, on
                 dueDate:      dueAt,
                 startDate:    startAt,
                 allowLate:    form.allowLate,
-                published:    publish,
+                published:    true,
                 attachments,
                 rubricItems:  form.rubricItems.filter(r => r.criterion.trim()),
                 category:     form.category,
@@ -318,11 +317,8 @@ export default function CreateAssignment({ courses, defaultCourse, onCreated, on
 
                 {/* Action buttons */}
                 <div style={{ display: 'flex', gap: '10px', paddingTop: '8px', borderTop: '1px solid rgba(51,65,85,0.25)', flexWrap: 'wrap' }}>
-                    <button onClick={() => handleSubmit(true)} disabled={saving} style={{ ...primaryBtn, opacity: saving ? 0.7 : 1 }}>
+                    <button onClick={handleSubmit} disabled={saving} style={{ ...primaryBtn, opacity: saving ? 0.7 : 1 }}>
                         <ClipboardList size={15} aria-hidden="true" /> {saving ? 'Creating…' : 'Create & Publish'}
-                    </button>
-                    <button onClick={() => handleSubmit(false)} disabled={saving} style={{ ...ghostBtn, opacity: saving ? 0.7 : 1 }}>
-                        Save as Draft
                     </button>
                     <button onClick={onCancel} style={ghostBtn}>Cancel</button>
                 </div>

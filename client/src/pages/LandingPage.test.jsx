@@ -51,7 +51,7 @@ beforeEach(() => {
 });
 
 describe('LandingPage hero video', () => {
-  it('starts paused and only plays when the user clicks the play button', async () => {
+  it('autoplays muted and loops, with an unmute overlay that unmutes the video on click', async () => {
     render(
       <MemoryRouter>
         <LandingPage />
@@ -60,12 +60,15 @@ describe('LandingPage hero video', () => {
 
     const video = document.querySelector('video');
     expect(video).not.toBeNull();
-    expect(video).not.toHaveAttribute('autoplay');
-    expect(video).not.toHaveAttribute('loop');
-    expect(screen.getByTitle('Play')).toBeInTheDocument();
+    expect(video).toHaveAttribute('autoplay');
+    expect(video).toHaveAttribute('loop');
+    expect(video.muted).toBe(true);
+    expect(screen.getByText('Your Video Is Playing')).toBeInTheDocument();
+    expect(screen.getByText('Click to Unmute')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTitle('Play'));
+    fireEvent.click(screen.getByRole('button', { name: 'Unmute video' }));
 
-    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
+    expect(video.muted).toBe(false);
+    expect(screen.queryByText('Your Video Is Playing')).not.toBeInTheDocument();
   });
 });

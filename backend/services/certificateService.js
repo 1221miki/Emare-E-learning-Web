@@ -110,6 +110,11 @@ async function qrBuffer(url) {
  * @param {string} opts.certificateId    — ALWAYS from DB record
  * @param {Date}   [opts.completionDate]
  * @param {string} [opts.signerTitle]    — signer's job title
+ * @param {string} [opts.verificationBaseUrl] — backend base URL (from the issuing
+ *        request: req.protocol + req.get('host')). The QR always points at THIS
+ *        backend's self-contained /api/certificates/verify-page/:id route, so the
+ *        URL always resolves and queries the SAME database that issued the
+ *        certificate. Falls back to APP_BASE_URL / localhost when absent.
  * @returns {Promise<{ filePath, filename, verifyUrl }>}
  */
 async function generateCertificatePdf({
@@ -119,7 +124,8 @@ async function generateCertificatePdf({
     issueDate,
     certificateId,
     completionDate,
-    signerTitle  = 'Chief Learning Officer'
+    signerTitle  = 'Chief Learning Officer',
+    verificationBaseUrl
 }) {
     // ── Output path ───────────────────────────────────────────────────────────
     const certsDir = path.join(__dirname, '..', 'public', 'certificates');
@@ -127,8 +133,14 @@ async function generateCertificatePdf({
     const filename = `${certificateId}.pdf`;
     const filePath = path.join(certsDir, filename);
 
-    // ── Verification URL (points to backend HTML page — works everywhere) ─────
-    const backendBase = process.env.APP_BASE_URL || 'http://localhost:5000';
+    // ── Verification URL (PERMANENT fix) ──────────────────────────────────────
+    // The QR points at THIS backend's own self-contained verify page
+    // (/api/certificates/verify-page/:id), using the exact host the certificate
+    // was issued from (req host). That host always serves the route and queries
+    // the SAME database the certificate lives in, so scanning NEVER lands on a
+    // "not found" page — regardless of FRONTEND_URL / APP_BASE_URL env settings.
+    const backendBase = (verificationBaseUrl || process.env.APP_BASE_URL || 'http://localhost:5000')
+        .replace(/\/+$/, '');
     const verifyUrl    = `${backendBase}/api/certificates/verify-page/${certificateId}`;
 
     // ── Date strings ──────────────────────────────────────────────────────────

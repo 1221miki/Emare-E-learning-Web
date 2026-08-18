@@ -32,7 +32,10 @@ services:
         sync: false
       - key: JWT_EXPIRE
         value: 120m
+      # The ACTIVE website that serves the React SPA (and its /verify-certificate/:id page).
+      # Certificates' QR codes point here. asamenew.onrender.com is API-only (no SPA) — it
+      # must NOT be used as FRONTEND_URL or scanning a QR returns a 404 "not found" page.
       - key: FRONTEND_URL
-        value: https://asamenew.onrender.com
+        value: https://resplendent-profiterole-2ed049.netlify.app
       - key: APP_BASE_URL
         value: https://asamenew.onrender.com

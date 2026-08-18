@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { courseService, subscriptionService, userService, liveSessionService } from '../services/api.jsx';
 import Navbar from '../components/Navbar';
+import HeroVideoControls from '../components/HeroVideoControls';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, Phone, Mail, Clock } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock, Volume2 } from 'lucide-react';
 
 export default function LandingPage() {
     const { colors, theme } = useTheme();
@@ -16,8 +17,6 @@ export default function LandingPage() {
     const [coursesVisible, setCoursesVisible] = useState(8); // pagination: show 8 initially
     const heroVideoRef = useRef(null);
     const [heroMuted,   setHeroMuted]   = useState(true);
-    const [heroPlaying, setHeroPlaying] = useState(false);
-    const [heroVideoEnded, setHeroVideoEnded] = useState(false);
     const [contactStatus, setContactStatus] = useState(null);
     const [upcomingSessions, setUpcomingSessions] = useState([]); // real live sessions from DB
     const [reservingId, setReservingId] = useState(null);
@@ -162,49 +161,22 @@ export default function LandingPage() {
         if (searchQuery.trim()) navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
     };
 
-    useEffect(() => {
+    const handleHeroVideoUnmute = async () => {
         const video = heroVideoRef.current;
         if (!video) return;
 
-        video.muted = true;
-        video.pause();
-        video.currentTime = 0;
-        setHeroPlaying(false);
-    }, []);
-
-    const handleHeroVideoToggle = async () => {
-        const video = heroVideoRef.current;
-        if (!video) return;
-
-        if (video.ended) {
-            video.currentTime = 0;
-            await video.play();
-            setHeroPlaying(true);
-            setHeroVideoEnded(false);
-            return;
+        video.muted = false;
+        setHeroMuted(false);
+        try {
+            if (video.paused) await video.play();
+        } catch (err) {
+            console.error('Hero video unmute play failed:', err);
         }
-
-        if (video.paused) {
-            video.muted = heroMuted;
-            try {
-                await video.play();
-                setHeroPlaying(true);
-                setHeroVideoEnded(false);
-            } catch (err) {
-                console.error('Hero video play failed:', err);
-            }
-            return;
-        }
-
-        video.pause();
-        setHeroPlaying(false);
     };
 
-    const handleHeroVideoMuteToggle = () => {
+    const handleHeroVideoSetMuted = (next) => {
         const video = heroVideoRef.current;
         if (!video) return;
-
-        const next = !heroMuted;
         video.muted = next;
         setHeroMuted(next);
     };
@@ -263,12 +235,6 @@ export default function LandingPage() {
         { name: 'Emare Developers', title: 'Built with dedication and late-night focus', desc: 'Our team worked through the night, often before 9:00 hours, to bring this learning platform to life for Ethiopian students. Every release reflects the passion and persistence of the people behind Emare.', icon: '⚙️' }
     ];
 
-    const testimonials = [
-        { name: 'Abeba Tsehay', role: 'Completed: Web Dev Bootcamp', text: 'Emare ICT Hub transformed my career. The courses are practical and the instructors are world-class!', avatar: 'A', rating: 5 },
-        { name: 'Yonas Kebede', role: 'Completed: Data Analyst Path', text: 'The hands-on projects helped me build a strong portfolio. Highly recommend this platform.', avatar: 'Y', rating: 5 },
-        { name: 'Hiwot Girma', role: 'Completed: UI/UX Masterclass', text: 'Beautiful platform and great learning experience. I landed a job 2 months after finishing.', avatar: 'H', rating: 4 }
-    ];
-
     const formatLiveDate = (iso) => {
         const d = new Date(iso);
         if (isNaN(d.getTime())) return 'Date TBA';
@@ -295,12 +261,6 @@ export default function LandingPage() {
             setReservingId(null);
         }
     };
-
-    const blogArticles = [
-        { title: 'Top 5 Tech Skills for 2026', date: 'July 15, 2026', author: 'Admin' },
-        { title: 'How to Build a Web App in 10 Days', date: 'July 10, 2026', author: 'Eng. Bethelhem' },
-        { title: 'Understanding AI Ethics', date: 'July 05, 2026', author: 'Dr. Samuel' }
-    ];
 
     const faqs = [
         { q: 'How do I enroll in a course?', a: 'Create an account, browse our catalog, and click "Enroll Now".' },
@@ -361,7 +321,7 @@ export default function LandingPage() {
             pointerEvents: 'none'
         },
         heroContent: { flex: '1 1 520px', maxWidth: '700px', zIndex: 2, position: 'relative', textAlign: 'left', minWidth: '280px' },
-        heroImageWrapper: { flex: '0 0 520px', width: '100%', maxWidth: '620px', aspectRatio: '4 / 5', minHeight: '500px', height: '100%', borderRadius: '30px', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative', background: '#0b1325', boxShadow: '0 30px 70px rgba(15,23,42,0.22)', border: '1px solid rgba(148,163,184,0.12)' },
+        heroImageWrapper: { flex: '0 0 520px', width: '100%', maxWidth: '620px', aspectRatio: '9 / 13', minHeight: '680px', height: '100%', borderRadius: '30px', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative', background: '#0b1325', boxShadow: '0 30px 70px rgba(15,23,42,0.22)', border: '1px solid rgba(148,163,184,0.12)' },
         heroImageOverlay: { position: 'absolute', inset: 0, borderRadius: '30px', background: 'linear-gradient(180deg, rgba(2,6,23,0.08) 0%, rgba(2,6,23,0.18) 100%)', pointerEvents: 'none' },
         heroImage: { width: '100%', height: '100%', borderRadius: '30px', objectFit: 'cover', objectPosition: 'center center', display: 'block', background: '#020817' },
         heroTitle: { fontSize: '60px', fontWeight: '900', lineHeight: 1.1, margin: '0 0 16px', letterSpacing: '-2px', color: colors.text },
@@ -388,7 +348,6 @@ export default function LandingPage() {
         sectionTitle: { fontSize: '36px', fontWeight: '900', margin: '0 0 12px', color: colors.text },
         sectionSubtitle: { color: colors.textMuted, fontSize: '17px', margin: 0 },
 
-        grid3: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' },
         grid4: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' },
         grid6: { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '20px' },
         
@@ -410,13 +369,7 @@ export default function LandingPage() {
         instructorCard: { background: colors.bgCard, borderRadius: '16px', padding: '24px', border: `1px solid ${colors.border}`, textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' },
         instructorAvatar: { width: '80px', height: '80px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: '800', margin: '0 auto 16px' },
 
-        testimonialCard: { background: colors.bgCard, borderRadius: '16px', padding: '32px', border: `1px solid ${colors.border}`, boxShadow: '0 10px 25px rgba(0,0,0,0.05)' },
-
         liveCard: { background: colors.bgCard, borderRadius: '16px', padding: '24px', border: `1px solid ${colors.primary}50`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: `0 4px 20px ${colors.primary}10` },
-
-        blogCard: { background: colors.bgCard, borderRadius: '16px', padding: '24px', border: `1px solid ${colors.border}`, boxShadow: '0 10px 25px rgba(0,0,0,0.05)' },
-
-        certificateMockup: { background: `linear-gradient(135deg, ${colors.bgCard}, ${colors.bgInput})`, border: `4px solid ${colors.primary}`, borderRadius: '20px', padding: '60px', textAlign: 'center', maxWidth: '800px', margin: '0 auto', boxShadow: `0 20px 50px ${colors.primary}20` },
 
         faqContainer: { maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px' },
         faqItem: { background: colors.bgCard, borderRadius: '12px', padding: '20px 24px', border: `1px solid ${colors.border}`, cursor: 'pointer', transition: 'border-color 0.2s', boxShadow: '0 4px 15px rgba(0,0,0,0.02)' },
@@ -483,107 +436,47 @@ export default function LandingPage() {
                     <video
                         ref={heroVideoRef}
                         className="landing-hero-image"
-                        src="/videos/hero.mp4#t=0.001"
+                        src="/videos/emareicthub.mp4#t=0.001"
+                        autoPlay
                         muted
+                        loop
                         playsInline
                         preload="metadata"
-                        controls
                         style={p.heroImage}
-                        onPause={() => setHeroPlaying(false)}
-                        onPlay={() => setHeroPlaying(true)}
-                        onEnded={() => {
-                            setHeroPlaying(false);
-                            setHeroVideoEnded(true);
-                        }}
                     />
                     <div style={p.heroImageOverlay} />
 
-                    {!heroPlaying && !heroVideoEnded && (
+                    {heroMuted && (
                         <button
                             type="button"
-                            title="Play"
-                            aria-label="Play video"
-                            onClick={handleHeroVideoToggle}
+                            aria-label="Unmute video"
+                            onClick={handleHeroVideoUnmute}
                             style={{
                                 position: 'absolute',
-                                left: '50%',
-                                top: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                zIndex: 10,
-                                display: 'inline-flex',
+                                inset: 0,
+                                zIndex: 30,
+                                display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                gap: '12px',
-                                background: 'rgba(245, 247, 250, 0.96)',
-                                border: 'none',
-                                color: '#0f172a',
-                                borderRadius: '999px',
-                                padding: '18px 30px',
-                                fontSize: '15px',
-                                fontWeight: '900',
-                                letterSpacing: '0.08em',
-                                textTransform: 'uppercase',
+                                background: 'rgba(2, 6, 23, 0.55)',
+                                border: '1px solid rgba(148, 163, 184, 0.28)',
+                                borderRadius: '30px',
                                 cursor: 'pointer',
-                                boxShadow: '0 18px 45px rgba(15, 23, 42, 0.28)',
+                                color: '#fff',
+                                padding: 0,
                             }}
                         >
-                            <span aria-hidden="true" style={{ fontSize: '24px', lineHeight: 1, display: 'inline-block', transform: 'translateY(-1px)' }}>▶</span>
-                            <span>Play</span>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', padding: '20px', textAlign: 'center' }}>
+                                <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(245,158,11,0.35)' }}>
+                                    <Volume2 size={34} color="#0f172a" aria-hidden="true" />
+                                </div>
+                                <div style={{ fontSize: '18px', fontWeight: '800', letterSpacing: '0.04em' }}>Your Video Is Playing</div>
+                                <div style={{ color: '#fbbf24', fontSize: '14px', fontWeight: '700', letterSpacing: '0.02em' }}>Click to Unmute</div>
+                            </div>
                         </button>
                     )}
 
-                    {heroVideoEnded && (
-                        <div style={{
-                            position: 'absolute',
-                            inset: 0,
-                            zIndex: 12,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: 'linear-gradient(180deg, rgba(2,6,23,0.18) 0%, rgba(2,6,23,0.42) 100%)',
-                            textAlign: 'center',
-                            padding: '24px',
-                            boxSizing: 'border-box'
-                        }}>
-                            <img
-                                src="/images/Emare-ICT-Hub-Logo.jpg"
-                                alt="Emare ICT Hub logo"
-                                style={{
-                                    display: 'block',
-                                    width: '100%',
-                                    maxWidth: '270px',
-                                    height: 'auto',
-                                    objectFit: 'contain',
-                                    marginBottom: '18px',
-                                    filter: 'drop-shadow(0 0 16px rgba(16, 185, 129, 0.28))'
-                                }}
-                            />
-                            <button
-                                type="button"
-                                onClick={handleHeroVideoToggle}
-                                style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '12px',
-                                    padding: '14px 20px',
-                                    borderRadius: '999px',
-                                    background: 'rgba(255,255,255,0.92)',
-                                    color: '#0f172a',
-                                    fontWeight: 900,
-                                    letterSpacing: '0.08em',
-                                    textTransform: 'uppercase',
-                                    boxShadow: '0 16px 40px rgba(15, 23, 42, 0.25)',
-                                    border: 'none',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                <span aria-hidden="true" style={{ fontSize: '20px', lineHeight: 1 }}>▶</span>
-                                <span>Play Again</span>
-                            </button>
-                        </div>
-                    )}
+                    <HeroVideoControls videoRef={heroVideoRef} muted={heroMuted} onSetMuted={handleHeroVideoSetMuted} />
                 </div>
             </section>
 
@@ -869,63 +762,6 @@ export default function LandingPage() {
                             );
                         })
                     )}
-                </div>
-            </section>
-
-            {/* 15. Student Success Stories */}
-            <section style={p.section}>
-                <div style={p.sectionHeader}>
-                    <span style={p.sectionBadge}>Impact</span>
-                    <h2 style={p.sectionTitle}>Student Success Stories</h2>
-                </div>
-                <div style={{ maxWidth: '1000px', margin: '0 auto', background: colors.bgCard, borderRadius: '24px', overflow: 'hidden', border: `1px solid ${colors.border}`, display: 'flex' }}>
-                    <div style={{ flex: 1, background: colors.bgInput, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '64px' }}>▶</div>
-                    <div style={{ flex: 1, padding: '40px' }}>
-                        <div style={{ fontSize: '40px', color: colors.primary, marginBottom: '20px' }}>"</div>
-                        <h3 style={{ fontSize: '24px', color: colors.text, margin: '0 0 16px', lineHeight: 1.4 }}>I transitioned from a high school graduate to a Junior Developer in 6 months using Emare ICT Hub.</h3>
-                        <p style={{ color: colors.textMuted, margin: '0 0 24px' }}>- Yabsera, Junior Full Stack Developer at TechEth</p>
-                        <button style={p.secondaryBtn}>Read Full Story</button>
-                    </div>
-                </div>
-            </section>
-
-            {/* 16. Certificate Showcase */}
-            <section style={{ ...p.section, background: colors.bgCard }}>
-                <div style={p.sectionHeader}>
-                    <span style={p.sectionBadge}>Achievement</span>
-                    <h2 style={p.sectionTitle}>Earn Verifiable Certificates</h2>
-                </div>
-                <div style={p.certificateMockup}>
-                    <h1 style={{ color: colors.primary, fontSize: '40px', margin: '0 0 20px', fontFamily: 'serif' }}>Certificate of Completion</h1>
-                    <p style={{ color: colors.text, fontSize: '18px', margin: '0 0 20px' }}>This is to certify that</p>
-                    <h2 style={{ color: colors.text, fontSize: '32px', margin: '0 0 20px', textDecoration: 'underline' }}>[Your Name Here]</h2>
-                    <p style={{ color: colors.text, fontSize: '18px', margin: '0 0 40px' }}>has successfully completed the <strong>Full Stack Web Development Masterclass</strong>.</p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: `1px solid ${colors.border}`, paddingTop: '20px' }}>
-                        <div style={{ textAlign: 'left' }}><div style={{ borderBottom: `1px solid ${colors.text}`, width: '150px', marginBottom: '8px' }}></div><span style={{ color: colors.textMuted }}>Date</span></div>
-                        <div style={{ width: '80px', height: '80px', background: colors.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '12px', textAlign: 'center' }}>Official<br/>Seal</div>
-                        <div style={{ textAlign: 'right' }}><div style={{ borderBottom: `1px solid ${colors.text}`, width: '150px', marginBottom: '8px' }}></div><span style={{ color: colors.textMuted }}>Instructor Signature</span></div>
-                    </div>
-                </div>
-            </section>
-
-            {/* 17. Blog & Learning Articles */}
-            <section style={p.section}>
-                <div style={p.sectionHeader}>
-                    <span style={p.sectionBadge}>Resources</span>
-                    <h2 style={p.sectionTitle}>Blog & Learning Articles</h2>
-                </div>
-                <div style={p.grid3}>
-                    {blogArticles.map((b, i) => (
-                        <div key={i} style={p.blogCard}>
-                            <div style={{ height: '160px', background: colors.bgInput, borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>▤</div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', color: colors.textMuted, fontSize: '12px', marginBottom: '12px' }}>
-                                <span>{b.date}</span>
-                                <span>By {b.author}</span>
-                            </div>
-                            <h3 style={{ color: colors.text, fontSize: '18px', margin: '0 0 16px', lineHeight: 1.4 }}>{b.title}</h3>
-                            <span style={{ color: colors.primary, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>Read Article →</span>
-                        </div>
-                    ))}
                 </div>
             </section>
 

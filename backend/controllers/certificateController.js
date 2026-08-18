@@ -36,6 +36,13 @@ function publicCertPayload(cert) {
     };
 }
 
+/**
+ * Backend base URL derived from the issuing request.
+ * Guarantees the certificate's QR verify URL points at THIS backend
+ * (same host → same database → the URL always resolves to a valid page).
+ */
+const reqBaseUrl = (req) => `${req.protocol}://${req.get('host')}`;
+
 // ── GET /certificates/check/:courseId  (protected) ───────────────────────────
 exports.checkEligibility = async (req, res) => {
     try {
@@ -125,7 +132,8 @@ exports.issueCertificate = async (req, res) => {
                 certificateId:  certId,
                 logoUrl:        template.logoUrl,
                 signatureImage: template.signatureImage,
-                template
+                template,
+                verificationBaseUrl: reqBaseUrl(req)
             });
         } catch (pdfErr) {
             console.warn('[issueCertificate] PDF generation failed (continuing):', pdfErr.message);
@@ -274,7 +282,8 @@ exports.downloadCertificate = async (req, res) => {
             certificateId:  cert.certificateId,   // ← always the stored ID
             logoUrl:        template.logoUrl,
             signatureImage: template.signatureImage,
-            template
+            template,
+            verificationBaseUrl: reqBaseUrl(req)
         });
 
         // Track downloads
@@ -384,7 +393,8 @@ exports.generateCertificateForAdmin = async (req, res) => {
                 certificateId:  certId,
                 logoUrl:        template.logoUrl,
                 signatureImage: template.signatureImage,
-                template
+                template,
+                verificationBaseUrl: reqBaseUrl(req)
             });
         } catch (pdfErr) {
             console.warn('[admin generateCertificate] PDF failed:', pdfErr.message);
@@ -465,7 +475,8 @@ exports.reissueCertificate = async (req, res) => {
                 issuerName:     'Emare ICT Hub',
                 issueDate:      new Date(),
                 certificateId:  newCertId,
-                template
+                template,
+                verificationBaseUrl: reqBaseUrl(req)
             });
         } catch { /* non-fatal */ }
 
@@ -519,49 +530,90 @@ exports.verifyPage = async (req, res) => {
 <title>Certificate Verification — Emare ICT Hub</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-  .card{background:#fff;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.08);padding:36px 32px;max-width:480px;width:100%}
-  .header{text-align:center;margin-bottom:28px}
-  .header h1{font-size:22px;font-weight:800;color:#1a1a2e;margin-bottom:6px}
-  .header p{font-size:13px;color:#6b7280}
-  .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:700;margin-bottom:20px}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1b4b;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .wrap{width:100%;max-width:860px}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;margin-bottom:18px}
   .badge.valid{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
   .badge.invalid{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
   .badge.revoked{background:#fef3c7;color:#92400e;border:1px solid #fbbf24}
-  .field{margin-bottom:14px}
-  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:3px;font-weight:600}
-  .field span{font-size:15px;font-weight:600;color:#1a1a2e}
-  .footer{text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af}
-  .search-box{margin-top:20px}
-  .search-box input{width:100%;padding:12px 14px;border:1.5px solid #d1d5db;border-radius:10px;font-size:14px;font-family:monospace;letter-spacing:.04em;margin-bottom:10px;outline:none}
-  .search-box input:focus{border-color:#2563eb}
-  .search-box button{width:100%;padding:12px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer}
+  .cert{background:#fafaf7;border-radius:16px;padding:8px;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+  .cert .outer{border:2px solid #c9a84c;border-radius:13px;padding:3px}
+  .cert .inner{border:1px solid #e8c97a;border-radius:10px;overflow:hidden}
+  .cert .head{background:#0d1b4b;padding:16px 20px;text-align:center;border-bottom:2px solid #c9a84c}
+  .cert .head .brand{color:#e8c97a;font-size:11px;letter-spacing:.28em;font-weight:700;text-transform:uppercase}
+  .cert .head .title{color:#fff;font-size:19px;font-weight:800;letter-spacing:.1em;margin-top:6px;text-transform:uppercase}
+  .cert .body{padding:22px 26px;text-align:center}
+  .cert .body .lead{color:#374151;font-size:12px}
+  .cert .body .student{color:#0d1b4b;font-size:26px;font-weight:800;margin:8px 0 2px;line-height:1.2;letter-spacing:.02em}
+  .cert .body .goldline{width:160px;height:2px;background:#c9a84c;margin:0 auto 12px}
+  .cert .body .course{color:#0f766e;font-size:18px;font-weight:700;margin-top:6px;line-height:1.3}
+  .cert .body .quote{color:#6b7280;font-size:11px;font-style:italic;margin-top:8px;line-height:1.5}
+  .cert .foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:18px;padding-top:12px;border-top:1px solid #d1d5db}
+  .cert .foot .block{text-align:left}
+  .cert .foot .block.mid{text-align:center}
+  .cert .foot .block.right{text-align:right}
+  .cert .foot .sig{color:#0d1b4b;font-size:11px;font-weight:600}
+  .cert .foot .sigline{width:90px;height:1px;background:#0d1b4b;margin:5px 0 4px}
+  .cert .foot .cap{color:#6b7280;font-size:8px;letter-spacing:.1em;font-weight:700;text-transform:uppercase}
+  .cert .foot .val{color:#111827;font-size:10px;font-weight:700;font-family:monospace;margin-top:3px}
+  .cert .foot .seal{width:46px;height:46px;border-radius:50%;background:#0d1b4b;color:#e8c97a;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;text-align:center;letter-spacing:.04em;margin-left:auto}
+  .cert .foot .scan{color:#6b7280;font-size:8px;margin-top:6px}
+  .footer{text-align:center;margin-top:18px;color:#8fa3c8;font-size:12px}
+  .box{background:#fff;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.2);padding:26px 28px;max-width:480px;width:100%;margin:0 auto;text-align:center}
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="header">
-    <h1>🎓 Certificate Verification</h1>
-    <p>Emare ICT Hub — Ethiopian Tech Learning Platform</p>
-  </div>
+<div class="wrap">
   ${isValid ? `
-    <div class="badge valid">✅ Certificate is Valid</div>
-    <div class="field"><label>Certificate ID</label><span>${d.certificateId}</span></div>
-    <div class="field"><label>Student Name</label><span>${d.studentName}</span></div>
-    <div class="field"><label>Course</label><span>${d.course}</span></div>
-    <div class="field"><label>Issuer</label><span>${d.issuer}</span></div>
-    <div class="field"><label>Issue Date</label><span>${fmtDate(d.issueDate)}</span></div>
-    <div class="field"><label>Completion Date</label><span>${fmtDate(d.completionDate)}</span></div>
-    ${d.grade ? `<div class="field"><label>Grade</label><span>${d.grade}</span></div>` : ''}
-    <div class="field"><label>Status</label><span>${d.status}</span></div>
-  ` : cert ? `
-    <div class="badge revoked">⚠️ Certificate Revoked</div>
-    <p style="color:#92400e;font-size:14px">This certificate was issued but has been revoked.</p>
+    <div style="text-align:center"><div class="badge valid">✅ Certificate is Valid</div></div>
+    <div class="cert">
+      <div class="outer">
+        <div class="inner">
+          <div class="head">
+            <div class="brand">Emare ICT Hub</div>
+            <div class="title">Certificate of Completion</div>
+          </div>
+          <div class="body">
+            <div class="lead">This certificate is proudly presented to</div>
+            <div class="student">${d.studentName.toUpperCase()}</div>
+            <div class="goldline"></div>
+            <div class="lead">for successfully completing</div>
+            <div class="course">${d.course}</div>
+            <div class="quote">and has demonstrated the knowledge, skills, and dedication required to earn this credential.</div>
+            <div class="foot">
+              <div class="block">
+                <div class="sig">${d.issuer}</div>
+                <div class="sigline"></div>
+                <div class="cap">Signature</div>
+              </div>
+              <div class="block mid">
+                <div class="cap">Certificate ID</div>
+                <div class="val">${d.certificateId}</div>
+                <div class="cap" style="margin-top:8px">Issue Date</div>
+                <div class="val" style="font-family:inherit">${fmtDate(d.issueDate)}</div>
+              </div>
+              <div class="block right">
+                <div class="seal">VERIFIED<br>✓</div>
+                <div class="scan">Scan to verify</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">Certificate ID: ${d.certificateId} • Completion: ${fmtDate(d.completionDate)} • Issuer: ${d.issuer} • Status: ${d.status}</div>
   ` : `
-    <div class="badge invalid">❌ Certificate Not Found</div>
-    <p style="color:#991b1b;font-size:14px">The ID <strong>${certificateId}</strong> does not match any certificate issued by Emare ICT Hub.</p>
+    <div class="box">
+      ${cert ? `
+        <div class="badge revoked">⚠️ Certificate Revoked</div>
+        <p style="color:#92400e;font-size:14px">This certificate was issued by Emare ICT Hub but has been revoked.</p>
+      ` : `
+        <div class="badge invalid">❌ Certificate Not Found</div>
+        <p style="color:#991b1b;font-size:14px;margin-top:10px">The ID <strong>${certificateId}</strong> does not match any certificate issued by Emare ICT Hub.</p>
+      `}
+      <div class="footer" style="color:#9ca3af">Verified via Emare ICT Hub • ${new Date().getFullYear()}</div>
+    </div>
   `}
-  <div class="footer">Verified via Emare ICT Hub • ${new Date().getFullYear()}</div>
 </div>
 </body>
 </html>`;
