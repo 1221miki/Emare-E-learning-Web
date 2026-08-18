@@ -347,12 +347,16 @@ export default function LandingPage() {
             flexWrap: 'wrap', 
             gap: '40px', 
             overflow: 'hidden',
-            minHeight: '700px'
+            minHeight: '700px',
+            backgroundImage: 'url(/images/education-hero.jpg)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center center',
+            backgroundRepeat: 'no-repeat',
         },
         heroOverlay: { 
             position: 'absolute', 
             inset: 0, 
-            background: 'linear-gradient(135deg, rgba(6,10,78,0.75), rgba(20,30,100,0.65))',
+            background: 'linear-gradient(135deg, rgba(6,10,78,0.80), rgba(20,30,100,0.70))',
             zIndex: 1,
             pointerEvents: 'none'
         },
