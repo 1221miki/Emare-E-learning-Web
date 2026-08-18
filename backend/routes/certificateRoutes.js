@@ -24,6 +24,7 @@ const c = require('../controllers/certificateController');
 
 // ── Public ────────────────────────────────────────────────────────────────────
 router.get('/verify/:certificateId', c.verify);
+router.get('/verify-page/:certificateId', c.verifyPage);
 
 // ── Student (protected) ───────────────────────────────────────────────────────
 router.get('/my',               protect, c.getMyCertificates);

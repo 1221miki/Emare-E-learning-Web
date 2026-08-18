@@ -496,3 +496,76 @@ exports.reissueCertificate = async (req, res) => {
 
 // ── Legacy alias ─────────────────────────────────────────────────────────────
 exports.verifyCertificate = exports.verify;
+
+// ── GET /certificates/verify-page/:certificateId  (PUBLIC — HTML page) ───────
+// Self-contained HTML page so QR codes work from ANY device without a frontend.
+exports.verifyPage = async (req, res) => {
+    const { certificateId } = req.params;
+    if (!certificateId) return res.redirect('/api/certificates/verify-page');
+
+    const cert = await Certificate.findOne({ certificateId })
+        .populate('studentRef', 'fullName username')
+        .populate('courseRef', 'courseTitle title');
+
+    const isValid = cert && (cert.status === 'Issued' || cert.status === 'Reissued');
+    const d = cert ? publicCertPayload(cert) : null;
+
+    const fmtDate = (dt) => dt ? new Date(dt).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) : '';
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Certificate Verification — Emare ICT Hub</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{background:#fff;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.08);padding:36px 32px;max-width:480px;width:100%}
+  .header{text-align:center;margin-bottom:28px}
+  .header h1{font-size:22px;font-weight:800;color:#1a1a2e;margin-bottom:6px}
+  .header p{font-size:13px;color:#6b7280}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:700;margin-bottom:20px}
+  .badge.valid{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
+  .badge.invalid{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+  .badge.revoked{background:#fef3c7;color:#92400e;border:1px solid #fbbf24}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:3px;font-weight:600}
+  .field span{font-size:15px;font-weight:600;color:#1a1a2e}
+  .footer{text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af}
+  .search-box{margin-top:20px}
+  .search-box input{width:100%;padding:12px 14px;border:1.5px solid #d1d5db;border-radius:10px;font-size:14px;font-family:monospace;letter-spacing:.04em;margin-bottom:10px;outline:none}
+  .search-box input:focus{border-color:#2563eb}
+  .search-box button{width:100%;padding:12px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <h1>🎓 Certificate Verification</h1>
+    <p>Emare ICT Hub — Ethiopian Tech Learning Platform</p>
+  </div>
+  ${isValid ? `
+    <div class="badge valid">✅ Certificate is Valid</div>
+    <div class="field"><label>Certificate ID</label><span>${d.certificateId}</span></div>
+    <div class="field"><label>Student Name</label><span>${d.studentName}</span></div>
+    <div class="field"><label>Course</label><span>${d.course}</span></div>
+    <div class="field"><label>Issuer</label><span>${d.issuer}</span></div>
+    <div class="field"><label>Issue Date</label><span>${fmtDate(d.issueDate)}</span></div>
+    <div class="field"><label>Completion Date</label><span>${fmtDate(d.completionDate)}</span></div>
+    ${d.grade ? `<div class="field"><label>Grade</label><span>${d.grade}</span></div>` : ''}
+    <div class="field"><label>Status</label><span>${d.status}</span></div>
+  ` : cert ? `
+    <div class="badge revoked">⚠️ Certificate Revoked</div>
+    <p style="color:#92400e;font-size:14px">This certificate was issued but has been revoked.</p>
+  ` : `
+    <div class="badge invalid">❌ Certificate Not Found</div>
+    <p style="color:#991b1b;font-size:14px">The ID <strong>${certificateId}</strong> does not match any certificate issued by Emare ICT Hub.</p>
+  `}
+  <div class="footer">Verified via Emare ICT Hub • ${new Date().getFullYear()}</div>
+</div>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+};

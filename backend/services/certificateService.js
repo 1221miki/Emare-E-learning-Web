@@ -127,9 +127,9 @@ async function generateCertificatePdf({
     const filename = `${certificateId}.pdf`;
     const filePath = path.join(certsDir, filename);
 
-    // ── Verification URL ──────────────────────────────────────────────────────
-    const frontendBase = process.env.FRONTEND_URL || process.env.APP_BASE_URL || 'http://localhost:5173';
-    const verifyUrl    = `${frontendBase}/verify-certificate/${certificateId}`;
+    // ── Verification URL (points to backend HTML page — works everywhere) ─────
+    const backendBase = process.env.APP_BASE_URL || 'http://localhost:5000';
+    const verifyUrl    = `${backendBase}/api/certificates/verify-page/${certificateId}`;
 
     // ── Date strings ──────────────────────────────────────────────────────────
     const issueDateStr = new Date(issueDate || Date.now()).toLocaleDateString('en-US', {
