@@ -128,7 +128,7 @@ async function generateCertificatePdf({
     const filePath = path.join(certsDir, filename);
 
     // ── Verification URL ──────────────────────────────────────────────────────
-    const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendBase = process.env.FRONTEND_URL || process.env.APP_BASE_URL || 'http://localhost:5173';
     const verifyUrl    = `${frontendBase}/verify-certificate/${certificateId}`;
 
     // ── Date strings ──────────────────────────────────────────────────────────
