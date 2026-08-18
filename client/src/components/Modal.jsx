@@ -70,11 +70,11 @@ const styles = {
         padding: '20px'
     },
     modal: {
-        background: '#1e293b',
-        border: '1px solid #334155',
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
         borderRadius: '20px',
         width: '100%',
-        boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+        boxShadow: '0 25px 60px rgba(15,23,42,0.15)',
         animation: 'modalIn 0.2s ease-out'
     },
     header: {
@@ -84,15 +84,15 @@ const styles = {
         padding: '20px 24px 0',
     },
     title: {
-        color: '#f1f5f9',
+        color: '#0f172a',
         fontSize: '18px',
         fontWeight: '700',
         margin: 0
     },
     closeBtn: {
-        background: 'rgba(255,255,255,0.05)',
-        border: '1px solid #334155',
-        color: '#94a3b8',
+        background: '#f1f5f9',
+        border: '1px solid #e2e8f0',
+        color: '#64748b',
         borderRadius: '8px',
         width: '32px',
         height: '32px',

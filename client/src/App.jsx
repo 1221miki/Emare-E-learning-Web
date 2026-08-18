@@ -25,7 +25,7 @@ class ChunkErrorBoundary extends React.Component {
     render() {
         if (this.state.hasError) {
             return (
-                <div style={{ minHeight:'100vh', background:'#0f172a', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', color:'#fff', padding:24, fontFamily:'system-ui,sans-serif' }}>
+                <div style={{ minHeight:'100vh', background:'#f8fafc', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', color:'#0f172a', padding:24, fontFamily:'system-ui,sans-serif' }}>
                     <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
                     <h2 style={{ margin:'0 0 12px', fontSize:22 }}>Page failed to load</h2>
                     <p style={{ color:'#94a3b8', marginBottom:20, textAlign:'center' }}>A network error occurred loading this page.</p>
@@ -165,18 +165,18 @@ function AppRoutes() {
 
                 {/* ── Fallback ─────────────────────────────────────────── */}
                 <Route path="/unauthorized" element={
-                    <div style={{ color: '#fff', textAlign: 'center', padding: '80px', background: '#0f172a', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ color: '#0f172a', textAlign: 'center', padding: '80px', background: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                         <div style={{ fontSize: '64px', marginBottom: '20px' }}>🚫</div>
                         <h2 style={{ fontSize: '32px', margin: '0 0 12px' }}>403 — Access Denied</h2>
-                        <p style={{ color: '#94a3b8', marginBottom: '24px' }}>You do not have permission to view this page.</p>
+                        <p style={{ color: '#64748b', marginBottom: '24px' }}>You do not have permission to view this page.</p>
                         <a href="/" style={{ background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: '#fff', padding: '12px 24px', borderRadius: '10px', textDecoration: 'none', fontWeight: '700' }}>Go Home</a>
                     </div>
                 } />
                 <Route path="*" element={
-                    <div style={{ color: '#fff', textAlign: 'center', padding: '80px', background: '#0f172a', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ color: '#0f172a', textAlign: 'center', padding: '80px', background: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                         <div style={{ fontSize: '64px', marginBottom: '20px' }}>🔍</div>
                         <h2 style={{ fontSize: '32px', margin: '0 0 12px' }}>404 — Page Not Found</h2>
-                        <p style={{ color: '#94a3b8', marginBottom: '24px' }}>The page you're looking for doesn't exist.</p>
+                        <p style={{ color: '#64748b', marginBottom: '24px' }}>The page you're looking for doesn't exist.</p>
                         <a href="/" style={{ background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: '#fff', padding: '12px 24px', borderRadius: '10px', textDecoration: 'none', fontWeight: '700' }}>Go Home</a>
                     </div>
                 } />

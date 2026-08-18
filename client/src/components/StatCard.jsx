@@ -21,10 +21,10 @@ export default function StatCard({ label, value, color = '#3b82f6', icon }) {
 
 const styles = {
     card: {
-        background: '#1e293b',
+        background: '#ffffff',
         borderRadius: '16px',
         padding: '24px',
-        border: '1px solid #334155',
+        border: '1px solid #e2e8f0',
         transition: 'transform 0.2s, box-shadow 0.2s'
     },
     icon: { fontSize: '24px', display: 'block', marginBottom: '8px' },
