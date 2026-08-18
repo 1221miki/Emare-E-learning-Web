@@ -356,7 +356,7 @@ export default function LandingPage() {
         heroOverlay: { 
             position: 'absolute', 
             inset: 0, 
-            background: 'linear-gradient(135deg, rgba(6,10,78,0.55), rgba(20,30,100,0.45))',
+            background: 'linear-gradient(135deg, rgba(6,10,78,0.55), rgba(20,30,100,0.50))',
             zIndex: 1,
             pointerEvents: 'none'
         },
