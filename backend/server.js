@@ -138,6 +138,27 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 app.use('/certificates', express.static(path.join(__dirname, 'public/certificates')));
 
 // ── Connect to MongoDB Atlas ───────────────────────────────
+// Start the HTTP server immediately so Render's health check passes.
+// DB connection happens in the background — requests will work once connected.
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, '0.0.0.0', () => {
+    const ENV = (process.env.NODE_ENV || 'development').toUpperCase();
+    console.log(`
+╔═══════════════════════════════════════════════════════════╗
+║                                                           ║
+║          🎓  Emare E-Learning LMS BACKEND 🎓             ║
+║                                                           ║
+║   Environment: ${ENV}                                      ║
+║   Server running on: http://localhost:${PORT}              ║
+║   API Base: http://localhost:${PORT}/api                   ║
+║   Socket.IO: ✅ ENABLED                                     ║
+║                                                           ║
+║   Status: ✅ READY                                         ║
+║                                                           ║
+╚═══════════════════════════════════════════════════════════╝
+`);
+});
+
 connectDB()
     .catch(err => {
         console.error('❌ Fatal database initialization error:', err);
@@ -330,28 +351,3 @@ if (process.env.NODE_ENV === 'production') {
 // ── Global Error Handler (must be last) ───────────────────
 app.use(errorHandler);
 
-// ── Start Server ───────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
-// Listen on 0.0.0.0 so the server accepts connections on ALL network interfaces:
-//   - localhost / 127.0.0.1  (same machine, browser)
-//   - LAN IP (e.g. 10.18.56.112)  — phones on the same Wi-Fi / Ethernet
-//   - Production: Render / cloud assigns 0.0.0.0 automatically
-// Previously '::'  (IPv6 dual-stack) worked for localhost but caused
-// "connection refused" from some phones/routers that don't forward IPv6.
-app.listen(PORT, '0.0.0.0', () => {
-    const ENV = (process.env.NODE_ENV || 'development').toUpperCase();
-    console.log(`
-╔═══════════════════════════════════════════════════════════╗
-║                                                           ║
-║          🎓  Emare E-Learning LMS BACKEND 🎓             ║
-║                                                           ║
-║   Environment: ${ENV}                                      ║
-║   Server running on: http://localhost:${PORT}              ║
-║   API Base: http://localhost:${PORT}/api                   ║
-║   Socket.IO: ✅ ENABLED                                     ║
-║                                                           ║
-║   Status: ✅ READY                                         ║
-║                                                           ║
-╚═══════════════════════════════════════════════════════════╝
-`);
-});

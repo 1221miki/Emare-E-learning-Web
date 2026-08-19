@@ -530,8 +530,59 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                                     <input style={styles.input} value={cp.title} onChange={e => updateCheckpoint(cpIdx, { title: e.target.value })} placeholder={`Segment ${cpIdx + 1} quiz`} />
                                 </div>
                                 <div style={styles.formGroup}>
-                                    <label style={styles.label}>Pause At (seconds)</label>
-                                    <input type="number" min="0" style={styles.input} value={cp.timestampSeconds} onChange={e => updateCheckpoint(cpIdx, { timestampSeconds: Number(e.target.value) || 0 })} placeholder="300" />
+                                    <label style={styles.label}>Pause At (H : M : S)</label>
+                                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1 }}>
+                                            <input
+                                                type="number" min="0" max="23"
+                                                style={{ ...styles.input, textAlign: 'center' }}
+                                                value={Math.floor(cp.timestampSeconds / 3600)}
+                                                onChange={e => {
+                                                    const h = Math.max(0, Number(e.target.value) || 0);
+                                                    const m = Math.floor((cp.timestampSeconds % 3600) / 60);
+                                                    const s = cp.timestampSeconds % 60;
+                                                    updateCheckpoint(cpIdx, { timestampSeconds: h * 3600 + m * 60 + s });
+                                                }}
+                                                placeholder="0"
+                                            />
+                                            <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>HRS</span>
+                                        </div>
+                                        <span style={{ fontSize: 18, color: '#94a3b8', fontWeight: 700, paddingBottom: 16 }}>:</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1 }}>
+                                            <input
+                                                type="number" min="0" max="59"
+                                                style={{ ...styles.input, textAlign: 'center' }}
+                                                value={Math.floor((cp.timestampSeconds % 3600) / 60)}
+                                                onChange={e => {
+                                                    const h = Math.floor(cp.timestampSeconds / 3600);
+                                                    const m = Math.min(59, Math.max(0, Number(e.target.value) || 0));
+                                                    const s = cp.timestampSeconds % 60;
+                                                    updateCheckpoint(cpIdx, { timestampSeconds: h * 3600 + m * 60 + s });
+                                                }}
+                                                placeholder="0"
+                                            />
+                                            <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>MIN</span>
+                                        </div>
+                                        <span style={{ fontSize: 18, color: '#94a3b8', fontWeight: 700, paddingBottom: 16 }}>:</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1 }}>
+                                            <input
+                                                type="number" min="0" max="59"
+                                                style={{ ...styles.input, textAlign: 'center' }}
+                                                value={cp.timestampSeconds % 60}
+                                                onChange={e => {
+                                                    const h = Math.floor(cp.timestampSeconds / 3600);
+                                                    const m = Math.floor((cp.timestampSeconds % 3600) / 60);
+                                                    const s = Math.min(59, Math.max(0, Number(e.target.value) || 0));
+                                                    updateCheckpoint(cpIdx, { timestampSeconds: h * 3600 + m * 60 + s });
+                                                }}
+                                                placeholder="0"
+                                            />
+                                            <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>SEC</span>
+                                        </div>
+                                    </div>
+                                    <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                                        = {cp.timestampSeconds}s total
+                                    </span>
                                 </div>
                                 <div style={styles.formGroup}>
                                     <label style={styles.label}>Passing Score (%)</label>

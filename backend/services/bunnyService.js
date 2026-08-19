@@ -2,17 +2,17 @@
 const axios = require('axios');
 
 const BUNNY_VIDEO_BASE_URL = 'https://video.bunnycdn.com';
-const DEFAULT_BUNNY_API_KEY = '4b01e04c-779b-46a5-9d98700cee34-adf0-4224';
+const DEFAULT_BUNNY_API_KEY  = '4b01e04c-779b-46a5-9d98700cee34-adf0-4224';
 const DEFAULT_BUNNY_LIBRARY_ID = '735143';
 
 const getBunnyApiKey = () => {
-    const apiKey = process.env.BUNNY_STREAM_API_KEY || process.env.BUNNY_API_KEY || process.env.BUNNY_STORAGE_API_KEY || DEFAULT_BUNNY_API_KEY;
+    const apiKey = process.env.BUNNY_API_KEY || process.env.BUNNY_STREAM_API_KEY || process.env.BUNNY_STORAGE_API_KEY || DEFAULT_BUNNY_API_KEY;
     return apiKey && String(apiKey).trim() ? String(apiKey).trim() : null;
 };
 
 const getBunnyLibraryId = () => process.env.BUNNY_VIDEO_LIBRARY_ID || DEFAULT_BUNNY_LIBRARY_ID;
 // Pull Zone CDN hostname (e.g. vz-ece4d3e6-807.b-cdn.net) used for video playback
-const getBunnyStorageDomain = () => process.env.BUNNY_STORAGE_DOMAIN || 'vz-ece4d3e6-807.b-cdn.net';
+const getBunnyStorageDomain = () => process.env.BUNNY_STORAGE_DOMAIN || 'vz-ace4d3e6-807.b-cdn.net';
 // Storage zone regional endpoint (Falcon/DE region zones use a region subdomain)
 const getBunnyStorageEndpoint = () => process.env.BUNNY_STORAGE_ENDPOINT || 'https://storage.bunnycdn.com';
 
