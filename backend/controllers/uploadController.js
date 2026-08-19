@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const fs   = require('fs');
 const { uploadBuffer } = require('../services/cloudinaryService');
 const { uploadVideo, uploadFileToStorage } = require('../services/bunnyService');
 const Media = require('../models/Media');
@@ -128,10 +129,18 @@ exports.uploadFile = async (req, res) => {
 
         // Route video uploads to Bunny Stream
         if (isVideoFile(req.file.mimetype, req.file.originalname)) {
+            const tempFilePath = req.file.path || null; // disk storage path
+            const cleanupTemp = () => {
+                if (tempFilePath && fs.existsSync(tempFilePath)) {
+                    fs.unlink(tempFilePath, () => {});
+                }
+            };
             try {
                 const fileName = req.file.originalname || 'emare-upload-video.mp4';
+                // Use disk path if available (disk storage), otherwise buffer (memory storage)
                 const bunnyPayload = req.file.path ? req.file.path : req.file.buffer;
                 const bunnyResult = await uploadVideo(bunnyPayload, fileName, req.file.mimetype || 'video/mp4');
+                cleanupTemp();
 
                 try {
                     const mediaDoc = new Media({
@@ -163,6 +172,7 @@ exports.uploadFile = async (req, res) => {
                     }
                 });
             } catch (bunnyErr) {
+                cleanupTemp();
                 const bunnyErrorMessage = bunnyErr?.response?.data?.Message || bunnyErr?.response?.data || bunnyErr?.message || 'Unknown Bunny upload error';
                 const clientError = typeof bunnyErrorMessage === 'string' ? bunnyErrorMessage : JSON.stringify(bunnyErrorMessage);
                 console.error('Bunny.net video upload failed:', bunnyErr?.response?.data || bunnyErr);
