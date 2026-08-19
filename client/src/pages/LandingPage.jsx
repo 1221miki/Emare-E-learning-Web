@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { courseService, subscriptionService, userService, liveSessionService } from '../services/api.jsx';
 import Navbar from '../components/Navbar';
 import HeroVideoControls from '../components/HeroVideoControls';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { MapPin, Phone, Mail, Clock, Volume2 } from 'lucide-react';
+import { FaFacebookF, FaTiktok, FaTelegramPlane, FaInstagram, FaLinkedinIn } from 'react-icons/fa';
 
 export default function LandingPage() {
     const { colors, theme } = useTheme();
@@ -21,6 +22,18 @@ export default function LandingPage() {
     const [upcomingSessions, setUpcomingSessions] = useState([]); // real live sessions from DB
     const [reservingId, setReservingId] = useState(null);
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // ── Scroll to a section when arriving via hash (#services, #contact) ────
+    useEffect(() => {
+        const target = location.state?.scrollTo || (location.hash ? location.hash.replace('#', '') : null);
+        if (!target) return;
+        const id = window.requestAnimationFrame(() => {
+            const el = document.getElementById(target);
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+        });
+        return () => window.cancelAnimationFrame(id);
+    }, [location.state?.scrollTo, location.hash]);
 
     const handleContactSubmit = (e) => {
         e.preventDefault();
@@ -1079,16 +1092,24 @@ export default function LandingPage() {
                             <span style={{ color: colors.text, fontWeight: '800', fontSize: '18px' }}>Emare ICT Hub</span>
                         </div>
                         <p style={{ color: colors.textMuted, fontSize: '14px', lineHeight: 1.6, maxWidth: '280px' }}>
-                            Empowering Ethiopia's next generation of tech leaders through quality, accessible e-learning.
+                            A Center for Digital Innovation and Technology Development
                         </p>
+                        <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                            <a href="https://www.facebook.com/people/%E1%8A%A5%E1%88%9B%E1%88%AC-%E1%8B%A8%E1%88%B5%E1%88%8D%E1%8C%A0%E1%8A%93-%E1%88%9B%E1%8B%95%E1%8A%A8%E1%88%8D-Emare-ICT-Hub/61575108773808/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" style={{ color: colors.textMuted, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px', border: '1px solid rgba(51,65,85,0.5)', textDecoration: 'none', transition: 'color 0.2s, border-color 0.2s' }}><FaFacebookF /></a>
+                            <a href="https://www.tiktok.com/@emareicthub" target="_blank" rel="noopener noreferrer" aria-label="TikTok" style={{ color: colors.textMuted, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px', border: '1px solid rgba(51,65,85,0.5)', textDecoration: 'none', transition: 'color 0.2s, border-color 0.2s' }}><FaTiktok /></a>
+                            <a href="https://t.me/emareicthub" target="_blank" rel="noopener noreferrer" aria-label="Telegram" style={{ color: colors.textMuted, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px', border: '1px solid rgba(51,65,85,0.5)', textDecoration: 'none', transition: 'color 0.2s, border-color 0.2s' }}><FaTelegramPlane /></a>
+                            <a href="https://www.instagram.com/emare_ict_hub?igsh=emllYWtybmlucGh0" target="_blank" rel="noopener noreferrer" aria-label="Instagram" style={{ color: colors.textMuted, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px', border: '1px solid rgba(51,65,85,0.5)', textDecoration: 'none', transition: 'color 0.2s, border-color 0.2s' }}><FaInstagram /></a>
+                            <a href="https://www.linkedin.com/company/emareicthub" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" style={{ color: colors.textMuted, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px', border: '1px solid rgba(51,65,85,0.5)', textDecoration: 'none', transition: 'color 0.2s, border-color 0.2s' }}><FaLinkedinIn /></a>
+                        </div>
                     </div>
                     <div>
                         <h4 style={p.footerTitle}>Quick Links</h4>
-                        <Link to="/" style={p.footerLink}>Home</Link>
-                        <Link to="/about" style={p.footerLink}>About Us</Link>
-                        <Link to="/courses" style={p.footerLink}>Courses</Link>
-                        <Link to="/categories" style={p.footerLink}>Categories</Link>
-                        <Link to="/search" style={p.footerLink}>Search</Link>
+                        <Link to="/about" style={p.footerLink}>About</Link>
+                        <Link to="/developers" style={p.footerLink}>Emare Developers</Link>
+                        <Link to="/courses" style={p.footerLink}>Course Catalogs</Link>
+                        <Link to="/events" style={p.footerLink}>Events</Link>
+                        <a href="/#services" style={p.footerLink} onClick={e => { e.preventDefault(); const el = document.getElementById('services'); if (el) el.scrollIntoView({ behavior: 'smooth' }); else window.location.href = '/#services'; }}>Services</a>
+                        <a href="/#contact" style={p.footerLink} onClick={e => { e.preventDefault(); const el = document.getElementById('contact'); if (el) el.scrollIntoView({ behavior: 'smooth' }); else window.location.href = '/#contact'; }}>Contact</a>
                     </div>
                     <div>
                         <h4 style={p.footerTitle}>Categories</h4>

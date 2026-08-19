@@ -130,3 +130,21 @@ exports.createNotification = async ({ recipientRef, type, title, message, link, 
         console.error('Notification creation failed:', err.message);
     }
 };
+
+// ── Helper: Broadcast an event notification to all active users ──
+exports.broadcastEventNotification = async ({ title, message, link, type = 'event' }) => {
+    try {
+        const users = await User.find({ isActive: true }).select('_id').lean();
+        const payloads = users.map((u) => ({
+            recipientRef: u._id,
+            type,
+            title,
+            message,
+            link: link || '',
+            metadata: { source: 'event' }
+        }));
+        if (payloads.length) await Notification.insertMany(payloads);
+    } catch (err) {
+        console.error('Event broadcast failed:', err.message);
+    }
+};

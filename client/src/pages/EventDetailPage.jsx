@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import EventFooter from '../components/events/EventFooter';
-import FloatingActions from '../components/events/FloatingActions';
 import EventCalendar from '../components/events/EventCalendar';
 import { events as staticEvents, eventGallery, getEventById as staticGetEventById, formatISODate, formatLongDate } from '../data/events';
 import { publicEventService } from '../services/api';
@@ -58,16 +57,26 @@ export default function EventDetailPage() {
     const { eventId } = useParams();
     const [apiEvent, setApiEvent] = useState(null);
     const [apiEvents, setApiEvents] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
         publicEventService
             .getBySlug(eventId)
-            .then((res) => setApiEvent({ ...(res.data?.data || null), date: res.data?.data ? new Date(res.data.data.date) : null }))
-            .catch(() => setApiEvent(null));
+            .then((res) => {
+                if (cancelled) return;
+                setApiEvent({ ...(res.data?.data || null), date: res.data?.data ? new Date(res.data.data.date) : null });
+            })
+            .catch(() => { if (!cancelled) setApiEvent(null); })
+            .finally(() => { if (!cancelled) setLoading(false); });
         publicEventService
             .getAll()
-            .then((res) => setApiEvents((res.data?.data || []).map((e) => ({ ...e, date: new Date(e.date) }))))
-            .catch(() => setApiEvents([]));
+            .then((res) => {
+                if (!cancelled) setApiEvents((res.data?.data || []).map((e) => ({ ...e, date: new Date(e.date) })));
+            })
+            .catch(() => { if (!cancelled) setApiEvents([]); });
+        return () => { cancelled = true; };
     }, [eventId]);
 
     const event = useMemo(
@@ -77,12 +86,14 @@ export default function EventDetailPage() {
     const eventDate = event ? new Date(event.date) : null;
     const countdown = useCountdown(eventDate ?? FALLBACK_COUNTDOWN_TARGET);
 
-    const liveStatus = event.liveStatus || getLiveStatus({ startDate: event.date, endDate: event.endDate, status: event.status }) || 'upcoming';
+    const liveStatus = event
+        ? (event.liveStatus || getLiveStatus({ startDate: event.date, endDate: event.endDate, status: event.status }) || 'upcoming')
+        : 'upcoming';
     const statusMeta = LIVE_STATUS_META[liveStatus] || LIVE_STATUS_META.upcoming;
     const isLive = liveStatus === 'live';
     const isCancelled = liveStatus === 'cancelled';
     const isCompleted = liveStatus === 'completed';
-    const joinUrl = event.meetingUrl || event.streamUrl;
+    const joinUrl = event ? (event.meetingUrl || event.streamUrl) : null;
     const canJoin = isLive && joinUrl;
 
     const otherEvents = useMemo(
@@ -150,7 +161,6 @@ export default function EventDetailPage() {
             <div className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[720px] -translate-x-1/2 rounded-full bg-amber-500/10 blur-[120px]" />
             <Navbar />
             {children}
-            <FloatingActions />
             <EventFooter />
         </div>
     );
@@ -158,11 +168,23 @@ export default function EventDetailPage() {
     if (!event) {
         return shell(
             <main className="relative z-10 mx-auto flex max-w-7xl flex-col items-center justify-center px-4 pb-24 pt-40 text-center sm:px-6">
-                <span className="text-6xl">🔍</span>
-                <h1 className="mt-6 text-3xl font-black text-white">Event Not Found</h1>
-                <p className="mt-3 max-w-md text-sm text-[#9CA3AF]">
-                    The event you are looking for does not exist or has been removed.
-                </p>
+                {loading ? (
+                    <>
+                        <Loader2 className="h-12 w-12 animate-spin text-amber-400" />
+                        <h1 className="mt-6 text-2xl font-black text-white">Loading Event…</h1>
+                        <p className="mt-3 max-w-md text-sm text-[#9CA3AF]">
+                            Fetching the latest event details, please wait a moment.
+                        </p>
+                    </>
+                ) : (
+                    <>
+                        <span className="text-6xl">🔍</span>
+                        <h1 className="mt-6 text-3xl font-black text-white">Event Not Found</h1>
+                        <p className="mt-3 max-w-md text-sm text-[#9CA3AF]">
+                            The event you are looking for does not exist or has been removed.
+                        </p>
+                    </>
+                )}
                 <Link
                     to="/events"
                     className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-black shadow-[0_0_25px_rgba(255,193,7,0.4)] transition hover:brightness-110"
@@ -267,7 +289,7 @@ export default function EventDetailPage() {
                             <span className="h-px flex-1 bg-gradient-to-r from-amber-400/50 to-transparent" />
                         </div>
                         <h2 className="text-2xl font-extrabold text-white sm:text-3xl">{event.tagline}</h2>
-                        {event.description.map((p, i) => (
+                        {(Array.isArray(event.description) ? event.description : [event.description]).filter(Boolean).map((p, i) => (
                             <p key={i} className="mt-4 leading-relaxed text-[#9CA3AF]">{p}</p>
                         ))}
 

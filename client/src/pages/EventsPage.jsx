@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import EventFooter from '../components/events/EventFooter';
-import FloatingActions from '../components/events/FloatingActions';
 import { events as staticEvents, eventGallery, formatISODate } from '../data/events';
 import { publicEventService } from '../services/api';
 import { getLiveStatus, LIVE_STATUS_META } from '../utils/eventStatus';
@@ -256,7 +255,6 @@ export default function EventsPage() {
                 </section>
             </main>
 
-            <FloatingActions />
             <EventFooter />
         </div>
     );

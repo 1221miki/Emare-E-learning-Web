@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import EmareTeamSection from '../components/EmareTeamSection';
 import { useTheme } from '../context/ThemeContext';
 
 export default function HelpPage() {
@@ -70,8 +69,6 @@ export default function HelpPage() {
                     <Link to="/contact" style={s.contactBtn}>Contact Support</Link>
                 </div>
             </section>
-
-            <EmareTeamSection />
 
             <footer style={s.footer}>
                 <p>© {new Date().getFullYear()} Emare ICT Hub, Debre Birhan. All rights reserved.</p>

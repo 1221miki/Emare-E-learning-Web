@@ -5,7 +5,6 @@ import { courseService, categoryService } from '../../services/api';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import GuestModal from '../../components/GuestModal';
-import CourseDiscoveryChecklist from '../../components/dashboard/CourseDiscoveryChecklist';
 import { categoryMatchesCourse } from '../../utils/categoryMatching';
 
 function useQuery() {
@@ -498,8 +497,6 @@ export default function CourseCatalog() {
                             </div>
                         </div>
                     </div>
-
-                    <CourseDiscoveryChecklist />
 
                     {/* Course Grid */}
                     {filtered.length === 0 ? (

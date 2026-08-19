@@ -15,7 +15,7 @@ const NotificationSchema = new mongoose.Schema({
         enum: [
             'enrollment', 'payment', 'grade', 'quiz',
             'announcement', 'certificate', 'badge',
-            'review', 'assignment', 'system'
+            'review', 'assignment', 'system', 'event'
         ],
         default: 'system'
     },

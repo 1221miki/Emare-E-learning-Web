@@ -10,8 +10,12 @@ import React, { useEffect, useRef } from 'react';
  * @param {string} title - Modal header title
  * @param {React.ReactNode} children - Modal body content
  * @param {string} maxWidth - Maximum width of the modal (default: 480px)
+ * @param {boolean} scrollable - When true, the modal is capped to the viewport
+ *   and the body scrolls vertically while the header stays fixed (default: false)
+ * @param {string} maxHeight - Optional max height override when scrollable
+ *   (default: calc(100vh - 80px))
  */
-export default function Modal({ isOpen, onClose, title, children, maxWidth = '480px' }) {
+export default function Modal({ isOpen, onClose, title, children, maxWidth = '480px', scrollable = false, maxHeight }) {
     const modalRef = useRef(null);
 
     // Close on Escape key press
@@ -39,17 +43,28 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = '48
         <div style={styles.backdrop} onClick={onClose}>
             <div
                 ref={modalRef}
-                style={{ ...styles.modal, maxWidth }}
+                style={{
+                    ...styles.modal,
+                    maxWidth,
+                    ...(scrollable
+                        ? { maxHeight: maxHeight || 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }
+                        : {})
+                }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div style={styles.header}>
+                <div style={{ ...styles.header, ...(scrollable ? { flexShrink: 0 } : {}) }}>
                     <h3 style={styles.title}>{title}</h3>
                     <button onClick={onClose} style={styles.closeBtn}></button>
                 </div>
 
                 {/* Body */}
-                <div style={styles.body}>
+                <div
+                    style={{
+                        ...styles.body,
+                        ...(scrollable ? { overflowY: 'auto', flex: 1, minHeight: 0 } : {})
+                    }}
+                >
                     {children}
                 </div>
             </div>

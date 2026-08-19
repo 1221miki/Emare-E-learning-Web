@@ -2,3 +2,6 @@
 
 # Generated certificate PDFs (runtime files, not source code)
 public/certificates/
+
+# Server-side Google OAuth token store (refresh token — never committed)
+.google-oauth.json
