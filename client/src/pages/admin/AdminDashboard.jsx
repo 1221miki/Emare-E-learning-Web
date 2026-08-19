@@ -1,21 +1,104 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { courseService, quizService, assignmentService, userService, enrollmentService, analyticsService, systemService, notificationService, authService, reportService, certificateService, contentService, uploadService, auditService, calendarService } from '../../services/api';
+import { courseService, quizService, assignmentService, userService, enrollmentService, analyticsService, systemService, notificationService, authService, reportService, certificateService, contentService, uploadService, auditService, calendarService, eventService } from '../../services/api';
 import Sidebar from '../../components/Sidebar';
 import StatCard from '../../components/StatCard';
 import Modal from '../../components/Modal';
 import AdminSystemSettings from '../../components/admin/AdminSystemSettings';
 import { AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { LayoutDashboard, BarChart3, Users, UserCog, Building2, BookOpen, FolderTree, NotebookPen, Video, FileQuestion, ClipboardList, Award, Wallet, Receipt, DollarSign, TicketPercent, FileBarChart, Bell, Megaphone, MessageSquare, MessagesSquare, Bot, LifeBuoy, Settings, ShieldCheck, ClipboardCheck, DatabaseBackup, PlugZap, KeyRound, UserCircle, LogOut, TrendingUp, Clock3, Activity, PlusCircle, FilePen, Upload, Archive, Trash2, UserPlus, UserMinus, ShieldAlert, RotateCcw, CreditCard, PieChart as LucidePieChart, Mail, Eye, EyeOff, AlertTriangle, Palette, Languages, MoonStar, Database, BadgeInfo, CircleCheck, Server, GraduationCap, Search, Download, Monitor, Lock, Shield, MoreVertical, CheckCircle2, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown, Edit, Image, User, Copy, Star, Settings2, DownloadCloud, Trash, Wand2, PartyPopper, FileText, HelpCircle, Clipboard, Pin, Headphones, File, Radio, XCircle, Flag, Package, MessageCircle, Folder, RefreshCw, ScrollText, X, Trophy, CheckSquare, Check, FileEdit, Scale, Repeat, Calendar, Ban, Medal, Plus, Rocket, Zap, Book, Library, Clock, Save, FolderOpen, Link, Circle, Bookmark, Building, Eraser, Sparkles, Pause } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Users, UserCog, Building2, BookOpen, FolderTree, NotebookPen, Video, FileQuestion, ClipboardList, Award, Wallet, Receipt, DollarSign, TicketPercent, FileBarChart, Bell, Megaphone, MessageSquare, MessagesSquare, Bot, LifeBuoy, Settings, ShieldCheck, ClipboardCheck, DatabaseBackup, PlugZap, KeyRound, UserCircle, LogOut, TrendingUp, Clock3, Activity, PlusCircle, FilePen, Upload, Archive, Trash2, UserPlus, UserMinus, ShieldAlert, RotateCcw, CreditCard, PieChart as LucidePieChart, Mail, Eye, EyeOff, AlertTriangle, Palette, Languages, MoonStar, Database, BadgeInfo, CircleCheck, Server, GraduationCap, Search, Download, Monitor, Lock, Shield, MoreVertical, CheckCircle2, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown, Edit, Image, User, Copy, Star, Settings2, DownloadCloud, Trash, Wand2, PartyPopper, FileText, HelpCircle, Clipboard, Pin, Headphones, File, Radio, XCircle, Flag, Package, MessageCircle, Folder, RefreshCw, ScrollText, X, Trophy, CheckSquare, Check, FileEdit, Scale, Repeat, Calendar, Ban, Medal, Plus, Rocket, Zap, Book, Library, Clock, Save, FolderOpen, Link, Circle, Bookmark, Building, Eraser, Sparkles, Pause, MapPin, Tag, Globe, ExternalLink, Loader2 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { getLiveStatus, LIVE_STATUS_META, formatEventDate, isValidUrl, EVENT_CATEGORIES } from '../../utils/eventStatus';
 import CourseCreationWizard from '../instructor/CourseCreationWizard';
+
+const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const combineDateAndTime = (dateStr, timeStr) => {
+    if (!dateStr) return null;
+    const d = new Date(`${dateStr}T${timeStr || '00:00'}`);
+    return Number.isNaN(d.getTime()) ? null : d;
+};
+const isSameDay = (a, b) => startOfDay(a).getTime() === startOfDay(b).getTime();
+const dateInRange = (date, fromDays, toDays) => {
+    const d = startOfDay(date);
+    const from = startOfDay(Date.now() + fromDays * 86400000);
+    const to = startOfDay(Date.now() + toDays * 86400000);
+    return d >= from && d <= to;
+};
+const INTERNAL_EVENT_CATEGORIES = ['academic', 'exam', 'assignment', 'holiday', 'training', 'event'];
+const MEETING_PROVIDERS = [
+    { value: 'googleMeet', label: 'Google Meet' },
+    { value: 'jitsi', label: 'Jitsi Meet' },
+    { value: 'zoom', label: 'Zoom' },
+    { value: 'microsoftTeams', label: 'Microsoft Teams' },
+    { value: 'internal', label: 'Internal Join Link' },
+    { value: 'custom', label: 'Manual URL' }
+];
+const meetingProviderLabel = (value) => (MEETING_PROVIDERS.find((p) => p.value === value) || { label: 'Internal Join Link' }).label;
+
+// Virtual Meeting & Live Stream Settings platforms (form-facing)
+const MEETING_PLATFORMS = [
+    { value: 'googleMeet', label: 'Google Meet' },
+    { value: 'zoom', label: 'Zoom' },
+    { value: 'jitsi', label: 'Jitsi Meet' },
+    { value: 'youtubeLive', label: 'YouTube Live' },
+    { value: 'rtmp', label: 'Custom RTMP / Web Stream' }
+];
+const platformToProvider = { googleMeet: 'googleMeet', zoom: 'zoom', jitsi: 'jitsi', youtubeLive: 'custom', rtmp: 'custom' };
+const meetingPlatformLabel = (value) => (MEETING_PLATFORMS.find((p) => p.value === value) || { label: 'Google Meet' }).label;
+const getDefaultMeetingLink = (platform, title) => {
+    const slug = (title || 'emare-live-session').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 24) || 'emare-live-session';
+    if (platform === 'jitsi') return `https://meet.jit.si/${slug}`;
+    return null;
+};
+const providerToPlatform = (provider) => {
+    if (provider === 'zoom') return 'zoom';
+    if (provider === 'googleMeet') return 'googleMeet';
+    if (provider === 'jitsi') return 'jitsi';
+    return 'youtubeLive';
+};
+const formatTimeShort = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+};
+const formatDateShort = (dateStr) => {
+    if (!dateStr) return '─"';
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return '─"';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+const statusChip = (live) => ({
+    upcoming: { label: 'Upcoming', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+    live: { label: 'Ongoing', color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
+    completed: { label: 'Completed', color: '#64748b', bg: 'rgba(100,116,139,0.14)' },
+    cancelled: { label: 'Cancelled', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+}[live] || { label: 'Upcoming', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' });
+
+const copyToClipboard = async (text) => {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch { ok = false; }
+        document.body.removeChild(ta);
+        return ok;
+    }
+};
 
 export default function AdminDashboard() {
     const { colors, theme } = useTheme();
     const navigate = useNavigate();
     const location = useLocation();
     const [activeTab, setActiveTab] = useState(() => location.state?.activeTab || 'overview');
-    const [loading, setLoading] = useState(false); // start false — show skeleton immediately
+    const [loading, setLoading] = useState(false); // start false ─" show skeleton immediately
 
     useEffect(() => {
         if (location.state?.activeTab) {
@@ -81,7 +164,7 @@ export default function AdminDashboard() {
     const [isAiCourseGenModalOpen, setIsAiCourseGenModalOpen] = useState(false);
     const [aiPromptInput, setAiPromptInput] = useState('');
 
-    // ── Fixed-position course action menu (escapes table overflow clipping) ──
+    // ─"?─"? Fixed-position course action menu (escapes table overflow clipping) ─"?─"?
     const [courseMenuOpenId, setCourseMenuOpenId] = useState(null);   // course._id or null
     const [courseMenuPos,    setCourseMenuPos]    = useState({ top: 0, right: 0 });
 
@@ -288,9 +371,24 @@ export default function AdminDashboard() {
     const [auditSearch, setAuditSearch] = useState('');
     const [isAuditLoading, setIsAuditLoading] = useState(false);
     const [calendarEvents, setCalendarEvents] = useState([]);
-    const [calendarForm, setCalendarForm] = useState({ title: '', category: 'academic', description: '', startDate: '', endDate: '', location: '', isAllDay: false, color: '#2563eb' });
+    const [publicEvents, setPublicEvents] = useState([]);
+    const [calendarForm, setCalendarForm] = useState({ title: '', category: 'academic', description: '', startDate: '', endDate: '', location: '', isAllDay: false, color: '#2563eb', eventType: 'Hybrid', streamUrl: '', bannerImage: '', galleryImages: '', enableRegistration: true, capacity: '', price: 'FREE', instructor: '', eventStatus: 'SCHEDULED', eventCategory: 'Masterclass', visibility: 'internal', startTime: '10:00', endTime: '11:00', meetingProvider: 'googleMeet', meetingPlatform: 'googleMeet', meetingInvitees: '', meetingPassword: '' });
+    const [eventSearch, setEventSearch] = useState('');
+    const [eventStatusFilter, setEventStatusFilter] = useState('all');
+    const [eventCategoryFilter, setEventCategoryFilter] = useState('all');
+    const [eventVisibilityFilter, setEventVisibilityFilter] = useState('all');
+    const [eventDateFilter, setEventDateFilter] = useState('all');
+    const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+    const [viewingEvent, setViewingEvent] = useState(null);
+    const [cancelTarget, setCancelTarget] = useState(null);
+    const [cancelReason, setCancelReason] = useState('');
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [formError, setFormError] = useState('');
     const [calendarEditingId, setCalendarEditingId] = useState(null);
     const [isCalendarSaving, setIsCalendarSaving] = useState(false);
+    const [googleMeetStatus, setGoogleMeetStatus] = useState(null);
+    const [isGoogleConnecting, setIsGoogleConnecting] = useState(false);
+    const [isGeneratingMeeting, setIsGeneratingMeeting] = useState(false);
     const [certificateVerificationNumber, setCertificateVerificationNumber] = useState('');
     const [certificateVerificationResult, setCertificateVerificationResult] = useState(null);
     const [isCertificateActionLoading, setIsCertificateActionLoading] = useState(false);
@@ -346,6 +444,41 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         fetchData();
+    }, []);
+
+    // Handle the Google Meet OAuth callback redirect (e.g. /admin?calendar=1&googleMeet=connected)
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const gm = params.get('googleMeet');
+        if (params.get('calendar') === '1') setActiveTab('calendar');
+        if (gm === 'connected') {
+            showNotification('Google Meet connected. You can now create real Google Meet meetings.');
+            fetchGoogleStatus();
+            // Return the admin to the Create/Edit Event modal they were working on.
+            const saved = sessionStorage.getItem('googleAuthReturnForm');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && parsed.form) {
+                        setCalendarForm(parsed.form);
+                        if (parsed.editingId) setCalendarEditingId(parsed.editingId);
+                        setIsEventModalOpen(true);
+                    }
+                } catch (e) { /* ignore corrupted payload */ }
+                sessionStorage.removeItem('googleAuthReturnForm');
+            }
+        } else if (gm === 'error') {
+            showNotification(params.get('reason') ? `Google Meet connection failed: ${params.get('reason')}` : 'Google Meet connection failed.');
+            sessionStorage.removeItem('googleAuthReturnForm');
+        }
+        if (gm) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('googleMeet');
+            url.searchParams.delete('reason');
+            url.searchParams.delete('calendar');
+            window.history.replaceState({}, '', url);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
@@ -418,6 +551,72 @@ export default function AdminDashboard() {
         }
     };
 
+    const fetchGoogleStatus = async () => {
+        try {
+            const res = await calendarService.getGoogleStatus();
+            setGoogleMeetStatus(res.data?.data || null);
+        } catch (error) {
+            setGoogleMeetStatus(null);
+        }
+    };
+
+const handleConnectGoogleMeet = async () => {
+        try {
+            setIsGoogleConnecting(true);
+            const res = await calendarService.getGoogleAuthUrl();
+            const url = res.data?.data?.url;
+            if (!url) throw new Error('No authorization URL returned.');
+            // Preserve the form so the admin is returned to the Create Event modal
+            // after authorizing on Google.
+            try {
+                sessionStorage.setItem('googleAuthReturnForm', JSON.stringify({
+                    form: calendarForm,
+                    editingId: calendarEditingId
+                }));
+            } catch (e) { /* non-fatal — the form simply resets on return */ }
+            window.location.href = url;
+        } catch (error) {
+            setIsGoogleConnecting(false);
+            showNotification(error.response?.data?.message || 'Could not start Google Meet connection.');
+        }
+    };
+
+    const fetchPublicEvents = async () => {
+        try {
+            const res = await eventService.getAll();
+            setPublicEvents(res.data?.data || []);
+        } catch (error) {
+            console.error('Error fetching public events:', error);
+        }
+    };
+
+    const publishPublicEvent = async (event) => {
+        try {
+            await eventService.setStatus(event._id, { status: 'APPROVED' });
+            showNotification(`"${event.title}" is now live on the public site.`);
+            fetchPublicEvents();
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to publish event.');
+        }
+    };
+
+    const cancelPublicEvent = async (event) => {
+        setCancelReason('');
+        setCancelTarget(event);
+    };
+
+    const confirmCancelPublicEvent = async () => {
+        if (!cancelTarget) return;
+        try {
+            await eventService.cancel(cancelTarget._id, { reason: cancelReason || 'Cancelled by administrator' });
+            showNotification(`"${cancelTarget.title}" has been cancelled.`);
+            setCancelTarget(null);
+            fetchPublicEvents();
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to cancel event.');
+        }
+    };
+
     const fetchData = async () => {
         // Fetch only the critical data needed for initial render
         // Non-critical data (certificates, audit logs, calendar, content) loads after
@@ -462,6 +661,8 @@ export default function AdminDashboard() {
             fetchContentPages();
             fetchAuditLogs();
             fetchCalendarEvents();
+            fetchPublicEvents();
+            fetchGoogleStatus();
         }, 100);
     };
 
@@ -719,7 +920,7 @@ export default function AdminDashboard() {
         showNotification('Certificate template removed.');
     };
 
-    // ── User Management ────────────────────────────────────────
+    // ─"?─"? User Management ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?
 
     const handleToggleUserStatus = async (user) => {
         try {
@@ -871,7 +1072,7 @@ export default function AdminDashboard() {
         }
     };
 
-    // ── Course Management ──────────────────────────────────────
+    // ─"?─"? Course Management ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?
 
     const handleApproveCourse = async (id) => {
         try {
@@ -1280,7 +1481,7 @@ export default function AdminDashboard() {
         }
     };
 
-    // ── System Management ──────────────────────────────────────
+    // ─"?─"? System Management ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?
 
     const handleAssetUpload = async (fieldName, file) => {
         if (!file) return;
@@ -1368,63 +1569,266 @@ export default function AdminDashboard() {
         fetchAuditLogs(auditFilter, value);
     };
 
-    const resetCalendarForm = () => {
-        setCalendarForm({ title: '', category: 'academic', description: '', startDate: '', endDate: '', location: '', isAllDay: false, color: '#2563eb' });
+const resetCalendarForm = () => {
+        setCalendarForm({ title: '', category: 'academic', description: '', startDate: '', endDate: '', location: '', isAllDay: false, color: '#2563eb', eventType: 'Hybrid', streamUrl: '', bannerImage: '', galleryImages: '', enableRegistration: true, capacity: '', price: 'FREE', instructor: '', eventStatus: 'SCHEDULED', eventCategory: 'Masterclass', visibility: 'internal', startTime: '10:00', endTime: '11:00', meetingProvider: 'googleMeet', meetingPlatform: 'googleMeet', meetingInvitees: '', meetingPassword: '' });
         setCalendarEditingId(null);
+        setFormError('');
+        setIsEventModalOpen(false);
+    };
+
+    const openCreateEvent = () => {
+        resetCalendarForm();
+        setIsEventModalOpen(true);
     };
 
     const handleSaveCalendarEvent = async (e) => {
         e.preventDefault();
+        if (isCalendarSaving) return;
+        const isPublic = calendarForm.visibility === 'public';
+        const wantsGoogleMeet = calendarForm.eventType !== 'Physical' && calendarForm.meetingProvider === 'googleMeet' && !calendarForm.streamUrl;
+
+        setFormError('');
+        if (wantsGoogleMeet && !(googleMeetStatus?.connected && googleMeetStatus?.authorized)) {
+            return setFormError('Google Meet is not connected. Click "Connect Google Meet" to authorize before creating the meeting.');
+        }
+        if (!calendarForm.title.trim()) return setFormError('Event title is required.');
+        if (!calendarForm.startDate) return setFormError('Start date is required.');
+        const start = combineDateAndTime(calendarForm.startDate, calendarForm.isAllDay ? '00:00' : (calendarForm.startTime || '00:00'));
+        if (!start) return setFormError('Start date is invalid.');
+        const end = calendarForm.endDate ? combineDateAndTime(calendarForm.endDate, calendarForm.isAllDay ? '23:59' : (calendarForm.endTime || '23:59')) : null;
+        if (end && end < start) return setFormError('End date/time must be after the start date/time.');
+        if (calendarForm.eventType === 'Physical' && !calendarForm.location.trim()) return setFormError('Location is required for a physical event.');
+        if (isPublic) {
+            if (calendarForm.streamUrl && !isValidUrl(calendarForm.streamUrl)) return setFormError('Meeting URL is invalid ─" use a full http(s) link.');
+            if (calendarForm.bannerImage && !isValidUrl(calendarForm.bannerImage)) return setFormError('Banner image URL is invalid ─" use a full http(s) link.');
+            if (calendarForm.capacity !== '' && (Number.isNaN(Number(calendarForm.capacity)) || Number(calendarForm.capacity) < 0)) return setFormError('Capacity must be a positive number.');
+        }
+
         try {
             setIsCalendarSaving(true);
+
+            if (isPublic) {
+                const startTime = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+                const endTime = calendarForm.isAllDay
+                    ? '23:59'
+                    : (end ? (() => {
+                        const hh = String(end.getHours()).padStart(2, '0');
+                        const mm = String(end.getMinutes()).padStart(2, '0');
+                        const sMin = start.getHours() * 60 + start.getMinutes();
+                        const eMin = end.getHours() * 60 + end.getMinutes();
+                        return eMin > sMin ? `${hh}:${mm}` : '23:59';
+                    })() : '23:59');
+                const timeLabel = calendarForm.isAllDay ? 'All Day' : '';
+                const instructors = users.filter((u) => u.assignedRole === 'Instructor');
+                const host = instructors.find((u) => u._id === calendarForm.instructor);
+                const existing = calendarEditingId ? publicEvents.find((ev) => ev._id === calendarEditingId) : null;
+                const payload = {
+                    title: calendarForm.title,
+                    tagline: '',
+                    category: calendarForm.eventCategory || 'Masterclass',
+                    description: calendarForm.description ? calendarForm.description.split('\n').filter(Boolean) : [],
+                    eventType: calendarForm.eventType || 'Hybrid',
+                    venue: calendarForm.location || (calendarForm.eventType !== 'Physical' ? 'Online Live Stream' : ''),
+                    city: '',
+                    streamUrl: calendarForm.streamUrl || '',
+                    startDate: start.toISOString(),
+                    endDate: end ? end.toISOString() : null,
+                    startTime,
+                    endTime,
+                    timeLabel,
+                    allDay: Boolean(calendarForm.isAllDay),
+                    visibility: 'public',
+                    meetingProvider: platformToProvider[calendarForm.meetingPlatform] || calendarForm.meetingProvider || 'googleMeet',
+                    meetingPlatform: calendarForm.meetingPlatform || providerToPlatform(calendarForm.meetingProvider),
+                    meetingInvitees: calendarForm.meetingInvitees || '',
+                    meetingPassword: calendarForm.meetingPassword || '',
+                    price: calendarForm.price || 'FREE',
+                    totalSlots: Number(calendarForm.capacity) || 0,
+                    image: calendarForm.bannerImage || '',
+                    gallery: calendarForm.galleryImages ? calendarForm.galleryImages.split(',').map((u) => u.trim()).filter(Boolean) : [],
+                    speaker: host ? { name: host.fullName || '', role: host.specialization || 'Instructor', avatar: host.avatarUrl || '', bio: '' } : (existing?.speaker ? existing.speaker : {}),
+                    status: calendarForm.eventStatus === 'CANCELLED' ? 'CANCELLED' : (calendarEditingId && existing ? existing.status : 'PENDING_REVIEW'),
+                    isFeatured: Boolean(existing?.isFeatured),
+                    registrationEnabled: Boolean(calendarForm.enableRegistration)
+                };
+                if (calendarEditingId) {
+                    await eventService.update(calendarEditingId, payload);
+                    showNotification(wantsGoogleMeet ? 'Event updated. Google Meet meeting preserved.' : 'Public event updated. Meeting link saved.');
+                } else {
+                    await eventService.create(payload);
+                    showNotification(wantsGoogleMeet ? 'Event created. Real Google Meet meeting ready.' : 'Public event created. Meeting link generated.');
+                }
+                resetCalendarForm();
+                fetchPublicEvents();
+                return;
+            }
+
             const payload = {
-                ...calendarForm,
-                startDate: new Date(calendarForm.startDate).toISOString(),
-                endDate: calendarForm.endDate ? new Date(calendarForm.endDate).toISOString() : null,
-                isAllDay: Boolean(calendarForm.isAllDay)
+                title: calendarForm.title,
+                category: calendarForm.category,
+                description: calendarForm.description || '',
+                startDate: start.toISOString(),
+                endDate: end ? end.toISOString() : null,
+                location: calendarForm.location || '',
+                eventType: calendarForm.eventType || 'Hybrid',
+                streamUrl: calendarForm.streamUrl || '',
+                visibility: 'internal',
+                meetingProvider: platformToProvider[calendarForm.meetingPlatform] || calendarForm.meetingProvider || 'googleMeet',
+                meetingPlatform: calendarForm.meetingPlatform || providerToPlatform(calendarForm.meetingProvider),
+                meetingInvitees: calendarForm.meetingInvitees || '',
+                meetingPassword: calendarForm.meetingPassword || '',
+                isAllDay: Boolean(calendarForm.isAllDay),
+                color: calendarForm.color || '#2563eb',
+                status: calendarForm.eventStatus === 'CANCELLED' ? 'CANCELLED' : 'SCHEDULED'
             };
             if (calendarEditingId) {
                 await calendarService.updateEvent(calendarEditingId, payload);
-                showNotification('Calendar event updated.');
+                showNotification(wantsGoogleMeet ? 'Calendar event updated. Google Meet meeting preserved.' : 'Calendar event updated.');
             } else {
                 await calendarService.createEvent(payload);
-                showNotification('Calendar event created.');
+                showNotification(wantsGoogleMeet ? 'Calendar event created. Real Google Meet meeting ready.' : 'Calendar event created.');
             }
             resetCalendarForm();
             fetchCalendarEvents();
         } catch (error) {
-            alert(error.response?.data?.message || 'Failed to save calendar event.');
+            const msg = error.response?.data?.message || 'Failed to save event.';
+            showNotification(wantsGoogleMeet && !error.response ? 'Google Meet creation failed — the event was NOT saved. Check the backend connection and retry.' : msg);
         } finally {
             setIsCalendarSaving(false);
         }
     };
 
     const handleEditCalendarEvent = (event) => {
+        const isPublic = event.visibility === 'public';
+        const toDatePart = (d) => (d ? new Date(d).toISOString().slice(0, 10) : '');
+        const toTimePart = (d) => (d ? new Date(d).toISOString().slice(11, 16) : '');
         setCalendarEditingId(event._id);
         setCalendarForm({
             title: event.title || '',
-            category: event.category || 'academic',
-            description: event.description || '',
-            startDate: event.startDate ? new Date(event.startDate).toISOString().slice(0, 16) : '',
-            endDate: event.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : '',
-            location: event.location || '',
+            category: isPublic ? (event.category || 'Masterclass') : (event.category || 'academic'),
+            description: isPublic ? (Array.isArray(event.description) ? event.description.join('\n') : (event.description || '')) : (event.description || ''),
+            startDate: toDatePart(event.startDate),
+            startTime: toTimePart(event.startDate),
+            endDate: toDatePart(event.endDate),
+            endTime: toTimePart(event.endDate),
+            location: isPublic ? (event.venue || '') : (event.location || ''),
             isAllDay: Boolean(event.isAllDay),
-            color: event.color || '#2563eb'
+            color: event.color || '#2563eb',
+            eventType: event.eventType || 'Hybrid',
+            streamUrl: event.meetingUrl || event.streamUrl || '',
+            bannerImage: event.image || '',
+            galleryImages: event.gallery ? event.gallery.join(', ') : '',
+            enableRegistration: event.registrationEnabled !== false,
+            capacity: event.totalSlots != null ? event.totalSlots : '',
+            price: event.price || 'FREE',
+            instructor: '',
+            eventStatus: event.status === 'CANCELLED' ? 'CANCELLED' : 'SCHEDULED',
+            eventCategory: event.category || 'Masterclass',
+            visibility: isPublic ? 'public' : 'internal',
+            meetingProvider: event.meetingProvider || (event.streamUrl ? 'custom' : 'googleMeet'),
+            meetingPlatform: event.meetingPlatform || providerToPlatform(event.meetingProvider),
+            meetingInvitees: event.meetingInvitees || '',
+            meetingPassword: event.meetingPassword || '',
         });
+        setFormError('');
+        setIsEventModalOpen(true);
     };
 
-    const handleDeleteCalendarEvent = async (id) => {
-        if (!window.confirm('Delete this calendar event?')) return;
+    const handleCopyMeetingLink = async (url) => {
+        if (!url) return showNotification('No meeting URL to copy.');
+        const ok = await copyToClipboard(url);
+        showNotification(ok ? 'Meeting link copied.' : 'Could not copy link.');
+    };
+
+    const openMeetingLink = (url) => {
+        if (!url) return showNotification('No meeting URL to open.');
+        window.open(url, '_blank', 'noopener,noreferrer');
+    };
+
+    const handleGenerateMeetingLink = async (overrideProvider) => {
+        const provider = overrideProvider || calendarForm.meetingProvider;
+        if (provider === 'custom') return;
+        if (provider === 'googleMeet' && !(googleMeetStatus?.connected && googleMeetStatus?.authorized)) {
+            return showNotification('Google Meet is not connected. Click "Connect Google Meet" first.');
+        }
+        if (!calendarForm.title.trim()) return showNotification('Enter an event title before generating a link.');
         try {
-            await calendarService.deleteEvent(id);
-            showNotification('Calendar event deleted.');
-            fetchCalendarEvents();
+            setIsGeneratingMeeting(true);
+            const startDate = calendarForm.startDate ? combineDateAndTime(calendarForm.startDate, calendarForm.isAllDay ? '00:00' : (calendarForm.startTime || '00:00')) : null;
+            const endDate = calendarForm.endDate ? combineDateAndTime(calendarForm.endDate, calendarForm.isAllDay ? '23:59' : (calendarForm.endTime || '23:59')) : null;
+            const { data: res } = await eventService.generateMeetingLink({
+                provider,
+                title: calendarForm.title,
+                startDate: startDate ? startDate.toISOString() : undefined,
+                endDate: endDate ? endDate.toISOString() : undefined
+            });
+            const url = res?.data?.url || res?.data?.meetingUrl || '';
+            if (!url) throw new Error('No meeting link was returned.');
+            setCalendarForm((f) => ({ ...f, streamUrl: url, meetingProvider: res?.data?.provider || provider }));
+            showNotification(provider === 'googleMeet'
+                ? 'Real Google Meet meeting created and attached to this event.'
+                : `${meetingProviderLabel(res?.data?.provider || provider)} link generated.`);
         } catch (error) {
-            alert(error.response?.data?.message || 'Failed to delete calendar event.');
+            showNotification(error.response?.data?.message || (provider === 'googleMeet' ? 'Google Meet creation failed. No meeting was created.' : 'Failed to generate meeting link.'));
+        } finally {
+            setIsGeneratingMeeting(false);
         }
     };
 
-    // ── RENDERERS ──────────────────────────────────────────────
+    const handleGeneratePlatformMeeting = async () => {
+        const platform = calendarForm.meetingPlatform || 'googleMeet';
+        const defaultLink = getDefaultMeetingLink(platform, calendarForm.title);
+        if (defaultLink) {
+            setCalendarForm((f) => ({ ...f, streamUrl: defaultLink, meetingProvider: 'jitsi' }));
+            return showNotification('Jitsi Meet link generated.');
+        }
+        if (platform === 'googleMeet') {
+            if (!(googleMeetStatus?.connected && googleMeetStatus?.authorized)) {
+                return showNotification('Google Meet is not connected. Please enter a link manually.');
+            }
+            return await handleGenerateMeetingLink('googleMeet');
+        }
+        return showNotification(`Automatic generation is not available for ${meetingPlatformLabel(platform)}. Please enter a real meeting link manually.`);
+    };
+
+    const handleRegenerateMeeting = async () => {
+        if (!calendarEditingId) return;
+        try {
+            const { data: res } = await eventService.regenerateMeeting(calendarEditingId, {
+                provider: calendarForm.meetingProvider,
+                title: calendarForm.title
+            });
+            const url = res?.data?.streamUrl || '';
+            setCalendarForm((f) => ({ ...f, streamUrl: url, meetingProvider: res?.data?.provider || f.meetingProvider }));
+            showNotification('Meeting link regenerated.');
+        } catch (error) {
+            showNotification(error.response?.data?.message || 'Failed to regenerate meeting link.');
+        }
+    };
+
+    const openDeleteEvent = (event) => {
+        setDeleteTarget(event);
+    };
+
+    const confirmDeleteEvent = async () => {
+        if (!deleteTarget) return;
+        try {
+            if (deleteTarget.visibility === 'internal') {
+                await calendarService.deleteEvent(deleteTarget._id);
+                showNotification('Calendar event deleted.');
+                fetchCalendarEvents();
+            } else {
+                await eventService.remove(deleteTarget._id);
+                showNotification(`"${deleteTarget.title}" has been deleted.`);
+                fetchPublicEvents();
+            }
+            setDeleteTarget(null);
+        } catch (error) {
+            showNotification(error.response?.data?.message || 'Failed to delete event.');
+        }
+    };
+
+    // ─"?─"? RENDERERS ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?
 
     const s = {
         page: { display: 'flex', minHeight: '100vh', fontFamily: "'Outfit', 'Inter', sans-serif", background: colors.bg },
@@ -1602,7 +2006,7 @@ export default function AdminDashboard() {
                                 <div key={item.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '12px', background: colors.bgInput }}>
                                     <div>
                                         <div style={{ color: colors.text, fontWeight: '700' }}>{item.name}</div>
-                                        <div style={{ color: colors.textMuted, fontSize: '13px' }}>{item.courseCount} course{item.courseCount === 1 ? '' : 's'} • {item.enrollments} enrollments</div>
+                                        <div style={{ color: colors.textMuted, fontSize: '13px' }}>{item.courseCount} course{item.courseCount === 1 ? '' : 's'} ── {item.enrollments} enrollments</div>
                                     </div>
                                     <span style={{ color: colors.accent, fontWeight: '800' }}>{item.rating}/5</span>
                                 </div>
@@ -1789,7 +2193,7 @@ export default function AdminDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
                 <div>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', color: colors.text, margin: '0 0 4px 0' }}>Security & Roles</h2>
-                    <p style={{ fontSize: '13px', color: colors.textMuted, margin: 0 }}>Dashboard • Security & Roles</p>
+                    <p style={{ fontSize: '13px', color: colors.textMuted, margin: 0 }}>Dashboard ── Security & Roles</p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
                     <div style={{ position: 'relative' }}>
@@ -1966,7 +2370,7 @@ export default function AdminDashboard() {
                 <div style={{ background: colors.bgCard, borderRadius: '12px', border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ padding: '20px 24px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h3 style={{ fontSize: '16px', fontWeight: '600', color: colors.text, margin: 0 }}>Recent Security Events</h3>
-                        <button onClick={() => setActiveTab('audit')} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}>View All Logs →</button>
+                        <button onClick={() => setActiveTab('audit')} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}>View All Logs ─+'</button>
                     </div>
                     <div style={{ padding: '0', overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
@@ -2060,7 +2464,7 @@ export default function AdminDashboard() {
                 <div style={{ background: colors.bgCard, borderRadius: '12px', border: `1px solid ${colors.border}`, padding: '24px', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                         <h3 style={{ fontSize: '16px', fontWeight: '600', color: colors.text, margin: 0 }}>Security Status</h3>
-                        <button onClick={() => setActiveTab('audit')} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}>View Full Report →</button>
+                        <button onClick={() => setActiveTab('audit')} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}>View Full Report ─+'</button>
                     </div>
                     <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flex: 1 }}>
                         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -2376,7 +2780,7 @@ export default function AdminDashboard() {
                             {analytics.topPerformers.map((student, index) => (
                                 <div key={index} style={{ padding: '14px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
                                     <div style={{ color: colors.text, fontWeight: '700' }}>{student.studentName}</div>
-                                    <div style={{ color: colors.textMuted, fontSize: '13px' }}>{student.avgScore}% avg score • {student.totalAttempts} attempts</div>
+                                    <div style={{ color: colors.textMuted, fontSize: '13px' }}>{student.avgScore}% avg score ── {student.totalAttempts} attempts</div>
                                 </div>
                             ))}
                         </div>
@@ -2454,7 +2858,7 @@ export default function AdminDashboard() {
                 status: st,
                 statusColor: sc.color,
                 statusBg: sc.bg,
-                date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—',
+                date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '─"',
                 iconBg: '#1e3a8a', icon: <BookOpen size={20} color="#60a5fa" />,
                 _id: c._id, isFeatured: c.isFeatured, raw: c
             };
@@ -2753,7 +3157,7 @@ export default function AdminDashboard() {
         };
         const statusConfig = {
             'Approved': { color: '#10b981', bg: '#f0fdf4', icon: <CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} /> },
-            'Pending':  { color: '#f59e0b', bg: '#fffbeb', icon: '⏳' },
+            'Pending':  { color: '#f59e0b', bg: '#fffbeb', icon: '─3' },
             'Rejected': { color: '#ef4444', bg: '#fef2f2', icon: <XCircle size={16} style={{ marginRight: '6px', color: '#ef4444' }} /> },
             'Flagged':  { color: '#f97316', bg: '#fff7ed', icon: <Flag size={16} style={{ marginRight: '6px' }} /> },
             'Archived': { color: colors.textMuted, bg: '#f8fafc', icon: <Package size={16} style={{ marginRight: '6px' }} /> },
@@ -2803,7 +3207,7 @@ export default function AdminDashboard() {
 
         const statsData = [
             { label: 'Total Content',    value: moderationItems.length, icon: <Folder size={16} style={{ marginRight: '6px' }} />, color: '#3b82f6', bg: '#eff6ff' },
-            { label: 'Pending Review',   value: moderationItems.filter(i => i.status === 'Pending').length, icon: '⏳', color: '#f59e0b', bg: '#fffbeb' },
+            { label: 'Pending Review',   value: moderationItems.filter(i => i.status === 'Pending').length, icon: '─3', color: '#f59e0b', bg: '#fffbeb' },
             { label: 'Approved',         value: moderationItems.filter(i => i.status === 'Approved').length, icon: <CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} />, color: '#10b981', bg: '#f0fdf4' },
             { label: 'Rejected',         value: moderationItems.filter(i => i.status === 'Rejected').length, icon: <XCircle size={16} style={{ marginRight: '6px', color: '#ef4444' }} />, color: '#ef4444', bg: '#fef2f2' },
             { label: 'Reported Content', value: moderationItems.filter(i => i.reports > 0).length, icon: <Flag size={16} style={{ marginRight: '6px' }} />, color: '#f97316', bg: '#fff7ed' },
@@ -2818,8 +3222,8 @@ export default function AdminDashboard() {
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
-                        <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Dashboard → Content & Moderation</div>
-                        <h2 style={{ fontSize: '24px', fontWeight: '800', color: colors.text, margin: 0 }}> <Shield size={16} style={{ marginRight: '6px' }} /> ️ Content & Moderation</h2>
+                        <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Dashboard ─+' Content & Moderation</div>
+                        <h2 style={{ fontSize: '24px', fontWeight: '800', color: colors.text, margin: 0 }}> <Shield size={16} style={{ marginRight: '6px' }} /> ─,? Content & Moderation</h2>
                         <p style={{ fontSize: '13px', color: colors.textMuted, margin: '4px 0 0' }}>Review, approve, monitor, and manage all content uploads across the LMS platform.</p>
                     </div>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -2846,7 +3250,7 @@ export default function AdminDashboard() {
                     ))}
                 </div>
 
-                {/* ─── ALL CONTENT TABLE VIEW ─── */}
+                {/* ─"?─"?─"? ALL CONTENT TABLE VIEW ─"?─"?─"? */}
                 <div style={{ background: colors.bgCard, borderRadius: '16px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                     {/* Table Title Section */}
                     <div style={{ padding: '16px 20px', borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: colors.bgCard }}>
@@ -2861,7 +3265,7 @@ export default function AdminDashboard() {
                                 <button onClick={() => handleBulkModAction('approve')} style={{ ...inputStyle, background: '#10b981', color: colors.text, border: 'none', padding: '6px 14px' }}> <CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} />  Approve</button>
                                 <button onClick={() => handleBulkModAction('reject')}  style={{ ...inputStyle, background: '#ef4444', color: colors.text, border: 'none', padding: '6px 14px' }}> <XCircle size={16} style={{ marginRight: '6px', color: '#ef4444' }} />  Reject</button>
                                 <button onClick={() => handleBulkModAction('archive')} style={{ ...inputStyle, background: '#64748b', color: colors.text, border: 'none', padding: '6px 14px' }}> <Package size={16} style={{ marginRight: '6px' }} />  Archive</button>
-                                <button onClick={() => handleBulkModAction('delete')}  style={{ ...inputStyle, background: '#dc2626', color: colors.text, border: 'none', padding: '6px 14px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> ️ Delete</button>
+                                <button onClick={() => handleBulkModAction('delete')}  style={{ ...inputStyle, background: '#dc2626', color: colors.text, border: 'none', padding: '6px 14px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> ─,? Delete</button>
                                 <button onClick={() => setSelectedModerationItems([])} style={{ ...inputStyle, padding: '6px 12px', marginLeft: 'auto' }}> <X size={16} style={{ marginRight: '6px' }} />  Deselect</button>
                             </div>
                         )}
@@ -2885,8 +3289,8 @@ export default function AdminDashboard() {
                                 {[...new Set(moderationItems.map(i => i.category))].map(c => <option key={c} value={c} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{c}</option>)}
                             </select>
                             <select value={modSortBy} onChange={e => setModSortBy(e.target.value)} style={inputStyle}>
-                                <option value="Newest" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>⬇ Newest First</option>
-                                <option value="Oldest" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>⬆ Oldest First</option>
+                                <option value="Newest" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>─── Newest First</option>
+                                <option value="Oldest" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>──+ Oldest First</option>
                                 <option value="Most Reported" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}> <Flag size={16} style={{ marginRight: '6px' }} />  Most Reported</option>
                                 <option value="Title A-Z" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>A-Z Title</option>
                             </select>
@@ -2914,7 +3318,7 @@ export default function AdminDashboard() {
                                         <tr><td colSpan={10} style={{ padding: '48px', textAlign: 'center', color: colors.textMuted, fontSize: '14px' }}>No content matches your current filters.</td></tr>
                                     ) : pagedItems.map((item, idx) => {
                                         const typeConf = contentTypeConfig[item.type] || { icon: <Folder size={16} style={{ marginRight: '6px' }} />, color: colors.textMuted, bg: '#f8fafc' };
-                                        const statConf = statusConfig[item.status] || { color: colors.textMuted, bg: '#f8fafc', icon: '•' };
+                                        const statConf = statusConfig[item.status] || { color: colors.textMuted, bg: '#f8fafc', icon: '──' };
                                         const isSelected = selectedModerationItems.includes(item.id);
                                         return (
                                             <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', background: isSelected ? '#eff6ff' : 'transparent', transition: 'background 0.15s' }}
@@ -2938,7 +3342,7 @@ export default function AdminDashboard() {
                                                 <td style={{ padding: '14px 16px', color: colors.textMuted, whiteSpace: 'nowrap' }}>{item.date}</td>
                                                 <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                                                     {item.reports > 0 ? <span style={{ background: '#fef2f2', color: '#dc2626', padding: '3px 10px', borderRadius: '20px', fontWeight: '700', fontSize: '12px' }}> <Flag size={16} style={{ marginRight: '6px' }} />  {item.reports}</span>
-                                                        : <span style={{ color: colors.textMuted, fontSize: '12px' }}>—</span>}
+                                                        : <span style={{ color: colors.textMuted, fontSize: '12px' }}>─"</span>}
                                                 </td>
                                                 <td style={{ padding: '14px 16px' }}>
                                                     <span style={{ background: statConf.bg, color: statConf.color, padding: '4px 10px', borderRadius: '20px', fontWeight: '600', fontSize: '12px', whiteSpace: 'nowrap' }}>
@@ -2965,22 +3369,22 @@ export default function AdminDashboard() {
                         {/* Pagination */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderTop: `1px solid ${colors.border}`, flexWrap: 'wrap', gap: '10px' }}>
                             <div style={{ fontSize: '13px', color: colors.textMuted }}>
-                                Showing {Math.min(pageStart + 1, filteredItems.length)}–{Math.min(pageStart + moderationRowsPerPage, filteredItems.length)} of {filteredItems.length} items &nbsp;|&nbsp;
+                                Showing {Math.min(pageStart + 1, filteredItems.length)}─"{Math.min(pageStart + moderationRowsPerPage, filteredItems.length)} of {filteredItems.length} items &nbsp;|&nbsp;
                                 Rows per page: <select value={moderationRowsPerPage} onChange={e => { setModerationRowsPerPage(Number(e.target.value)); setModerationCurrentPage(1); }} style={{ ...inputStyle, padding: '3px 8px', fontSize: '12px', display: 'inline-block', width: 'auto' }}>
                                     {[5, 10, 25, 50].map(n => <option key={n} value={n} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{n}</option>)}
                                 </select>
                             </div>
                             <div style={{ display: 'flex', gap: '6px' }}>
-                                <button disabled={moderationCurrentPage === 1} onClick={() => setModerationCurrentPage(p => p - 1)} style={{ ...inputStyle, padding: '6px 12px', opacity: moderationCurrentPage === 1 ? 0.4 : 1 }}>← Prev</button>
+                                <button disabled={moderationCurrentPage === 1} onClick={() => setModerationCurrentPage(p => p - 1)} style={{ ...inputStyle, padding: '6px 12px', opacity: moderationCurrentPage === 1 ? 0.4 : 1 }}>─+? Prev</button>
                                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
                                     <button key={n} onClick={() => setModerationCurrentPage(n)} style={{ ...inputStyle, padding: '6px 12px', background: n === moderationCurrentPage ? '#2563eb' : '#fff', color: n === moderationCurrentPage ? '#fff' : '#334155', fontWeight: n === moderationCurrentPage ? '700' : '500', border: n === moderationCurrentPage ? 'none' : '1px solid #e2e8f0' }}>{n}</button>
                                 ))}
-                                <button disabled={moderationCurrentPage === totalPages} onClick={() => setModerationCurrentPage(p => p + 1)} style={{ ...inputStyle, padding: '6px 12px', opacity: moderationCurrentPage === totalPages ? 0.4 : 1 }}>Next →</button>
+                                <button disabled={moderationCurrentPage === totalPages} onClick={() => setModerationCurrentPage(p => p + 1)} style={{ ...inputStyle, padding: '6px 12px', opacity: moderationCurrentPage === totalPages ? 0.4 : 1 }}>Next ─+'</button>
                             </div>
                         </div>
                     </div>
 
-                {/* ─── CONTENT REVIEW DRAWER ─── */}
+                {/* ─"?─"?─"? CONTENT REVIEW DRAWER ─"?─"?─"? */}
                 {isReviewDrawerOpen && reviewItem && (
                     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex' }}>
                         <div style={{ flex: 1, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(3px)' }} onClick={() => setIsReviewDrawerOpen(false)} />
@@ -3016,7 +3420,7 @@ export default function AdminDashboard() {
 
                                 {/* Preview Area */}
                                 <div>
-                                    <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '700', color: colors.text }}>▶ Content Preview</h4>
+                                    <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '700', color: colors.text }}>─- Content Preview</h4>
                                     {reviewItem.type === 'Video Lecture' && reviewItem.videoUrl ? (
                                         <video src={reviewItem.videoUrl} controls style={{ width: '100%', borderRadius: '10px', background: colors.bg, maxHeight: '220px' }} />
                                     ) : reviewItem.type === 'PDF' && reviewItem.pdfUrl ? (
@@ -3073,7 +3477,7 @@ export default function AdminDashboard() {
 
                                 {/* Notes */}
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: colors.text, marginBottom: '6px' }}> <FileEdit size={16} style={{ marginRight: '6px' }} /> ️ Internal Moderator Notes</label>
+                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: colors.text, marginBottom: '6px' }}> <FileEdit size={16} style={{ marginRight: '6px' }} /> ─,? Internal Moderator Notes</label>
                                     <textarea value={moderatorNotes} onChange={e => setModeratorNotes(e.target.value)} placeholder="Add internal notes (not visible to instructor)..." rows={2} style={{ width: '100%', padding: '10px 12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '13px', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
                                 </div>
                                 <div>
@@ -3083,7 +3487,7 @@ export default function AdminDashboard() {
 
                                 {/* Admin Decision Buttons */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: colors.text }}> <Scale size={16} style={{ marginRight: '6px' }} /> ️ Admin Decision</h4>
+                                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: colors.text }}> <Scale size={16} style={{ marginRight: '6px' }} /> ─,? Admin Decision</h4>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                         {[
                                             { label: <><CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} />  Approve</>, action: 'approve', style: { background: '#10b981', color: colors.text, border: 'none' } },
@@ -3098,7 +3502,7 @@ export default function AdminDashboard() {
                                             }} style={{ ...btn.style, padding: '10px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>{btn.label}</button>
                                         ))}
                                     </div>
-                                    <button onClick={() => { if (window.confirm('Permanently delete this content?')) { handleModAction('delete', reviewItem); setIsReviewDrawerOpen(false); } }} style={{ padding: '10px', background: colors.bgCard, border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> ️ Delete Content Permanently</button>
+                                    <button onClick={() => { if (window.confirm('Permanently delete this content?')) { handleModAction('delete', reviewItem); setIsReviewDrawerOpen(false); } }} style={{ padding: '10px', background: colors.bgCard, border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> ─,? Delete Content Permanently</button>
                                 </div>
                             </div>
                         </div>
@@ -3206,7 +3610,7 @@ export default function AdminDashboard() {
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
-                        <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Dashboard → Assessment & Certificate</div>
+                        <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Dashboard ─+' Assessment & Certificate</div>
                         <h2 style={{ fontSize: '24px', fontWeight: '800', color: colors.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Medal size={22} color="#3b82f6" /> Assessment & Certificate Control Center
                         </h2>
@@ -3268,7 +3672,7 @@ export default function AdminDashboard() {
                     ))}
                 </div>
 
-                {/* ═══════════ 1. ASSESSMENTS TABLE VIEW ═══════════ */}
+                {/* ─?─?─?─?─?─?─?─?─?─?─? 1. ASSESSMENTS TABLE VIEW ─?─?─?─?─?─?─?─?─?─?─? */}
                 {asmTabSubView === 'assessments' && (
                     <div style={{ background: colors.bgCard, borderRadius: '16px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
 
@@ -3278,7 +3682,7 @@ export default function AdminDashboard() {
                                 <span style={{ fontWeight: '700', fontSize: '13px', color: '#2563eb' }}>{selectedAsmRows.length} selected</span>
                                 <button onClick={() => handleBulkAsmAction('publish')}   style={{ ...inp, background: '#10b981', color: colors.text, border: 'none', padding: '6px 14px' }}> <CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} />  Publish</button>
                                 <button onClick={() => handleBulkAsmAction('unpublish')} style={{ ...inp, background: '#f59e0b', color: colors.text, border: 'none', padding: '6px 14px' }}> <FilePen size={16} style={{ marginRight: '6px' }} />  Set to Draft</button>
-                                <button onClick={() => handleBulkAsmAction('delete')}    style={{ ...inp, background: '#dc2626', color: colors.text, border: 'none', padding: '6px 14px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> ️ Delete</button>
+                                <button onClick={() => handleBulkAsmAction('delete')}    style={{ ...inp, background: '#dc2626', color: colors.text, border: 'none', padding: '6px 14px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> ─,? Delete</button>
                                 <button onClick={() => setSelectedAsmRows([])} style={{ ...inp, padding: '6px 12px', marginLeft: 'auto' }}> <X size={16} style={{ marginRight: '6px' }} />  Deselect</button>
                             </div>
                         )}
@@ -3304,8 +3708,8 @@ export default function AdminDashboard() {
                                 {[...new Set(assessmentsList.map(a => a.course))].map(c => <option key={c} value={c} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{c}</option>)}
                             </select>
                             <select value={asmSortBy} onChange={e => setAsmSortBy(e.target.value)} style={inp}>
-                                <option value="Newest" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>⬇ Newest First</option>
-                                <option value="Oldest" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>⬆ Oldest First</option>
+                                <option value="Newest" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>─── Newest First</option>
+                                <option value="Oldest" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>──+ Oldest First</option>
                                 <option value="Most Attempts" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Most Attempts</option>
                                 <option value="Name A-Z" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>A-Z Name</option>
                             </select>
@@ -3335,14 +3739,14 @@ export default function AdminDashboard() {
                                         <tr><td colSpan={11} style={{ padding: '48px', textAlign: 'center', color: colors.textMuted, fontSize: '14px' }}>No assessments found.</td></tr>
                                     ) : pagedAsm.map(asm => {
                                         const tb = typeBadges[asm.type] || { icon: <FileText size={14} />, color: colors.textMuted, bg: 'rgba(148, 163, 184, 0.15)' };
-                                        const sb = statusBadges[asm.status] || { icon: '•', color: colors.textMuted, bg: 'rgba(148, 163, 184, 0.15)' };
+                                        const sb = statusBadges[asm.status] || { icon: '──', color: colors.textMuted, bg: 'rgba(148, 163, 184, 0.15)' };
                                         const isSel = selectedAsmRows.includes(asm.id);
                                         return (
                                             <tr key={asm.id} style={{ borderBottom: `1px solid ${colors.border}`, background: isSel ? 'rgba(59, 130, 246, 0.1)' : 'transparent' }}>
                                                 <td style={{ padding: '14px 16px' }}><input type="checkbox" checked={isSel} onChange={() => setSelectedAsmRows(prev => isSel ? prev.filter(id => id !== asm.id) : [...prev, asm.id])} /></td>
                                                 <td style={{ padding: '14px 16px', maxWidth: '240px' }}>
                                                     <div style={{ fontWeight: '600', color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asm.name}</div>
-                                                    <div style={{ fontSize: '11px', color: colors.textMuted }}>{asm.id} • Created {asm.date}</div>
+                                                    <div style={{ fontSize: '11px', color: colors.textMuted }}>{asm.id} ── Created {asm.date}</div>
                                                 </td>
                                                 <td style={{ padding: '14px 16px', color: colors.textMuted, whiteSpace: 'nowrap' }}>{asm.course}</td>
                                                 <td style={{ padding: '14px 16px', color: colors.textMuted, whiteSpace: 'nowrap' }}>{asm.instructor}</td>
@@ -3352,7 +3756,7 @@ export default function AdminDashboard() {
                                                 <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '600', color: colors.text }}>{asm.totalQuestions}</td>
                                                 <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '600', color: '#10b981' }}>{asm.passingScore}%</td>
                                                 <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '600', color: '#3b82f6' }}>{asm.attempts}</td>
-                                                <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '700', color: asm.avgScore >= 75 ? '#10b981' : asm.avgScore > 0 ? '#f59e0b' : colors.textMuted }}>{asm.avgScore ? `${asm.avgScore}%` : '—'}</td>
+                                                <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '700', color: asm.avgScore >= 75 ? '#10b981' : asm.avgScore > 0 ? '#f59e0b' : colors.textMuted }}>{asm.avgScore ? `${asm.avgScore}%` : '─"'}</td>
                                                 <td style={{ padding: '14px 16px' }}>
                                                     <span style={{ background: sb.bg, color: sb.color, padding: '4px 10px', borderRadius: '20px', fontWeight: '600', fontSize: '12px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>{sb.icon} {asm.status}</span>
                                                 </td>
@@ -3377,21 +3781,21 @@ export default function AdminDashboard() {
                         {/* Pagination */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderTop: `1px solid ${colors.border}`, flexWrap: 'wrap', gap: '10px' }}>
                             <div style={{ fontSize: '13px', color: colors.textMuted }}>
-                                Showing {Math.min(pageStart + 1, filteredAsm.length)}–{Math.min(pageStart + asmRowsPerPage, filteredAsm.length)} of {filteredAsm.length} assessments
+                                Showing {Math.min(pageStart + 1, filteredAsm.length)}─"{Math.min(pageStart + asmRowsPerPage, filteredAsm.length)} of {filteredAsm.length} assessments
                             </div>
                             <div style={{ display: 'flex', gap: '6px' }}>
-                                <button disabled={asmCurrentPage === 1} onClick={() => setAsmCurrentPage(p => p - 1)} style={{ ...inp, padding: '6px 12px', opacity: asmCurrentPage === 1 ? 0.4 : 1 }}>← Prev</button>
+                                <button disabled={asmCurrentPage === 1} onClick={() => setAsmCurrentPage(p => p - 1)} style={{ ...inp, padding: '6px 12px', opacity: asmCurrentPage === 1 ? 0.4 : 1 }}>─+? Prev</button>
                                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
                                     <button key={n} onClick={() => setAsmCurrentPage(n)} style={{ ...inp, padding: '6px 12px', background: n === asmCurrentPage ? '#2563eb' : '#fff', color: n === asmCurrentPage ? '#fff' : '#334155', fontWeight: n === asmCurrentPage ? '700' : '500', border: n === asmCurrentPage ? 'none' : '1px solid #e2e8f0' }}>{n}</button>
                                 ))}
-                                <button disabled={asmCurrentPage === totalPages} onClick={() => setAsmCurrentPage(p => p + 1)} style={{ ...inp, padding: '6px 12px', opacity: asmCurrentPage === totalPages ? 0.4 : 1 }}>Next →</button>
+                                <button disabled={asmCurrentPage === totalPages} onClick={() => setAsmCurrentPage(p => p + 1)} style={{ ...inp, padding: '6px 12px', opacity: asmCurrentPage === totalPages ? 0.4 : 1 }}>Next ─+'</button>
                             </div>
                         </div>
                     </div>
                 )}
 
 
-                {/* ═══════════ 3. GRADEBOOK VIEW ═══════════ */}
+                {/* ─?─?─?─?─?─?─?─?─?─?─? 3. GRADEBOOK VIEW ─?─?─?─?─?─?─?─?─?─?─? */}
                 {asmTabSubView === 'grades' && (
                     <div style={{ background: colors.bgCard, borderRadius: '16px', border: `1px solid ${colors.border}`, overflow: 'hidden' }}>
                         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -3433,7 +3837,7 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
-                {/* ═══════════ 4. CERTIFICATES & TEMPLATES VIEW ═══════════ */}
+                {/* ─?─?─?─?─?─?─?─?─?─?─? 4. CERTIFICATES & TEMPLATES VIEW ─?─?─?─?─?─?─?─?─?─?─? */}
                 {asmTabSubView === 'certificates' && (
                     <div style={{ display: 'grid', gap: '24px' }}>
                         {/* Issued Certificates Section */}
@@ -3527,7 +3931,7 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
-                {/* ═══════════ 5. PERFORMANCE ANALYTICS VIEW ═══════════ */}
+                {/* ─?─?─?─?─?─?─?─?─?─?─? 5. PERFORMANCE ANALYTICS VIEW ─?─?─?─?─?─?─?─?─?─?─? */}
                 {asmTabSubView === 'analytics' && (() => {
                     const totalAsm = assessmentsList.length || 1;
                     const totalAtt = assessmentsList.reduce((acc, a) => acc + a.attempts, 0);
@@ -3573,7 +3977,7 @@ export default function AdminDashboard() {
                 })()}
 
 
-                {/* ═══════════ CREATE ASSESSMENT MODAL ═══════════ */}
+                {/* ─?─?─?─?─?─?─?─?─?─?─? CREATE ASSESSMENT MODAL ─?─?─?─?─?─?─?─?─?─?─? */}
                 {isCreateAsmOpen && (
                     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(3px)' }} onClick={() => setIsCreateAsmOpen(false)} />
@@ -3726,7 +4130,7 @@ export default function AdminDashboard() {
                             Mark as reminder message
                         </label>
                         <button type="submit" disabled={isNotificationSubmitting} style={{ ...s.primaryBtn, opacity: isNotificationSubmitting ? 0.7 : 1 }}>
-                            {isNotificationSubmitting ? 'Sending…' : 'Send Notification'}
+                            {isNotificationSubmitting ? 'Sending──' : 'Send Notification'}
                         </button>
                     </form>
                 </div>
@@ -3768,7 +4172,7 @@ export default function AdminDashboard() {
                             <label style={s.label}>Content JSON / Text</label>
                             <textarea value={contentForm.content} onChange={(e) => setContentForm({ ...contentForm, content: e.target.value })} rows="10" style={{ ...s.input, minHeight: '220px', fontFamily: 'monospace' }} />
                             <button type="submit" disabled={isContentSaving} style={{ ...s.primaryBtn, opacity: isContentSaving ? 0.7 : 1 }}>
-                                {isContentSaving ? 'Saving…' : 'Save Content'}
+                                {isContentSaving ? 'Saving──' : 'Save Content'}
                             </button>
                         </form>
                     </div>
@@ -3789,7 +4193,7 @@ export default function AdminDashboard() {
         };
         const statusConf = {
             'Completed':  { icon: <CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} />, color: '#10b981', bg: '#f0fdf4' },
-            'Processing': { icon: '⏳', color: '#f59e0b', bg: '#fffbeb' },
+            'Processing': { icon: '─3', color: '#f59e0b', bg: '#fffbeb' },
             'Scheduled':  { icon: <Calendar size={16} style={{ marginRight: '6px' }} />, color: '#3b82f6', bg: '#eff6ff' },
             'Failed':     { icon: <XCircle size={16} style={{ marginRight: '6px', color: '#ef4444' }} />, color: '#ef4444', bg: '#fef2f2' },
             'Cancelled':  { icon: <Ban size={16} style={{ marginRight: '6px', color: '#ef4444' }} />, color: colors.textMuted, bg: '#f1f5f9' },
@@ -3876,7 +4280,7 @@ export default function AdminDashboard() {
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
-                        <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Dashboard → Reports & Export</div>
+                        <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Dashboard ─+' Reports & Export</div>
                         <h2 style={{ fontSize: '24px', fontWeight: '800', color: colors.text, margin: 0 }}> <BarChart3 size={16} style={{ marginRight: '6px' }} />  Reports & Export</h2>
                         <p style={{ fontSize: '13px', color: colors.textMuted, margin: '4px 0 0' }}>Generate, schedule, analyze, and export institutional performance reports across all LMS modules.</p>
                     </div>
@@ -3929,7 +4333,7 @@ export default function AdminDashboard() {
                     ))}
                 </div>
 
-                {/* ═══════════ ALL REPORTS TABLE VIEW ═══════════ */}
+                {/* ─?─?─?─?─?─?─?─?─?─?─? ALL REPORTS TABLE VIEW ─?─?─?─?─?─?─?─?─?─?─? */}
                 {rptSubView === 'all' && (
                     <div style={{ background: colors.bgCard, borderRadius: '16px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
 
@@ -3939,7 +4343,7 @@ export default function AdminDashboard() {
                                 <span style={{ fontWeight: '700', fontSize: '13px', color: '#2563eb' }}>{selectedReportRows.length} selected</span>
                                 <button onClick={() => handleBulkRptAction('download')} style={{ ...inp, background: '#10b981', color: colors.text, border: 'none', padding: '6px 14px' }}> <Download size={16} style={{ marginRight: '6px' }} />  Download</button>
                                 <button onClick={() => handleBulkRptAction('archive')}  style={{ ...inp, background: '#64748b', color: colors.text, border: 'none', padding: '6px 14px' }}> <Package size={16} style={{ marginRight: '6px' }} />  Archive</button>
-                                <button onClick={() => handleBulkRptAction('delete')}   style={{ ...inp, background: '#dc2626', color: colors.text, border: 'none', padding: '6px 14px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> ️ Delete</button>
+                                <button onClick={() => handleBulkRptAction('delete')}   style={{ ...inp, background: '#dc2626', color: colors.text, border: 'none', padding: '6px 14px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> ─,? Delete</button>
                                 <button onClick={() => setSelectedReportRows([])} style={{ ...inp, padding: '6px 12px', marginLeft: 'auto' }}> <X size={16} style={{ marginRight: '6px' }} />  Deselect</button>
                             </div>
                         )}
@@ -3959,8 +4363,8 @@ export default function AdminDashboard() {
                                 {Object.keys(formatConfig).map(f => <option key={f} value={f} style={{ background: colors.bgCard, color: colors.text }}>{f}</option>)}
                             </select>
                             <select value={rptSortBy} onChange={e => setRptSortBy(e.target.value)} style={inp}>
-                                <option value="Newest" style={{ background: colors.bgCard, color: colors.text }}>⬇ Newest First</option>
-                                <option value="Oldest" style={{ background: colors.bgCard, color: colors.text }}>⬆ Oldest First</option>
+                                <option value="Newest" style={{ background: colors.bgCard, color: colors.text }}>─── Newest First</option>
+                                <option value="Oldest" style={{ background: colors.bgCard, color: colors.text }}>──+ Oldest First</option>
                                 <option value="Most Downloaded" style={{ background: colors.bgCard, color: colors.text }}> <Download size={16} style={{ marginRight: '6px' }} />  Most Downloaded</option>
                                 <option value="Name A-Z" style={{ background: colors.bgCard, color: colors.text }}>A-Z Name</option>
                             </select>
@@ -3989,7 +4393,7 @@ export default function AdminDashboard() {
                                         <tr><td colSpan={10} style={{ padding: '48px', textAlign: 'center', color: colors.textMuted, fontSize: '14px' }}>No reports match your filters.</td></tr>
                                     ) : paged.map(rpt => {
                                         const fc = formatConfig[rpt.format] || { icon: <FileText size={16} style={{ marginRight: '6px' }} />, color: colors.textMuted, bg: '#f8fafc' };
-                                        const sc = statusConf[rpt.status]  || { icon: '•', color: colors.textMuted, bg: '#f8fafc' };
+                                        const sc = statusConf[rpt.status]  || { icon: '──', color: colors.textMuted, bg: '#f8fafc' };
                                         const isSel = selectedReportRows.includes(rpt.id);
                                         return (
                                             <tr key={rpt.id} style={{ borderBottom: '1px solid #f1f5f9', background: isSel ? '#eff6ff' : 'transparent', transition: 'background 0.15s' }}
@@ -4018,7 +4422,7 @@ export default function AdminDashboard() {
                                                         <button title="Download" onClick={() => handleDownloadReport(rpt)} style={{ padding: '5px 9px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }} disabled={rpt.status !== 'Completed'}> <Download size={16} style={{ marginRight: '6px' }} /> </button>
                                                         <button title="Duplicate" onClick={() => { const dup = { ...rpt, id: `RPT-${String(generatedReports.length + 1).padStart(3, '0')}`, name: `${rpt.name} (Copy)`, date: new Date().toISOString().split('T')[0], downloads: 0 }; setGeneratedReports(prev => [dup, ...prev]); showNotification(`Duplicated: ${rpt.name}`); }} style={{ padding: '5px 9px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}> <Clipboard size={16} style={{ marginRight: '6px' }} /> </button>
                                                         <button title="Share" onClick={() => { navigator.clipboard?.writeText(`Report: ${rpt.name} | ID: ${rpt.id}`); showNotification('Report link copied to clipboard.'); }} style={{ padding: '5px 9px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}> <Link size={16} style={{ marginRight: '6px' }} /> </button>
-                                                        <button title="Delete" onClick={() => { if (window.confirm(`Delete "${rpt.name}"?`)) { setGeneratedReports(prev => prev.filter(r => r.id !== rpt.id)); showNotification(`Deleted: ${rpt.name}`); }}} style={{ padding: '5px 9px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', color: '#dc2626', fontSize: '13px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> ️</button>
+                                                        <button title="Delete" onClick={() => { if (window.confirm(`Delete "${rpt.name}"?`)) { setGeneratedReports(prev => prev.filter(r => r.id !== rpt.id)); showNotification(`Deleted: ${rpt.name}`); }}} style={{ padding: '5px 9px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', color: '#dc2626', fontSize: '13px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> ─,?</button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -4031,23 +4435,23 @@ export default function AdminDashboard() {
                         {/* Pagination */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderTop: `1px solid ${colors.border}`, flexWrap: 'wrap', gap: '10px' }}>
                             <div style={{ fontSize: '13px', color: colors.textMuted }}>
-                                Showing {Math.min(pageStart + 1, filtered.length)}–{Math.min(pageStart + rptRowsPerPage, filtered.length)} of {filtered.length} reports &nbsp;|&nbsp;
+                                Showing {Math.min(pageStart + 1, filtered.length)}─"{Math.min(pageStart + rptRowsPerPage, filtered.length)} of {filtered.length} reports &nbsp;|&nbsp;
                                 Rows: <select value={rptRowsPerPage} onChange={e => { setRptRowsPerPage(Number(e.target.value)); setRptCurrentPage(1); }} style={{ ...inp, padding: '3px 8px', fontSize: '12px', display: 'inline-block', width: 'auto' }}>
                                     {[5, 10, 25, 50].map(n => <option key={n} value={n} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{n}</option>)}
                                 </select>
                             </div>
                             <div style={{ display: 'flex', gap: '6px' }}>
-                                <button disabled={rptCurrentPage === 1} onClick={() => setRptCurrentPage(p => p - 1)} style={{ ...inp, padding: '6px 12px', opacity: rptCurrentPage === 1 ? 0.4 : 1 }}>← Prev</button>
+                                <button disabled={rptCurrentPage === 1} onClick={() => setRptCurrentPage(p => p - 1)} style={{ ...inp, padding: '6px 12px', opacity: rptCurrentPage === 1 ? 0.4 : 1 }}>─+? Prev</button>
                                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
                                     <button key={n} onClick={() => setRptCurrentPage(n)} style={{ ...inp, padding: '6px 12px', background: n === rptCurrentPage ? '#2563eb' : '#fff', color: n === rptCurrentPage ? '#fff' : '#334155', fontWeight: n === rptCurrentPage ? '700' : '500', border: n === rptCurrentPage ? 'none' : '1px solid #e2e8f0' }}>{n}</button>
                                 ))}
-                                <button disabled={rptCurrentPage === totalPages} onClick={() => setRptCurrentPage(p => p + 1)} style={{ ...inp, padding: '6px 12px', opacity: rptCurrentPage === totalPages ? 0.4 : 1 }}>Next →</button>
+                                <button disabled={rptCurrentPage === totalPages} onClick={() => setRptCurrentPage(p => p + 1)} style={{ ...inp, padding: '6px 12px', opacity: rptCurrentPage === totalPages ? 0.4 : 1 }}>Next ─+'</button>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* ═══════════ GENERATE REPORT MODAL ═══════════ */}
+                {/* ─?─?─?─?─?─?─?─?─?─?─? GENERATE REPORT MODAL ─?─?─?─?─?─?─?─?─?─?─? */}
                 {isGenReportOpen && (
                     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(3px)' }} onClick={() => setIsGenReportOpen(false)} />
@@ -4098,7 +4502,7 @@ export default function AdminDashboard() {
 
                                 {/* Description */}
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: colors.text, marginBottom: '6px' }}> <FileEdit size={16} style={{ marginRight: '6px' }} /> ️ Description (optional)</label>
+                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: colors.text, marginBottom: '6px' }}> <FileEdit size={16} style={{ marginRight: '6px' }} /> ─,? Description (optional)</label>
                                     <textarea value={genReportForm.description} onChange={e => setGenReportForm(p => ({ ...p, description: e.target.value }))} placeholder="Add notes about this report..." rows={2} style={{ width: '100%', padding: '10px 14px', border: `1px solid ${colors.border}`, borderRadius: '10px', fontSize: '13px', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
                                 </div>
 
@@ -4170,7 +4574,7 @@ export default function AdminDashboard() {
                                 </div>
                                 <div style={{ color: colors.textMuted, fontSize: '14px', marginBottom: '6px' }}>{log.description || 'No description provided.'}</div>
                                 <div style={{ fontSize: '13px', color: colors.textMuted }}>
-                                    User: {log.userRef?.fullName || 'System'} · Role: {log.userRef?.assignedRole || 'N/A'} · IP: {log.ipAddress || 'N/A'}
+                                    User: {log.userRef?.fullName || 'System'} A─ Role: {log.userRef?.assignedRole || 'N/A'} A─ IP: {log.ipAddress || 'N/A'}
                                 </div>
                             </div>
                         )) : <div style={{ color: colors.textMuted }}>No audit logs found for the selected filter.</div>}
@@ -4180,69 +4584,730 @@ export default function AdminDashboard() {
         </div>
     );
 
-    const renderCalendar = () => (
+    const renderCalendar = () => {
+        const fieldLabel = { display: 'block', color: colors.textMuted, fontSize: '13px', fontWeight: '600', marginBottom: '6px' };
+        const formRow = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' };
+        const isFormPublic = calendarForm.visibility === 'public';
+        const googleMeetConnected = Boolean(googleMeetStatus?.connected && googleMeetStatus?.authorized);
+        const googleMeetHint = !googleMeetStatus?.connected
+            ? (googleMeetStatus?.missingEnv?.length ? `Missing backend/.env: ${googleMeetStatus.missingEnv.join(', ')}` : 'Checking connection...')
+            : (!googleMeetStatus?.authorized ? 'Authorized account required — connect below.' : '');
+
+        // ─"?─"? Unified event data (Internal + Public) ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?
+        const internalRows = calendarEvents.map((e) => ({
+            ...e,
+            visibility: 'internal',
+            location: e.location || (e.eventType === 'Online' ? 'Online' : '')
+        }));
+        const publicRows = publicEvents.map((e) => ({
+            ...e,
+            visibility: 'public',
+            location: e.venue || (e.eventType !== 'Physical' ? 'Online Live Stream' : '')
+        }));
+        const allEvents = [...internalRows, ...publicRows];
+        const eventLive = (e) => getLiveStatus(e);
+
+        // ─"?─"? Filters ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?
+        const q = eventSearch.trim().toLowerCase();
+        const filteredEvents = allEvents.filter((e) => {
+            const titleOk = !q || (e.title || '').toLowerCase().includes(q);
+            const catOk = eventCategoryFilter === 'all' || (e.category || '').toLowerCase() === eventCategoryFilter;
+            const visOk = eventVisibilityFilter === 'all' || e.visibility === eventVisibilityFilter;
+            const live = eventLive(e);
+            const statusOk = eventStatusFilter === 'all' || live === eventStatusFilter;
+            let dateOk = true;
+            if (eventDateFilter === 'today') dateOk = e.startDate && isSameDay(new Date(e.startDate), new Date());
+            else if (eventDateFilter === 'week') dateOk = e.startDate && dateInRange(e.startDate, 0, 7);
+            else if (eventDateFilter === 'month') dateOk = e.startDate && dateInRange(e.startDate, 0, 30);
+            else if (eventDateFilter === 'next30') dateOk = e.startDate && dateInRange(e.startDate, 1, 30);
+            return titleOk && catOk && visOk && statusOk && dateOk;
+        });
+
+        const stats = {
+            total: allEvents.length,
+            upcoming: allEvents.filter((e) => eventLive(e) === 'upcoming').length,
+            ongoing: allEvents.filter((e) => eventLive(e) === 'live').length,
+            completed: allEvents.filter((e) => eventLive(e) === 'completed').length
+        };
+
+        const allCatKeys = Array.from(new Set([
+            ...INTERNAL_EVENT_CATEGORIES,
+            ...EVENT_CATEGORIES.map((c) => c.toLowerCase()),
+            ...allEvents.map((e) => (e.category || '').toLowerCase()).filter(Boolean)
+        ])).sort();
+        const catLabel = (c) => c === 'all' ? 'All Categories' : c.charAt(0).toUpperCase() + c.slice(1);
+
+        const filterSelectStyle = { ...s.select, width: '100%', minWidth: '150px' };
+        const filterInputStyle = { ...s.input, width: '100%', minWidth: '180px' };
+        const filterStyle = { display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' };
+
+        const segBtn = (active, activeColor) => ({
+            flex: 1, padding: '9px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
+            border: active ? 'none' : `1px solid ${colors.border}`, background: active ? activeColor : 'transparent', color: active ? '#ffffff' : colors.textMuted, transition: 'all 0.15s'
+        });
+        const segWrap = { display: 'flex', gap: 6, padding: 4, borderRadius: 10, background: colors.bgInput, border: `1px solid ${colors.border}` };
+
+        const chip = (color, bg) => ({ padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, color, background: bg, textTransform: 'capitalize', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 });
+
+        const iconBtn = (color) => ({
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8,
+            border: `1px solid ${colors.border}`, background: 'transparent', color, cursor: 'pointer', transition: 'all 0.15s'
+        });
+
+        const statCard = (label, value, color) => (
+            <div style={{ padding: '16px 18px', borderRadius: 14, background: colors.bgCard, border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: colors.textMuted }}>{label}</span>
+                <strong style={{ fontSize: 26, fontWeight: 800, color }}>{value}</strong>
+            </div>
+        );
+
+        const emptyState = (
+            <div style={{ textAlign: 'center', padding: '48px 24px' }}>
+                <div style={{ width: 56, height: 56, margin: '0 auto 16px', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${colors.primary}12`, color: colors.primary, fontSize: 26 }}>
+                    <Calendar size={26} />
+                </div>
+                <h3 style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 800, color: colors.text }}>No events found.</h3>
+                <p style={{ margin: '0 auto 18px', maxWidth: 360, fontSize: 14, color: colors.textMuted }}>Create your first event to start managing the calendar.</p>
+                <button type="button" onClick={openCreateEvent} style={{ ...s.primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <Plus size={16} /> Create Event
+                </button>
+            </div>
+        );
+
+        const renderRowActions = (event) => {
+            const live = eventLive(event);
+            return (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <button type="button" title="View" onClick={() => setViewingEvent(event)} style={iconBtn(colors.textMuted)}><Eye size={15} /></button>
+                    <button type="button" title="Edit" onClick={() => handleEditCalendarEvent(event)} style={iconBtn('#f59e0b')}><Edit size={15} /></button>
+                    {event.visibility === 'public' && event.status !== 'APPROVED' && event.status !== 'CANCELLED' && (
+                        <button type="button" title="Approve & publish" onClick={() => publishPublicEvent(event)} style={{ ...s.primaryBtn, padding: '6px 12px', fontSize: 12, borderRadius: 8 }}>Approve</button>
+                    )}
+                    {event.visibility === 'public' && event.status !== 'CANCELLED' && (
+                        <button type="button" title="Cancel event" onClick={() => cancelPublicEvent(event)} style={iconBtn('#f59e0b')}><Ban size={15} /></button>
+                    )}
+                    <button type="button" title="Delete" onClick={() => openDeleteEvent(event)} style={iconBtn(colors.danger)}><Trash2 size={15} /></button>
+                </div>
+            );
+        };
+
+        const renderDateCell = (event) => {
+            const allDay = Boolean(event.isAllDay);
+            const startTxt = event.startDate ? `${formatDateShort(event.startDate)}${allDay ? '' : ` A─ ${formatTimeShort(event.startDate)}`}` : '─"';
+            const endTxt = event.endDate ? `${formatDateShort(event.endDate)}${allDay ? '' : ` A─ ${formatTimeShort(event.endDate)}`}` : '';
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span style={{ color: colors.text, fontSize: 13, fontWeight: 600 }}>{startTxt}</span>
+                    {endTxt && <span style={{ color: colors.textMuted, fontSize: 12 }}>─+' {endTxt}</span>}
+                </div>
+            );
+        };
+
+        const renderLocationCell = (event) => {
+            const showStream = event.eventType !== 'Physical' && event.streamUrl;
+            const loc = event.location || (event.eventType === 'Online' ? 'Online Live Stream' : '');
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 200 }}>
+                    {loc && <span style={{ color: colors.text, fontSize: 13 }}>{loc}</span>}
+                    {showStream && (
+                        <a href={event.streamUrl} target="_blank" rel="noopener noreferrer" style={{ color: colors.primary, fontSize: 12, fontWeight: 600, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.streamUrl}</a>
+                    )}
+                    {!loc && !showStream && <span style={{ color: colors.textMuted, fontSize: 13 }}>─"</span>}
+                </div>
+            );
+        };
+
+        return (
         <div style={s.tabContent}>
-            <div style={s.sectionHeader}>
-                <h2 style={s.sectionTitle}>Calendar Management</h2>
-                <p style={s.sectionSub}>Plan academic dates, exams, assignments, holidays, training sessions, and events from one administrative calendar.</p>
+            <style>{`
+                .em-cal-table { display: none; }
+                .em-cal-cards { display: block; }
+                @media (min-width: 960px) { .em-cal-table { display: block; } .em-cal-cards { display: none; } }
+            `}</style>
+
+            {/* ─"?─"? Header ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"? */}
+            <div style={{ ...s.sectionHeader, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                <div>
+                    <h2 style={s.sectionTitle}>Calendar Management</h2>
+                    <p style={s.sectionSub}>Manage holidays, academic dates, assignments, workshops, masterclasses, and live streams.</p>
+                </div>
+                <button type="button" onClick={openCreateEvent} style={{ ...s.primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+                    <Plus size={16} /> Create Event
+                </button>
             </div>
 
-            <div style={{ display: 'grid', gap: '24px' }}>
-                <div style={s.card}>
-                    <h3 style={s.cardTitle}>{calendarEditingId ? 'Edit Event' : 'Create Event'}</h3>
-                    <form onSubmit={handleSaveCalendarEvent} style={{ display: 'grid', gap: '12px' }}>
-                        <input value={calendarForm.title} onChange={(e) => setCalendarForm({ ...calendarForm, title: e.target.value })} placeholder="Event title" style={s.input} required />
-                        <select value={calendarForm.category} onChange={(e) => setCalendarForm({ ...calendarForm, category: e.target.value })} style={s.select}>
-                            <option value="academic" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Academic</option>
-                            <option value="exam" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Exam</option>
-                            <option value="assignment" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Assignment</option>
-                            <option value="holiday" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Holiday</option>
-                            <option value="training" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Training</option>
-                            <option value="event" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Event</option>
-                        </select>
-                        <textarea value={calendarForm.description} onChange={(e) => setCalendarForm({ ...calendarForm, description: e.target.value })} placeholder="Description" rows="3" style={s.input}></textarea>
-                        <input type="datetime-local" value={calendarForm.startDate} onChange={(e) => setCalendarForm({ ...calendarForm, startDate: e.target.value })} style={s.input} required />
-                        <input type="datetime-local" value={calendarForm.endDate} onChange={(e) => setCalendarForm({ ...calendarForm, endDate: e.target.value })} style={s.input} />
-                        <input value={calendarForm.location} onChange={(e) => setCalendarForm({ ...calendarForm, location: e.target.value })} placeholder="Location" style={s.input} />
-                        <input type="color" value={calendarForm.color} onChange={(e) => setCalendarForm({ ...calendarForm, color: e.target.value })} style={{ width: '100%', height: '44px', border: 'none', background: 'transparent', cursor: 'pointer' }} />
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: colors.textMuted, cursor: 'pointer' }}>
-                            <input type="checkbox" checked={calendarForm.isAllDay} onChange={(e) => setCalendarForm({ ...calendarForm, isAllDay: e.target.checked })} />
-                            All day event
-                        </label>
-                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                            <button type="submit" disabled={isCalendarSaving} style={{ ...s.primaryBtn, opacity: isCalendarSaving ? 0.7 : 1 }}>
-                                {isCalendarSaving ? 'Saving...' : calendarEditingId ? 'Update Event' : 'Create Event'}
-                            </button>
-                            <button type="button" onClick={resetCalendarForm} style={s.secondaryBtn}>Clear</button>
-                        </div>
-                    </form>
+            {/* ─"?─"? Statistics row ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"? */}
+            <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', marginBottom: 20 }}>
+                {statCard('Total Events', stats.total, colors.text)}
+                {statCard('Upcoming', stats.upcoming, '#3b82f6')}
+                {statCard('Ongoing', stats.ongoing, '#10b981')}
+                {statCard('Completed', stats.completed, '#64748b')}
+            </div>
+
+            {/* ─"?─"? Filter toolbar ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"? */}
+            <div style={s.card}>
+                <div style={filterStyle}>
+                    <input value={eventSearch} onChange={(e) => setEventSearch(e.target.value)} placeholder="Search events──" style={filterInputStyle} />
+                    <select value={eventCategoryFilter} onChange={(e) => setEventCategoryFilter(e.target.value)} style={filterSelectStyle}>
+                        <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Categories</option>
+                        {allCatKeys.map((c) => (
+                            <option key={c} value={c} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{catLabel(c)}</option>
+                        ))}
+                    </select>
+                    <select value={eventStatusFilter} onChange={(e) => setEventStatusFilter(e.target.value)} style={filterSelectStyle}>
+                        <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Statuses</option>
+                        <option value="upcoming" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Upcoming</option>
+                        <option value="live" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Ongoing</option>
+                        <option value="completed" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Completed</option>
+                        <option value="cancelled" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Cancelled</option>
+                    </select>
+                    <select value={eventVisibilityFilter} onChange={(e) => setEventVisibilityFilter(e.target.value)} style={filterSelectStyle}>
+                        <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Visibility</option>
+                        <option value="internal" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Internal</option>
+                        <option value="public" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Public</option>
+                    </select>
+                    <select value={eventDateFilter} onChange={(e) => setEventDateFilter(e.target.value)} style={filterSelectStyle}>
+                        <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Dates</option>
+                        <option value="today" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Today</option>
+                        <option value="week" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>This Week</option>
+                        <option value="month" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>This Month</option>
+                        <option value="next30" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Next 30 Days</option>
+                    </select>
+                </div>
+            </div>
+
+            {/* ─"?─"? Event Management ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"? */}
+            <div style={{ ...s.card, marginTop: 20, padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '20px 24px', borderBottom: `1px solid ${colors.border}` }}>
+                    <h3 style={{ ...s.cardTitle, margin: 0 }}>Event Management</h3>
                 </div>
 
-                <div style={s.card}>
-                    <h3 style={s.cardTitle}>Upcoming Events</h3>
-                    <div style={{ display: 'grid', gap: '10px' }}>
-                        {calendarEvents.length ? calendarEvents.map((event) => (
-                            <div key={event._id} style={{ padding: '14px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
-                                    <strong>{event.title}</strong>
-                                    <span style={{ color: colors.primary, fontSize: '13px', textTransform: 'capitalize' }}>{event.category}</span>
+                {filteredEvents.length === 0 ? emptyState : (
+                    <>
+                        {/* Desktop table */}
+                        <div className="em-cal-table" style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
+                                <thead>
+                                    <tr>
+                                        <th style={{ ...s.th, textAlign: 'left' }}>Event</th>
+                                        <th style={{ ...s.th, textAlign: 'left' }}>Category</th>
+                                        <th style={{ ...s.th, textAlign: 'left' }}>Date &amp; Time</th>
+                                        <th style={{ ...s.th, textAlign: 'left' }}>Location</th>
+                                        <th style={{ ...s.th, textAlign: 'left' }}>Status</th>
+                                        <th style={{ ...s.th, textAlign: 'left' }}>Visibility</th>
+                                        <th style={{ ...s.th, textAlign: 'right' }}>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredEvents.map((event) => {
+                                        const live = eventLive(event);
+                                        const sc = statusChip(live);
+                                        return (
+                                            <tr key={`${event.visibility}-${event._id}`} style={{ transition: 'background 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.background = colors.bgInput; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                                                <td style={{ ...s.td, textAlign: 'left' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                                                        {event.image ? (
+                                                            <img src={event.image} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', border: `1px solid ${colors.border}` }} />
+                                                        ) : (
+                                                            <span style={{ width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${colors.primary}14`, color: colors.primary, flexShrink: 0 }}>
+                                                                <Calendar size={17} />
+                                                            </span>
+                                                        )}
+                                                        <div style={{ minWidth: 0 }}>
+                                                            <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{event.title}</p>
+                                                            <p style={{ margin: '2px 0 0', fontSize: 12, color: colors.textMuted }}>{event.visibility === 'public' ? (event.eventType || 'Hybrid') : 'Internal'}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td style={{ ...s.td, textAlign: 'left' }}>
+                                                    <span style={{ ...chip(colors.primary, `${colors.primary}14`), textTransform: 'capitalize' }}>{event.category || 'Event'}</span>
+                                                </td>
+                                                <td style={{ ...s.td, textAlign: 'left' }}>{renderDateCell(event)}</td>
+                                                <td style={{ ...s.td, textAlign: 'left' }}>{renderLocationCell(event)}</td>
+                                                <td style={{ ...s.td, textAlign: 'left' }}>
+                                                    <span style={chip(sc.color, sc.bg)}>{sc.label}</span>
+                                                </td>
+                                                <td style={{ ...s.td, textAlign: 'left' }}>
+                                                    <span style={event.visibility === 'public' ? chip('#10b981', 'rgba(16,185,129,0.12)') : chip('#94a3b8', 'rgba(148,163,184,0.14)')}>
+                                                        {event.visibility === 'public' ? 'Public' : 'Internal'}
+                                                    </span>
+                                                </td>
+                                                <td style={{ ...s.td, textAlign: 'right' }}>{renderRowActions(event)}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Mobile cards */}
+                        <div className="em-cal-cards">
+                            <div style={{ display: 'grid', gap: 12, padding: '16px 20px 24px' }}>
+                                {filteredEvents.map((event) => {
+                                    const live = eventLive(event);
+                                    const sc = statusChip(live);
+                                    return (
+                                        <div key={`${event.visibility}-${event._id}`} style={{ padding: 16, borderRadius: 12, background: colors.bgInput, border: `1px solid ${colors.border}` }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+                                                <strong style={{ fontSize: 14, color: colors.text }}>{event.title}</strong>
+                                                <span style={chip(sc.color, sc.bg)}>{sc.label}</span>
+                                            </div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                                                <span style={{ ...chip(colors.primary, `${colors.primary}14`), textTransform: 'capitalize' }}>{event.category || 'Event'}</span>
+                                                <span style={event.visibility === 'public' ? chip('#10b981', 'rgba(16,185,129,0.12)') : chip('#94a3b8', 'rgba(148,163,184,0.14)')}>
+                                                    {event.visibility === 'public' ? 'Public' : 'Internal'}
+                                                </span>
+                                            </div>
+                                            <div style={{ display: 'grid', gap: 4, fontSize: 13, color: colors.textMuted }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Calendar size={13} style={{ flexShrink: 0 }} /> {renderDateCell(event)}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MapPin size={13} style={{ flexShrink: 0 }} /> {(event.location || (event.eventType === 'Online' ? 'Online Live Stream' : '─"'))}</div>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                                                {renderRowActions(event)}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* ─"?─"? Create / Edit Event Modal ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"? */}
+            <Modal isOpen={isEventModalOpen} onClose={resetCalendarForm} title={calendarEditingId ? 'Edit Event' : 'Create Event'} maxWidth="680px" scrollable>
+                <form onSubmit={handleSaveCalendarEvent} style={{ display: 'grid', gap: 16 }}>
+                    {formError && (
+                        <div style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: `1px solid ${colors.danger}`, color: colors.danger, fontSize: 13, fontWeight: 600 }}>{formError}</div>
+                    )}
+
+                    {/* Basic Information */}
+                    <div>
+                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: colors.primary, marginBottom: 12 }}>Basic Information</div>
+                        <div style={{ display: 'grid', gap: 12 }}>
+                            <div>
+                                <label style={fieldLabel}>Event Title *</label>
+                                <input value={calendarForm.title} onChange={(e) => setCalendarForm({ ...calendarForm, title: e.target.value })} placeholder="e.g. Digital Income Masterclass" style={s.input} required />
+                            </div>
+                            <div style={formRow}>
+                                <div>
+                                    <label style={fieldLabel}>Category *</label>
+                                    {isFormPublic ? (
+                                        <select value={calendarForm.category} onChange={(e) => setCalendarForm({ ...calendarForm, category: e.target.value, eventCategory: e.target.value })} style={s.select}>
+                                            {EVENT_CATEGORIES.map((cat) => (
+                                                <option key={cat} value={cat} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{cat}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <select value={calendarForm.category} onChange={(e) => setCalendarForm({ ...calendarForm, category: e.target.value })} style={s.select}>
+                                            {INTERNAL_EVENT_CATEGORIES.map((cat) => (
+                                                <option key={cat} value={cat} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{catLabel(cat)}</option>
+                                            ))}
+                                        </select>
+                                    )}
                                 </div>
-                                <div style={{ color: colors.textMuted, fontSize: '14px', marginBottom: '6px' }}>{event.description || 'No description provided.'}</div>
-                                <div style={{ fontSize: '13px', color: colors.textMuted }}>
-                                    {new Date(event.startDate).toLocaleString()} {event.endDate ? `→ ${new Date(event.endDate).toLocaleString()}` : ''}
-                                    {event.location ? ` · ${event.location}` : ''}
-                                </div>
-                                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                                    <button type="button" onClick={() => handleEditCalendarEvent(event)} style={s.secondaryBtn}>Edit</button>
-                                    <button type="button" onClick={() => handleDeleteCalendarEvent(event._id)} style={{ ...s.secondaryBtn, borderColor: colors.danger, color: colors.danger }}>Delete</button>
+                                <div>
+                                    <label style={fieldLabel}>Status</label>
+                                    <select value={calendarForm.eventStatus} onChange={(e) => setCalendarForm({ ...calendarForm, eventStatus: e.target.value })} style={s.select}>
+                                        <option value="SCHEDULED" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Scheduled</option>
+                                        <option value="CANCELLED" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Cancelled</option>
+                                    </select>
                                 </div>
                             </div>
-                        )) : <div style={{ color: colors.textMuted }}>No calendar events created yet.</div>}
+                            <div>
+                                <label style={fieldLabel}>Description</label>
+                                <textarea value={calendarForm.description} onChange={(e) => setCalendarForm({ ...calendarForm, description: e.target.value })} placeholder={isFormPublic ? 'One paragraph per line ─" each line becomes a section on the public page' : 'Short description'} rows="3" style={s.input}></textarea>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
+
+                    <div style={{ height: 1, background: colors.border }} />
+
+                    {/* Schedule */}
+                    <div>
+                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: colors.primary, marginBottom: 12 }}>Schedule</div>
+                        <div style={{ display: 'grid', gap: 12 }}>
+                            <div style={formRow}>
+                                <div>
+                                    <label style={fieldLabel}>Start Date *</label>
+                                    <input type="date" value={calendarForm.startDate} onChange={(e) => setCalendarForm({ ...calendarForm, startDate: e.target.value })} style={s.input} required />
+                                </div>
+                                <div>
+                                    <label style={fieldLabel}>Start Time</label>
+                                    <input type="time" value={calendarForm.startTime} disabled={calendarForm.isAllDay} onChange={(e) => setCalendarForm({ ...calendarForm, startTime: e.target.value })} style={{ ...s.input, opacity: calendarForm.isAllDay ? 0.5 : 1 }} />
+                                </div>
+                            </div>
+                            <div style={formRow}>
+                                <div>
+                                    <label style={fieldLabel}>End Date</label>
+                                    <input type="date" value={calendarForm.endDate} onChange={(e) => setCalendarForm({ ...calendarForm, endDate: e.target.value })} style={s.input} />
+                                </div>
+                                <div>
+                                    <label style={fieldLabel}>End Time</label>
+                                    <input type="time" value={calendarForm.endTime} disabled={calendarForm.isAllDay} onChange={(e) => setCalendarForm({ ...calendarForm, endTime: e.target.value })} style={{ ...s.input, opacity: calendarForm.isAllDay ? 0.5 : 1 }} />
+                                </div>
+                            </div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: colors.textMuted, cursor: 'pointer', fontSize: 14 }}>
+                                <input type="checkbox" checked={calendarForm.isAllDay} onChange={(e) => setCalendarForm({ ...calendarForm, isAllDay: e.target.checked })} />
+                                All day event
+                            </label>
+                        </div>
+                    </div>
+
+                    <div style={{ height: 1, background: colors.border }} />
+
+                    {/* Location */}
+                    <div>
+                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: colors.primary, marginBottom: 12 }}>Location</div>
+                        <div style={{ display: 'grid', gap: 12 }}>
+                            <div style={segWrap}>
+                                {['Online', 'Physical', 'Hybrid'].map((t) => (
+                                    <button key={t} type="button" onClick={() => setCalendarForm({ ...calendarForm, eventType: t })} style={segBtn(calendarForm.eventType === t, t === 'Physical' ? '#64748b' : colors.primary)}>
+                                        {t}
+                                    </button>
+                                ))}
+                            </div>
+                            {(calendarForm.eventType === 'Physical' || calendarForm.eventType === 'Hybrid') && (
+                                <div>
+                                    <label style={fieldLabel}>Location</label>
+                                    <input value={calendarForm.location} onChange={(e) => setCalendarForm({ ...calendarForm, location: e.target.value })} placeholder="e.g. Emare Live Hub, Addis Ababa" style={s.input} />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div style={{ height: 1, background: colors.border }} />
+
+                    {/* Virtual Meeting & Live Stream Settings */}
+                    {calendarForm.eventType !== 'Physical' && (
+                        <div>
+                            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: colors.primary, marginBottom: 12 }}>Virtual Meeting &amp; Live Stream Settings</div>
+                            <div style={{ display: 'grid', gap: 12 }}>
+                                {/* Platform Selector */}
+                                <div>
+                                    <label style={fieldLabel}>Platform</label>
+                                    <select value={calendarForm.meetingPlatform} onChange={(e) => {
+                                        const p = e.target.value;
+                                        setCalendarForm((f) => ({
+                                            ...f,
+                                            meetingPlatform: p,
+                                            meetingProvider: platformToProvider[p] || p,
+                                            streamUrl: p === 'jitsi' ? (getDefaultMeetingLink('jitsi', f.title) || f.streamUrl) : f.streamUrl
+                                        }));
+                                    }} style={s.select}>
+                                        {MEETING_PLATFORMS.map((pf) => (
+                                            <option key={pf.value} value={pf.value} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{pf.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Invitees (Google Meet only, like Live Sessions) */}
+                                {calendarForm.meetingPlatform === 'googleMeet' && (
+                                    <div>
+                                        <label style={fieldLabel}>Invitees</label>
+                                        <input value={calendarForm.meetingInvitees} onChange={(e) => setCalendarForm({ ...calendarForm, meetingInvitees: e.target.value })} placeholder="student1@example.com, student2@example.com" style={s.input} />
+                                    </div>
+                                )}
+
+                                {/* Meeting Link + Generate */}
+                                <div>
+                                    <label style={fieldLabel}>Meeting Link</label>
+                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                        <input
+                                            value={calendarForm.streamUrl}
+                                            onChange={(e) => setCalendarForm({ ...calendarForm, streamUrl: e.target.value })}
+                                            placeholder="Enter a meeting link or generate one automatically"
+                                            style={{ ...s.input, flex: '1 1 200px' }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleGeneratePlatformMeeting}
+                                            disabled={isGeneratingMeeting}
+                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#7e22ce'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.background = '#9333ea'; }}
+                                            style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, background: '#9333ea', color: '#fff', border: 'none', borderRadius: 8, padding: '0 16px', height: 42, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: isGeneratingMeeting ? 'not-allowed' : 'pointer', opacity: isGeneratingMeeting ? 0.7 : 1 }}
+                                        >
+                                            {isGeneratingMeeting
+                                                ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Generating...</>
+                                                : <><Wand2 size={15} /> Generate Meeting Link</>}
+                                        </button>
+                                    </div>
+                                    {calendarForm.streamUrl && (
+                                        <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                            <button type="button" onClick={() => handleCopyMeetingLink(calendarForm.streamUrl)} style={{ ...s.secondaryBtn, padding: '5px 10px', fontSize: 12 }}>
+                                                <Copy size={13} /> Copy Link
+                                            </button>
+                                            <button type="button" onClick={() => openMeetingLink(calendarForm.streamUrl)} style={{ ...s.secondaryBtn, padding: '5px 10px', fontSize: 12 }}>
+                                                <ExternalLink size={13} /> Open Meeting
+                                            </button>
+                                            {calendarEditingId && (
+                                                <button type="button" onClick={handleRegenerateMeeting} disabled={isGeneratingMeeting || (calendarForm.meetingPlatform === 'googleMeet' && !googleMeetConnected)} title={calendarForm.meetingPlatform === 'googleMeet' && !googleMeetConnected ? 'Connect Google Meet before regenerating.' : 'Intentionally generate a new meeting (replaces the current one)'} style={{ ...s.secondaryBtn, whiteSpace: 'nowrap', fontSize: 12, opacity: (isGeneratingMeeting || (calendarForm.meetingPlatform === 'googleMeet' && !googleMeetConnected)) ? 0.55 : 1 }}>
+                                                    <RefreshCw size={14} /> Regenerate
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Meeting Password */}
+                                <div>
+                                    <label style={fieldLabel}>Meeting Password (Optional)</label>
+                                    <input value={calendarForm.meetingPassword} onChange={(e) => setCalendarForm({ ...calendarForm, meetingPassword: e.target.value })} placeholder="e.g. 123456 — for passcode-protected meetings / streams" style={s.input} />
+                                </div>
+
+                                {/* Google Meet connection status */}
+                                {calendarForm.meetingPlatform === 'googleMeet' && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 12px', borderRadius: 10, background: colors.bgInput, border: `1px solid ${colors.border}` }}>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: googleMeetConnected ? '#10b981' : '#ef4444' }}>
+                                            <span style={{ width: 9, height: 9, borderRadius: '50%', background: googleMeetConnected ? '#10b981' : '#ef4444', boxShadow: googleMeetConnected ? '0 0 8px rgba(16,185,129,0.8)' : '0 0 8px rgba(239,68,68,0.6)' }} />
+                                            Google Meet {googleMeetConnected ? 'Connected' : 'Not Connected'}
+                                        </span>
+                                        {!googleMeetConnected && (
+                                            <button type="button" onClick={handleConnectGoogleMeet} disabled={isGoogleConnecting} style={{ ...s.secondaryBtn, padding: '6px 12px', fontSize: 12 }}>
+                                                {isGoogleConnecting ? 'Opening Google...' : 'Connect Google Meet'}
+                                            </button>
+                                        )}
+                                        {!googleMeetConnected && googleMeetHint && (
+                                            <span style={{ fontSize: 12, color: colors.textMuted }}>{googleMeetHint}</span>
+                                        )}
+                                    </div>
+                                )}
+
+                                {isGeneratingMeeting ? (
+                                    <p style={{ margin: '0', fontSize: 12, color: colors.primary, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                        <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Creating a real Google Meet meeting (Google Calendar event)...
+                                    </p>
+                                ) : calendarForm.meetingPlatform === 'googleMeet' && calendarForm.streamUrl ? (
+                                    <div style={{ margin: '0', padding: '10px 12px', borderRadius: 10, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.35)' }}>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#10b981' }}>
+                                            <CheckCircle2 size={15} /> Real Google Meet created
+                                        </span>
+                                    </div>
+                                ) : null}
+                            </div>
+                        </div>
+                    )}
+
+                    <div style={{ height: 1, background: colors.border }} />
+
+                    {/* Visibility */}
+                    <div>
+                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: colors.primary, marginBottom: 12 }}>Visibility</div>
+                        <div style={segWrap}>
+                            <button type="button" onClick={() => setCalendarForm({ ...calendarForm, visibility: 'internal' })} style={segBtn(calendarForm.visibility === 'internal', '#64748b')}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Lock size={13} /> Internal</span>
+                            </button>
+                            <button type="button" onClick={() => setCalendarForm({ ...calendarForm, visibility: 'public' })} style={segBtn(calendarForm.visibility === 'public', '#10b981')}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Globe size={13} /> Public</span>
+                            </button>
+                        </div>
+                        <p style={{ margin: '10px 0 0', fontSize: 12, color: colors.textMuted }}>
+                            {isFormPublic
+                                ? 'Public events appear in the public e-learning / events area and go through the review pipeline.'
+                                : 'Internal events appear only on the admin/internal calendar (holidays, academic dates, meetings).'}
+                        </p>
+                    </div>
+
+                    {/* Public-only options */}
+                    {isFormPublic && (
+                        <>
+                            <div style={{ height: 1, background: colors.border }} />
+                            <div>
+                                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: colors.primary, marginBottom: 12 }}>Public Event Options</div>
+                                <div style={{ display: 'grid', gap: 12 }}>
+                                    <div style={formRow}>
+                                        <div>
+                                            <label style={fieldLabel}>Price</label>
+                                            <input value={calendarForm.price} onChange={(e) => setCalendarForm({ ...calendarForm, price: e.target.value })} placeholder="FREE / 0" style={s.input} />
+                                        </div>
+                                        <div>
+                                            <label style={fieldLabel}>Total seats / capacity</label>
+                                            <input type="number" min="0" value={calendarForm.capacity} onChange={(e) => setCalendarForm({ ...calendarForm, capacity: e.target.value })} placeholder="e.g. 50" style={s.input} />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style={fieldLabel}>Banner image URL</label>
+                                        <input value={calendarForm.bannerImage} onChange={(e) => setCalendarForm({ ...calendarForm, bannerImage: e.target.value })} placeholder="https://──/cover.jpg" style={s.input} />
+                                    </div>
+                                    <div>
+                                        <label style={fieldLabel}>Host / Instructor</label>
+                                        <select value={calendarForm.instructor} onChange={(e) => setCalendarForm({ ...calendarForm, instructor: e.target.value })} style={s.select}>
+                                            <option value="" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Select host / instructor</option>
+                                            {users.filter((u) => u.assignedRole === 'Instructor').map((inst) => (
+                                                <option key={inst._id} value={inst._id} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{inst.fullName}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 10, background: colors.bgInput, border: `1px solid ${colors.border}`, cursor: 'pointer' }}>
+                                        <span style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Enable public registration</span>
+                                        <input type="checkbox" checked={calendarForm.enableRegistration} onChange={(e) => setCalendarForm({ ...calendarForm, enableRegistration: e.target.checked })} />
+                                    </label>
+</div>
+                            </div>
+                        </>
+                    )}
+
+                    <div style={{ height: 1, background: colors.border }} />
+
+                    {/* Live Preview ─" updates automatically as the form changes */}
+                    {(() => {
+                        const pStart = calendarForm.startDate ? combineDateAndTime(calendarForm.startDate, calendarForm.isAllDay ? '00:00' : (calendarForm.startTime || '00:00')) : null;
+                        const pEnd = calendarForm.endDate ? combineDateAndTime(calendarForm.endDate, calendarForm.isAllDay ? '23:59' : (calendarForm.endTime || '23:59')) : null;
+                        const now = new Date();
+                        const pStatus = calendarForm.eventStatus === 'CANCELLED'
+                            ? 'cancelled'
+                            : (!pStart ? 'upcoming' : (pEnd && now > pEnd ? 'completed' : (now >= pStart ? 'live' : 'upcoming')));
+                        const psc = statusChip(pStatus);
+                        const pType = calendarForm.eventType || 'Hybrid';
+                        return (
+                            <div>
+                                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: colors.primary, marginBottom: 12 }}>Live Preview</div>
+                                <div style={{ padding: 14, borderRadius: 12, background: colors.bgInput, border: `1px solid ${colors.border}` }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 8 }}>
+                                        <strong style={{ fontSize: 15, lineHeight: 1.3 }}>{calendarForm.title.trim() || 'Untitled event'}</strong>
+                                        <span style={chip(psc.color, psc.bg)}>{psc.label}</span>
+                                    </div>
+                                    <div style={{ display: 'grid', gap: 4, fontSize: 13, color: colors.textMuted }}>
+                                        <div><strong style={{ color: colors.text }}>{calendarForm.isAllDay ? 'All day' : 'Scheduled'}: </strong>{pStart ? formatEventDate(pStart.toISOString()) : '─"'}{pEnd && !calendarForm.isAllDay ? ` ─+' ${formatEventDate(pEnd.toISOString())}` : ''}</div>
+                                        <div><strong style={{ color: colors.text }}>Format: </strong>{pType} {pType === 'Physical' ? `── ${calendarForm.location || 'No location set'}` : pType === 'Hybrid' ? `── ${calendarForm.location || 'Online + venue TBD'}` : ''}</div>
+                                        {pType !== 'Physical' && <div><strong style={{ color: colors.text }}>Meeting: </strong>{meetingProviderLabel(calendarForm.meetingProvider)}{calendarForm.streamUrl ? ` — ${calendarForm.streamUrl}` : (calendarForm.meetingProvider === 'googleMeet' ? ' — real Google Meet will be created on save' : ' — will be created on save')}</div>}
+                                        {isFormPublic && <div><strong style={{ color: colors.text }}>Price: </strong>{calendarForm.price || 'FREE'}{calendarForm.capacity !== '' ? ` ── Capacity: ${calendarForm.capacity}` : ''}</div>}
+                                        <div><strong style={{ color: colors.text }}>Visibility: </strong>{isFormPublic ? 'Public (review pipeline)' : 'Internal (calendar only)'}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', paddingTop: 4 }}>
+                        <button type="submit" disabled={isCalendarSaving} style={{ ...s.primaryBtn, opacity: isCalendarSaving ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                            {isCalendarSaving
+                                ? (calendarForm.eventType !== 'Physical' && calendarForm.meetingProvider === 'googleMeet' && !calendarForm.streamUrl ? 'Creating Google Meet...' : 'Saving...')
+                                : (calendarEditingId ? 'Save Changes' : 'Create Event')}
+                        </button>
+                        <button type="button" onClick={resetCalendarForm} style={s.secondaryBtn}>Cancel</button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* ─"?─"? Event Details Modal ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"? */}
+            {viewingEvent && (
+                <Modal isOpen={Boolean(viewingEvent)} onClose={() => setViewingEvent(null)} title="Event Details" maxWidth="560px">
+                    {(() => {
+                        const ev = viewingEvent;
+                        const live = eventLive(ev);
+                        const sc = statusChip(live);
+                        const isPublic = ev.visibility === 'public';
+                        return (
+                            <div>
+                                {ev.image && <img src={ev.image} alt={ev.title} style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 12, marginBottom: 16 }} />}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                                    <strong style={{ fontSize: 18 }}>{ev.title}</strong>
+                                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                        <span style={chip(sc.color, sc.bg)}>{sc.label}</span>
+                                        <span style={isPublic ? chip('#10b981', 'rgba(16,185,129,0.12)') : chip('#94a3b8', 'rgba(148,163,184,0.14)')}>{isPublic ? 'Public' : 'Internal'}</span>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gap: 8, fontSize: 14, marginBottom: 14 }}>
+                                    <div><span style={{ color: colors.textMuted }}>Category: </span><strong style={{ textTransform: 'capitalize' }}>{ev.category || 'Event'}</strong></div>
+                                    <div><span style={{ color: colors.textMuted }}>Starts: </span><strong>{ev.startDate ? formatEventDate(ev.startDate) : '─"'}</strong></div>
+                                    {ev.endDate && <div><span style={{ color: colors.textMuted }}>Ends: </span><strong>{formatEventDate(ev.endDate)}</strong></div>}
+                                    {ev.isAllDay && <div><span style={{ color: colors.textMuted }}>All day: </span><strong>Yes</strong></div>}
+                                    <div><span style={{ color: colors.textMuted }}>Format: </span><strong>{ev.eventType || 'Hybrid'}</strong></div>
+                                    <div><span style={{ color: colors.textMuted }}>Location: </span><strong>{ev.location || (ev.eventType === 'Online' ? 'Online Live Stream' : '─"')}</strong></div>
+{ev.meetingUrl || ev.streamUrl ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                            <span style={{ color: colors.textMuted }}>Meeting URL ({meetingProviderLabel(ev.meetingProvider)}): </span>
+                                            <a href={ev.meetingUrl || ev.streamUrl} target="_blank" rel="noopener noreferrer" style={{ color: colors.primary, fontWeight: 600, wordBreak: 'break-all' }}>{ev.meetingUrl || ev.streamUrl}</a>
+                                            <button type="button" onClick={() => handleCopyMeetingLink(ev.meetingUrl || ev.streamUrl)} title="Copy meeting link" style={{ ...s.secondaryBtn, padding: '6px 10px', fontSize: 12 }}>
+                                                <Copy size={13} /> Copy Meeting Link
+</button>
+                                        </div>
+                                    ) : null}
+                                    {ev.eventType !== 'Physical' && (
+                                        <div><span style={{ color: colors.textMuted }}>Platform: </span><strong>{meetingPlatformLabel(ev.meetingPlatform || providerToPlatform(ev.meetingProvider))}</strong></div>
+                                    )}
+                                    {ev.meetingInvitees && (
+                                        <div><span style={{ color: colors.textMuted }}>Invitees: </span><strong style={{ wordBreak: 'break-word' }}>{ev.meetingInvitees}</strong></div>
+                                    )}
+                                    {ev.meetingPassword && (
+                                        <div><span style={{ color: colors.textMuted }}>Meeting Password: </span><strong>{ev.meetingPassword}</strong></div>
+                                    )}
+                                    {isPublic && (
+                                        <>
+                                            <div><span style={{ color: colors.textMuted }}>Price: </span><strong>{ev.price || 'FREE'}</strong></div>
+                                            <div><span style={{ color: colors.textMuted }}>Capacity: </span><strong>{Math.max(0, (ev.totalSlots || 0) - (ev.registeredCount || 0))} / {ev.totalSlots || 0} spots remaining</strong></div>
+                                            <div><span style={{ color: colors.textMuted }}>Host: </span><strong>{ev.speaker?.name || 'Not assigned'}</strong></div>
+                                            <div><span style={{ color: colors.textMuted }}>Registration: </span><strong style={{ color: ev.registrationEnabled === false ? colors.textMuted : '#10b981' }}>{ev.registrationEnabled === false ? 'Closed' : 'Open'}</strong></div>
+                                        </>
+                                    )}
+                                </div>
+                                {ev.description && (
+                                    <div style={{ marginBottom: 14 }}>
+                                        <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: colors.primary, marginBottom: 8 }}>Description</div>
+                                        <p style={{ margin: 0, fontSize: 14, color: colors.textMuted, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{Array.isArray(ev.description) ? ev.description.join('\n') : ev.description}</p>
+                                    </div>
+                                )}
+<div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
+                                    {ev.eventType !== 'Physical' && (ev.meetingUrl || ev.streamUrl) && live !== 'completed' && live !== 'cancelled' && (
+                                        <a href={ev.meetingUrl || ev.streamUrl} target="_blank" rel="noopener noreferrer" style={{ ...s.primaryBtn, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+                                            <Video size={14} /> {ev.meetingProvider === 'googleMeet' ? 'Join Google Meet' : 'Join Event'}
+                                        </a>
+                                    )}
+                                    {ev.eventType !== 'Physical' && (ev.meetingUrl || ev.streamUrl) && (
+                                        <button type="button" onClick={() => handleCopyMeetingLink(ev.meetingUrl || ev.streamUrl)} style={{ ...s.secondaryBtn, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+                                            <Copy size={13} /> Copy Meeting Link
+                                        </button>
+                                    )}
+                                    {isPublic && ev.slug && (
+                                        <a href={`/events/${ev.slug}`} target="_blank" rel="noopener noreferrer" style={{ ...s.secondaryBtn, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', fontSize: 13 }}>
+                                            View Public Page
+                                        </a>
+                                    )}
+                                    <button type="button" onClick={() => setViewingEvent(null)} style={s.secondaryBtn}>Close</button>
+                                </div>
+                            </div>
+                        );
+                    })()}
+                </Modal>
+            )}
+
+            {/* ─"?─"? Cancel Event Modal ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"? */}
+            {cancelTarget && (
+                <Modal isOpen={Boolean(cancelTarget)} onClose={() => setCancelTarget(null)} title="Cancel Event" maxWidth="460px">
+                    <p style={{ margin: '0 0 12px', fontSize: 14, color: colors.textMuted }}>
+                        Are you sure you want to cancel <strong style={{ color: colors.text }}>{cancelTarget.title}</strong>? Registered users will be notified.
+                    </p>
+                    <textarea
+                        value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        placeholder="Cancellation reason (optional)"
+                        rows="3"
+                        style={{ ...s.input, marginBottom: 16 }}
+                    />
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        <button type="button" onClick={confirmCancelPublicEvent} style={{ ...s.primaryBtn, background: '#f59e0b' }}>Confirm Cancel</button>
+                        <button type="button" onClick={() => setCancelTarget(null)} style={s.secondaryBtn}>Keep Event</button>
+                    </div>
+                </Modal>
+            )}
+
+            {/* ─"?─"? Delete Event Modal ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"? */}
+            {deleteTarget && (
+                <Modal isOpen={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} title="Delete Event?" maxWidth="460px">
+                    <p style={{ margin: '0 0 16px', fontSize: 14, color: colors.textMuted }}>
+                        Are you sure you want to delete <strong style={{ color: colors.text }}>{deleteTarget.title}</strong>? This action cannot be undone.
+                    </p>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        <button type="button" onClick={confirmDeleteEvent} style={{ ...s.primaryBtn, background: colors.danger }}>Delete</button>
+                        <button type="button" onClick={() => setDeleteTarget(null)} style={s.secondaryBtn}>Cancel</button>
+                    </div>
+                </Modal>
+            )}
         </div>
-    );
+        );
+    };
+
 
     const renderSystem = () => (
         <div style={s.tabContent}>
@@ -4294,7 +5359,7 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
-                {/* Render immediately — each section shows skeletons while data loads */}
+                {/* Render immediately ─" each section shows skeletons while data loads */}
                     <>
                                 {activeTab === 'overview' && renderOverview()}
                         {activeTab === 'users' && renderUsers()}
@@ -4355,7 +5420,7 @@ export default function AdminDashboard() {
                                                 <div style={{ color: colors.textMuted, fontSize: '14px' }}>
                                                     {section.lessons?.map((lesson, lessonIdx) => (
                                                         <div key={lessonIdx} style={{ marginBottom: '6px' }}>
-                                                            • {lesson.lessonTitle || 'Untitled lesson'} ({lesson.durationMinutes || '---'} min)
+                                                            ── {lesson.lessonTitle || 'Untitled lesson'} ({lesson.durationMinutes || '---'} min)
                                                         </div>
                                                     ))}
                                                 </div>
@@ -4437,9 +5502,9 @@ export default function AdminDashboard() {
                             <div key={step} style={{ flex: 1, height: '4px', borderRadius: '2px', background: createFormStep >= step ? colors.primary : colors.bgInput, transition: 'background 0.3s' }} />
                         ))}
                     </div>
-                    <p style={{ ...s.sectionSub, marginBottom: '16px', fontSize: '12px' }}>Step {createFormStep} of 3 — {createFormStep === 1 ? 'Personal & Account Info' : createFormStep === 2 ? (createForm.assignedRole === 'Instructor' ? 'Professional Info' : 'Employment & Security') : 'Documents & Settings'}</p>
+                    <p style={{ ...s.sectionSub, marginBottom: '16px', fontSize: '12px' }}>Step {createFormStep} of 3 ─" {createFormStep === 1 ? 'Personal & Account Info' : createFormStep === 2 ? (createForm.assignedRole === 'Instructor' ? 'Professional Info' : 'Employment & Security') : 'Documents & Settings'}</p>
 
-                    {/* ─── STEP 1: Personal & Account ─── */}
+                    {/* ─"?─"?─"? STEP 1: Personal & Account ─"?─"?─"? */}
                     {createFormStep === 1 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <div>
@@ -4526,7 +5591,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {/* ─── STEP 2: Professional / Employment ─── */}
+                    {/* ─"?─"?─"? STEP 2: Professional / Employment ─"?─"?─"? */}
                     {createFormStep === 2 && createForm.assignedRole === 'Instructor' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <p style={{ color: colors.primary, fontWeight: '700', fontSize: '15px', margin: '0 0 4px' }}> <Clipboard size={16} style={{ marginRight: '6px' }} />  Professional Information</p>
@@ -4614,7 +5679,7 @@ export default function AdminDashboard() {
                                     <input type="text" value={createForm.securityAnswer} onChange={(e) => setCreateForm({ ...createForm, securityAnswer: e.target.value })} placeholder="Answer" style={s.input} />
                                 </div>
                             </div>
-                            <p style={{ color: colors.primary, fontWeight: '700', fontSize: '15px', margin: '12px 0 4px' }}> <Shield size={16} style={{ marginRight: '6px' }} /> ️ Permissions</p>
+                            <p style={{ color: colors.primary, fontWeight: '700', fontSize: '15px', margin: '12px 0 4px' }}> <Shield size={16} style={{ marginRight: '6px' }} /> ─,? Permissions</p>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                 {Object.entries(createForm.permissions).map(([key, val]) => (
                                     <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -4626,7 +5691,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {/* ─── STEP 3: Documents & Settings ─── */}
+                    {/* ─"?─"?─"? STEP 3: Documents & Settings ─"?─"?─"? */}
                     {createFormStep === 3 && createForm.assignedRole === 'Instructor' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <p style={{ color: colors.primary, fontWeight: '700', fontSize: '15px', margin: '0 0 4px' }}> <Folder size={16} style={{ marginRight: '6px' }} />  Document Uploads</p>
@@ -4713,16 +5778,16 @@ export default function AdminDashboard() {
                         {/* Step validation error */}
                         {createStepError && (
                             <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '10px 14px', color: '#fca5a5', fontSize: '13px', fontWeight: '600' }}>
-                                ⚠ {createStepError}
+                                ─s─ {createStepError}
                             </div>
                         )}
                         <div style={{ display: 'flex', gap: '12px' }}>
                             {createFormStep > 1 && (
-                                <button type="button" onClick={() => { setCreateFormStep(createFormStep - 1); setCreateStepError(''); }} style={{...s.secondaryBtn, flex: 1}}>← Back</button>
+                                <button type="button" onClick={() => { setCreateFormStep(createFormStep - 1); setCreateStepError(''); }} style={{...s.secondaryBtn, flex: 1}}>─+? Back</button>
                             )}
                             {createFormStep < 3 && (
                                 <button type="button" onClick={() => {
-                                    // ── Validate current step before advancing ──────────
+                                    // ─"?─"? Validate current step before advancing ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?
                                     let err = '';
                                     if (createFormStep === 1) {
                                         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -4753,7 +5818,7 @@ export default function AdminDashboard() {
                                     if (err) { setCreateStepError(err); return; }
                                     setCreateStepError('');
                                     setCreateFormStep(createFormStep + 1);
-                                }} style={{...s.primaryBtn, flex: 1}}>Next →</button>
+                                }} style={{...s.primaryBtn, flex: 1}}>Next ─+'</button>
                             )}
                             {createFormStep === 3 && (
                                 <button type="submit" style={{...s.primaryBtn, flex: 1}} disabled={isUploadingCreateFile}>{isUploadingCreateFile ? 'Uploading...' : 'Create Account'}</button>
@@ -4764,11 +5829,11 @@ export default function AdminDashboard() {
                 </form>
             </Modal>
 
-            {/* ── Email Verification Modal (shown after account creation) ── */}
+            {/* ─"?─"? Email Verification Modal (shown after account creation) ─"?─"? */}
             <Modal isOpen={createVerifyStep} onClose={() => { setCreateVerifyStep(false); setIsCreateModalOpen(false); }} title="Verify Email Address">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ textAlign: 'center', padding: '8px 0' }}>
-                        <div style={{ fontSize: 48, marginBottom: 12 }}>📧</div>
+                        <div style={{ fontSize: 48, marginBottom: 12 }}>dY"</div>
                         <p style={{ color: colors.text, fontWeight: 700, fontSize: 15, margin: '0 0 8px' }}>
                             Verification Code Sent
                         </p>
@@ -4781,7 +5846,7 @@ export default function AdminDashboard() {
 
                     {createVerifyError && (
                         <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '10px 14px', color: '#fca5a5', fontSize: '13px', fontWeight: '600' }}>
-                            ⚠ {createVerifyError}
+                            ─s─ {createVerifyError}
                         </div>
                     )}
 
@@ -4912,7 +5977,7 @@ export default function AdminDashboard() {
                 </div>
             </Modal>
 
-            {/* ═══════════ ENTERPRISE ASSIGN INSTRUCTOR MODAL ═══════════ */}
+            {/* ─?─?─?─?─?─?─?─?─?─?─? ENTERPRISE ASSIGN INSTRUCTOR MODAL ─?─?─?─?─?─?─?─?─?─?─? */}
             <Modal isOpen={isAssignInstructorModalOpen} onClose={() => { setIsAssignInstructorModalOpen(false); setSelectedInstructorObj(null); setInstructorSearchQuery(''); setAssignInstructorIdInput(''); }} title="Assign Instructor to Course">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>
@@ -4963,7 +6028,7 @@ export default function AdminDashboard() {
                                         </div>
                                         <div>
                                             <div style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>{user.fullName}</div>
-                                            <div style={{ fontSize: '12px', color: colors.textMuted }}>{user.accountEmail} • <span style={{ color: '#2563eb', fontWeight: '500' }}>{user.specialization || user.role || 'Instructor'}</span></div>
+                                            <div style={{ fontSize: '12px', color: colors.textMuted }}>{user.accountEmail} ── <span style={{ color: '#2563eb', fontWeight: '500' }}>{user.specialization || user.role || 'Instructor'}</span></div>
                                         </div>
                                     </div>
                                 ))}
@@ -5056,7 +6121,7 @@ export default function AdminDashboard() {
                 </div>
             </Modal>
 
-            {/* ═══════════ ENTERPRISE MANAGE ENROLLED STUDENTS MODAL ═══════════ */}
+            {/* ─?─?─?─?─?─?─?─?─?─?─? ENTERPRISE MANAGE ENROLLED STUDENTS MODAL ─?─?─?─?─?─?─?─?─?─?─? */}
             <Modal isOpen={isManageStudentsModalOpen} onClose={() => { setIsManageStudentsModalOpen(false); setActiveCourseId(null); setManagedStudents([]); setEnrollStudentId(''); setSelectedStudentsToEnroll([]); setBulkStudentEmails(''); }} title="Manage Course Enrollments & Access">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -5209,7 +6274,7 @@ export default function AdminDashboard() {
                                                 <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
                                                     <button onClick={() => handleRevokeAccess(enr._id)} title="Revoke Access" style={{ padding: '4px 8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: '#ef4444' }}> <Ban size={16} style={{ marginRight: '6px', color: '#ef4444' }} />  Revoke</button>
                                                     <button onClick={() => handleResetProgress(enr._id)} title="Reset Progress" style={{ padding: '4px 8px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: colors.text }}> <Eraser size={16} style={{ marginRight: '6px' }} />  Reset</button>
-                                                    <button onClick={() => handleResendWelcomeEmail(enr._id)} title="Resend Email" style={{ padding: '4px 8px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: '#2563eb' }}> <Mail size={16} style={{ marginRight: '6px' }} /> ️ Email</button>
+                                                    <button onClick={() => handleResendWelcomeEmail(enr._id)} title="Resend Email" style={{ padding: '4px 8px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: '#2563eb' }}> <Mail size={16} style={{ marginRight: '6px' }} /> ─,? Email</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -5230,7 +6295,7 @@ export default function AdminDashboard() {
                 </div>
             </Modal>
 
-            {/* ═══════════ EXPORT CUSTOMIZER MODAL ═══════════ */}
+            {/* ─?─?─?─?─?─?─?─?─?─?─? EXPORT CUSTOMIZER MODAL ─?─?─?─?─?─?─?─?─?─?─? */}
             <Modal isOpen={isExportCustomizerOpen} onClose={() => setIsExportCustomizerOpen(false)} title="Customize Course Export">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>Select the data columns and date range you want to include in your export file.</p>
@@ -5269,7 +6334,7 @@ export default function AdminDashboard() {
                 </div>
             </Modal>
 
-            {/* ═══════════ SMART IMPORT WIZARD MODAL ═══════════ */}
+            {/* ─?─?─?─?─?─?─?─?─?─?─? SMART IMPORT WIZARD MODAL ─?─?─?─?─?─?─?─?─?─?─? */}
             <Modal isOpen={isSmartImportWizardOpen} onClose={() => { setIsSmartImportWizardOpen(false); setWizardSelectedFile(null); setWizardHeaders([]); setWizardParsedRows([]); setIsWizardMappingStep(false); }} title="Smart Course Import Wizard" maxWidth="720px">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>Import course content and curricula from multiple platform formats. Select a file type, upload your file, and preview field mappings.</p>
@@ -5357,9 +6422,9 @@ export default function AdminDashboard() {
                             <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '10px', padding: '12px 16px', marginTop: '6px' }}>
                                 <h5 style={{ margin: '0 0 6px 0', fontSize: '12px', fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase' }}>Live Row 1 Preview</h5>
                                 <div style={{ fontSize: '13px', display: 'grid', gap: '4px' }}>
-                                    <div><strong>Title:</strong> {wizardParsedRows[0]?.[wizardColumnMapping.courseTitle] || '—'}</div>
-                                    <div><strong>Category:</strong> {wizardParsedRows[0]?.[wizardColumnMapping.technicalCategory] || '—'}</div>
-                                    <div><strong>Price:</strong> {wizardParsedRows[0]?.[wizardColumnMapping.price] ? `$${wizardParsedRows[0]?.[wizardColumnMapping.price]}` : '—'}</div>
+                                    <div><strong>Title:</strong> {wizardParsedRows[0]?.[wizardColumnMapping.courseTitle] || '─"'}</div>
+                                    <div><strong>Category:</strong> {wizardParsedRows[0]?.[wizardColumnMapping.technicalCategory] || '─"'}</div>
+                                    <div><strong>Price:</strong> {wizardParsedRows[0]?.[wizardColumnMapping.price] ? `$${wizardParsedRows[0]?.[wizardColumnMapping.price]}` : '─"'}</div>
                                 </div>
                             </div>
                         </div>
@@ -5406,7 +6471,7 @@ export default function AdminDashboard() {
                 </div>
             </Modal>
 
-            {/* ═══════════ AI COURSE GENERATOR MODAL ═══════════ */}
+            {/* ─?─?─?─?─?─?─?─?─?─?─? AI COURSE GENERATOR MODAL ─?─?─?─?─?─?─?─?─?─?─? */}
             <Modal isOpen={isAiCourseGenModalOpen} onClose={() => setIsAiCourseGenModalOpen(false)} title="Generate Course with AI">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>Describe your course topic, target audience, and key learning outcomes. AI will automatically generate the full syllabus, module breakdown, and lesson outlines.</p>
@@ -5453,7 +6518,7 @@ export default function AdminDashboard() {
                 </div>
             </Modal>
 
-            {/* ── Course Analytics Modal ── */}
+            {/* ─"?─"? Course Analytics Modal ─"?─"? */}
             <Modal isOpen={isCourseAnalyticsModalOpen} onClose={() => { setIsCourseAnalyticsModalOpen(false); setActiveCourseId(null); }} title="Course Analytics Overview">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>
@@ -5506,7 +6571,7 @@ export default function AdminDashboard() {
                 </div>
             </Modal>
 
-            {/* ── Course Reviews Modal ── */}
+            {/* ─"?─"? Course Reviews Modal ─"?─"? */}
             <Modal isOpen={isCourseReviewsModalOpen} onClose={() => { setIsCourseReviewsModalOpen(false); setActiveCourseId(null); }} title="Course Reviews & Feedback">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>
@@ -5608,7 +6673,7 @@ export default function AdminDashboard() {
                 </form>
             </Modal>
 
-            {/* ── Fixed-position course action menu (renders above all overflow contexts) ── */}
+            {/* ─"?─"? Fixed-position course action menu (renders above all overflow contexts) ─"?─"? */}
             {courseMenuOpenId && (() => {
                 const course = allCourses.find(c => c._id === courseMenuOpenId);
                 if (!course) return null;

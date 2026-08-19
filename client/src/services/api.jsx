@@ -444,7 +444,37 @@ export const calendarService = {
     getEvents: (params) => API.get('/calendar', { params }),
     createEvent: (data) => API.post('/calendar', data),
     updateEvent: (id, data) => API.put(`/calendar/${id}`, data),
-    deleteEvent: (id) => API.delete(`/calendar/${id}`)
+    deleteEvent: (id) => API.delete(`/calendar/${id}`),
+    // Real Google Meet integration — OAuth stays on the backend.
+    // returnTo: 'calendar' (default) | 'events' — controls where the callback redirects
+    getGoogleAuthUrl: (returnTo = 'calendar') => API.get('/calendar/google/auth-url', { params: { returnTo } }),
+    getGoogleStatus: () => API.get('/calendar/google/status')
+};
+
+// ── Event Management API Calls (Admin) ─────────────────────
+export const eventService = {
+    getAll: (params) => API.get('/events/admin/all', { params }),
+    getStats: () => API.get('/admin/events/stats'),
+    getById: (id) => API.get(`/admin/events/${id}`),
+    create: (data) => API.post('/admin/events', data),
+    update: (id, data) => API.put(`/admin/events/${id}`, data),
+    remove: (id) => API.delete(`/admin/events/${id}`),
+    validate: (id) => API.post(`/admin/events/${id}/validate`),
+    approve: (id) => API.post(`/admin/events/${id}/approve`),
+    reject: (id, data) => API.post(`/admin/events/${id}/reject`, data),
+    cancel: (id, data) => API.post(`/admin/events/${id}/cancel`, data),
+    regenerateMeeting: (id, data) => API.post(`/admin/events/${id}/regenerate-meeting`, data),
+    generateMeetingLink: (data) => API.post('/admin/events/meetings/generate', data),
+    getCategories: () => API.get('/events/admin/categories'),
+    // PUT /api/events/admin/validate/:id — unified { status, rejectionReason }
+    setStatus: (id, data) => API.put(`/events/admin/validate/${id}`, data)
+};
+
+// ── Public Events API (Visitor) ────────────────────────────
+export const publicEventService = {
+    getAll: () => API.get('/events/published'),
+    getBySlug: (slug) => API.get(`/events/${slug}`),
+    register: (slug, data) => API.post(`/events/register/${slug}`, data)
 };
 
 // ── Newsletter API (Visitor) ────────────────────────────────

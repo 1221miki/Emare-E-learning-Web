@@ -86,11 +86,14 @@ import AdminAuditLogs        from './pages/admin/AdminAuditLogs';
 import AdminUserProfilePage  from './pages/admin/AdminUserProfilePage';
 import AdminCoupons          from './pages/admin/Coupons';
 import CouponDetail          from './pages/admin/CouponDetail';
+import AdminEventsPage       from './pages/admin/AdminEventsPage';
 
 // Shared pages
 import VerifyCertificatePage from './pages/VerifyCertificatePage';
 import MessageInboxPage      from './pages/MessageInboxPage';
 import LiveSessionsPage      from './pages/LiveSessionsPage';
+import EventsPage            from './pages/EventsPage';
+import EventDetailPage       from './pages/EventDetailPage';
 import CategoriesPage        from './pages/CategoriesPage';
 import SearchPage            from './pages/SearchPage';
 import InstructorProfilePage from './pages/InstructorProfilePage';
@@ -148,6 +151,8 @@ function AppRoutes() {
                 <Route path="/payment/failed"                element={<PaymentFailed />} />
                 <Route path="/messages"                      element={<PrivateRoute><MessageInboxPage /></PrivateRoute>} />
                 <Route path="/live-sessions"                 element={<PrivateRoute><LiveSessionsPage /></PrivateRoute>} />
+                <Route path="/events"                        element={<EventsPage />} />
+                <Route path="/events/:eventId"               element={<EventDetailPage />} />
 
                 {/* ── Instructor Routes ───────────────────────────────── */}
                 <Route path="/instructor/dashboard"          element={<PrivateRoute allowedRoles={['Instructor']}><InstructorDashboard /></PrivateRoute>} />
@@ -162,6 +167,7 @@ function AppRoutes() {
                 <Route path="/admin/audit-logs"              element={<PrivateRoute allowedRoles={['Admin']}><AdminAuditLogs /></PrivateRoute>} />
                 <Route path="/admin/coupons"                 element={<PrivateRoute allowedRoles={['Admin']}><AdminCoupons /></PrivateRoute>} />
                 <Route path="/admin/coupons/:id"             element={<PrivateRoute allowedRoles={['Admin']}><CouponDetail /></PrivateRoute>} />
+                <Route path="/admin/events"                  element={<PrivateRoute allowedRoles={['Admin']}><AdminEventsPage /></PrivateRoute>} />
 
                 {/* ── Fallback ─────────────────────────────────────────── */}
                 <Route path="/unauthorized" element={

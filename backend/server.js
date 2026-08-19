@@ -55,6 +55,9 @@ const auditRoutes = require('./routes/auditRoutes');
 const calendarRoutes = require('./routes/calendarRoutes');
 const communicationRoutes = require('./routes/communicationRoutes');
 const mediaRoutes = require('./routes/mediaRoutes');
+const eventRoutes = require('./routes/eventRoutes');
+const publicEventRoutes = require('./routes/publicEventRoutes');
+const seedEvents = require('./utils/seedEvents');
 const { getAnalytics } = require('./controllers/userController');
 const { protect, authorizeRoles } = require('./middleware/auth');
 
@@ -127,10 +130,14 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 app.use('/certificates', express.static(path.join(__dirname, 'public/certificates')));
 
 // ── Connect to MongoDB Atlas ───────────────────────────────
-connectDB().catch(err => {
-    console.error('❌ Fatal database initialization error:', err);
-    process.exit(1);
-});
+connectDB()
+    .then(() => {
+        seedEvents().catch((err) => console.warn('⚠️  Event seed skipped:', err && err.message));
+    })
+    .catch(err => {
+        console.error('❌ Fatal database initialization error:', err);
+        process.exit(1);
+    });
 
 // ── API Routes ─────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
@@ -164,6 +171,8 @@ app.use('/api/media', mediaRoutes);
 app.use('/api/audit-logs', auditRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/comm', communicationRoutes);
+app.use('/api/events', publicEventRoutes);
+app.use('/api/admin/events', protect, authorizeRoles('Admin'), eventRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/analytics/overview', protect, authorizeRoles('Admin'), getAnalytics);
