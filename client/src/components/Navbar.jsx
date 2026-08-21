@@ -51,6 +51,15 @@ export default function Navbar() {
         }
     };
 
+    const handleProfileRedirect = () => {
+        if (!user) return '/login';
+        switch (user.assignedRole) {
+            case 'Admin': return '/admin/dashboard';
+            case 'Instructor': return '/instructor/settings';
+            default: return '/student/profile';
+        }
+    };
+
     const goToSection = (id) => {
         if (window.location.pathname === '/') {
             const el = document.getElementById(id);
@@ -192,7 +201,7 @@ export default function Navbar() {
                             {isAvatarMenuOpen && (
                                 <div style={s.avatarMenu}>
                                     <Link
-                                        to="/student/profile"
+                                        to={handleProfileRedirect()}
                                         style={s.avatarMenuItem}
                                         onClick={() => setIsAvatarMenuOpen(false)}
                                         onMouseEnter={e => e.currentTarget.style.background = `${colors.primary}12`}
@@ -256,7 +265,7 @@ export default function Navbar() {
                                 </div>
                                 <span style={{ fontWeight: '600', color: colors.text, fontSize: '14px' }}>{user?.fullName}</span>
                             </div>
-                            <Link to="/student/profile" style={s.loginBtn} onClick={() => setIsMobileMenuOpen(false)}>Profile Settings</Link>
+                            <Link to={handleProfileRedirect()} style={s.loginBtn} onClick={() => setIsMobileMenuOpen(false)}>Profile Settings</Link>
                             <Link to={handleDashboardRedirect()} style={s.loginBtn} onClick={() => setIsMobileMenuOpen(false)}>Dashboard</Link>
                             <button onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }} style={s.logoutBtn}>Sign Out</button>
                         </>
