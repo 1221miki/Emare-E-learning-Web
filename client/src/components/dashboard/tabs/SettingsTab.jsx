@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { User, Image, ShieldCheck, Settings, Camera, Sun, Moon, KeyRound, Smartphone, Lock, Download, Save } from 'lucide-react';
+import { User, ShieldCheck, Settings, Camera, Sun, Moon, KeyRound, Smartphone, Lock, Download, Save, Eye, EyeOff } from 'lucide-react';
 
 const WARN = '#f59e0b';
 const DANGER = '#ef4444';
@@ -8,6 +8,24 @@ export default function SettingsTab(dash) {
     const { user, theme, toggleTheme, colors, firstName, setFirstName, lastName, setLastName, username, setUsername, profileEmail, setProfileEmail, contactPhone, setContactPhone, gender, setGender, dateOfBirth, setDateOfBirth, country, setCountry, city, setCity, address, setAddress, biography, setBiography, occupation, setOccupation, company, setCompany, website, setWebsite, linkedInUrl, setLinkedInUrl, githubUrl, setGithubUrl, currentPassword, setCurrentPassword, newPassword, setNewPassword, confirmPassword, setConfirmPassword, twoFactorEnabled, setTwoFactorEnabled, avatarUrl, prefLanguage, setPrefLanguage, timeZone, setTimeZone, notifPreferences, setNotifPreferences, isPublicProfile, setIsPublicProfile, profileSuccessMsg, avatarUploading, settingsSectionTab, setSettingsSectionTab, handleAvatarFileUpload, handleProfileUpdate, studyTargetHours, setStudyTargetHours, styles } = dash;
 
     const [confirmDelete, setConfirmDelete] = useState(false);
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    const eyeToggleStyle = {
+        position: 'absolute',
+        right: '12px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        color: colors.textMuted
+    };
 
     const completion = useMemo(() => {
         const fields = [firstName, lastName, username, profileEmail, contactPhone, country, city, occupation, biography, website, githubUrl];
@@ -64,7 +82,6 @@ export default function SettingsTab(dash) {
             <div style={{ display: 'flex', borderBottom: `1px solid ${colors.border}`, marginBottom: '32px', gap: '8px', flexWrap: 'wrap' }}>
                 {[
                     { key: 'personal', label: 'Personal Info', icon: <User size={15} aria-hidden="true" /> },
-                    { key: 'account', label: 'Avatar & Locale', icon: <Image size={15} aria-hidden="true" /> },
                     { key: 'security', label: 'Security & 2FA', icon: <ShieldCheck size={15} aria-hidden="true" /> },
                     { key: 'preferences', label: 'Preferences & Privacy', icon: <Settings size={15} aria-hidden="true" /> }
                 ].map(tab => (
@@ -99,7 +116,28 @@ export default function SettingsTab(dash) {
                     {/* SECTION 1: PERSONAL INFORMATION */}
                     {settingsSectionTab === 'personal' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '8px' }}>Personal Identity & Details</h3>
+                            <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '8px' }}>Profile Avatar Picture</h3>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', padding: '20px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, flexWrap: 'wrap' }}>
+                                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: '800', overflow: 'hidden' }}>
+                                    {avatarUrl ? (
+                                        <img src={avatarUrl} alt="Profile Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        firstName?.[0]?.toUpperCase() || user?.fullName?.[0]?.toUpperCase() || 'S'
+                                    )}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <span style={{ fontSize: '14px', fontWeight: '700', color: colors.text }}>Upload Custom Profile Photo</span>
+                                    <span style={{ fontSize: '12px', color: colors.textMuted }}>Supports JPG, PNG or WEBP (Max 5MB)</span>
+                                    <label style={{ ...styles.resumeBtn, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content', padding: '8px 16px', fontSize: '12px' }}>
+                                        <Camera size={14} aria-hidden="true" />
+                                        {avatarUploading ? 'Uploading Image...' : 'Choose Image File'}
+                                        <input type="file" accept="image/*" onChange={handleAvatarFileUpload} style={{ display: 'none' }} />
+                                    </label>
+                                </div>
+                            </div>
+
+                            <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', margin: '16px 0 8px' }}>Personal Identity & Details</h3>
                             
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                                 <div style={styles.formGroup}>
@@ -199,70 +237,7 @@ export default function SettingsTab(dash) {
                         </div>
                     )}
 
-                    {/* SECTION 2: AVATAR & LOCALE */}
-                    {settingsSectionTab === 'account' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '8px' }}>Profile Avatar Picture</h3>
-                            
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', padding: '20px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, flexWrap: 'wrap' }}>
-                                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: '800', overflow: 'hidden' }}>
-                                    {avatarUrl ? (
-                                        <img src={avatarUrl} alt="Profile Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    ) : (
-                                        firstName?.[0]?.toUpperCase() || user?.fullName?.[0]?.toUpperCase() || 'S'
-                                    )}
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    <span style={{ fontSize: '14px', fontWeight: '700', color: colors.text }}>Upload Custom Profile Photo</span>
-                                    <span style={{ fontSize: '12px', color: colors.textMuted }}>Supports JPG, PNG or WEBP (Max 5MB)</span>
-                                    <label style={{ ...styles.resumeBtn, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content', padding: '8px 16px', fontSize: '12px' }}>
-                                        <Camera size={14} aria-hidden="true" />
-                                        {avatarUploading ? 'Uploading Image...' : 'Choose Image File'}
-                                        <input type="file" accept="image/*" onChange={handleAvatarFileUpload} style={{ display: 'none' }} />
-                                    </label>
-                                </div>
-                            </div>
-
-                            <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', margin: '16px 0 8px' }}>Language & Time Locale</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                                <div style={styles.formGroup}>
-                                    <label style={styles.label}>Preferred Interface Language</label>
-                                    <select style={styles.select} value={prefLanguage} onChange={e => setPrefLanguage(e.target.value)}>
-                                        <option value="English">English</option>
-                                        <option value="Amharic">Amharic (አማርኛ)</option>
-                                        <option value="Afaan Oromo">Afaan Oromo</option>
-                                        <option value="Tigrinya">Tigrinya (ትግርኛ)</option>
-                                        <option value="French">French (Français)</option>
-                                    </select>
-                                </div>
-                                <div style={styles.formGroup}>
-                                    <label style={styles.label}>Time Zone</label>
-                                    <select style={styles.select} value={timeZone} onChange={e => setTimeZone(e.target.value)}>
-                                        <option value="UTC+3 (East Africa Time)">UTC+3 (East Africa Time - Addis Ababa)</option>
-                                        <option value="UTC+0 (Greenwich Mean Time)">UTC+0 (Greenwich Mean Time)</option>
-                                        <option value="UTC-5 (Eastern Standard Time)">UTC-5 (Eastern Standard Time)</option>
-                                        <option value="UTC+1 (Central European Time)">UTC+1 (Central European Time)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', margin: '16px 0 8px' }}>Appearance Theme Mode</h3>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, flexWrap: 'wrap', gap: '12px' }}>
-                                <div>
-                                    <span style={{ fontSize: '14px', fontWeight: '700', color: colors.text, display: 'block' }}>Current Theme Mode</span>
-                                    <span style={{ fontSize: '12px', color: colors.textMuted }}>Toggle between high contrast dark mode and clean light layout</span>
-                                </div>
-                                <button type="button" onClick={toggleTheme} style={{ ...styles.catalogBtn, display: 'flex', alignItems: 'center', gap: '6px' }} aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
-                                    {theme === 'dark'
-                                        ? <><Sun size={15} aria-hidden="true" /> Switch to Light Mode</>
-                                        : <><Moon size={15} aria-hidden="true" /> Switch to Dark Mode</>
-                                    }
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* SECTION 3: SECURITY & 2FA */}
+                    {/* SECTION 2: SECURITY & 2FA */}
                     {settingsSectionTab === 'security' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                             <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '8px' }}>Change Account Password</h3>
@@ -270,11 +245,31 @@ export default function SettingsTab(dash) {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '500px' }}>
                                 <div style={styles.formGroup}>
                                     <label style={styles.label}>Current Password</label>
-                                    <input type="password" style={styles.input} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="••••••••" />
+                                    <div style={{ position: 'relative' }}>
+                                        <input type={showCurrentPassword ? 'text' : 'password'} style={{ ...styles.input, paddingRight: '40px' }} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="••••••••" autoComplete="current-password" />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                            style={eyeToggleStyle}
+                                            aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}
+                                        >
+                                            {showCurrentPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+                                        </button>
+                                    </div>
                                 </div>
                                 <div style={styles.formGroup}>
                                     <label style={styles.label}>New Password (Min 8 chars)</label>
-                                    <input type="password" style={styles.input} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="••••••••" />
+                                    <div style={{ position: 'relative' }}>
+                                        <input type={showNewPassword ? 'text' : 'password'} style={{ ...styles.input, paddingRight: '40px' }} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowNewPassword(!showNewPassword)}
+                                            style={eyeToggleStyle}
+                                            aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
+                                        >
+                                            {showNewPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+                                        </button>
+                                    </div>
                                     {newPassword && (
                                         <span style={{ fontSize: '12px', fontWeight: '700', color: newPassword.length < 8 ? DANGER : newPassword.length < 12 ? WARN : colors.success }}>
                                             {newPassword.length < 8 ? 'Too short — use at least 8 characters' : newPassword.length < 12 ? 'Decent — add more characters for a stronger password' : 'Strong password length '}
@@ -283,7 +278,17 @@ export default function SettingsTab(dash) {
                                 </div>
                                 <div style={styles.formGroup}>
                                     <label style={styles.label}>Confirm New Password</label>
-                                    <input type="password" style={styles.input} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" />
+                                    <div style={{ position: 'relative' }}>
+                                        <input type={showConfirmPassword ? 'text' : 'password'} style={{ ...styles.input, paddingRight: '40px' }} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                            style={eyeToggleStyle}
+                                            aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                                        >
+                                            {showConfirmPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+                                        </button>
+                                    </div>
                                     {newPassword && confirmPassword && newPassword !== confirmPassword && (
                                         <span style={{ fontSize: '12px', fontWeight: '700', color: DANGER }}>Passwords do not match.</span>
                                     )}
@@ -338,10 +343,47 @@ export default function SettingsTab(dash) {
                         </div>
                     )}
 
-                    {/* SECTION 4: PREFERENCES & PRIVACY */}
+                    {/* SECTION 3: PREFERENCES & PRIVACY */}
                     {settingsSectionTab === 'preferences' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '8px' }}>Learning Preferences</h3>
+                            <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', marginBottom: '8px' }}>Language & Time Locale</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Preferred Interface Language</label>
+                                    <select style={styles.select} value={prefLanguage} onChange={e => setPrefLanguage(e.target.value)}>
+                                        <option value="English">English</option>
+                                        <option value="Amharic">Amharic (አማርኛ)</option>
+                                        <option value="Afaan Oromo">Afaan Oromo</option>
+                                        <option value="Tigrinya">Tigrinya (ትግርኛ)</option>
+                                        <option value="French">French (Français)</option>
+                                    </select>
+                                </div>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Time Zone</label>
+                                    <select style={styles.select} value={timeZone} onChange={e => setTimeZone(e.target.value)}>
+                                        <option value="UTC+3 (East Africa Time)">UTC+3 (East Africa Time - Addis Ababa)</option>
+                                        <option value="UTC+0 (Greenwich Mean Time)">UTC+0 (Greenwich Mean Time)</option>
+                                        <option value="UTC-5 (Eastern Standard Time)">UTC-5 (Eastern Standard Time)</option>
+                                        <option value="UTC+1 (Central European Time)">UTC+1 (Central European Time)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', margin: '16px 0 8px' }}>Appearance Theme Mode</h3>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, flexWrap: 'wrap', gap: '12px' }}>
+                                <div>
+                                    <span style={{ fontSize: '14px', fontWeight: '700', color: colors.text, display: 'block' }}>Current Theme Mode</span>
+                                    <span style={{ fontSize: '12px', color: colors.textMuted }}>Toggle between high contrast dark mode and clean light layout</span>
+                                </div>
+                                <button type="button" onClick={toggleTheme} style={{ ...styles.catalogBtn, display: 'flex', alignItems: 'center', gap: '6px' }} aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+                                    {theme === 'dark'
+                                        ? <><Sun size={15} aria-hidden="true" /> Switch to Light Mode</>
+                                        : <><Moon size={15} aria-hidden="true" /> Switch to Dark Mode</>
+                                    }
+                                </button>
+                            </div>
+
+                            <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', margin: '16px 0 8px' }}>Learning Preferences</h3>
                             <div style={styles.formGroup}>
                                 <label style={styles.label}>Weekly Study Target (hours)</label>
                                 <input type="number" min="0" max="80" style={{ ...styles.input, maxWidth: '200px' }} value={studyTargetHours || ''} onChange={e => setStudyTargetHours(Number(e.target.value) || 0)} />

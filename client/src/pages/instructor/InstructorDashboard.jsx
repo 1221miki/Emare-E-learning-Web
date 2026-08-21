@@ -1346,7 +1346,11 @@ export default function InstructorDashboard() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><LayoutDashboard size={24} aria-hidden="true" /><h1 style={s.greeting}>Instructor Workspace</h1></div>
                         <p style={s.subGreeting}>Empower learners through quality content</p>
                     </div>
-                    <div style={s.avatar}>{user?.fullName?.[0]?.toUpperCase()}</div>
+                    {user?.avatarUrl ? (
+                        <img src={user.avatarUrl} alt={user?.fullName} style={{ ...s.avatar, objectFit: 'cover' }} />
+                    ) : (
+                        <div style={s.avatar}>{user?.fullName?.[0]?.toUpperCase()}</div>
+                    )}
                 </header>
 
                 {activeTab === 'overview' && renderOverview()}

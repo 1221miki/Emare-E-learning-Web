@@ -303,7 +303,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
                     : `SMTP (attempt ${attempt}): ${error.message}`);
                 console.error(`SMTP Email API Error (attempt ${attempt}/${attempts}):`, error.message || error);
                 if (!isDailyLimit && attempt < attempts) {
-                    await new Promise((resolve) => setTimeout(resolve, 5000));
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
                 }
             }
         }

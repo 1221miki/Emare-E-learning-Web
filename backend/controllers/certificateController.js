@@ -37,11 +37,19 @@ function publicCertPayload(cert) {
 }
 
 /**
- * Backend base URL derived from the issuing request.
- * Guarantees the certificate's QR verify URL points at THIS backend
- * (same host → same database → the URL always resolves to a valid page).
+ * Backend base URL for QR / verification links.
+ *
+ * Priority:
+ *  1. APP_BASE_URL env var — set this to your LAN IP or public domain.
+ *     Local dev example:  APP_BASE_URL=http://10.18.56.22:5000
+ *     Production example: APP_BASE_URL=https://asamenew.onrender.com
+ *  2. The request host (req.protocol + req.get('host')) — ONLY used when
+ *     APP_BASE_URL is not set. On localhost this yields http://127.0.0.1:5000
+ *     which is unreachable from phones/external devices, so always prefer the
+ *     env var in any environment where the server isn't the only client.
  */
-const reqBaseUrl = (req) => `${req.protocol}://${req.get('host')}`;
+const reqBaseUrl = (req) =>
+    (process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
 
 // ── GET /certificates/check/:courseId  (protected) ───────────────────────────
 exports.checkEligibility = async (req, res) => {
@@ -520,6 +528,16 @@ exports.verifyPage = async (req, res) => {
 
     const isValid = cert && (cert.status === 'Issued' || cert.status === 'Reissued');
     const d = cert ? publicCertPayload(cert) : null;
+
+    // Silently fix any stale 127.0.0.1 / localhost qrCodeData stored in the DB
+    // so the next PDF download will embed the correct accessible URL.
+    if (cert) {
+        const correctBase = (process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
+        const correctUrl  = `${correctBase}/api/certificates/verify-page/${certificateId}`;
+        if (cert.qrCodeData !== correctUrl) {
+            Certificate.findByIdAndUpdate(cert._id, { qrCodeData: correctUrl }).catch(() => {});
+        }
+    }
 
     const fmtDate = (dt) => dt ? new Date(dt).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) : '';
 

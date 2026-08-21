@@ -6,6 +6,7 @@ import {
     ChevronDown, ChevronUp, Upload, FileText
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { userService, uploadService } from '../../services/api';
 
 // ── Reusable Toggle switch ───────────────────────────────────────
@@ -64,7 +65,7 @@ function Section({ title, icon, children, collapsible }) {
 // ════════════════════════════════════════════════════════════════
 // TAB 1 — Profile Info
 // ════════════════════════════════════════════════════════════════
-function ProfileTab({ user, onSaved }) {
+function ProfileTab({ user, onSaved, updateUser }) {
     const fileRef = useRef(null);
     const cvRef   = useRef(null);
 
@@ -99,7 +100,13 @@ function ProfileTab({ user, onSaved }) {
             fd.append('file', file);
             fd.append('targetType', 'avatar');
             const res = await uploadService.uploadFile(fd);
-            if (res.data?.success) { setAvatar(res.data.data.url); }
+            if (res.data?.success) {
+                const newUrl = res.data.data.url;
+                setAvatar(newUrl);
+                // Propagate to AuthContext immediately so Sidebar and all other
+                // avatar locations re-render without waiting for handleSave.
+                updateUser?.({ avatarUrl: newUrl });
+            }
         } catch { /* ignore */ } finally { setUploading(false); }
     };
 
@@ -124,6 +131,9 @@ function ProfileTab({ user, onSaved }) {
                 qualifications: specs,
                 socialMediaLinks: { linkedin: form.linkedin, website: form.website },
             });
+            // Propagate all changed fields (name, bio, avatarUrl, etc.) to
+            // AuthContext so every avatar/name display updates immediately.
+            updateUser?.({ ...form, avatarUrl: avatar });
             setMsg('Profile saved successfully!');
             onSaved && onSaved();
         } catch (e) {
@@ -666,6 +676,7 @@ const TABS = [
 
 export default function InstructorSettings({ user }) {
     const { colors, theme } = useTheme();
+    const { updateUser } = useAuth();
     const [activeTab, setActiveTab] = useState('profile');
 
     // ── Dynamic design tokens based on theme ────
@@ -721,7 +732,7 @@ export default function InstructorSettings({ user }) {
             </div>
 
             {/* Tab content */}
-            {activeTab === 'profile'       && <ProfileTab       user={user} />}
+            {activeTab === 'profile'       && <ProfileTab       user={user} updateUser={updateUser} />}
             {activeTab === 'security'      && <SecurityTab      user={user} />}
             {activeTab === 'preferences'   && <PreferencesTab   user={user} />}
             {activeTab === 'notifications' && <NotificationsTab />}

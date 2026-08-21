@@ -89,19 +89,23 @@ const allowedOrigins = [
     'http://127.0.0.1:5173',
     'http://127.0.0.1:5176',
     'http://127.0.0.1:5177',
+    // LAN — phone/tablet on same Wi-Fi or Ethernet (update to match your ipconfig IPv4)
     'http://10.18.56.22:5173',
     'http://10.18.56.22:5000',
+    'http://10.18.56.112:5173',
+    'http://10.18.56.112:5000',
     'http://192.168.137.1:5173',
     'http://192.168.137.1:5000'
 ];
 
 // Helper to match dynamic origins (Netlify preview deploys, localhost, LAN IPs)
 const isAllowedOrigin = (origin) =>
-    !origin ||                                                   // Server-to-server / curl, no Origin header
+    !origin ||                                                        // server-to-server / curl
     allowedOrigins.includes(origin) ||
-    origin.endsWith('.netlify.app') ||                           // All Netlify deploys & previews
-    origin.endsWith('.onrender.com') ||                          // All Render previews
-    /^http:\/\/(localhost|127\.0\.0\.1|10\.|192\.168\.)(:\d+)?$/.test(origin);
+    origin.endsWith('.netlify.app') ||                                // Netlify deploys & previews
+    origin.endsWith('.onrender.com') ||                               // Render previews
+    /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||     // localhost any port
+    /^http:\/\/(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(origin); // any RFC-1918 LAN IP
 
 app.use(cors({
     origin: (origin, callback) => {
@@ -319,10 +323,13 @@ app.use(errorHandler);
 
 // ── Start Server ───────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-// Bind to IPv6 dual-stack ('::') so BOTH IPv6 (::1) and IPv4 (127.0.0.1) clients connect.
-// Fixes "connection refused" when a client resolves localhost to ::1 while the server
-// only listened on 0.0.0.0 (IPv4) — which surfaced as an unreadable 500 in the React app.
-app.listen(PORT, '::', () => {
+// Listen on 0.0.0.0 so the server accepts connections on ALL network interfaces:
+//   - localhost / 127.0.0.1  (same machine, browser)
+//   - LAN IP (e.g. 10.18.56.112)  — phones on the same Wi-Fi / Ethernet
+//   - Production: Render / cloud assigns 0.0.0.0 automatically
+// Previously '::'  (IPv6 dual-stack) worked for localhost but caused
+// "connection refused" from some phones/routers that don't forward IPv6.
+app.listen(PORT, '0.0.0.0', () => {
     const ENV = (process.env.NODE_ENV || 'development').toUpperCase();
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗

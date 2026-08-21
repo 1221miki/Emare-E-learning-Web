@@ -11,9 +11,7 @@ export default function Navbar() {
     const [currentLang, setCurrentLang] = useState('en');
     const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
     const dropdownRef = useRef(null);
-    const avatarMenuRef = useRef(null);
 
     const languages = [
         { code: 'en', name: 'English' },
@@ -28,9 +26,6 @@ export default function Navbar() {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setIsLangDropdownOpen(false);
-            }
-            if (avatarMenuRef.current && !avatarMenuRef.current.contains(event.target)) {
-                setIsAvatarMenuOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -122,12 +117,9 @@ export default function Navbar() {
         langOption: { padding: '12px 16px', fontSize: '14px', color: colors.text, cursor: 'pointer', borderBottom: `1px solid ${colors.border}`, background: 'transparent', textAlign: 'left', borderLeft: 'none', borderRight: 'none', borderTop: 'none', display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s' },
         langOptionLast: { borderBottom: 'none' },
         checkMark: { width: '16px', fontWeight: '800', color: colors.primary },
-        avatarContainer: { position: 'relative', cursor: 'pointer' },
-        avatarBtn: { width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', border: `2px solid ${colors.border}`, background: colors.bgInput, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, transition: 'border-color 0.2s' },
+        avatarBtn: { width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', border: `2px solid ${colors.border}`, background: colors.bgInput, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flexShrink: 0, transition: 'border-color 0.2s' },
         avatarImg: { width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' },
-        avatarInitial: { fontSize: '15px', fontWeight: '700', color: colors.text, userSelect: 'none' },
-        avatarMenu: { position: 'absolute', top: 'calc(100% + 8px)', right: 0, minWidth: '200px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '14px', boxShadow: '0 12px 36px rgba(0,0,0,0.18)', overflow: 'hidden', zIndex: 1100 },
-        avatarMenuItem: { display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 18px', fontSize: '14px', fontWeight: '500', color: colors.text, cursor: 'pointer', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', textDecoration: 'none', transition: 'background 0.15s' }
+        avatarInitial: { fontSize: '15px', fontWeight: '700', color: colors.text, userSelect: 'none' }
     };
 
     return (
@@ -184,51 +176,20 @@ export default function Navbar() {
                     </button>
                     
                     {isAuthenticated ? (
-                        <div style={s.avatarContainer} ref={avatarMenuRef}>
-                            <button
-                                onClick={() => setIsAvatarMenuOpen(!isAvatarMenuOpen)}
-                                style={s.avatarBtn}
-                                title={user?.fullName || 'Account'}
-                                onMouseEnter={e => e.currentTarget.style.borderColor = colors.primary}
-                                onMouseLeave={e => e.currentTarget.style.borderColor = colors.border}
-                            >
-                                {user?.avatarUrl ? (
-                                    <img src={user.avatarUrl} alt={user?.fullName} style={s.avatarImg} />
-                                ) : (
-                                    <span style={s.avatarInitial}>{user?.fullName?.[0]?.toUpperCase() || 'U'}</span>
-                                )}
-                            </button>
-                            {isAvatarMenuOpen && (
-                                <div style={s.avatarMenu}>
-                                    <Link
-                                        to={handleProfileRedirect()}
-                                        style={s.avatarMenuItem}
-                                        onClick={() => setIsAvatarMenuOpen(false)}
-                                        onMouseEnter={e => e.currentTarget.style.background = `${colors.primary}12`}
-                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                    >
-                                        👤 Profile Settings
-                                    </Link>
-                                    <Link
-                                        to={handleDashboardRedirect()}
-                                        style={s.avatarMenuItem}
-                                        onClick={() => setIsAvatarMenuOpen(false)}
-                                        onMouseEnter={e => e.currentTarget.style.background = `${colors.primary}12`}
-                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                    >
-                                        📊 Dashboard
-                                    </Link>
-                                    <button
-                                        onClick={() => { setIsAvatarMenuOpen(false); handleLogout(); }}
-                                        style={{ ...s.avatarMenuItem, color: colors.danger, borderTop: `1px solid ${colors.border}` }}
-                                        onMouseEnter={e => e.currentTarget.style.background = `${colors.danger}12`}
-                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                    >
-                                        🚪 Sign Out
-                                    </button>
-                                </div>
+                        <button
+                            onClick={() => navigate(handleProfileRedirect())}
+                            style={s.avatarBtn}
+                            title={user?.fullName ? `${user.fullName} — Profile Settings` : 'Profile Settings'}
+                            aria-label="Go to Profile Settings"
+                            onMouseEnter={e => e.currentTarget.style.borderColor = colors.primary}
+                            onMouseLeave={e => e.currentTarget.style.borderColor = colors.border}
+                        >
+                            {user?.avatarUrl ? (
+                                <img src={user.avatarUrl} alt={user?.fullName} style={s.avatarImg} />
+                            ) : (
+                                <span style={s.avatarInitial}>{user?.fullName?.[0]?.toUpperCase() || 'U'}</span>
                             )}
-                        </div>
+                        </button>
                     ) : (
                         <>
                             <Link to="/login" style={s.loginBtn}>Login</Link>

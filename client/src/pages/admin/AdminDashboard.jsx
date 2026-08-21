@@ -365,6 +365,8 @@ export default function AdminDashboard() {
     const [createVerifyResending, setCreateVerifyResending] = useState(false);
     const [createVerifyCooldown, setCreateVerifyCooldown] = useState(0);
     const [isUploadingCreateFile, setIsUploadingCreateFile] = useState(false);
+    const [isCreatingUser, setIsCreatingUser] = useState(false);
+    const [createSubmitError, setCreateSubmitError] = useState('');
     const [editForm, setEditForm] = useState({ fullName: '', accountEmail: '' });
     const [showCreatePassword, setShowCreatePassword] = useState(false);
     const [showCreateConfirmPassword, setShowCreateConfirmPassword] = useState(false);
@@ -1000,10 +1002,12 @@ const handleConnectGoogleMeet = async () => {
 
     const handleCreateUser = async (e) => {
         e.preventDefault();
+        setCreateSubmitError('');
         if (createForm.securedPassword !== createForm.confirmPassword) {
-            alert('Passwords do not match.');
+            setCreateSubmitError('Passwords do not match.');
             return;
         }
+        setIsCreatingUser(true);
         try {
             const payload = {
                 fullName: createForm.fullName.trim(),
@@ -1048,6 +1052,7 @@ const handleConnectGoogleMeet = async () => {
                     setCreateVerifyError(response.data.verificationSent === false
                         ? (response.data.deliveryError || 'The verification email could not be delivered to the inbox. Check the email service and use "Resend Code" once the cooldown ends.')
                         : '');
+                    setIsCreateModalOpen(false);
                     setCreateVerifyStep(true);
                     // Lock the "Resend Code" button so the admin cannot spam it —
                     // longer cooldown when the server reports a daily quota / rate limit.
@@ -1059,6 +1064,7 @@ const handleConnectGoogleMeet = async () => {
                     setIsCreateModalOpen(false);
                     setCreateFormStep(1);
                     setCreateStepError('');
+                    setCreateSubmitError('');
                     setCreateForm({
                         fullName: '', accountEmail: '', securedPassword: '', confirmPassword: '', assignedRole: 'Instructor', contactPhone: '', isActive: true, requirePasswordChange: true, sendWelcomeEmail: true,
                         username: '', gender: '', dateOfBirth: '', avatarUrl: '',
@@ -1073,7 +1079,10 @@ const handleConnectGoogleMeet = async () => {
                 }
             }
         } catch (err) {
-            alert(err.response?.data?.message || 'Failed to create user account.');
+            const msg = err?.response?.data?.message || 'Failed to create user account. Please check your input and try again.';
+            setCreateSubmitError(msg);
+        } finally {
+            setIsCreatingUser(false);
         }
     };
 
@@ -5778,7 +5787,7 @@ const resetCalendarForm = () => {
                 )}
             </Modal>
 
-            <Modal isOpen={isCreateModalOpen} onClose={() => { setIsCreateModalOpen(false); setCreateFormStep(1); setCreateStepError(''); setCreateVerifyStep(false); }} title={`Create New ${createForm.assignedRole} Account`} maxWidth="720px">
+            <Modal isOpen={isCreateModalOpen} onClose={() => { setIsCreateModalOpen(false); setCreateFormStep(1); setCreateStepError(''); setCreateSubmitError(''); setCreateVerifyStep(false); }} title={`Create New ${createForm.assignedRole} Account`} maxWidth="720px">
                 <form onSubmit={handleCreateUser} style={{display:'flex', flexDirection:'column', gap:'0'}}>
                     {/* Step indicators */}
                     <div style={{ display: 'flex', gap: '4px', marginBottom: '20px' }}>
@@ -6062,15 +6071,15 @@ const resetCalendarForm = () => {
 
                     {/* Navigation buttons */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px', borderTop: `1px solid ${colors.border}`, paddingTop: '16px' }}>
-                        {/* Step validation error */}
-                        {createStepError && (
+                        {/* Step validation / submit error */}
+                        {(createStepError || createSubmitError) && (
                             <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '10px 14px', color: '#fca5a5', fontSize: '13px', fontWeight: '600' }}>
-                                ─s─ {createStepError}
+                                ⚠️ {createSubmitError || createStepError}
                             </div>
                         )}
                         <div style={{ display: 'flex', gap: '12px' }}>
                             {createFormStep > 1 && (
-                                <button type="button" onClick={() => { setCreateFormStep(createFormStep - 1); setCreateStepError(''); }} style={{...s.secondaryBtn, flex: 1}}>─+? Back</button>
+                                <button type="button" onClick={() => { setCreateFormStep(createFormStep - 1); setCreateStepError(''); setCreateSubmitError(''); }} style={{...s.secondaryBtn, flex: 1}}>─+? Back</button>
                             )}
                             {createFormStep < 3 && (
                                 <button type="button" onClick={() => {
@@ -6108,9 +6117,29 @@ const resetCalendarForm = () => {
                                 }} style={{...s.primaryBtn, flex: 1}}>Next ─+'</button>
                             )}
                             {createFormStep === 3 && (
-                                <button type="submit" style={{...s.primaryBtn, flex: 1}} disabled={isUploadingCreateFile}>{isUploadingCreateFile ? 'Uploading...' : 'Create Account'}</button>
+                                <button
+                                    type="submit"
+                                    style={{
+                                        ...s.primaryBtn,
+                                        flex: 1,
+                                        opacity: (isUploadingCreateFile || isCreatingUser) ? 0.7 : 1,
+                                        cursor: (isUploadingCreateFile || isCreatingUser) ? 'not-allowed' : 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                                    }}
+                                    disabled={isUploadingCreateFile || isCreatingUser}
+                                >
+                                    {isCreatingUser && (
+                                        <span style={{
+                                            display: 'inline-block', width: 14, height: 14,
+                                            border: '2px solid rgba(255,255,255,0.4)',
+                                            borderTopColor: '#fff', borderRadius: '50%',
+                                            animation: 'spin 0.7s linear infinite'
+                                        }} />
+                                    )}
+                                    {isUploadingCreateFile ? 'Uploading...' : isCreatingUser ? 'Creating Account...' : 'Create Account'}
+                                </button>
                             )}
-                            <button type="button" onClick={() => { setIsCreateModalOpen(false); setCreateFormStep(1); setCreateStepError(''); setCreateVerifyStep(false); }} style={{...s.secondaryBtn, flex: 1}}>Cancel</button>
+                            <button type="button" onClick={() => { setIsCreateModalOpen(false); setCreateFormStep(1); setCreateStepError(''); setCreateSubmitError(''); setCreateVerifyStep(false); }} style={{...s.secondaryBtn, flex: 1}}>Cancel</button>
                         </div>
                     </div>
                 </form>

@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useNavigate } from 'react-router-dom';
 import { userService, uploadService } from '../../services/api';
 import Sidebar from '../../components/Sidebar';
 
 export default function ProfilePage() {
     const { user, updateUser } = useAuth();
     const { colors } = useTheme();
+    const navigate = useNavigate();
     const [profile, setProfile] = useState(null);
     const [uploading, setUploading] = useState(false);
     const [avatarError, setAvatarError] = useState(false);
@@ -92,7 +94,7 @@ export default function ProfilePage() {
                                     @{profile?.username || user.username || user.accountEmail?.split('@')[0]}
                                 </span>
                             </div>
-                            <button onClick={() => window.location.href = '/student/dashboard'} style={{ background: `${colors.primary}15`, border: `1px solid ${colors.primary}30`, color: colors.primary, padding: '8px 16px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
+                            <button onClick={() => navigate('/student/dashboard?tab=settings')} style={{ background: `${colors.primary}15`, border: `1px solid ${colors.primary}30`, color: colors.primary, padding: '8px 16px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
                                 ◈️ Edit Profile Settings
                             </button>
                         </div>

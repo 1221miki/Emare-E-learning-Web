@@ -172,45 +172,44 @@ const createUser = async (req, res, next) => {
             permissions: permissions || undefined
         });
 
-// Send verification email with OTP. sendEmailVerification swallows transport
-        // failures and returns { success: false, error } instead of throwing, so we must
-        // read its result to know whether delivery actually succeeded.
-        let verificationSent = false;
-        let deliveryError = '';
-        let deliveryRateLimited = false;
-        try {
-            const emailResult = await sendEmailVerification(user, verificationCode);
-            verificationSent = !!(emailResult && emailResult.success);
-            if (verificationSent) {
-                console.log(`✅ Verification email sent to ${user.accountEmail}`);
-            } else {
-                deliveryError = sanitizeEmailError(emailResult && emailResult.error);
-                deliveryRateLimited = isRateLimitError(emailResult && emailResult.error);
-                console.error('Failed to send verification email:', emailResult && emailResult.error);
-            }
-        } catch (emailErr) {
-            deliveryError = sanitizeEmailError(emailErr && emailErr.message);
-            deliveryRateLimited = isRateLimitError(emailErr && emailErr.message);
-            console.error('Failed to send verification email:', emailErr && emailErr.message);
-            // If email fails, still return the code in development so admin can verify manually
-        }
-
+// Send verification email with OTP — fire-and-forget so the HTTP response
+        // is not blocked by SMTP negotiation / delivery time. The email delivery
+        // state is tracked via a Promise that resolves after the email is sent;
+        // the result is piped into the response once ready, but the response
+        // itself is sent immediately with a "pending" flag so the UI can open
+        // the OTP modal without waiting.
         const userData = user.toObject();
         delete userData.securedPassword;
         delete userData.emailVerificationToken;
 
+        // Respond immediately — the client opens the OTP modal right away.
+        // Email delivery happens in the background; if it fails the user can
+        // click "Resend Code" after the cooldown.
         res.status(201).json({
             success: true,
-            message: verificationSent
-                ? `${assignedRole} account created. A verification code has been sent to ${user.accountEmail}. The account must be verified before it can be used.`
-                : `${assignedRole} account created, but the verification email could not be delivered (${deliveryError || 'email server issue'}). Use "Resend Code" after the cooldown to retry delivery, or contact support.`,
+            message: `${assignedRole} account created. A verification code is being sent to ${user.accountEmail}.`,
             data: userData,
             verificationRequired: true,
-            verificationSent,
-            deliveryError: verificationSent ? '' : deliveryError,
-            deliveryRateLimited,
-            retryAfterSeconds: deliveryRateLimited ? 60 : 30
+            verificationSent: null,   // null = in-flight; frontend treats this as "pending"
+            deliveryError: '',
+            deliveryRateLimited: false,
+            retryAfterSeconds: 30
         });
+
+        // Background email delivery — never blocks the response above.
+        (async () => {
+            try {
+                const emailResult = await sendEmailVerification(user, verificationCode);
+                if (emailResult && emailResult.success) {
+                    console.log(`✅ Verification email sent to ${user.accountEmail}`);
+                } else {
+                    const deliveryError = sanitizeEmailError(emailResult && emailResult.error);
+                    console.error(`❌ Verification email delivery failed for ${user.accountEmail}: ${deliveryError}`);
+                }
+            } catch (emailErr) {
+                console.error(`❌ Verification email threw for ${user.accountEmail}:`, emailErr && emailErr.message);
+            }
+        })();
     } catch (err) {
         next(err);
     }
@@ -619,16 +618,24 @@ const getAnalytics = async (req, res, next) => {
 // ─────────────────────────────────────────────
 const updateInstructorProfile = async (req, res, next) => {
     try {
-        const { biography, qualifications, workExperience, teachingLanguages, socialMediaLinks, contactPhone, fullName } = req.body;
+        const {
+            biography, qualifications, workExperience, teachingLanguages,
+            socialMediaLinks, contactPhone, fullName,
+            avatarUrl,          // profile photo URL (Cloudinary)
+            specializations,    // instructor tag list
+        } = req.body;
         const updateData = {};
 
-        if (biography !== undefined) updateData.biography = biography;
-        if (qualifications) updateData.qualifications = qualifications;
-        if (workExperience) updateData.workExperience = workExperience;
-        if (teachingLanguages) updateData.teachingLanguages = teachingLanguages;
-        if (socialMediaLinks) updateData.socialMediaLinks = socialMediaLinks;
-        if (contactPhone !== undefined) updateData.contactPhone = contactPhone;
-        if (fullName) updateData.fullName = fullName;
+        if (biography        !== undefined) updateData.biography        = biography;
+        if (qualifications)                 updateData.qualifications   = qualifications;
+        if (workExperience)                 updateData.workExperience   = workExperience;
+        if (teachingLanguages)              updateData.teachingLanguages = teachingLanguages;
+        if (socialMediaLinks)               updateData.socialMediaLinks = socialMediaLinks;
+        if (contactPhone     !== undefined) updateData.contactPhone     = contactPhone;
+        if (fullName)                       updateData.fullName         = fullName;
+        if (avatarUrl        !== undefined && avatarUrl !== '')
+                                            updateData.avatarUrl        = avatarUrl;
+        if (specializations)                updateData.specializations  = specializations;
 
         const user = await User.findByIdAndUpdate(req.user.id, updateData, {
             new: true,

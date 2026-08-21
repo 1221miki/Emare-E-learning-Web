@@ -40,7 +40,7 @@ function Toast({ message, type }) {
 
 export default function InstructorSettings() {
     const { colors, theme, setTheme } = useTheme();
-    const { user, login } = useAuth();
+    const { user, updateUser } = useAuth();
     const [active, setActive] = useState('profile');
     const [toast, setToast] = useState({ message: '', type: 'success' });
     const [saving, setSaving] = useState(false);
@@ -65,7 +65,7 @@ export default function InstructorSettings() {
         language: user?.preferredLanguage || 'English',
         timeZone: 'Africa/Addis_Ababa',
         gradingSystem: 'Percentage',
-        avatarUrl: user?.profilePicture || '',
+        avatarUrl: user?.avatarUrl || '',
     });
     const updateProfile = (f, v) => setProfile(p => ({ ...p, [f]: v }));
 
@@ -100,8 +100,11 @@ export default function InstructorSettings() {
             fd.append('file', file);
             const { data } = await uploadService.uploadFile(fd);
             const url = data.url || data.fileUrl || data.data?.url;
-            await userService.updateProfile({ profilePicture: url });
+            await userService.updateProfile({ avatarUrl: url });
             updateProfile('avatarUrl', url);
+            // Propagate to AuthContext so Sidebar and all other avatar
+            // locations re-render immediately without a page reload.
+            updateUser({ avatarUrl: url });
             showToast('Profile photo updated!');
         } catch {
             showToast('Photo upload failed.', 'error');

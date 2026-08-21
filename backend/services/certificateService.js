@@ -89,13 +89,24 @@ function diamond(doc, cx, cy, size, color) {
        .restore();
 }
 
-/** Return QR code as a Buffer (PNG) */
+/**
+ * Return QR code as a PNG Buffer.
+ *
+ * Settings chosen for reliable phone-camera decoding:
+ *   - width  : 300 px — large enough for any phone camera at arm's length
+ *   - margin : 2     — quiet zone required by QR spec for decoders
+ *   - errorCorrectionLevel: 'M' — 15 % redundancy, good balance of size vs safety
+ *   - color  : black on white — maximum contrast; coloured QRs fail more often
+ *   - type   : 'png' + toBuffer() — avoids base64 round-trip, keeps PNG intact
+ */
 async function qrBuffer(url) {
-    const dataUrl = await qrcode.toDataURL(url, {
-        width: 120, margin: 1,
-        color: { dark: C.navy, light: C.white }
+    return qrcode.toBuffer(url, {
+        width: 300,
+        margin: 2,
+        type: 'png',
+        errorCorrectionLevel: 'M',
+        color: { dark: '#000000', light: '#ffffff' }
     });
-    return Buffer.from(dataUrl.replace(/^data:image\/png;base64,/, ''), 'base64');
 }
 
 // ── Main PDF generator ────────────────────────────────────────────────────────
@@ -133,15 +144,23 @@ async function generateCertificatePdf({
     const filename = `${certificateId}.pdf`;
     const filePath = path.join(certsDir, filename);
 
-    // ── Verification URL (PERMANENT fix) ──────────────────────────────────────
-    // The QR points at THIS backend's own self-contained verify page
-    // (/api/certificates/verify-page/:id), using the exact host the certificate
-    // was issued from (req host). That host always serves the route and queries
-    // the SAME database the certificate lives in, so scanning NEVER lands on a
-    // "not found" page — regardless of FRONTEND_URL / APP_BASE_URL env settings.
-    const backendBase = (verificationBaseUrl || process.env.APP_BASE_URL || 'http://localhost:5000')
-        .replace(/\/+$/, '');
-    const verifyUrl    = `${backendBase}/api/certificates/verify-page/${certificateId}`;
+    // ── Verification URL ───────────────────────────────────────────────────────
+    // Priority order for the QR base URL:
+    //   1. APP_BASE_URL env var  — set this to your LAN IP or public domain so
+    //      phones on the same network (or internet) can reach the verify page.
+    //      e.g. APP_BASE_URL=http://10.18.56.22:5000   (local network)
+    //           APP_BASE_URL=https://asamenew.onrender.com  (production)
+    //   2. verificationBaseUrl   — the host extracted from the HTTP request.
+    //      NEVER use this as the primary source: when the server runs on
+    //      localhost, req.get('host') resolves to 127.0.0.1 which is
+    //      unreachable from any other device (phone, tablet, remote user).
+    //   3. Hard-coded fallback   — http://localhost:5000 (dev only, LAN-broken).
+    const backendBase = (
+        process.env.APP_BASE_URL ||
+        verificationBaseUrl      ||
+        'http://localhost:5000'
+    ).replace(/\/+$/, '');
+    const verifyUrl = `${backendBase}/api/certificates/verify-page/${certificateId}`;
 
     // ── Date strings ──────────────────────────────────────────────────────────
     const issueDateStr = new Date(issueDate || Date.now()).toLocaleDateString('en-US', {
@@ -453,7 +472,7 @@ async function generateCertificatePdf({
             // ── Column 3: QR code ─────────────────────────────────────────
             try {
                 const qrBuf = await qrBuffer(verifyUrl);
-                const QR_SIZE = 72;
+                const QR_SIZE = 90;   // 90 pt ≈ 32 mm — readable by any phone camera
                 doc.image(qrBuf, COL3, INFO_Y - 4, { width: QR_SIZE, height: QR_SIZE });
 
                 doc.save()

@@ -54,7 +54,7 @@ import MessagesTab from '../../components/dashboard/tabs/MessagesTab';
 import PaymentsTab from '../../components/dashboard/tabs/PaymentsTab';
 import SettingsTab from '../../components/dashboard/tabs/SettingsTab';
 export default function StudentDashboard() {
-    const { user, logout } = useAuth();
+    const { user, logout, updateUser } = useAuth();
     const { theme, toggleTheme, colors } = useTheme();
     const navigate = useNavigate();
     
@@ -178,7 +178,7 @@ export default function StudentDashboard() {
 
     const [profileSuccessMsg, setProfileSuccessMsg] = useState('');
     const [avatarUploading, setAvatarUploading] = useState(false);
-    const [settingsSectionTab, setSettingsSectionTab] = useState('personal'); // personal | account | security | preferences
+    const [settingsSectionTab, setSettingsSectionTab] = useState('personal'); // personal | security | preferences
 
     // Personalization States
     const [hiddenWidgets, setHiddenWidgets] = useState(() => {
@@ -391,12 +391,16 @@ export default function StudentDashboard() {
         setAvatarUploading(true);
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('targetType', 'avatar');
 
         try {
             const res = await uploadService.uploadFile(formData);
             const uploadedUrl = res.data.data.url;
             setAvatarUrl(uploadedUrl);
             await userService.updateProfile({ avatarUrl: uploadedUrl });
+            // Propagate new avatar to AuthContext so Sidebar and all other
+            // components reading user.avatarUrl re-render immediately.
+            updateUser({ avatarUrl: uploadedUrl });
             setProfileSuccessMsg('Profile picture updated successfully!');
         } catch (err) {
             alert('Failed to upload image: ' + (err.response?.data?.message || err.message));
@@ -454,11 +458,10 @@ export default function StudentDashboard() {
             setNewPassword('');
             setConfirmPassword('');
 
-            // Synchronize Local Storage User
-            const localUser = JSON.parse(localStorage.getItem('elms_user') || '{}');
+            // Propagate all updated fields (including avatarUrl, fullName, etc.) to
+            // AuthContext so every component re-renders without a page reload.
             const updatedData = res.data.data || payload;
-            Object.assign(localUser, updatedData);
-            localStorage.setItem('elms_user', JSON.stringify(localUser));
+            updateUser(updatedData);
         } catch (err) {
             alert(err?.response?.data?.message || 'Failed to save profile changes.');
         }
@@ -755,7 +758,11 @@ export default function StudentDashboard() {
                         <h1 style={styles.greeting}>Hello, {user?.fullName?.split(' ')[0]}</h1>
                         <p style={styles.subGreeting}>Empower your mind through Emare Digital Hub</p>
                     </div>
-                    <div style={styles.avatar}>{user?.fullName?.[0]?.toUpperCase() || 'S'}</div>
+                    {user?.avatarUrl ? (
+                        <img src={user.avatarUrl} alt={user?.fullName} style={{ ...styles.avatar, objectFit: 'cover' }} />
+                    ) : (
+                        <div style={styles.avatar}>{user?.fullName?.[0]?.toUpperCase() || 'S'}</div>
+                    )}
                 </header>
 
                 <div>
