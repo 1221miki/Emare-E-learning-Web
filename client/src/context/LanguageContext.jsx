@@ -1,27 +1,43 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import en from '../translations/en.json';
 import am from '../translations/am.json';
+import om from '../translations/om.json';
+import ti from '../translations/ti.json';
+
+const translations = { en, am, om, ti };
+
+// Maps the human-readable language names stored on the user profile
+// (backend `preferredLanguage` field) to i18n dictionary codes.
+export const LANGUAGE_CODES = {
+    English: 'en',
+    Amharic: 'am',
+    'Afaan Oromo': 'om',
+    Tigrinya: 'ti'
+};
+
+export const codeForLanguage = (name) => LANGUAGE_CODES[name] || 'en';
 
 const LanguageContext = createContext();
 
 export const LanguageProvider = ({ children }) => {
-    // Check local storage for saved language, default to 'en'
-    const [language, setLanguage] = useState(localStorage.getItem('elms_lang') || 'en');
+    // Restore the saved choice on reload; default to English
+    const [language, setLanguage] = useState(() => {
+        const saved = localStorage.getItem('elms_lang');
+        return saved && translations[saved] ? saved : 'en';
+    });
 
-    // Dictionary map
-    const translations = { en, am };
+    useEffect(() => {
+        localStorage.setItem('elms_lang', language);
+        document.documentElement.setAttribute('lang', language);
+    }, [language]);
 
-    // Function to change language
-    const changeLanguage = (lang) => {
-        setLanguage(lang);
-        localStorage.setItem('elms_lang', lang);
-    };
+    // Accepts either a dictionary code ('am') or a profile language name ('Amharic')
+    const changeLanguage = useCallback((lang) => {
+        setLanguage(translations[lang] ? lang : codeForLanguage(lang));
+    }, []);
 
-    // Helper function to get translated text by key
-    const t = (key) => {
-        // Fallback to English if key is missing in Amharic
-        return translations[language][key] || translations['en'][key] || key;
-    };
+    // Falls back to English, then to the raw key
+    const t = (key) => translations[language]?.[key] || translations.en[key] || key;
 
     return (
         <LanguageContext.Provider value={{ language, changeLanguage, t }}>

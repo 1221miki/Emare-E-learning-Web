@@ -25,6 +25,7 @@ import {
     paymentService
 } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import AiAssistant from '../../components/AiAssistant';
 import FeaturedCarousel from '../../components/dashboard/FeaturedCarousel';
 import MyCoursesHub from '../../components/dashboard/MyCoursesHub';
@@ -56,6 +57,7 @@ import SettingsTab from '../../components/dashboard/tabs/SettingsTab';
 export default function StudentDashboard() {
     const { user, logout, updateUser } = useAuth();
     const { theme, toggleTheme, colors } = useTheme();
+    const { changeLanguage, t } = useLanguage();
     const navigate = useNavigate();
     
     // Tab State
@@ -315,7 +317,11 @@ export default function StudentDashboard() {
                 if (u.socialMediaLinks?.website) setWebsite(u.socialMediaLinks.website);
                 if (u.socialMediaLinks?.linkedin) setLinkedInUrl(u.socialMediaLinks.linkedin);
                 if (typeof u.twoFactorEnabled === 'boolean') setTwoFactorEnabled(u.twoFactorEnabled);
-                if (u.preferredLanguage) setPrefLanguage(u.preferredLanguage);
+                if (u.preferredLanguage) {
+                    setPrefLanguage(u.preferredLanguage);
+                    // Keep the global i18n context in sync with the saved profile language
+                    changeLanguage(u.preferredLanguage);
+                }
                 if (u.timeZone) setTimeZone(u.timeZone);
                 if (u.notificationPreferences) setNotifPreferences(u.notificationPreferences);
                 if (typeof u.isPublicProfile === 'boolean') setIsPublicProfile(u.isPublicProfile);
@@ -370,7 +376,7 @@ export default function StudentDashboard() {
 
         fetchDashboardData();
         return () => { cancelled = true; };
-    }, [user]);
+    }, [user, changeLanguage]);
 
     const assignmentCount = assignmentsList.length;
     const quizCount = quizzesList.length;
@@ -723,19 +729,19 @@ export default function StudentDashboard() {
             {/* Sidebar Tab Navigation */}
             <Sidebar 
                 navItems={[
-                    { key: 'overview', label: 'Overview', icon: <LayoutDashboard size={18} aria-hidden="true" /> },
-                    { key: 'learning', label: 'My Learning', icon: <GraduationCap size={18} aria-hidden="true" /> },
-                    { key: 'assignments', label: 'Assignments', icon: <ClipboardList size={18} aria-hidden="true" />, badge: assignmentCount > 0 ? `${assignmentCount}` : null },
-                    { key: 'quizzes', label: 'Quizzes', icon: <BrainCircuit size={18} aria-hidden="true" />, badge: quizCount > 0 ? `${quizCount}` : null },
-                    { key: 'live', label: 'Live Sessions', icon: <Video size={18} aria-hidden="true" />, badge: liveSessionCount > 0 ? `${liveSessionCount}` : null },
-                    { key: 'discussions', label: 'Discussions', icon: <MessageSquare size={18} aria-hidden="true" /> },
-                    { key: 'leaderboard', label: 'Leaderboard', icon: <Trophy size={18} aria-hidden="true" /> },
+                    { key: 'overview', label: t('nav_overview'), icon: <LayoutDashboard size={18} aria-hidden="true" /> },
+                    { key: 'learning', label: t('nav_my_learning'), icon: <GraduationCap size={18} aria-hidden="true" /> },
+                    { key: 'assignments', label: t('nav_assignments'), icon: <ClipboardList size={18} aria-hidden="true" />, badge: assignmentCount > 0 ? `${assignmentCount}` : null },
+                    { key: 'quizzes', label: t('nav_quizzes'), icon: <BrainCircuit size={18} aria-hidden="true" />, badge: quizCount > 0 ? `${quizCount}` : null },
+                    { key: 'live', label: t('nav_live'), icon: <Video size={18} aria-hidden="true" />, badge: liveSessionCount > 0 ? `${liveSessionCount}` : null },
+                    { key: 'discussions', label: t('nav_discussions'), icon: <MessageSquare size={18} aria-hidden="true" /> },
+                    { key: 'leaderboard', label: t('nav_leaderboard'), icon: <Trophy size={18} aria-hidden="true" /> },
                     // ── Communication section ────────────────────────────────────────────
-                    { key: 'messages', label: 'Inbox', icon: <Mail size={18} aria-hidden="true" />, badge: unreadMessagesCount > 0 ? `${unreadMessagesCount}` : null },
+                    { key: 'messages', label: t('nav_inbox'), icon: <Mail size={18} aria-hidden="true" />, badge: unreadMessagesCount > 0 ? `${unreadMessagesCount}` : null },
                     // ────────────────────────────────────────────────────────────────────
-                    { key: 'certificates', label: 'Certificates', icon: <Award size={18} aria-hidden="true" /> },
-                    { key: 'payments', label: 'Payments', icon: <CreditCard size={18} aria-hidden="true" /> },
-                    { key: 'settings', label: 'Settings', icon: <Settings size={18} aria-hidden="true" /> }
+                    { key: 'certificates', label: t('nav_certificates'), icon: <Award size={18} aria-hidden="true" /> },
+                    { key: 'payments', label: t('nav_payments'), icon: <CreditCard size={18} aria-hidden="true" /> },
+                    { key: 'settings', label: t('nav_settings'), icon: <Settings size={18} aria-hidden="true" /> }
                 ]}
                 activeTab={activeTab}
                 onTabChange={(key) => {
@@ -745,7 +751,7 @@ export default function StudentDashboard() {
                     extraBottomButtons={
                     <button onClick={() => navigate('/courses')} style={styles.catalogBtn}>
                         <Library size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} aria-hidden="true" />
-                        Course Catalog
+                        {t('nav_course_catalog')}
                     </button>
                 }
             />
@@ -755,8 +761,8 @@ export default function StudentDashboard() {
                 {/* Header */}
                 <header style={styles.header}>
                     <div>
-                        <h1 style={styles.greeting}>Hello, {user?.fullName?.split(' ')[0]}</h1>
-                        <p style={styles.subGreeting}>Empower your mind through Emare Digital Hub</p>
+                        <h1 style={styles.greeting}>{t('header_hello')} {user?.fullName?.split(' ')[0]}</h1>
+                        <p style={styles.subGreeting}>{t('header_sub')}</p>
                     </div>
                     {user?.avatarUrl ? (
                         <img src={user.avatarUrl} alt={user?.fullName} style={{ ...styles.avatar, objectFit: 'cover' }} />
@@ -789,10 +795,10 @@ export default function StudentDashboard() {
                                 {/* Quick-navigation shortcuts to dedicated tabs */}
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginTop: 20 }}>
                                     {[
-                                        { label: '📋 Assignments', tab: 'assignments', desc: 'View & submit assignments' },
-                                        { label: '💳 Payments',    tab: 'payments',    desc: 'Payment history & invoices' },
-                                        { label: '🏆 Certificates',tab: 'certificates',desc: 'Your earned certificates' },
-                                        { label: '✉️ Messages',    tab: 'messages',    desc: 'Inbox & notifications' },
+                                        { label: `📋 ${t('sc_assignments')}`, tab: 'assignments', desc: t('sc_assignments_desc') },
+                                        { label: `💳 ${t('sc_payments')}`,    tab: 'payments',    desc: t('sc_payments_desc') },
+                                        { label: `🏆 ${t('sc_certificates')}`,tab: 'certificates',desc: t('sc_certificates_desc') },
+                                        { label: `✉️ ${t('sc_messages')}`,    tab: 'messages',    desc: t('sc_messages_desc') },
                                     ].map(({ label, tab, desc }) => (
                                         <button key={tab} onClick={() => setActiveTab(tab)} style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: 10, padding: '14px 16px', cursor: 'pointer', textAlign: 'left', color: colors.text }}>
                                             <div style={{ fontWeight: 700, fontSize: 14 }}>{label}</div>
