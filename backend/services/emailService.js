@@ -1,25 +1,62 @@
 const { Resend } = require('resend');
 const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 
 /**
  * Email Service - Handles all transactional emails
- * Transport chain (first available wins):
- *   1. Resend API (preferred for Render: HTTPS, no outbound SMTP restrictions)
- *   2. SMTP via Nodemailer (used when RESEND_API_KEY is not set; works on localhost)
- *   3. DEV MODE - log only (no real delivery)
+ *
+ * Provider selection via EMAIL_SERVICE (tried in order, all HTTPS-based and
+ * free of Gmail's 500/day quota):
+ *   resend    — production transactional API (recommended). Uses EMAIL_API_KEY
+ *               (legacy alias: RESEND_API_KEY). HTTPS — no SMTP daily quotas.
+ *   sendgrid  — SendGrid v3 REST API (free tier: 100 emails/day, no SMTP). Uses
+ *               SENDGRID_API_KEY + SENDGRID_FROM. No SDK required (HTTP fetch).
+ *   smtp      — Nodemailer SMTP (e.g. Gmail) for local development. Limited to
+ *               EMAIL_DAILY_LIMIT (default 450) to stay safely under Gmail's
+ *               500/day cap, with a minimum 1s gap between sends.
+ *   aws-ses / mailgun — selected but unsupported SDK present: warns and falls
+ *               back to SMTP so delivery never silently drops.
+ *
+ * If no provider is configured at all: DEV MODE — log only.
  */
 
-const resendConfigured = !!process.env.RESEND_API_KEY;
-const resend = resendConfigured ? new Resend(process.env.RESEND_API_KEY) : null;
+const emailService = (process.env.EMAIL_SERVICE || 'smtp').toLowerCase().trim();
 
-const smtpConfigured = !!(process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASSWORD);
-const smtpPort = Number(process.env.EMAIL_PORT) || 587;
+// ── Provider 1: Resend (production) ────────────────────────────────────────
+const resendApiKey = process.env.EMAIL_API_KEY || process.env.RESEND_API_KEY || '';
+const resendConfigured = emailService === 'resend' && !!resendApiKey;
+const resend = resendConfigured ? new Resend(resendApiKey) : null;
+const resendFrom = process.env.EMAIL_FROM || process.env.RESEND_FROM || 'Emare <onboarding@resend.dev>';
+
+// ── Provider 2: SendGrid v3 REST API (no SDK required) ─────────────────────
+const sendgridConfigured = emailService === 'sendgrid' && !!process.env.SENDGRID_API_KEY;
+const sendgridFrom = process.env.SENDGRID_FROM || process.env.EMAIL_FROM || process.env.SMTP_FROM || 'Emare <noreply@example.com>';
+
+// Unsupported SDKs requested — surface a warning so the operator switches to
+// resend/sendgrid/smtp or installs the required SDK.
+const unsupportedProvider = ['aws-ses', 'mailgun'].includes(emailService);
+if (unsupportedProvider) {
+    console.warn(`📧 EMAIL_SERVICE=${emailService} requires an SDK that is not installed. Falling back to SMTP.`);
+}
+
+// ── Provider 2: SMTP via Nodemailer (dev / fallback) ───────────────────────
+// Reads EMAIL_* vars with SMTP_* aliases so conventional production configs
+// (SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_FROM) work out of the box.
+const smtpHost = process.env.EMAIL_HOST || process.env.SMTP_HOST || '';
+const smtpUser = process.env.EMAIL_USER || process.env.SMTP_USER || '';
+const smtpPass = process.env.EMAIL_PASSWORD || process.env.SMTP_PASS || '';
+const smtpFrom = process.env.EMAIL_FROM || process.env.SMTP_FROM || smtpUser;
+const smtpConfigured = !!(smtpHost && smtpUser && smtpPass);
+const smtpPort = Number(process.env.EMAIL_PORT || process.env.SMTP_PORT) || 587;
 const smtpTransport = smtpConfigured
     ? nodemailer.createTransport({
-          host: process.env.EMAIL_HOST,
+          host: smtpHost,
           port: smtpPort,
           secure: smtpPort === 465,
-          auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASSWORD },
+          // Gmail requires STARTTLS on port 587 — force the upgrade so auth never
+          // silently fails over a plaintext connection.
+          requireTLS: true,
+          auth: { user: smtpUser, pass: smtpPass },
           connectionTimeout: 15000,
           socketTimeout: 20000,
           // family: 4 avoids ENETUNREACH / IPv6 resolution issues seen with some hosts.
@@ -27,10 +64,134 @@ const smtpTransport = smtpConfigured
       })
     : null;
 
-const emailConfigured = resendConfigured || smtpConfigured;
+const emailConfigured = resendConfigured || sendgridConfigured || smtpConfigured;
+
+// Reply-To address: replies from recipients go here (defaults to the sender so
+// providers that reject reply-less mail stay deliverable).
+const replyTo = process.env.EMAIL_REPLY_TO || process.env.SMTP_FROM || process.env.EMAIL_FROM || smtpUser || '';
+
+// ── Rate limiting ──────────────────────────────────────────────────────────
+// Guards the daily quota (critical for Gmail's 500/day free cap) and spaces
+// sends out so bursts never trip provider throttling.
+// Resend has no meaningful daily cap on paid plans and 3 000/month on free —
+// the in-process counter is still incremented for observability, but the limit
+// is set high enough (Infinity when EMAIL_SERVICE=resend) that it never blocks.
+let emailDailyCount = 0;
+let emailDailyDate = new Date().toDateString();
+let lastSendTimestamp = 0;
+
+const getDailyLimit = (provider) => {
+    // Explicit override wins so operators can tune per provider.
+    const override = Number(process.env.EMAIL_DAILY_LIMIT);
+    if (override) return override;
+    // Resend free tier: 3 000/month → no enforced daily cap in code.
+    // SendGrid free tier: 100/day.
+    // SMTP/Gmail: stay safely under the 500/day hard limit.
+    if (provider === 'resend') return Infinity;
+    if (provider === 'sendgrid') return 100;
+    return 450; // safe margin under Gmail's 500/day
+};
+
+const enforceRateLimit = async (provider) => {
+    const today = new Date().toDateString();
+    if (emailDailyDate !== today) {
+        emailDailyDate = today;
+        emailDailyCount = 0;
+    }
+    const limit = getDailyLimit(provider);
+    if (emailDailyCount >= limit) {
+        throw new Error(`EMAIL_DAILY_LIMIT:${limit}`);
+    }
+    const wait = lastSendTimestamp ? Math.max(0, 1000 - (Date.now() - lastSendTimestamp)) : 0;
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    emailDailyCount += 1;
+    lastSendTimestamp = Date.now();
+};
+
+/**
+ * Reset the in-process daily email counter.
+ * Useful in development when the server has NOT been restarted but the
+ * in-memory counter needs to be cleared (e.g. after hitting EMAIL_DAILY_LIMIT
+ * during testing). This has no effect on the upstream provider's own quota —
+ * if Gmail has blocked the account for the day, switch to Resend instead.
+ */
+const resetEmailDailyCounter = () => {
+    emailDailyCount = 0;
+    emailDailyDate = new Date().toDateString();
+    lastSendTimestamp = 0;
+    console.log('📧 Email daily counter reset. emailDailyCount = 0');
+};
+
+/**
+ * Return the current counter state (for diagnostics / admin endpoint).
+ */
+const getEmailCounterStatus = () => ({
+    provider: emailService,
+    emailDailyCount,
+    emailDailyDate,
+    limit: getDailyLimit(emailService),
+    resendConfigured,
+    sendgridConfigured,
+    smtpConfigured,
+    emailConfigured
+});
+
+// ── Error sanitization ─────────────────────────────────────────────────────
+// Maps raw SMTP/API traces to friendly, user-safe messages. Never leaks
+// credentials, hostnames or provider internals to the UI.
+const sanitizeEmailError = (raw) => {
+    const msg = String((raw && raw.message) || raw || '').toLowerCase();
+    if (!msg) return 'Verification email failed to send due to an email server issue. Please try again later or contact support.';
+    if (msg.includes('daily user sending limit') || msg.includes('daily limit') || msg.includes('quota') || msg.includes('rate limit')) {
+        return 'Email server daily sending limit reached. Please try again later or contact support.';
+    }
+    if (msg.includes('535') || msg.includes('authentication') || msg.includes('auth failed') || msg.includes('invalid credentials')) {
+        return 'Email server authentication failed. Please check the configured sender credentials and contact support.';
+    }
+    if (msg.includes('421') || msg.includes('temporarily unavailable')) {
+        return 'Email server is temporarily unavailable. Please try again later.';
+    }
+    if (msg.includes('550') && (msg.includes('mailbox') || msg.includes('recipient') || msg.includes('address'))) {
+        return 'The recipient email address could not be reached.';
+    }
+    return 'Verification email failed to send due to an email server issue. Please try again later or contact support.';
+};
+
+/**
+ * Detect provider rate-limit / daily-quota errors so callers can set an extended
+ * retry cooldown instead of hammering a provider that has shut the tap.
+ */
+const isRateLimitError = (raw) => {
+    const msg = String((raw && raw.message) || raw || '').toLowerCase();
+    if (!msg) return false;
+    return /daily user sending limit|daily limit|quota|rate limit|too many|429|5\.4\.5/.test(msg);
+};
+
+/**
+ * Anti-spam / deliverability headers. OTP emails with missing or ambiguous
+ * headers are more likely to land in Spam/Junk. These headers give Gmail,
+ * Outlook and other filters the signals they look for:
+ *   - X-Entity-Ref-ID: unique per-message id (recognized by Gmail).
+ *   - List-Unsubscribe + List-Unsubscribe-Post: one-click unsubscribe (signals
+ *     a legitimate transactional sender, not a spam campaign).
+ *   - Precedence / X-Auto-Response-Suppress: suppress vacation/auto replies.
+ */
+const buildAntiSpamHeaders = () => ({
+    'X-Mailer': 'Emare ELMS',
+    'X-Entity-Ref-ID': crypto.randomBytes(16).toString('hex'),
+    'Precedence': 'Bulk',
+    'X-Auto-Response-Suppress': 'OOF, AutoReply, RN, NDR, NRN',
+    'List-Unsubscribe': `<mailto:${smtpFrom || process.env.EMAIL_USER || ''}?subject=unsubscribe>`,
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+});
 
 /**
  * Send an email via the active transport.
+ * Delivery strategy (ordered, with fallback + retry):
+ *   1. Resend API (if configured) — HTTPS, no SMTP quotas.
+ *   2. SMTP (Nodemailer) — retried once after a short delay for transient errors.
+ * If every provider fails, the combined error is thrown so controllers can
+ * surface a sanitized, user-friendly reason instead of a silent drop.
  * @param {{ to: string|string[], subject: string, html: string, text?: string }} options
  * @returns {Promise<{ id: string }>} message id
  */
@@ -40,54 +201,129 @@ const sendEmail = async ({ to, subject, html, text }) => {
     // DEV MODE: log email content when no provider is configured, so registration
     // can still proceed while warning that real delivery is unavailable.
     if (!emailConfigured) {
-        console.warn('📧 [DEV MODE] No email provider configured (RESEND_API_KEY or EMAIL_* SMTP). Email not sent.');
+        console.warn('📧 [DEV MODE] No email provider configured (EMAIL_SERVICE=resend + EMAIL_API_KEY, or EMAIL_* SMTP). Email not sent.');
         console.warn(`   To: ${recipients.join(', ')}`);
         console.warn(`   Subject: ${subject}`);
         return { id: `dev_${Date.now()}`, devMode: true };
     }
 
-    try {
-        if (resendConfigured) {
+    const failures = [];
+
+    // ── Provider 1: Resend ───────────────────────────────────────────────
+    if (resendConfigured) {
+        try {
+            await enforceRateLimit('resend');
             // The Resend SDK returns { data, error } and does NOT throw on API errors.
             const { data, error } = await resend.emails.send({
-                from: process.env.RESEND_FROM || process.env.EMAIL_FROM || 'Emare <onboarding@resend.dev>',
+                from: resendFrom,
                 to: recipients,
                 subject,
                 html,
-                ...(text ? { text } : {})
+                ...(text ? { text } : {}),
+                ...(replyTo ? { reply_to: [replyTo] } : {}),
+                headers: buildAntiSpamHeaders()
             });
 
-            if (error) {
-                console.error('Resend Email API Error:', error);
-                throw new Error(error.message || 'Failed to send email via Resend');
-            }
-
+            if (error) throw new Error(error.message || 'Failed to send email via Resend');
             return data;
+        } catch (error) {
+            if (error.message && error.message.startsWith('EMAIL_DAILY_LIMIT')) {
+                failures.push('Resend: daily sending limit reached');
+            } else {
+                failures.push(`Resend: ${error.message}`);
+            }
+            console.error('Resend Email API Error:', error.message || error);
         }
-
-        // SMTP fallback (e.g. Gmail). Gmail requires from == authenticated user.
-        const info = await smtpTransport.sendMail({
-            from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-            to: recipients,
-            subject,
-            html,
-            ...(text ? { text } : {})
-        });
-
-        return { id: info.messageId };
-    } catch (error) {
-        console.error('Email API Error:', error);
-        throw new Error(error.message || 'Failed to send email');
     }
+
+    // ── Provider 2: SendGrid v3 REST API (no SDK required) ───────────────
+    if (sendgridConfigured) {
+        try {
+            await enforceRateLimit('sendgrid');
+            const sgPayload = {
+                personalizations: [{
+                    to: recipients.map((r) => ({ email: r })),
+                    ...(replyTo ? { reply_to: { email: replyTo } } : {})
+                }],
+                from: { email: sendgridFrom },
+                subject,
+                content: [
+                    { type: 'text/plain', value: text || '' },
+                    { type: 'text/html', value: html }
+                ],
+                headers: buildAntiSpamHeaders()
+            };
+            const sgRes = await fetch('https://api.sendgrid.com/v3/mail/send', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(sgPayload)
+            });
+            if (!sgRes.ok) {
+                const body = await sgRes.text().catch(() => '');
+                throw new Error(`SendGrid API ${sgRes.status}: ${body.slice(0, 300)}`);
+            }
+            return { id: `sendgrid_${Date.now()}` };
+        } catch (error) {
+            if (error.message && error.message.startsWith('EMAIL_DAILY_LIMIT')) {
+                failures.push('SendGrid: daily sending limit reached');
+            } else {
+                failures.push(`SendGrid: ${error.message}`);
+            }
+            console.error('SendGrid Email API Error:', error.message || error);
+        }
+    }
+
+    // ── Provider 3: SMTP (retried once) ──────────────────────────────────
+    if (smtpConfigured) {
+        const attempts = 2;
+        for (let attempt = 1; attempt <= attempts; attempt++) {
+            try {
+                await enforceRateLimit('smtp');
+                const info = await smtpTransport.sendMail({
+                    from: smtpFrom,
+                    to: recipients,
+                    subject,
+                    html,
+                    ...(text ? { text } : {}),
+                    // multipart/alternative (HTML + plain text) plus anti-spam
+                    // headers maximize inbox (not Spam/Junk) placement.
+                    ...(replyTo ? { replyTo } : {}),
+                    text,
+                    headers: buildAntiSpamHeaders(),
+                    envelope: { from: smtpFrom, to: recipients }
+                });
+                return { id: info.messageId };
+            } catch (error) {
+                const isDailyLimit = error.message && error.message.startsWith('EMAIL_DAILY_LIMIT');
+                failures.push(isDailyLimit
+                    ? 'SMTP: daily sending limit reached'
+                    : `SMTP (attempt ${attempt}): ${error.message}`);
+                console.error(`SMTP Email API Error (attempt ${attempt}/${attempts}):`, error.message || error);
+                if (!isDailyLimit && attempt < attempts) {
+                    await new Promise((resolve) => setTimeout(resolve, 5000));
+                }
+            }
+        }
+    }
+
+    throw new Error(failures.length ? failures.join(' | ') : 'No email provider is configured.');
 };
 
 const logEmailTransportStatus = () => {
     if (resendConfigured) {
-        console.log('📧 Email service configured: Resend API.');
+        console.log('📧 Email service configured: Resend API (production).');
+    } else if (sendgridConfigured) {
+        console.log(`📧 Email service configured: SendGrid v3 API — rate-limited to ${getDailyLimit('sendgrid')} emails/day.`);
     } else if (smtpConfigured) {
-        console.log(`📧 Email service configured: SMTP (${process.env.EMAIL_HOST}:${smtpPort}).`);
+        console.log(`📧 Email service configured: SMTP (${smtpHost}:${smtpPort}) — rate-limited to ${getDailyLimit('smtp')} emails/day.`);
+        if (process.env.NODE_ENV === 'production') {
+            console.warn('⚠️  SMTP is configured in production. SMTP relays (e.g. Gmail) enforce daily quotas and are not recommended — set EMAIL_SERVICE=resend + EMAIL_API_KEY or EMAIL_SERVICE=sendgrid + SENDGRID_API_KEY for reliable production delivery.');
+        }
     } else {
-        console.warn('📧 Email service running in fallback/dev mode (no RESEND_API_KEY or SMTP credentials).');
+        console.warn('📧 Email service running in fallback/dev mode (set EMAIL_SERVICE=resend|sendgrid + API key, or SMTP_* credentials).');
     }
 };
 
@@ -275,9 +511,11 @@ const sendPasswordResetConfirmationEmail = async (user, newPassword) => {
 const sendEmailVerification = async (user, verificationCode) => {
     const htmlTemplate = `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
       <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="color-scheme" content="light">
         <style>
           body { font-family: Arial, sans-serif; background: #f4f4f4; }
           .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 8px; }
@@ -296,9 +534,11 @@ const sendEmailVerification = async (user, verificationCode) => {
           }
           .footer { text-align: center; color: #999; font-size: 12px; margin-top: 30px; }
           .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
+          .preheader { display: none; max-height: 0; overflow: hidden; mso-hide: all; }
         </style>
       </head>
       <body>
+        <div class="preheader">Your Emare ELMS verification code is ${verificationCode}. It expires in 15 minutes.</div>
         <div class="container">
           <div class="header">
             <div class="logo">Emare ELMS</div>
@@ -798,5 +1038,9 @@ module.exports = {
     sendEmailVerification,
     sendCourseEnrollmentEmail,
     sendDiscountEmail,
-    isEmailConfigured: () => emailConfigured
+    isEmailConfigured: () => emailConfigured,
+    sanitizeEmailError,
+    isRateLimitError,
+    resetEmailDailyCounter,
+    getEmailCounterStatus
 };

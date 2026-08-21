@@ -12,7 +12,7 @@ const {
     getAnalytics,
     updateInstructorProfile,
     uploadUserAvatar,
-    getPublicStats
+    getPublicStats,
 } = require('../controllers/userController');
 
 // ── User Avatar Upload ─────────────────────────────────────────────

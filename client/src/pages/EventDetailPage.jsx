@@ -22,7 +22,7 @@ import {
 import Navbar from '../components/Navbar';
 import EventFooter from '../components/events/EventFooter';
 import EventCalendar from '../components/events/EventCalendar';
-import { events as staticEvents, eventGallery, getEventById as staticGetEventById, formatISODate, formatLongDate } from '../data/events';
+import { eventGallery, formatISODate, formatLongDate } from '../data/events';
 import { publicEventService } from '../services/api';
 import { getLiveStatus, LIVE_STATUS_META } from '../utils/eventStatus';
 
@@ -79,10 +79,7 @@ export default function EventDetailPage() {
         return () => { cancelled = true; };
     }, [eventId]);
 
-    const event = useMemo(
-        () => (apiEvent !== null ? apiEvent : staticGetEventById(eventId)),
-        [apiEvent, eventId]
-    );
+    const event = apiEvent;
     const eventDate = event ? new Date(event.date) : null;
     const countdown = useCountdown(eventDate ?? FALLBACK_COUNTDOWN_TARGET);
 
@@ -97,7 +94,7 @@ export default function EventDetailPage() {
     const canJoin = isLive && joinUrl;
 
     const otherEvents = useMemo(
-        () => (apiEvents !== null ? apiEvents : staticEvents).filter((e) => e.id !== event?.id).slice(0, 2),
+        () => (apiEvents || []).filter((e) => e.id !== event?.id).slice(0, 2),
         [apiEvents, event]
     );
 

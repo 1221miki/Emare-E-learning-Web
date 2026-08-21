@@ -123,6 +123,43 @@ const generateToken = () => crypto.randomBytes(8).toString('hex');
 
 const generateInternalJoinUrl = (slug) => `${APP_BASE}/join/event/${normalizeSlug(slug) || `event-${generateToken()}`}`;
 
+// ── Invitees ───────────────────────────────────────────────────────────
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+const parseInvitees = (value) => {
+    if (!value) return [];
+    const raw = Array.isArray(value) ? value.join(',') : String(value);
+    return raw
+        .split(/[,\n]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+};
+
+/**
+ * Parse, trim, lowercase, deduplicate and validate a comma/newline separated
+ * invitee list. Invalid addresses are never persisted — they are returned so
+ * the caller can surface a useful validation error.
+ * @param {string|string[]} value
+ * @returns {{ list: string[], invalid: string[] }}
+ */
+const validateInvitees = (value) => {
+    const seen = new Set();
+    const list = [];
+    const invalid = [];
+    parseInvitees(value).forEach((email) => {
+        const e = email.toLowerCase();
+        if (!EMAIL_PATTERN.test(e)) {
+            invalid.push(email);
+            return;
+        }
+        if (seen.has(e)) return;
+        seen.add(e);
+        list.push(e);
+    });
+    return { list, invalid };
+};
+
 // Picks the provider-metadata fields that should be persisted on an event.
 const meetingFields = (r = {}) => ({
     meetingUrl: r.meetingUrl || '',
@@ -332,6 +369,13 @@ const resolveMeetingUrl = async ({ existing = '', supplied, eventType, provider,
         return { url: existing.trim(), provider: chosen, generated: false, changed: false, meeting: null };
     }
 
+    // Manual-only provider: there is nothing to auto-generate, so leave the URL
+    // empty instead of throwing. The event still saves and the validation
+    // checklist flags the missing live-stream link for Online/Hybrid events.
+    if (chosen === 'custom') {
+        return { url: '', provider: 'custom', generated: false, changed: false, meeting: null };
+    }
+
     const result = await generateMeetingUrl({ provider: chosen, title, slug, startDate, endDate });
     return {
         ...result,
@@ -447,6 +491,7 @@ module.exports = {
     missingEnvMessage,
     isValidMeetingUrl,
     isValidGoogleMeetUrl,
+    validateInvitees,
     generateMeetingUrl,
     resolveMeetingUrl,
     mergeMeetingInfo,

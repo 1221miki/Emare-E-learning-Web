@@ -5,7 +5,8 @@ const {
     normalizeProvider,
     missingEnvMessage,
     mergeMeetingInfo,
-    deleteProviderResource
+    deleteProviderResource,
+    validateInvitees
 } = require('../services/meetingService');
 
 const FRONTEND_BASE = (() => {
@@ -90,6 +91,16 @@ exports.createCalendarEvent = async (req, res) => {
         const payload = await withMeetingUrl(req.body || {});
         payload.visibility = payload.visibility || 'internal';
         payload.meetingProvider = normalizeProvider(payload.meetingProvider);
+
+        // Normalize invitees: trim, dedupe, validate — surface invalid addresses.
+        const inviteeInput = payload.invitees ?? payload.meetingInvitees;
+        if (inviteeInput !== undefined && inviteeInput !== null) {
+            const { list, invalid } = validateInvitees(inviteeInput);
+            if (invalid.length) return res.status(400).json({ success: false, message: `Invalid invitee email(s): ${invalid.join(', ')}` });
+            payload.invitees = list;
+            payload.meetingInvitees = list.join(', ');
+        }
+
         const event = await CalendarEvent.create({
             ...payload,
             createdBy: req.user?.id
@@ -108,6 +119,15 @@ exports.updateCalendarEvent = async (req, res) => {
         const current = await CalendarEvent.findById(req.params.id);
         if (!current) return res.status(404).json({ success: false, message: 'Calendar event not found.' });
         const payload = await withMeetingUrl(req.body || {}, current);
+
+        // Normalize invitees on edit (same rules as create).
+        const inviteeInput = payload.invitees ?? payload.meetingInvitees;
+        if (inviteeInput !== undefined && inviteeInput !== null) {
+            const { list, invalid } = validateInvitees(inviteeInput);
+            if (invalid.length) return res.status(400).json({ success: false, message: `Invalid invitee email(s): ${invalid.join(', ')}` });
+            payload.invitees = list;
+            payload.meetingInvitees = list.join(', ');
+        }
 
         // Switching a real-provider meeting to Physical → clean up the provider
         // resource (best effort) and never keep a stale meeting URL.

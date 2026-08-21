@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import { userService } from '../../services/api';
 import Sidebar from '../../components/Sidebar';
 import { useTheme } from '../../context/ThemeContext';
@@ -9,19 +10,26 @@ export default function AdminUserProfilePage() {
     const navigate = useNavigate();
     const { colors } = useTheme();
     const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
+        let active = true;
         const fetchUser = async () => {
+            setLoading(true);
+            setError('');
             try {
                 const res = await userService.getById(id);
-                setUser(res.data?.data || null);
+                if (active) setUser(res.data?.data || null);
             } catch (err) {
-                setError(err.response?.data?.message || 'Failed to load user profile.');
+                if (active) setError(err.response?.data?.message || 'Failed to load user profile.');
+            } finally {
+                if (active) setLoading(false);
             }
         };
 
         fetchUser();
+        return () => { active = false; };
     }, [id]);
 
     const styles = {
@@ -49,6 +57,22 @@ export default function AdminUserProfilePage() {
         return <span style={{ ...styles.badge, background: `${colors.success}15`, color: colors.success }}>Active</span>;
     };
 
+    if (loading) {
+        return (
+            <div style={styles.page}>
+                <Sidebar />
+                <main style={styles.main}>
+                    <div style={styles.card}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: colors.textMuted }}>
+                            <Loader2 className="animate-spin" size={20} color={colors.primary} />
+                            <span>Loading user profile…</span>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
     if (error) {
         return (
             <div style={styles.page}>
@@ -58,6 +82,21 @@ export default function AdminUserProfilePage() {
                         <button onClick={() => navigate('/admin/dashboard')} style={styles.backBtn}>← Back to Admin</button>
                         <h2 style={styles.title}>Unable to load profile</h2>
                         <p style={{ color: colors.danger, marginTop: '16px' }}>{error}</p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    if (!user) {
+        return (
+            <div style={styles.page}>
+                <Sidebar />
+                <main style={styles.main}>
+                    <div style={styles.card}>
+                        <button onClick={() => navigate('/admin/dashboard')} style={styles.backBtn}>← Back to Admin</button>
+                        <h2 style={styles.title}>User not found</h2>
+                        <p style={{ color: colors.textMuted, marginTop: '16px' }}>No user account was returned for this ID.</p>
                     </div>
                 </main>
             </div>

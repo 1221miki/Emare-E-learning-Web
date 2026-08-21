@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
+    AlertTriangle,
     ArrowLeft,
     ArrowRight,
     BadgeCheck,
@@ -30,12 +31,13 @@ import {
     Loader2,
     Send,
     Ban,
+    UploadCloud,
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import EventFooter from '../../components/events/EventFooter';
 import Modal from '../../components/Modal';
-import { eventService, calendarService } from '../../services/api';
-import { EVENT_CATEGORIES, getLiveStatus, formatEventDate, isValidUrl } from '../../utils/eventStatus';
+import { eventService, calendarService, uploadService } from '../../services/api';
+import { EVENT_CATEGORIES, getLiveStatus, isValidUrl } from '../../utils/eventStatus';
 
 // ── Status meta (badge colors) ─────────────────────────────
 const STATUS_META = {
@@ -153,12 +155,41 @@ const EMPTY_FORM = {
 const MEETING_PLATFORMS = [
     { value: 'googleMeet', label: 'Google Meet' },
     { value: 'zoom',       label: 'Zoom' },
+    { value: 'microsoftTeams', label: 'Microsoft Teams' },
     { value: 'jitsi',      label: 'Jitsi Meet' },
+    { value: 'custom',     label: 'Custom Meeting Link' },
     { value: 'youtubeLive',label: 'YouTube Live' },
     { value: 'rtmp',       label: 'Custom RTMP / Web Stream' },
 ];
-const platformToProvider = { googleMeet: 'googleMeet', zoom: 'zoom', jitsi: 'jitsi', youtubeLive: 'custom', rtmp: 'custom' };
-const meetingProviderLabel = (v) => ({ googleMeet: 'Google Meet', zoom: 'Zoom', jitsi: 'Jitsi Meet', internal: 'Internal Join Link', custom: 'Manual URL' }[v] || 'Internal Join Link');
+const platformToProvider = { googleMeet: 'googleMeet', zoom: 'zoom', microsoftTeams: 'microsoftTeams', jitsi: 'jitsi', custom: 'custom', youtubeLive: 'custom', rtmp: 'custom' };
+const meetingProviderLabel = (v) => ({ googleMeet: 'Google Meet', zoom: 'Zoom', microsoftTeams: 'Microsoft Teams', jitsi: 'Jitsi Meet', internal: 'Internal Join Link', custom: 'Manual URL' }[v] || 'Internal Join Link');
+// Platforms where the "Generate Meeting Link" button is available (backend integration or local Jitsi).
+const GENERATABLE_PLATFORMS = ['googleMeet', 'zoom', 'microsoftTeams', 'jitsi'];
+// Platforms that support a meeting password in the form.
+const PASSWORD_PLATFORMS = ['googleMeet', 'zoom', 'custom', 'youtubeLive', 'rtmp'];
+// Platform that uses OAuth (only Google Meet has a browser OAuth flow).
+const OAUTH_PLATFORM = 'googleMeet';
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const parseInviteesInput = (value) => {
+    if (!value) return [];
+    return String(value)
+        .split(/[,\n]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+};
+const normalizeInviteesInput = (value) => {
+    const seen = new Set();
+    const list = [];
+    const invalid = [];
+    parseInviteesInput(value).forEach((email) => {
+        const e = email.toLowerCase();
+        if (!EMAIL_PATTERN.test(e)) { invalid.push(email); return; }
+        if (seen.has(e)) return;
+        seen.add(e);
+        list.push(e);
+    });
+    return { list, invalid };
+};
 const getDefaultMeetingLink = (platform, title) => {
     const slug = (title || 'emare-meeting').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 24) || 'emare-meeting';
     if (platform === 'jitsi') return `https://meet.jit.si/${slug}`;
@@ -196,6 +227,7 @@ const EMPTY_CREATE_FORM = {
     meetingPlatform: 'googleMeet',
     meetingProvider: 'googleMeet',
     meetingInvitees: '',
+    meetingId: '',
     meetingPassword: '',
     visibility: 'public',
     // public-event extras
@@ -212,10 +244,12 @@ export default function AdminEventsPage() {
     const [events, setEvents] = useState([]);
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(null);
     const [statsLoading, setStatsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('all');
     const [search, setSearch] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
+    const [visibilityFilter, setVisibilityFilter] = useState('all');
     const [busy, setBusy] = useState({});
 
     // delete / cancel confirms
@@ -240,6 +274,9 @@ export default function AdminEventsPage() {
     const [createSaving, setCreateSaving] = useState(false);
     const [meetingGenerating, setMeetingGenerating] = useState(false);
     const [createFormError, setCreateFormError] = useState('');
+    const [meetingErrors, setMeetingErrors] = useState({});
+    const [bannerUploading, setBannerUploading] = useState(false);
+    const [bannerUploadError, setBannerUploadError] = useState('');
     const [googleMeetStatus, setGoogleMeetStatus] = useState(null);
     const [isGoogleConnecting, setIsGoogleConnecting] = useState(false);
 
@@ -247,10 +284,13 @@ export default function AdminEventsPage() {
 
     const loadEvents = useCallback(async () => {
         setLoading(true);
+        setLoadError(null);
         try {
             const res = await eventService.getAll();
             setEvents(res.data?.data || []);
         } catch (err) {
+            setLoadError(err.response?.data?.message || 'Unable to load events.');
+            setEvents([]);
             pushToast(err.response?.data?.message || 'Failed to load events.', 'error');
         } finally {
             setLoading(false);
@@ -326,6 +366,7 @@ export default function AdminEventsPage() {
             const matchesTab = activeTab === 'all' || e.status === activeTab;
             if (!matchesTab) return false;
             if (categoryFilter !== 'all' && e.category !== categoryFilter) return false;
+            if (visibilityFilter !== 'all' && (e.visibility || 'public') !== visibilityFilter) return false;
             if (!q) return true;
             const instructorName = e.submittedBy?.fullName || '';
             const instructorEmail = e.submittedBy?.accountEmail || '';
@@ -336,7 +377,7 @@ export default function AdminEventsPage() {
                 instructorEmail.toLowerCase().includes(q)
             );
         });
-    }, [events, activeTab, search, categoryFilter]);
+    }, [events, activeTab, search, categoryFilter, visibilityFilter]);
 
     const checks = useMemo(
         () => (inspected ? computeValidationChecks(inspected) : { passed: false, checks: [] }),
@@ -465,6 +506,10 @@ export default function AdminEventsPage() {
     };
 
     // ── Create event helpers ────────────────────────────────────────────────
+    // Google Meet connection states:
+    //   configured  — backend has GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI
+    //   connected   — configured AND an admin has authorized once (token stored)
+    const googleConfigured = Boolean(googleMeetStatus?.configured && (!googleMeetStatus.missingEnv || googleMeetStatus.missingEnv.length === 0));
     const googleMeetConnected = Boolean(googleMeetStatus?.connected && googleMeetStatus?.authorized);
     const googleMeetHint = googleMeetStatus
         ? (googleMeetStatus.missingEnv?.length
@@ -477,7 +522,41 @@ export default function AdminEventsPage() {
     const resetCreateForm = () => {
         setCreateForm(EMPTY_CREATE_FORM);
         setCreateFormError('');
+        setMeetingErrors({});
+        setBannerUploadError('');
         setCreateOpen(false);
+    };
+
+    const handleBannerUpload = async (e) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            setBannerUploadError('Please select an image file (JPG, PNG, or WebP).');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            setBannerUploadError('Image must be smaller than 5MB.');
+            return;
+        }
+        setBannerUploadError('');
+        setBannerUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('targetType', 'event');
+            formData.append('folder', 'emare_elms/event_thumbnails');
+            const res = await uploadService.uploadFile(formData);
+            const url = res.data?.data?.url;
+            if (!url) throw new Error('Upload completed but no image URL was returned.');
+            setCreateForm((f) => ({ ...f, bannerImage: url }));
+            pushToast('Event thumbnail uploaded successfully.', 'success');
+        } catch (err) {
+            setBannerUploadError(err.response?.data?.message || err.message || 'Failed to upload thumbnail.');
+            pushToast('Thumbnail upload failed.', 'error');
+        } finally {
+            setBannerUploading(false);
+        }
     };
 
     const handleConnectGoogleMeet = async () => {
@@ -501,9 +580,16 @@ export default function AdminEventsPage() {
 
     const handleGenerateMeetingLink = async () => {
         const provider = platformToProvider[createForm.meetingPlatform] || createForm.meetingProvider;
-        if (provider === 'custom') return;
+        if (provider === 'custom') {
+            return pushToast('Manual URLs are entered directly — paste your link into the Meeting Link field.', 'error');
+        }
         if (provider === 'googleMeet' && !googleMeetConnected) {
-            return pushToast('Google Meet is not connected. Click "Connect Google Meet" first.', 'error');
+            return pushToast(
+                googleConfigured
+                    ? 'Google Meet is not connected. Click "Connect Google Meet" first.'
+                    : 'Google Meet is not configured on the backend. Add GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REDIRECT_URI to backend/.env and restart the server.',
+                'error'
+            );
         }
         if (!createForm.title.trim()) return pushToast('Enter an event title before generating a link.', 'error');
 
@@ -518,7 +604,7 @@ export default function AdminEventsPage() {
         if (createForm.meetingPlatform === 'jitsi') {
             const link = getDefaultMeetingLink('jitsi', createForm.title);
             setCreateForm((f) => ({ ...f, streamUrl: link, meetingProvider: 'jitsi' }));
-            pushToast('Jitsi Meet link generated.');
+            pushToast('Jitsi Meet link generated.', 'success');
             return;
         }
 
@@ -532,14 +618,20 @@ export default function AdminEventsPage() {
             });
             const url = res?.data?.url || res?.data?.meetingUrl || '';
             if (!url) throw new Error('No meeting link was returned.');
-            setCreateForm((f) => ({ ...f, streamUrl: url, meetingProvider: res?.data?.provider || provider }));
-            pushToast(provider === 'googleMeet'
-                ? 'Real Google Meet meeting created and attached.'
-                : `${meetingProviderLabel(res?.data?.provider || provider)} link generated.`);
+            setCreateForm((f) => ({ ...f, streamUrl: url, meetingProvider: res?.data?.provider || provider, meetingId: res?.data?.meetingProviderId || '' }));
+            pushToast(
+                provider === 'googleMeet'
+                    ? 'Meeting created successfully. Real Google Meet meeting attached.'
+                    : `${meetingProviderLabel(res?.data?.provider || provider)} meeting created successfully.`,
+                'success'
+            );
         } catch (err) {
-            pushToast(err.response?.data?.message || (provider === 'googleMeet'
-                ? 'Google Meet creation failed. No meeting was created.'
-                : 'Failed to generate meeting link.'), 'error');
+            pushToast(
+                err.response?.data?.message || (provider === 'googleMeet'
+                    ? 'Google Meet creation failed. No meeting was created.'
+                    : 'Failed to generate meeting link.'),
+                'error'
+            );
         } finally {
             setMeetingGenerating(false);
         }
@@ -548,13 +640,18 @@ export default function AdminEventsPage() {
     const handleCreateEvent = async (e) => {
         e.preventDefault();
         setCreateFormError('');
+        setMeetingErrors({});
 
         const wantsGoogleMeet = createForm.eventType !== 'Physical'
             && createForm.meetingPlatform === 'googleMeet'
             && !createForm.streamUrl;
 
         if (wantsGoogleMeet && !googleMeetConnected) {
-            setCreateFormError('Google Meet is not connected. Click "Connect Google Meet" to authorize before creating the meeting.');
+            setCreateFormError(
+                googleConfigured
+                    ? 'Google Meet is not connected. Click "Connect Google Meet" to authorize before creating the meeting.'
+                    : 'Google Meet is not configured on the backend. Add GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REDIRECT_URI to backend/.env and restart the server.'
+            );
             return;
         }
         if (!createForm.title.trim()) { setCreateFormError('Event title is required.'); return; }
@@ -572,10 +669,24 @@ export default function AdminEventsPage() {
             setCreateFormError('Location is required for a physical event.');
             return;
         }
+
+        // Meeting URL must be a valid http(s) link whenever one is entered.
+        const trimmedUrl = (createForm.streamUrl || '').trim();
+        if (createForm.eventType !== 'Physical' && trimmedUrl && !isValidUrl(trimmedUrl)) {
+            setMeetingErrors((m) => ({ ...m, streamUrl: 'Please enter a valid meeting URL.' }));
+            setCreateFormError('Please enter a valid meeting URL.');
+            return;
+        }
+
+        // Invitees must be comma-separated valid email addresses.
+        const inviteesResult = normalizeInviteesInput(createForm.meetingInvitees);
+        if (inviteesResult.invalid.length) {
+            setMeetingErrors((m) => ({ ...m, meetingInvitees: `Invalid invitee email(s): ${inviteesResult.invalid.join(', ')}` }));
+            setCreateFormError(`Invalid invitee email(s): ${inviteesResult.invalid.join(', ')}`);
+            return;
+        }
+
         if (isFormPublic) {
-            if (createForm.streamUrl && !isValidUrl(createForm.streamUrl)) {
-                setCreateFormError('Meeting URL is invalid — use a full http(s) link.'); return;
-            }
             if (createForm.bannerImage && !isValidUrl(createForm.bannerImage)) {
                 setCreateFormError('Banner image URL is invalid — use a full http(s) link.'); return;
             }
@@ -611,6 +722,8 @@ export default function AdminEventsPage() {
                     meetingProvider: platformToProvider[createForm.meetingPlatform] || createForm.meetingProvider || 'googleMeet',
                     meetingPlatform: createForm.meetingPlatform,
                     meetingInvitees: createForm.meetingInvitees || '',
+                    invitees: inviteesResult.list,
+                    meetingId: createForm.meetingId || '',
                     meetingPassword: createForm.meetingPassword || '',
                     price: createForm.price || 'FREE',
                     totalSlots: Number(createForm.capacity) || 0,
@@ -624,26 +737,73 @@ export default function AdminEventsPage() {
                 setEvents((prev) => [created, ...prev]);
                 pushToast(wantsGoogleMeet ? 'Event created with a real Google Meet meeting.' : 'Public event created.');
             } else {
-                // Internal calendar event
+                // Internal event — stored in the Event model so it appears in the
+                // Admin Events table with visibility "internal", and mirrored to
+                // the internal calendar for the dashboard calendar view.
+                const startTime = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+                const endTime = createForm.isAllDay ? '23:59' : (end ? (() => {
+                    const hh = String(end.getHours()).padStart(2, '0');
+                    const mm = String(end.getMinutes()).padStart(2, '0');
+                    const sMin = start.getHours() * 60 + start.getMinutes();
+                    const eMin = end.getHours() * 60 + end.getMinutes();
+                    return eMin > sMin ? `${hh}:${mm}` : '23:59';
+                })() : '23:59');
+
                 const payload = {
                     title: createForm.title,
+                    tagline: '',
                     category: createForm.category,
-                    description: createForm.description || '',
+                    description: createForm.description ? createForm.description.split('\n').filter(Boolean) : [],
+                    eventType: createForm.eventType || 'Online',
+                    venue: createForm.location || (createForm.eventType !== 'Physical' ? 'Online Live Stream' : ''),
+                    city: '',
+                    streamUrl: createForm.streamUrl || '',
                     startDate: start.toISOString(),
                     endDate: end ? end.toISOString() : null,
-                    location: createForm.location || '',
-                    eventType: createForm.eventType || 'Online',
-                    streamUrl: createForm.streamUrl || '',
+                    startTime,
+                    endTime,
+                    allDay: Boolean(createForm.isAllDay),
                     visibility: 'internal',
                     meetingProvider: platformToProvider[createForm.meetingPlatform] || createForm.meetingProvider || 'googleMeet',
                     meetingPlatform: createForm.meetingPlatform,
                     meetingInvitees: createForm.meetingInvitees || '',
+                    invitees: inviteesResult.list,
+                    meetingId: createForm.meetingId || '',
                     meetingPassword: createForm.meetingPassword || '',
-                    isAllDay: Boolean(createForm.isAllDay),
-                    status: createForm.eventStatus === 'CANCELLED' ? 'CANCELLED' : 'SCHEDULED',
+                    price: 'FREE',
+                    totalSlots: 0,
+                    image: '',
+                    status: createForm.eventStatus === 'CANCELLED' ? 'CANCELLED' : 'APPROVED',
+                    isFeatured: false,
+                    registrationEnabled: false,
                 };
-                await calendarService.createEvent(payload);
-                pushToast(wantsGoogleMeet ? 'Calendar event created with a real Google Meet meeting.' : 'Internal calendar event created.');
+                const res = await eventService.create(payload);
+                const created = res.data?.data;
+                setEvents((prev) => [created, ...prev]);
+                try {
+                    await calendarService.createEvent({
+                        title: createForm.title,
+                        category: 'event',
+                        description: createForm.description || '',
+                        startDate: start.toISOString(),
+                        endDate: end ? end.toISOString() : null,
+                        location: createForm.location || '',
+                        eventType: createForm.eventType || 'Online',
+                        streamUrl: createForm.streamUrl || '',
+                        visibility: 'internal',
+                        meetingProvider: platformToProvider[createForm.meetingPlatform] || createForm.meetingProvider || 'googleMeet',
+                        meetingPlatform: createForm.meetingPlatform,
+                        meetingInvitees: createForm.meetingInvitees || '',
+                        invitees: inviteesResult.list,
+                        meetingId: createForm.meetingId || '',
+                        meetingPassword: createForm.meetingPassword || '',
+                        isAllDay: Boolean(createForm.isAllDay),
+                        status: createForm.eventStatus === 'CANCELLED' ? 'CANCELLED' : 'SCHEDULED',
+                    });
+                } catch {
+                    pushToast('Event saved, but the internal calendar could not be updated.', 'info');
+                }
+                pushToast(wantsGoogleMeet ? 'Internal event created with a real Google Meet meeting.' : 'Internal event created.');
             }
             resetCreateForm();
             loadEvents();
@@ -788,6 +948,15 @@ export default function AdminEventsPage() {
                                 <option key={cat} value={cat} className="bg-[#12131A]">{cat}</option>
                             ))}
                         </select>
+                        <select
+                            value={visibilityFilter}
+                            onChange={(e) => setVisibilityFilter(e.target.value)}
+                            className="rounded-full border border-white/10 bg-[#12131A] px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-300 transition hover:border-amber-400/40"
+                        >
+                            <option value="all" className="bg-[#12131A]">All Visibility</option>
+                            <option value="public" className="bg-[#12131A]">Public</option>
+                            <option value="internal" className="bg-[#12131A]">Internal</option>
+                        </select>
                     </div>
                     <div className="relative w-full lg:w-80">
                         <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
@@ -803,28 +972,58 @@ export default function AdminEventsPage() {
                 {/* ── Data Table ───────────────────────────────────── */}
                 <section className="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-[#12131A]/80">
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[960px] text-left text-sm">
+                        <table className="w-full min-w-[1180px] text-left text-sm">
                             <thead>
                                 <tr className="border-b border-white/10 text-[11px] font-extrabold uppercase tracking-wider text-gray-400">
-                                    <th className="px-5 py-4">Event Details</th>
+                                    <th className="px-5 py-4">Event</th>
+                                    <th className="px-5 py-4">Category</th>
                                     <th className="px-5 py-4">Date &amp; Time</th>
-                                    <th className="px-5 py-4">Venue / Type</th>
+                                    <th className="px-5 py-4">Location</th>
                                     <th className="px-5 py-4">Seats</th>
                                     <th className="px-5 py-4">Status</th>
+                                    <th className="px-5 py-4">Visibility</th>
                                     <th className="px-5 py-4 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={6} className="px-5 py-16 text-center">
+                                        <td colSpan={8} className="px-5 py-16 text-center">
                                             <Loader2 className="mx-auto h-6 w-6 animate-spin text-amber-400" />
                                             <p className="mt-3 text-xs text-gray-400">Loading events…</p>
                                         </td>
                                     </tr>
+                                ) : loadError ? (
+                                    <tr>
+                                        <td colSpan={8} className="px-5 py-16 text-center">
+                                            <AlertTriangle className="mx-auto h-8 w-8 text-red-400" />
+                                            <p className="mt-3 text-sm font-bold text-white">Unable to load events</p>
+                                            <p className="mt-1 text-xs text-gray-400">Please try again.</p>
+                                            <button
+                                                onClick={() => { loadEvents(); loadStats(); }}
+                                                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/10 px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider text-gray-200 transition hover:border-amber-400/50 hover:text-amber-300"
+                                            >
+                                                <RefreshCw className="h-3.5 w-3.5" /> Retry
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ) : events.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={8} className="px-5 py-16 text-center">
+                                            <CalendarDays className="mx-auto h-10 w-10 text-gray-600" />
+                                            <p className="mt-4 text-lg font-black text-white">No events found</p>
+                                            <p className="mt-1 text-sm text-gray-400">Create your first event to see it here.</p>
+                                            <button
+                                                onClick={() => { setCreateForm(EMPTY_CREATE_FORM); setCreateOpen(true); }}
+                                                className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider text-black shadow-[0_0_18px_rgba(255,193,7,0.3)] transition hover:brightness-110"
+                                            >
+                                                <Plus className="h-4 w-4" /> Create Event
+                                            </button>
+                                        </td>
+                                    </tr>
                                 ) : filtered.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="px-5 py-16 text-center text-sm text-gray-400">
+                                        <td colSpan={8} className="px-5 py-16 text-center text-sm text-gray-400">
                                             No events match the current filter.
                                         </td>
                                     </tr>
@@ -840,8 +1039,12 @@ export default function AdminEventsPage() {
                                                     <div className="flex items-center gap-3">
                                                         <img src={event.image || '/images/education-hero.jpg'} alt="" className="h-11 w-11 shrink-0 rounded-xl border border-white/10 object-cover" />
                                                         <div className="min-w-0">
-                                                            <p className="max-w-[260px] truncate font-bold text-white">{event.title}</p>
-                                                            <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
+                                                            <p className="max-w-[240px] truncate font-bold text-white">{event.title}</p>
+                                                            <span className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-300">
+                                                                {event.eventType === 'Online' ? <Video className="h-3 w-3 text-amber-400" /> : <MapPin className="h-3 w-3 text-amber-400" />}
+                                                                {event.eventType}
+                                                            </span>
+                                                            <p className="mt-1 flex items-center gap-1 text-xs text-gray-400">
                                                                 <Users className="h-3 w-3 text-amber-400" />
                                                                 {event.submittedBy?.fullName || 'Platform Admin'}
                                                             </p>
@@ -849,15 +1052,36 @@ export default function AdminEventsPage() {
                                                     </div>
                                                 </td>
                                                 <td className="px-5 py-4">
+                                                    <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-gray-200">{event.category || 'Masterclass'}</span>
+                                                </td>
+                                                <td className="px-5 py-4">
                                                     <p className="flex items-center gap-2 text-gray-200"><Calendar className="h-3.5 w-3.5 text-amber-400" /> {fmtDate(event.startDate)}</p>
                                                     <p className="mt-1 flex items-center gap-2 text-xs text-gray-400"><Clock className="h-3.5 w-3.5 text-amber-400" /> {event.timeLabel || `${event.startTime} – ${event.endTime}`}</p>
                                                 </td>
                                                 <td className="px-5 py-4">
-                                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold capitalize text-gray-200">
-                                                        {event.eventType === 'Online' ? <Video className="h-3 w-3 text-amber-400" /> : event.eventType === 'Hybrid' ? <MapPin className="h-3 w-3 text-amber-400" /> : <MapPin className="h-3 w-3 text-amber-400" />}
-                                                        {event.eventType}
-                                                    </span>
-                                                    <p className="mt-1.5 max-w-[180px] truncate text-xs text-gray-400">{event.venue || 'Online Live Stream'}</p>
+                                                    {event.eventType === 'Physical' ? (
+                                                        <p className="max-w-[220px] truncate text-xs text-gray-400">{[event.venue, event.city].filter(Boolean).join(', ') || 'Physical venue'}</p>
+                                                    ) : event.eventType === 'Online' ? (
+                                                        <>
+                                                            <p className="text-xs font-semibold text-gray-200">Online Live Stream</p>
+                                                            {event.meetingUrl || event.streamUrl ? (
+                                                                <a href={event.meetingUrl || event.streamUrl} target="_blank" rel="noopener noreferrer" className="mt-1 flex max-w-[220px] items-center gap-1 truncate text-xs text-sky-400 hover:text-sky-300">
+                                                                    <ExternalLink className="h-3 w-3 shrink-0" />
+                                                                    <span className="truncate">{event.meetingUrl || event.streamUrl}</span>
+                                                                </a>
+                                                            ) : null}
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <p className="max-w-[220px] truncate text-xs text-gray-200">{[event.venue, event.city].filter(Boolean).join(', ') || 'Venue TBD'}</p>
+                                                            {event.meetingUrl || event.streamUrl ? (
+                                                                <a href={event.meetingUrl || event.streamUrl} target="_blank" rel="noopener noreferrer" className="mt-1 flex max-w-[220px] items-center gap-1 truncate text-xs text-sky-400 hover:text-sky-300">
+                                                                    <Video className="h-3 w-3 shrink-0" />
+                                                                    <span className="truncate">{event.meetingUrl || event.streamUrl}</span>
+                                                                </a>
+                                                            ) : null}
+                                                        </>
+                                                    )}
                                                 </td>
                                                 <td className="px-5 py-4">
                                                     <p className="text-gray-200">{registered}<span className="text-gray-500"> / {total}</span></p>
@@ -878,30 +1102,40 @@ export default function AdminEventsPage() {
                                                     )}
                                                 </td>
                                                 <td className="px-5 py-4">
+                                                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider ${event.visibility === 'internal' ? 'border-white/10 bg-white/5 text-gray-300' : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300'}`}>
+                                                        {event.visibility === 'internal' ? <Lock className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
+                                                        {event.visibility === 'internal' ? 'Internal' : 'Public'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-4">
                                                     <div className="flex items-center justify-end gap-1.5">
                                                         <button
                                                             onClick={() => openInspect(event)}
-                                                            title="Inspect & Validate"
+                                                            title="View event"
                                                             className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-gray-300 transition hover:border-amber-400/50 hover:text-amber-300"
                                                         >
                                                             <Eye className="h-4 w-4" />
                                                         </button>
-                                                        <button
-                                                            onClick={() => handleApprove(event)}
-                                                            disabled={busy[event._id] === 'approve' || event.status === 'APPROVED'}
-                                                            title={event.status === 'APPROVED' ? 'Already published' : 'Approve & publish'}
-                                                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-400/30 text-emerald-300 transition hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-40"
-                                                        >
-                                                            {busy[event._id] === 'approve' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleReject(event, event.reviewNote || '')}
-                                                            disabled={busy[event._id] === 'reject' || event.status === 'REJECTED'}
-                                                            title="Reject & return to instructor"
-                                                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-red-400/30 text-red-300 transition hover:bg-red-400/10 disabled:cursor-not-allowed disabled:opacity-40"
-                                                        >
-                                                            {busy[event._id] === 'reject' ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
-                                                        </button>
+                                                        {(event.status === 'PENDING_REVIEW' || event.status === 'DRAFT') && (
+                                                            <button
+                                                                onClick={() => handleApprove(event)}
+                                                                disabled={busy[event._id] === 'approve'}
+                                                                title="Approve & publish"
+                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-400/30 text-emerald-300 transition hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+                                                            >
+                                                                {busy[event._id] === 'approve' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                                            </button>
+                                                        )}
+                                                        {event.status === 'PENDING_REVIEW' && (
+                                                            <button
+                                                                onClick={() => handleReject(event, event.reviewNote || '')}
+                                                                disabled={busy[event._id] === 'reject'}
+                                                                title="Reject & return to instructor"
+                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-red-400/30 text-red-300 transition hover:bg-red-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+                                                            >
+                                                                {busy[event._id] === 'reject' ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                                                            </button>
+                                                        )}
                                                         {event.status !== 'CANCELLED' && (
                                                             <button
                                                                 onClick={() => { setCancelTarget(event); setCancelReason(''); }}
@@ -1247,6 +1481,7 @@ export default function AdminEventsPage() {
                                                 meetingProvider: platformToProvider[p] || p,
                                                 streamUrl: p === 'jitsi' ? (getDefaultMeetingLink('jitsi', f.title) || f.streamUrl) : f.streamUrl,
                                             }));
+                                            setMeetingErrors((m) => ({ ...m, streamUrl: '', meetingInvitees: '' }));
                                         }}
                                         style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: '#1e293b', color: '#fff', fontSize: 14, outline: 'none' }}
                                     >
@@ -1262,8 +1497,28 @@ export default function AdminEventsPage() {
                                         <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Invitees</label>
                                         <input
                                             value={createForm.meetingInvitees}
-                                            onChange={(e) => setCreateForm({ ...createForm, meetingInvitees: e.target.value })}
+                                            onChange={(e) => {
+                                                setCreateForm({ ...createForm, meetingInvitees: e.target.value });
+                                                setMeetingErrors((m) => ({ ...m, meetingInvitees: '' }));
+                                            }}
                                             placeholder="student1@example.com, student2@example.com"
+                                            style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+                                        />
+                                        {meetingErrors.meetingInvitees && (
+                                            <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#ef4444' }}>{meetingErrors.meetingInvitees}</div>
+                                        )}
+                                        <p style={{ margin: '6px 0 0', fontSize: 12, color: '#6b7280' }}>Comma-separated email addresses. Whitespace is trimmed, duplicates are removed and invalid addresses are rejected.</p>
+                                    </div>
+                                )}
+
+                                {/* Meeting ID — Zoom only (optional) */}
+                                {createForm.meetingPlatform === 'zoom' && (
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Meeting ID (Optional)</label>
+                                        <input
+                                            value={createForm.meetingId || ''}
+                                            onChange={(e) => setCreateForm({ ...createForm, meetingId: e.target.value })}
+                                            placeholder="e.g. 846 1234 5678"
                                             style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
                                         />
                                     </div>
@@ -1275,21 +1530,32 @@ export default function AdminEventsPage() {
                                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                         <input
                                             value={createForm.streamUrl}
-                                            onChange={(e) => setCreateForm({ ...createForm, streamUrl: e.target.value })}
+                                            onChange={(e) => {
+                                                setCreateForm({ ...createForm, streamUrl: e.target.value });
+                                                setMeetingErrors((m) => ({ ...m, streamUrl: '' }));
+                                            }}
                                             placeholder="Enter a meeting link or generate one automatically"
                                             style={{ flex: '1 1 200px', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
                                         />
-                                        <button
-                                            type="button"
-                                            onClick={handleGenerateMeetingLink}
-                                            disabled={meetingGenerating}
-                                            style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, background: '#9333ea', color: '#fff', border: 'none', borderRadius: 8, padding: '0 16px', height: 42, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: meetingGenerating ? 'not-allowed' : 'pointer', opacity: meetingGenerating ? 0.7 : 1 }}
-                                        >
-                                            {meetingGenerating
-                                                ? <><Loader2 size={15} className="animate-spin" /> Generating…</>
-                                                : <><Wand2 size={15} /> Generate Meeting Link</>}
-                                        </button>
+                                        {GENERATABLE_PLATFORMS.includes(createForm.meetingPlatform) && (
+                                            <button
+                                                type="button"
+                                                onClick={handleGenerateMeetingLink}
+                                                disabled={meetingGenerating}
+                                                style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, background: '#9333ea', color: '#fff', border: 'none', borderRadius: 8, padding: '0 16px', height: 42, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: meetingGenerating ? 'not-allowed' : 'pointer', opacity: meetingGenerating ? 0.7 : 1 }}
+                                            >
+                                                {meetingGenerating
+                                                    ? <><Loader2 size={15} className="animate-spin" /> Generating meeting…</>
+                                                    : <><Wand2 size={15} /> Generate Meeting Link</>}
+                                            </button>
+                                        )}
                                     </div>
+                                    {meetingErrors.streamUrl && (
+                                        <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#ef4444' }}>{meetingErrors.streamUrl}</div>
+                                    )}
+                                    {!GENERATABLE_PLATFORMS.includes(createForm.meetingPlatform) && (
+                                        <p style={{ margin: '6px 0 0', fontSize: 12, color: '#6b7280' }}>Paste your external meeting / live-stream URL directly. It is validated when the event is saved.</p>
+                                    )}
 
                                     {/* Copy / Open links once URL exists */}
                                     {createForm.streamUrl && (
@@ -1304,39 +1570,59 @@ export default function AdminEventsPage() {
                                     )}
                                 </div>
 
-                                {/* Meeting Password */}
-                                <div>
-                                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Meeting Password (Optional)</label>
-                                    <input
-                                        value={createForm.meetingPassword}
-                                        onChange={(e) => setCreateForm({ ...createForm, meetingPassword: e.target.value })}
-                                        placeholder="e.g. 123456 — for passcode-protected meetings / streams"
-                                        style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
-                                    />
-                                </div>
-
-                                {/* Google Meet connection status badge */}
-                                {createForm.meetingPlatform === 'googleMeet' && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: googleMeetConnected ? '#10b981' : '#ef4444' }}>
-                                            <span style={{ width: 9, height: 9, borderRadius: '50%', background: googleMeetConnected ? '#10b981' : '#ef4444', boxShadow: googleMeetConnected ? '0 0 8px rgba(16,185,129,0.8)' : '0 0 8px rgba(239,68,68,0.6)', flexShrink: 0 }} />
-                                            Google Meet {googleMeetConnected ? 'Connected' : 'Not Connected'}
-                                        </span>
-                                        {!googleMeetConnected && (
-                                            <button type="button" onClick={handleConnectGoogleMeet} disabled={isGoogleConnecting} style={{ padding: '6px 12px', fontSize: 12, borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: '#9ca3af', cursor: 'pointer' }}>
-                                                {isGoogleConnecting ? 'Opening Google…' : 'Connect Google Meet'}
-                                            </button>
-                                        )}
-                                        {!googleMeetConnected && googleMeetHint && (
-                                            <span style={{ fontSize: 12, color: '#6b7280' }}>{googleMeetHint}</span>
-                                        )}
+                                {/* Meeting Password — only platforms that support one */}
+                                {PASSWORD_PLATFORMS.includes(createForm.meetingPlatform) && (
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Meeting Password (Optional)</label>
+                                        <input
+                                            value={createForm.meetingPassword}
+                                            onChange={(e) => setCreateForm({ ...createForm, meetingPassword: e.target.value })}
+                                            placeholder="e.g. 123456 — for passcode-protected meetings / streams"
+                                            style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+                                        />
                                     </div>
                                 )}
 
-                                {/* Google Meet creation progress */}
+                                {/* Google Meet connection status — Google only, never shown for other platforms */}
+                                {createForm.meetingPlatform === 'googleMeet' && (
+                                    googleConfigured && !googleMeetConnected ? (
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', padding: '10px 12px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#ef4444' }}>
+                                                <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 8px rgba(239,68,68,0.6)', flexShrink: 0 }} />
+                                                Google Meet Not Connected
+                                            </span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                                <span style={{ fontSize: 12, color: '#9ca3af' }}>Connect your Google account to automatically create Google Meet sessions.</span>
+                                                <button type="button" onClick={handleConnectGoogleMeet} disabled={isGoogleConnecting} style={{ padding: '6px 12px', fontSize: 12, borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: '#e5e7eb', cursor: isGoogleConnecting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                                    {isGoogleConnecting ? <><Loader2 size={13} className="animate-spin" /> Opening Google…</> : 'Connect Google Meet'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : !googleConfigured ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', borderRadius: 10, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.35)' }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#f59e0b' }}>
+                                                <AlertTriangle size={14} /> Google Meet Setup Required
+                                            </span>
+                                            <span style={{ fontSize: 12, color: '#9ca3af' }}>The administrator must configure Google OAuth credentials on the backend.</span>
+                                            {googleMeetStatus?.missingEnv?.length > 0 && (
+                                                <span style={{ fontSize: 12, color: '#6b7280' }}>Missing backend/.env: {googleMeetStatus.missingEnv.join(', ')}</span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 12px', borderRadius: 10, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.35)' }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#10b981' }}>
+                                                <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px rgba(16,185,129,0.8)', flexShrink: 0 }} />
+                                                Google Meet Connected
+                                            </span>
+                                            <span style={{ fontSize: 12, color: '#9ca3af' }}>Your Google account is connected and ready to create meetings.</span>
+                                        </div>
+                                    )
+                                )}
+
+                                {/* Meeting creation progress / success */}
                                 {meetingGenerating ? (
                                     <p style={{ margin: 0, fontSize: 12, color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                        <Loader2 size={13} className="animate-spin" /> Creating a real Google Meet meeting…
+                                        <Loader2 size={13} className="animate-spin" /> Creating a real {meetingProviderLabel(createForm.meetingProvider)} meeting…
                                     </p>
                                 ) : createForm.meetingPlatform === 'googleMeet' && createForm.streamUrl ? (
                                     <div style={{ padding: '10px 12px', borderRadius: 10, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.35)' }}>
@@ -1390,7 +1676,36 @@ export default function AdminEventsPage() {
                                         </div>
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Banner image URL</label>
+                                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Event Thumbnail</label>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                                            <input id="event-banner-upload" type="file" accept="image/*" onChange={handleBannerUpload} style={{ display: 'none' }} />
+                                            <label
+                                                htmlFor="event-banner-upload"
+                                                style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, background: 'rgba(16,185,129,0.15)', color: '#34d399', border: '1px solid rgba(16,185,129,0.35)', borderRadius: 8, padding: '9px 16px', display: 'inline-flex', alignItems: 'center', gap: 7, cursor: bannerUploading ? 'not-allowed' : 'pointer', opacity: bannerUploading ? 0.6 : 1 }}
+                                            >
+                                                {bannerUploading
+                                                    ? <><Loader2 size={15} className="animate-spin" /> Uploading…</>
+                                                    : <><UploadCloud size={15} /> Upload Thumbnail</>}
+                                            </label>
+                                            {createForm.bannerImage && (
+                                                <>
+                                                    <img src={createForm.bannerImage} alt="Thumbnail preview" style={{ width: 112, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)' }} />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCreateForm({ ...createForm, bannerImage: '' })}
+                                                        title="Remove thumbnail"
+                                                        style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: '#ef4444', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                                    >
+                                                        <X size={15} />
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                        {bannerUploadError && (
+                                            <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#ef4444' }}>{bannerUploadError}</div>
+                                        )}
+                                        <p style={{ margin: '6px 0 10px', fontSize: 12, color: '#6b7280' }}>JPG, PNG or WebP up to 5MB. Shown on the public event listing.</p>
+                                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>…or paste an image URL</label>
                                         <input value={createForm.bannerImage} onChange={(e) => setCreateForm({ ...createForm, bannerImage: e.target.value })} placeholder="https://…/cover.jpg" style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
                                     </div>
                                     <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>

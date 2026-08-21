@@ -11,7 +11,9 @@ const {
     sendAdminPasswordResetEmail,
     sendPasswordResetConfirmationEmail,
     sendAccountCreatedEmail,
-    sendEmailVerification
+    sendEmailVerification,
+    sanitizeEmailError,
+    isRateLimitError
 } = require('../services/emailService');
 
 // ─────────────────────────────────────────────
@@ -127,7 +129,7 @@ const createUser = async (req, res, next) => {
         // Generate email verification OTP
         const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
         const hashedVerificationCode = crypto.createHash('sha256').update(verificationCode).digest('hex');
-        const verificationExpire = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+        const verificationExpire = Date.now() + 15 * 60 * 1000; // 15 minutes — matches email template + resend flow
 
         const user = await User.create({
             fullName,
@@ -170,15 +172,27 @@ const createUser = async (req, res, next) => {
             permissions: permissions || undefined
         });
 
-        // Send verification email with OTP
+// Send verification email with OTP. sendEmailVerification swallows transport
+        // failures and returns { success: false, error } instead of throwing, so we must
+        // read its result to know whether delivery actually succeeded.
         let verificationSent = false;
+        let deliveryError = '';
+        let deliveryRateLimited = false;
         try {
-            await sendEmailVerification(user, verificationCode);
-            verificationSent = true;
-            console.log(`✅ Verification email sent to ${user.accountEmail}`);
+            const emailResult = await sendEmailVerification(user, verificationCode);
+            verificationSent = !!(emailResult && emailResult.success);
+            if (verificationSent) {
+                console.log(`✅ Verification email sent to ${user.accountEmail}`);
+            } else {
+                deliveryError = sanitizeEmailError(emailResult && emailResult.error);
+                deliveryRateLimited = isRateLimitError(emailResult && emailResult.error);
+                console.error('Failed to send verification email:', emailResult && emailResult.error);
+            }
         } catch (emailErr) {
-            console.error('Failed to send verification email:', emailErr.message);
-            // If email fails, still return the code in dev mode so admin can verify manually
+            deliveryError = sanitizeEmailError(emailErr && emailErr.message);
+            deliveryRateLimited = isRateLimitError(emailErr && emailErr.message);
+            console.error('Failed to send verification email:', emailErr && emailErr.message);
+            // If email fails, still return the code in development so admin can verify manually
         }
 
         const userData = user.toObject();
@@ -187,12 +201,15 @@ const createUser = async (req, res, next) => {
 
         res.status(201).json({
             success: true,
-            message: `${assignedRole} account created. A verification code has been sent to ${user.accountEmail}. The account must be verified before it can be used.`,
+            message: verificationSent
+                ? `${assignedRole} account created. A verification code has been sent to ${user.accountEmail}. The account must be verified before it can be used.`
+                : `${assignedRole} account created, but the verification email could not be delivered (${deliveryError || 'email server issue'}). Use "Resend Code" after the cooldown to retry delivery, or contact support.`,
             data: userData,
             verificationRequired: true,
             verificationSent,
-            // Return code in non-production if email failed (so admin can manually verify)
-            ...(process.env.NODE_ENV !== 'production' && !verificationSent ? { verificationCode } : {})
+            deliveryError: verificationSent ? '' : deliveryError,
+            deliveryRateLimited,
+            retryAfterSeconds: deliveryRateLimited ? 60 : 30
         });
     } catch (err) {
         next(err);
@@ -650,6 +667,12 @@ const uploadUserAvatar = async (req, res, next) => {
     }
 };
 
+// ─────────────────────────────────────────────
+// @desc    Admin fallback: manually mark a user's email as verified
+// @route   POST /api/users/:id/verify-email
+// @access  Private (Admin only)
+// Used when automated email delivery is unavailable (e.g. provider daily limit).
+// ─────────────────────────────────────────────
 module.exports = { getAllUsers, getUserById, createUser, updateUser, resetUserPassword, deleteUser, getAnalytics, updateInstructorProfile, uploadUserAvatar, getPublicStats };
 
 // ─────────────────────────────────────────────────────────────────────────────

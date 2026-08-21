@@ -7,7 +7,10 @@ const {
     sendAdminPasswordResetEmail,
     sendAccountCreatedEmail,
     sendEmailVerification,
-    isEmailConfigured
+    sanitizeEmailError,
+    isRateLimitError,
+    resetEmailDailyCounter,
+    getEmailCounterStatus
 } = require('../services/emailService');
 const { audit, resolveIp } = require('../utils/auditLogger');
 
@@ -132,14 +135,12 @@ const register = async (req, res, next) => {
             targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
 
         // ── 6. Build success payload ──────────────────────────────────────
+        // No fallback OTP is ever returned — codes are delivered ONLY through
+        // the email provider so they can never leak into an API response.
         const responsePayload = {
             success: true,
             message: 'Registration successful. Please verify your email with the OTP sent to your inbox.'
         };
-        if (!isEmailConfigured() && process.env.NODE_ENV !== 'production') {
-            responsePayload.verificationCode = verificationCode;
-            responsePayload.warning = 'SMTP is not configured. Use the code returned here to verify your account.';
-        }
 
         // ── 7. Verification email — roll back on failure so retries work ──
         const emailResult = await sendEmailVerification(user, verificationCode);
@@ -393,18 +394,6 @@ const resendVerificationCode = async (req, res, next) => {
         user.emailVerificationExpire = expiresAt;
         await user.save({ validateBeforeSave: false });
 
-        // If the email service is NOT configured outside production, return the
-        // code directly so development / testing can proceed without a provider.
-        if (!isEmailConfigured() && process.env.NODE_ENV !== 'production') {
-            console.log(`⚠️ Email service not configured. Development verification code for ${user.accountEmail}: ${verificationCode}`);
-            return res.status(200).json({
-                success: true,
-                message: 'Development Mode: Email service is not configured. Use the code shown here to verify your account.',
-                verificationCode,
-                warning: 'Email service is not configured. Use the code provided here to verify.'
-            });
-        }
-
         // Attempt delivery; sendEmailVerification already swallows transport
         // failures and returns { success: false, error } instead of throwing.
         // The defensive try/catch guards against an unexpected throw so the API
@@ -420,18 +409,16 @@ const resendVerificationCode = async (req, res, next) => {
         if (!emailResult.success) {
             console.error(`❌ Failed to resend verification email to ${user.accountEmail}:`, emailResult.error);
 
-            // In non-production, never block the flow — hand the code back to the UI.
-            if (process.env.NODE_ENV !== 'production') {
-                return res.status(200).json({
-                    success: true,
-                    message: `Email delivery failed (${emailResult.error || 'unknown error'}). Dev verification code: ${verificationCode}`,
-                    verificationCode
-                });
-            }
+            const friendlyMessage = sanitizeEmailError(emailResult.error);
+            const rateLimited = isRateLimitError(emailResult.error);
 
-            return res.status(502).json({
+            // Report the failure cleanly — no raw SMTP traces, no fallback codes.
+            // A clear error lets the UI keep the 30s cooldown and offer Retry.
+            return res.status(rateLimited ? 429 : 502).json({
                 success: false,
-                message: 'Failed to deliver the verification email. Please check your email service settings or try again later.'
+                message: friendlyMessage,
+                rateLimited,
+                retryAfterSeconds: rateLimited ? 60 : 30
             });
         }
 
@@ -599,5 +586,35 @@ const resetPassword = async (req, res, next) => {
     }
 };
 
-module.exports = { register, login, logout, getMe, socialLogin, forgotPassword, resetPassword, verifyEmail, resendVerificationCode };
+// ─────────────────────────────────────────────
+// @desc    Reset in-process email daily counter (dev/admin only)
+// @route   POST /api/auth/reset-email-counter
+// @access  Private (Admin) — blocked in production unless
+//          ALLOW_EMAIL_COUNTER_RESET=true is explicitly set
+// ─────────────────────────────────────────────
+const resetEmailCounter = (req, res) => {
+    // Safety guard: refuse in production unless the operator explicitly opts in.
+    const isProduction = process.env.NODE_ENV === 'production';
+    const optedIn = process.env.ALLOW_EMAIL_COUNTER_RESET === 'true';
+    if (isProduction && !optedIn) {
+        return res.status(403).json({
+            success: false,
+            message: 'Email counter reset is disabled in production. Set ALLOW_EMAIL_COUNTER_RESET=true to enable it.'
+        });
+    }
+
+    const before = getEmailCounterStatus();
+    resetEmailDailyCounter();
+    const after = getEmailCounterStatus();
+
+    console.log(`🔄 Email daily counter reset by ${req.user ? req.user.accountEmail : 'system'}.`);
+    return res.status(200).json({
+        success: true,
+        message: 'Email daily counter has been reset to 0. You can now send verification emails again.',
+        before,
+        after
+    });
+};
+
+module.exports = { register, login, logout, getMe, socialLogin, forgotPassword, resetPassword, verifyEmail, resendVerificationCode, resetEmailCounter };
 

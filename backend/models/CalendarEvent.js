@@ -31,6 +31,7 @@ const calendarEventSchema = new mongoose.Schema({
     meetingUrl: { type: String, trim: true, default: '' },
     meetingSpaceName: { type: String, trim: true, default: '' },
     meetingProviderId: { type: String, trim: true, default: '' },
+    meetingId: { type: String, trim: true, default: '' },
     meetingCreatedAt: { type: Date, default: null },
     meetingStatus: {
         type: String,
@@ -41,8 +42,11 @@ const calendarEventSchema = new mongoose.Schema({
     // Virtual meeting & live stream settings (admin-entered or from the provider)
     meetingPlatform: { type: String, trim: true, default: '' },
     meetingInvitees: { type: String, trim: true, default: '' },
+    // Validated, deduplicated invitee emails (parsed from meetingInvitees on save)
+    invitees: { type: [String], default: [] },
     meetingPassword: { type: String, trim: true, default: '' },
     isAllDay: { type: Boolean, default: false },
+    image: { type: String, trim: true, default: '' },
     color: { type: String, default: '#2563eb' },
     status: {
         type: String,

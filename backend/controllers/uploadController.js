@@ -24,6 +24,8 @@ const getCloudinaryFolder = (targetType, explicitFolder) => {
         profile: 'emare_elms/avatars',
         thumbnail: 'emare_elms/course_thumbnails',
         course_thumbnail: 'emare_elms/course_thumbnails',
+        event: 'emare_elms/events',
+        event_thumbnail: 'emare_elms/event_thumbnails',
         certificate: 'emare_elms/certificates',
         logo: 'emare_elms/logos',
         website: 'emare_elms/website',

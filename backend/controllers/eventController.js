@@ -4,7 +4,7 @@ const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
 const { validateEvent } = require('../utils/eventValidation');
 const { broadcastEventNotification } = require('./notificationController');
-const { resolveMeetingUrl, isValidMeetingUrl, isValidGoogleMeetUrl, generateMeetingUrl, missingEnvMessage, normalizeProvider, mergeMeetingInfo, deleteProviderResource } = require('../services/meetingService');
+const { resolveMeetingUrl, isValidMeetingUrl, isValidGoogleMeetUrl, generateMeetingUrl, missingEnvMessage, normalizeProvider, mergeMeetingInfo, deleteProviderResource, validateInvitees } = require('../services/meetingService');
 const googleMeetService = require('../services/googleMeetService');
 
 const EVENT_CATEGORIES = [
@@ -103,7 +103,7 @@ const googleError = (error) => {
 
 const resolveInstructor = async (event) => {
     const ref = event.submittedBy;
-    if (typeof ref === 'object' && ref.assignedRole) return ref;
+    if (ref && typeof ref === 'object' && ref.assignedRole) return ref;
     try {
         return await User.findById(ref).select('fullName accountEmail assignedRole isActive instructorId avatarUrl');
     } catch {
@@ -298,6 +298,16 @@ exports.createAdminEvent = async (req, res) => {
         delete doc.reviewedAt;
         delete doc.publishedAt;
 
+        // Normalize invitees: trim, dedupe, drop nothing invalid — surface the
+        // invalid addresses so the admin can correct them before saving.
+        const inviteeInput = doc.invitees ?? doc.meetingInvitees;
+        if (inviteeInput !== undefined && inviteeInput !== null) {
+            const { list, invalid } = validateInvitees(inviteeInput);
+            if (invalid.length) return res.status(400).json({ success: false, message: `Invalid invitee email(s): ${invalid.join(', ')}` });
+            doc.invitees = list;
+            doc.meetingInvitees = list.join(', ');
+        }
+
         // Auto-generate a meeting link for Online/Hybrid events when none is supplied.
         const meeting = await resolveMeetingUrl({
             existing: '',
@@ -351,6 +361,16 @@ exports.updateAdminEvent = async (req, res) => {
         // Meeting URL rules: preserve a valid manual URL, otherwise keep the stored
         // URL untouched (never silently regenerate on edit).
         updated.eventType = updated.eventType || event.eventType;
+
+        // Normalize invitees on edit (same rules as create).
+        const inviteeInput = updated.invitees ?? updated.meetingInvitees;
+        if (inviteeInput !== undefined && inviteeInput !== null) {
+            const { list, invalid } = validateInvitees(inviteeInput);
+            if (invalid.length) return res.status(400).json({ success: false, message: `Invalid invitee email(s): ${invalid.join(', ')}` });
+            updated.invitees = list;
+            updated.meetingInvitees = list.join(', ');
+        }
+
         const meeting = await resolveMeetingUrl({
             existing: event.streamUrl || '',
             supplied: typeof updated.streamUrl === 'string' ? updated.streamUrl : event.streamUrl || '',

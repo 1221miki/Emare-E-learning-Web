@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
+    AlertTriangle,
     ArrowRight,
     Calendar,
     Camera,
     Clock,
+    Loader2,
     MapPin,
     Sparkles,
     Tag,
@@ -12,9 +14,9 @@ import {
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import EventFooter from '../components/events/EventFooter';
-import { events as staticEvents, eventGallery, formatISODate } from '../data/events';
+import { eventGallery, formatISODate } from '../data/events';
 import { publicEventService } from '../services/api';
-import { getLiveStatus, LIVE_STATUS_META } from '../utils/eventStatus';
+import { getLiveStatus } from '../utils/eventStatus';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -71,19 +73,31 @@ function Countdown({ target }) {
 
 export default function EventsPage() {
     const [apiEvents, setApiEvents] = useState(null);
+    const [loadState, setLoadState] = useState('loading');
 
-    useEffect(() => {
+    const loadEvents = useCallback(() => {
+        setLoadState('loading');
         publicEventService
             .getAll()
-            .then((res) => setApiEvents((res.data?.data || []).map((e) => ({ ...e, date: new Date(e.date) }))))
-            .catch(() => setApiEvents([]));
+            .then((res) => {
+                setApiEvents((res.data?.data || []).map((e) => ({ ...e, date: new Date(e.date) })));
+                setLoadState('ready');
+            })
+            .catch(() => {
+                setApiEvents([]);
+                setLoadState('error');
+            });
     }, []);
 
-    const events = useMemo(() => (apiEvents === null ? staticEvents : apiEvents), [apiEvents]);
+    useEffect(() => {
+        loadEvents();
+    }, [loadEvents]);
+
+    const events = apiEvents || [];
     const featured = events.find((e) => e.featured) ?? events[0];
     const others = events.filter((e) => e.id !== featured?.id);
     const hasEvents = events.length > 0;
-    const featuredLive = eventLiveStatus(featured);
+    const featuredLive = featured ? eventLiveStatus(featured) : 'upcoming';
 
     return (
         <div className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(135deg,#0B0C10_0%,#14141F_45%,#1F1F2E_100%)] text-white">
@@ -103,7 +117,29 @@ export default function EventsPage() {
                     </p>
                 </div>
 
-                {hasEvents ? (
+                {loadState === 'loading' ? (
+                    <div className="rounded-3xl border border-amber-500/20 bg-[#12131A]/80 px-6 py-20 text-center">
+                        <Loader2 className="mx-auto h-10 w-10 animate-spin text-amber-400" />
+                        <h2 className="mt-5 text-2xl font-extrabold text-white">Loading events…</h2>
+                        <p className="mx-auto mt-2 max-w-md text-sm text-[#9CA3AF]">
+                            Fetching the latest events from the platform.
+                        </p>
+                    </div>
+                ) : loadState === 'error' ? (
+                    <div className="rounded-3xl border border-red-400/30 bg-[#12131A]/80 px-6 py-20 text-center">
+                        <AlertTriangle className="mx-auto h-10 w-10 text-red-400" />
+                        <h2 className="mt-5 text-2xl font-extrabold text-white">Unable to load events</h2>
+                        <p className="mx-auto mt-2 max-w-md text-sm text-[#9CA3AF]">
+                            Please try again.
+                        </p>
+                        <button
+                            onClick={loadEvents}
+                            className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                ) : hasEvents ? (
                     <>
                 {/* ── Featured Event Hero ─────────────────────────────────── */}
                 <section className="relative overflow-hidden rounded-3xl border border-amber-500/20">

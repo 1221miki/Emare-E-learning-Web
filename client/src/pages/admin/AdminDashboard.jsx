@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { courseService, quizService, assignmentService, userService, enrollmentService, analyticsService, systemService, notificationService, authService, reportService, certificateService, contentService, uploadService, auditService, calendarService, eventService } from '../../services/api';
 import Sidebar from '../../components/Sidebar';
@@ -39,11 +39,31 @@ const meetingProviderLabel = (value) => (MEETING_PROVIDERS.find((p) => p.value =
 const MEETING_PLATFORMS = [
     { value: 'googleMeet', label: 'Google Meet' },
     { value: 'zoom', label: 'Zoom' },
+    { value: 'microsoftTeams', label: 'Microsoft Teams' },
     { value: 'jitsi', label: 'Jitsi Meet' },
     { value: 'youtubeLive', label: 'YouTube Live' },
-    { value: 'rtmp', label: 'Custom RTMP / Web Stream' }
+    { value: 'rtmp', label: 'Custom RTMP / Web Stream' },
+    { value: 'custom', label: 'Custom / Manual URL' }
 ];
-const platformToProvider = { googleMeet: 'googleMeet', zoom: 'zoom', jitsi: 'jitsi', youtubeLive: 'custom', rtmp: 'custom' };
+const platformToProvider = { googleMeet: 'googleMeet', zoom: 'zoom', microsoftTeams: 'microsoftTeams', jitsi: 'jitsi', custom: 'custom', youtubeLive: 'custom', rtmp: 'custom' };
+const GENERATABLE_PLATFORMS = ['googleMeet', 'zoom', 'microsoftTeams', 'jitsi'];
+const PASSWORD_PLATFORMS = ['googleMeet', 'zoom', 'custom', 'youtubeLive', 'rtmp'];
+const OAUTH_PLATFORM = 'googleMeet';
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const normalizeInviteesInput = (value) => {
+    const raw = (value || '').split(',').map((s) => s.trim()).filter(Boolean);
+    const seen = new Set();
+    const list = [];
+    const invalid = [];
+    raw.forEach((email) => {
+        const normalized = email.toLowerCase();
+        if (!EMAIL_PATTERN.test(normalized)) { invalid.push(email); return; }
+        if (seen.has(normalized)) return;
+        seen.add(normalized);
+        list.push(normalized);
+    });
+    return { list, invalid };
+};
 const meetingPlatformLabel = (value) => (MEETING_PLATFORMS.find((p) => p.value === value) || { label: 'Google Meet' }).label;
 const getDefaultMeetingLink = (platform, title) => {
     const slug = (title || 'emare-live-session').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 24) || 'emare-live-session';
@@ -54,6 +74,8 @@ const providerToPlatform = (provider) => {
     if (provider === 'zoom') return 'zoom';
     if (provider === 'googleMeet') return 'googleMeet';
     if (provider === 'jitsi') return 'jitsi';
+    if (provider === 'microsoftTeams') return 'microsoftTeams';
+    if (provider === 'custom') return 'custom';
     return 'youtubeLive';
 };
 const formatTimeShort = (dateStr) => {
@@ -340,9 +362,12 @@ export default function AdminDashboard() {
     const [createVerifyCode, setCreateVerifyCode] = useState('');       // code entered by admin
     const [createVerifyError, setCreateVerifyError] = useState('');
     const [createVerifyLoading, setCreateVerifyLoading] = useState(false);
+    const [createVerifyResending, setCreateVerifyResending] = useState(false);
+    const [createVerifyCooldown, setCreateVerifyCooldown] = useState(0);
     const [isUploadingCreateFile, setIsUploadingCreateFile] = useState(false);
     const [editForm, setEditForm] = useState({ fullName: '', accountEmail: '' });
     const [showCreatePassword, setShowCreatePassword] = useState(false);
+    const [showCreateConfirmPassword, setShowCreateConfirmPassword] = useState(false);
     const [showResetPassword, setShowResetPassword] = useState(false);
     const [selectedCourseForReview, setSelectedCourseForReview] = useState(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -384,9 +409,15 @@ export default function AdminDashboard() {
     const [cancelReason, setCancelReason] = useState('');
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [formError, setFormError] = useState('');
+    const [formErrors, setFormErrors] = useState({});
+    const [meetingErrors, setMeetingErrors] = useState({});
     const [calendarEditingId, setCalendarEditingId] = useState(null);
+    const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
+    const [thumbnailDragOver, setThumbnailDragOver] = useState(false);
+    const thumbnailInputRef = useRef(null);
     const [isCalendarSaving, setIsCalendarSaving] = useState(false);
     const [googleMeetStatus, setGoogleMeetStatus] = useState(null);
+    const googleConfigured = Boolean(googleMeetStatus?.configured && (!googleMeetStatus.missingEnv || googleMeetStatus.missingEnv.length === 0));
     const [isGoogleConnecting, setIsGoogleConnecting] = useState(false);
     const [isGeneratingMeeting, setIsGeneratingMeeting] = useState(false);
     const [certificateVerificationNumber, setCertificateVerificationNumber] = useState('');
@@ -1014,8 +1045,15 @@ const handleConnectGoogleMeet = async () => {
                     // Show OTP verification step
                     setCreateVerifyEmail(createForm.accountEmail.trim().toLowerCase());
                     setCreateVerifyCode('');
-                    setCreateVerifyError('');
+                    setCreateVerifyError(response.data.verificationSent === false
+                        ? (response.data.deliveryError || 'The verification email could not be delivered to the inbox. Check the email service and use "Resend Code" once the cooldown ends.')
+                        : '');
                     setCreateVerifyStep(true);
+                    // Lock the "Resend Code" button so the admin cannot spam it —
+                    // longer cooldown when the server reports a daily quota / rate limit.
+                    startCreateVerifyCooldown(response.data.deliveryRateLimited
+                        ? (response.data.retryAfterSeconds || 60)
+                        : 30);
                 } else {
                     showNotification(`${createForm.assignedRole} account created successfully`);
                     setIsCreateModalOpen(false);
@@ -1036,6 +1074,61 @@ const handleConnectGoogleMeet = async () => {
             }
         } catch (err) {
             alert(err.response?.data?.message || 'Failed to create user account.');
+        }
+    };
+
+    // Cooldown countdown so the admin cannot spam the resend endpoint.
+    const createVerifyCooldownRef = useRef(null);
+    const startCreateVerifyCooldown = (seconds = 60) => {
+        if (createVerifyCooldownRef.current) clearInterval(createVerifyCooldownRef.current);
+        setCreateVerifyCooldown(seconds);
+        createVerifyCooldownRef.current = setInterval(() => {
+            setCreateVerifyCooldown((s) => {
+                if (s <= 1) {
+                    clearInterval(createVerifyCooldownRef.current);
+                    createVerifyCooldownRef.current = null;
+                    return 0;
+                }
+                return s - 1;
+            });
+        }, 1000);
+    };
+    useEffect(() => () => { if (createVerifyCooldownRef.current) clearInterval(createVerifyCooldownRef.current); }, []);
+
+    const handleResendCreateVerifyCode = async () => {
+        if (createVerifyResending || createVerifyCooldown > 0) return;
+        if (!createVerifyEmail) return;
+        setCreateVerifyResending(true);
+        setCreateVerifyError('');
+        let cooldownSeconds = 30;
+        try {
+            // Backend generates a fresh 6-digit code and emails it directly to the
+            // registered inbox. Codes are NEVER returned in the API response — the
+            // UI relies purely on live delivery, so on failure we surface the error
+            // and keep the 30s cooldown before a retry is allowed.
+            const res = await authService.resendVerification({ accountEmail: createVerifyEmail });
+            if (res?.data?.success) {
+                setCreateVerifyCode('');
+                showNotification('A new 6-digit verification code has been sent to the user inbox.');
+            } else {
+                setCreateVerifyError(res?.data?.message || 'Failed to resend verification code.');
+                if (res?.data?.rateLimited) {
+                    cooldownSeconds = res.data.retryAfterSeconds || 60;
+                    setCreateVerifyError((res?.data?.message || 'Email daily sending limit reached.') + ' Please try again after the cooldown.');
+                }
+            }
+        } catch (err) {
+            const rateLimited = !!err?.response?.data?.rateLimited;
+            const msg = err?.response?.data?.message || 'Failed to resend verification code.';
+            setCreateVerifyError(rateLimited ? `${msg} Please try again after the cooldown.` : msg);
+            if (rateLimited) {
+                cooldownSeconds = err?.response?.data?.retryAfterSeconds || 60;
+            }
+        } finally {
+            setCreateVerifyResending(false);
+            // Always restart the cooldown (success or failure) to prevent spamming —
+            // longer when the server reports a rate limit.
+            startCreateVerifyCooldown(cooldownSeconds);
         }
     };
 
@@ -1570,9 +1663,11 @@ const handleConnectGoogleMeet = async () => {
     };
 
 const resetCalendarForm = () => {
-        setCalendarForm({ title: '', category: 'academic', description: '', startDate: '', endDate: '', location: '', isAllDay: false, color: '#2563eb', eventType: 'Hybrid', streamUrl: '', bannerImage: '', galleryImages: '', enableRegistration: true, capacity: '', price: 'FREE', instructor: '', eventStatus: 'SCHEDULED', eventCategory: 'Masterclass', visibility: 'internal', startTime: '10:00', endTime: '11:00', meetingProvider: 'googleMeet', meetingPlatform: 'googleMeet', meetingInvitees: '', meetingPassword: '' });
+        setCalendarForm({ title: '', category: 'academic', description: '', startDate: '', endDate: '', location: '', isAllDay: false, color: '#2563eb', eventType: 'Hybrid', streamUrl: '', bannerImage: '', galleryImages: '', enableRegistration: true, capacity: '', price: 'FREE', instructor: '', eventStatus: 'SCHEDULED', eventCategory: 'Masterclass', visibility: 'internal', startTime: '10:00', endTime: '11:00', meetingProvider: 'googleMeet', meetingPlatform: 'googleMeet', meetingInvitees: '', meetingId: '', meetingPassword: '' });
         setCalendarEditingId(null);
         setFormError('');
+        setFormErrors({});
+        setMeetingErrors({});
         setIsEventModalOpen(false);
     };
 
@@ -1581,118 +1676,200 @@ const resetCalendarForm = () => {
         setIsEventModalOpen(true);
     };
 
+    const handleEventThumbnailUpload = async (file) => {
+        if (!file) return;
+        if (!file.type || !file.type.startsWith('image/')) {
+            return setFormError('Please select an image file for the event thumbnail.');
+        }
+        if (file.size > 8 * 1024 * 1024) {
+            return setFormError('Image is too large. Maximum size is 8 MB.');
+        }
+        setIsUploadingThumbnail(true);
+        setFormError('');
+        try {
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('targetType', 'thumbnail');
+            fd.append('folder', 'emare_elms/event_thumbnails');
+            const res = await uploadService.uploadFile(fd);
+            const url = res.data?.data?.url;
+            if (!url) throw new Error('Upload returned no URL.');
+            setCalendarForm((f) => ({ ...f, bannerImage: url }));
+            showNotification('Event thumbnail uploaded successfully.');
+        } catch (err) {
+            setFormError(err.response?.data?.message || 'Thumbnail upload failed. Please try again.');
+        } finally {
+            setIsUploadingThumbnail(false);
+        }
+    };
+
+    const handleThumbnailDrop = (e) => {
+        e.preventDefault();
+        setThumbnailDragOver(false);
+        const file = e.dataTransfer?.files?.[0];
+        if (file) handleEventThumbnailUpload(file);
+    };
+
+    const validateCalendarForm = ({ isPublic, existing }) => {
+        const errors = {};
+        const title = (calendarForm.title || '').trim();
+        if (!title) errors.title = 'Event title is required.';
+        else if (isPublic && title.length < 10) errors.title = 'Public event title must be at least 10 characters.';
+        if (!calendarForm.startDate) errors.startDate = 'Start date is required.';
+        const start = combineDateAndTime(calendarForm.startDate, calendarForm.isAllDay ? '00:00' : (calendarForm.startTime || '00:00'));
+        if (calendarForm.startDate && !start) errors.startDate = 'Start date is invalid.';
+        const end = calendarForm.endDate ? combineDateAndTime(calendarForm.endDate, calendarForm.isAllDay ? '23:59' : (calendarForm.endTime || '23:59')) : null;
+        if (start && end && end < start) errors.endDate = 'End date/time must be after the start date/time.';
+        if (calendarForm.eventType === 'Physical' && !(calendarForm.location || '').trim()) errors.location = 'Location is required for a physical event.';
+        const trimmedUrl = (calendarForm.streamUrl || '').trim();
+        if (calendarForm.eventType !== 'Physical' && trimmedUrl && !isValidUrl(trimmedUrl)) errors.streamUrl = 'Meeting URL is invalid — use a full http(s) link.';
+        if (calendarForm.bannerImage && !isValidUrl(calendarForm.bannerImage)) errors.bannerImage = 'Event thumbnail URL is invalid — use a full http(s) link.';
+        const inviteesResult = normalizeInviteesInput(calendarForm.meetingInvitees);
+        if (inviteesResult.invalid.length) errors.meetingInvitees = `Invalid invitee email(s): ${inviteesResult.invalid.join(', ')}`;
+        if (calendarForm.eventType !== 'Physical' && calendarForm.meetingProvider === 'googleMeet' && !trimmedUrl && !(googleMeetStatus?.connected && googleMeetStatus?.authorized)) {
+            errors.streamUrl = googleConfigured
+                ? 'Google Meet is not connected. Click "Connect Google Meet" to authorize before creating the meeting.'
+                : 'Google Meet is not configured on the backend (add GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REDIRECT_URI to backend/.env).';
+        }
+        if (isPublic) {
+            const price = String(calendarForm.price || '').trim().toUpperCase();
+            if (!price) errors.price = 'Price is required (use FREE or a number).';
+            else if (price !== 'FREE' && Number.isNaN(Number(price))) errors.price = 'Price must be FREE or a valid number.';
+            if (calendarForm.capacity === '' || calendarForm.capacity === null || calendarForm.capacity === undefined) {
+                errors.capacity = 'Total seats / capacity is required for public events.';
+            } else {
+                const capacityNum = Number(calendarForm.capacity);
+                if (Number.isNaN(capacityNum) || capacityNum < 0) errors.capacity = 'Total seats must be a number of 0 or more.';
+            }
+            const hostPresent = Boolean(calendarForm.instructor) || Boolean(existing && existing.speaker && existing.speaker.name);
+            if (!hostPresent) errors.instructor = 'Select a host / instructor for public events.';
+            if (!calendarForm.bannerImage) errors.bannerImage = 'An event thumbnail is required for public events.';
+        }
+        return { errors, valid: Object.keys(errors).length === 0 };
+    };
+
+    const buildPublicEventPayload = ({ existing, start, end }) => {
+        const startTime = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+        const endTime = calendarForm.isAllDay
+            ? '23:59'
+            : (end ? (() => {
+                const hh = String(end.getHours()).padStart(2, '0');
+                const mm = String(end.getMinutes()).padStart(2, '0');
+                const sMin = start.getHours() * 60 + start.getMinutes();
+                const eMin = end.getHours() * 60 + end.getMinutes();
+                return eMin > sMin ? `${hh}:${mm}` : '23:59';
+            })() : '23:59');
+        const instructors = users.filter((u) => u.assignedRole === 'Instructor');
+        const host = instructors.find((u) => u._id === calendarForm.instructor);
+        return {
+            title: calendarForm.title,
+            tagline: '',
+            category: calendarForm.eventCategory || 'Masterclass',
+            description: calendarForm.description ? calendarForm.description.split('\n').filter(Boolean) : [],
+            eventType: calendarForm.eventType || 'Hybrid',
+            venue: calendarForm.location || (calendarForm.eventType !== 'Physical' ? 'Online Live Stream' : ''),
+            city: '',
+            streamUrl: calendarForm.streamUrl || '',
+            startDate: start.toISOString(),
+            endDate: end ? end.toISOString() : null,
+            startTime,
+            endTime,
+            timeLabel: calendarForm.isAllDay ? 'All Day' : '',
+            allDay: Boolean(calendarForm.isAllDay),
+            visibility: calendarForm.visibility,
+            meetingProvider: platformToProvider[calendarForm.meetingPlatform] || calendarForm.meetingProvider || 'googleMeet',
+            meetingPlatform: calendarForm.meetingPlatform || providerToPlatform(calendarForm.meetingProvider),
+            meetingInvitees: calendarForm.meetingInvitees || '',
+            invitees: normalizeInviteesInput(calendarForm.meetingInvitees).list,
+            meetingId: calendarForm.meetingId || '',
+            meetingPassword: calendarForm.meetingPassword || '',
+            price: calendarForm.price || 'FREE',
+            totalSlots: Number(calendarForm.capacity) || 0,
+            image: calendarForm.bannerImage || '',
+            gallery: calendarForm.galleryImages ? calendarForm.galleryImages.split(',').map((u) => u.trim()).filter(Boolean) : [],
+            speaker: host ? { name: host.fullName || '', role: host.specialization || 'Instructor', avatar: host.avatarUrl || '', bio: '' } : (existing?.speaker ? existing.speaker : {}),
+            status: calendarForm.eventStatus === 'CANCELLED' ? 'CANCELLED' : (calendarEditingId && existing ? existing.status : 'PENDING_REVIEW'),
+            isFeatured: Boolean(existing?.isFeatured),
+            registrationEnabled: Boolean(calendarForm.enableRegistration)
+        };
+    };
+
+    const buildInternalEventPayload = ({ start, end }) => ({
+        title: calendarForm.title,
+        category: calendarForm.category,
+        description: calendarForm.description || '',
+        startDate: start.toISOString(),
+        endDate: end ? end.toISOString() : null,
+        location: calendarForm.location || '',
+        eventType: calendarForm.eventType || 'Hybrid',
+        streamUrl: calendarForm.streamUrl || '',
+        visibility: calendarForm.visibility,
+        meetingProvider: platformToProvider[calendarForm.meetingPlatform] || calendarForm.meetingProvider || 'googleMeet',
+        meetingPlatform: calendarForm.meetingPlatform || providerToPlatform(calendarForm.meetingProvider),
+        meetingInvitees: calendarForm.meetingInvitees || '',
+        invitees: normalizeInviteesInput(calendarForm.meetingInvitees).list,
+        meetingId: calendarForm.meetingId || '',
+        meetingPassword: calendarForm.meetingPassword || '',
+        isAllDay: Boolean(calendarForm.isAllDay),
+        image: calendarForm.bannerImage || '',
+        color: calendarForm.color || '#2563eb',
+        status: calendarForm.eventStatus === 'CANCELLED' ? 'CANCELLED' : 'SCHEDULED'
+    });
+
     const handleSaveCalendarEvent = async (e) => {
         e.preventDefault();
         if (isCalendarSaving) return;
+
         const isPublic = calendarForm.visibility === 'public';
-        const wantsGoogleMeet = calendarForm.eventType !== 'Physical' && calendarForm.meetingProvider === 'googleMeet' && !calendarForm.streamUrl;
+        const existing = calendarEditingId
+            ? (isPublic ? publicEvents.find((ev) => ev._id === calendarEditingId) : calendarEvents.find((ev) => ev._id === calendarEditingId))
+            : null;
 
         setFormError('');
-        if (wantsGoogleMeet && !(googleMeetStatus?.connected && googleMeetStatus?.authorized)) {
-            return setFormError('Google Meet is not connected. Click "Connect Google Meet" to authorize before creating the meeting.');
+        setFormErrors({});
+        setMeetingErrors({});
+
+        const { errors, valid } = validateCalendarForm({ isPublic, existing });
+        if (!valid) {
+            setFormErrors(errors);
+            setMeetingErrors({ streamUrl: errors.streamUrl || '', meetingInvitees: errors.meetingInvitees || '' });
+            setFormError(Object.values(errors)[0]);
+            return;
         }
-        if (!calendarForm.title.trim()) return setFormError('Event title is required.');
-        if (!calendarForm.startDate) return setFormError('Start date is required.');
+
         const start = combineDateAndTime(calendarForm.startDate, calendarForm.isAllDay ? '00:00' : (calendarForm.startTime || '00:00'));
-        if (!start) return setFormError('Start date is invalid.');
         const end = calendarForm.endDate ? combineDateAndTime(calendarForm.endDate, calendarForm.isAllDay ? '23:59' : (calendarForm.endTime || '23:59')) : null;
-        if (end && end < start) return setFormError('End date/time must be after the start date/time.');
-        if (calendarForm.eventType === 'Physical' && !calendarForm.location.trim()) return setFormError('Location is required for a physical event.');
-        if (isPublic) {
-            if (calendarForm.streamUrl && !isValidUrl(calendarForm.streamUrl)) return setFormError('Meeting URL is invalid ─" use a full http(s) link.');
-            if (calendarForm.bannerImage && !isValidUrl(calendarForm.bannerImage)) return setFormError('Banner image URL is invalid ─" use a full http(s) link.');
-            if (calendarForm.capacity !== '' && (Number.isNaN(Number(calendarForm.capacity)) || Number(calendarForm.capacity) < 0)) return setFormError('Capacity must be a positive number.');
-        }
 
         try {
             setIsCalendarSaving(true);
+            const payload = isPublic
+                ? buildPublicEventPayload({ existing, start, end })
+                : buildInternalEventPayload({ start, end });
 
-            if (isPublic) {
-                const startTime = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
-                const endTime = calendarForm.isAllDay
-                    ? '23:59'
-                    : (end ? (() => {
-                        const hh = String(end.getHours()).padStart(2, '0');
-                        const mm = String(end.getMinutes()).padStart(2, '0');
-                        const sMin = start.getHours() * 60 + start.getMinutes();
-                        const eMin = end.getHours() * 60 + end.getMinutes();
-                        return eMin > sMin ? `${hh}:${mm}` : '23:59';
-                    })() : '23:59');
-                const timeLabel = calendarForm.isAllDay ? 'All Day' : '';
-                const instructors = users.filter((u) => u.assignedRole === 'Instructor');
-                const host = instructors.find((u) => u._id === calendarForm.instructor);
-                const existing = calendarEditingId ? publicEvents.find((ev) => ev._id === calendarEditingId) : null;
-                const payload = {
-                    title: calendarForm.title,
-                    tagline: '',
-                    category: calendarForm.eventCategory || 'Masterclass',
-                    description: calendarForm.description ? calendarForm.description.split('\n').filter(Boolean) : [],
-                    eventType: calendarForm.eventType || 'Hybrid',
-                    venue: calendarForm.location || (calendarForm.eventType !== 'Physical' ? 'Online Live Stream' : ''),
-                    city: '',
-                    streamUrl: calendarForm.streamUrl || '',
-                    startDate: start.toISOString(),
-                    endDate: end ? end.toISOString() : null,
-                    startTime,
-                    endTime,
-                    timeLabel,
-                    allDay: Boolean(calendarForm.isAllDay),
-                    visibility: 'public',
-                    meetingProvider: platformToProvider[calendarForm.meetingPlatform] || calendarForm.meetingProvider || 'googleMeet',
-                    meetingPlatform: calendarForm.meetingPlatform || providerToPlatform(calendarForm.meetingProvider),
-                    meetingInvitees: calendarForm.meetingInvitees || '',
-                    meetingPassword: calendarForm.meetingPassword || '',
-                    price: calendarForm.price || 'FREE',
-                    totalSlots: Number(calendarForm.capacity) || 0,
-                    image: calendarForm.bannerImage || '',
-                    gallery: calendarForm.galleryImages ? calendarForm.galleryImages.split(',').map((u) => u.trim()).filter(Boolean) : [],
-                    speaker: host ? { name: host.fullName || '', role: host.specialization || 'Instructor', avatar: host.avatarUrl || '', bio: '' } : (existing?.speaker ? existing.speaker : {}),
-                    status: calendarForm.eventStatus === 'CANCELLED' ? 'CANCELLED' : (calendarEditingId && existing ? existing.status : 'PENDING_REVIEW'),
-                    isFeatured: Boolean(existing?.isFeatured),
-                    registrationEnabled: Boolean(calendarForm.enableRegistration)
-                };
-                if (calendarEditingId) {
-                    await eventService.update(calendarEditingId, payload);
-                    showNotification(wantsGoogleMeet ? 'Event updated. Google Meet meeting preserved.' : 'Public event updated. Meeting link saved.');
-                } else {
-                    await eventService.create(payload);
-                    showNotification(wantsGoogleMeet ? 'Event created. Real Google Meet meeting ready.' : 'Public event created. Meeting link generated.');
-                }
-                resetCalendarForm();
-                fetchPublicEvents();
-                return;
-            }
-
-            const payload = {
-                title: calendarForm.title,
-                category: calendarForm.category,
-                description: calendarForm.description || '',
-                startDate: start.toISOString(),
-                endDate: end ? end.toISOString() : null,
-                location: calendarForm.location || '',
-                eventType: calendarForm.eventType || 'Hybrid',
-                streamUrl: calendarForm.streamUrl || '',
-                visibility: 'internal',
-                meetingProvider: platformToProvider[calendarForm.meetingPlatform] || calendarForm.meetingProvider || 'googleMeet',
-                meetingPlatform: calendarForm.meetingPlatform || providerToPlatform(calendarForm.meetingProvider),
-                meetingInvitees: calendarForm.meetingInvitees || '',
-                meetingPassword: calendarForm.meetingPassword || '',
-                isAllDay: Boolean(calendarForm.isAllDay),
-                color: calendarForm.color || '#2563eb',
-                status: calendarForm.eventStatus === 'CANCELLED' ? 'CANCELLED' : 'SCHEDULED'
-            };
             if (calendarEditingId) {
-                await calendarService.updateEvent(calendarEditingId, payload);
-                showNotification(wantsGoogleMeet ? 'Calendar event updated. Google Meet meeting preserved.' : 'Calendar event updated.');
+                if (isPublic) {
+                    await eventService.update(calendarEditingId, payload);
+                    showNotification('Public event updated successfully.');
+                } else {
+                    await calendarService.updateEvent(calendarEditingId, payload);
+                    showNotification('Calendar event updated successfully.');
+                }
+            } else if (isPublic) {
+                await eventService.create(payload);
+                showNotification('Public event created successfully.');
             } else {
                 await calendarService.createEvent(payload);
-                showNotification(wantsGoogleMeet ? 'Calendar event created. Real Google Meet meeting ready.' : 'Calendar event created.');
+                showNotification('Calendar event created successfully.');
             }
+
             resetCalendarForm();
             fetchCalendarEvents();
+            fetchPublicEvents();
         } catch (error) {
             const msg = error.response?.data?.message || 'Failed to save event.';
-            showNotification(wantsGoogleMeet && !error.response ? 'Google Meet creation failed — the event was NOT saved. Check the backend connection and retry.' : msg);
+            setFormError(msg);
+            setFormErrors((prev) => ({ ...prev, _submit: msg }));
+            showNotification(msg);
         } finally {
             setIsCalendarSaving(false);
         }
@@ -1731,6 +1908,7 @@ const resetCalendarForm = () => {
             meetingPassword: event.meetingPassword || '',
         });
         setFormError('');
+        setFormErrors({});
         setIsEventModalOpen(true);
     };
 
@@ -1747,9 +1925,11 @@ const resetCalendarForm = () => {
 
     const handleGenerateMeetingLink = async (overrideProvider) => {
         const provider = overrideProvider || calendarForm.meetingProvider;
-        if (provider === 'custom') return;
+        if (provider === 'custom') return showNotification('Manual URLs are entered directly in the link field — no generation needed.');
         if (provider === 'googleMeet' && !(googleMeetStatus?.connected && googleMeetStatus?.authorized)) {
-            return showNotification('Google Meet is not connected. Click "Connect Google Meet" first.');
+            return showNotification(googleConfigured
+                ? 'Google Meet is not connected. Click "Connect Google Meet" to authorize first.'
+                : 'Google Meet is not configured on the backend. Add GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REDIRECT_URI to backend/.env.');
         }
         if (!calendarForm.title.trim()) return showNotification('Enter an event title before generating a link.');
         try {
@@ -1782,11 +1962,8 @@ const resetCalendarForm = () => {
             setCalendarForm((f) => ({ ...f, streamUrl: defaultLink, meetingProvider: 'jitsi' }));
             return showNotification('Jitsi Meet link generated.');
         }
-        if (platform === 'googleMeet') {
-            if (!(googleMeetStatus?.connected && googleMeetStatus?.authorized)) {
-                return showNotification('Google Meet is not connected. Please enter a link manually.');
-            }
-            return await handleGenerateMeetingLink('googleMeet');
+        if (GENERATABLE_PLATFORMS.includes(platform)) {
+            return await handleGenerateMeetingLink(platformToProvider[platform]);
         }
         return showNotification(`Automatic generation is not available for ${meetingPlatformLabel(platform)}. Please enter a real meeting link manually.`);
     };
@@ -4587,6 +4764,9 @@ const resetCalendarForm = () => {
     const renderCalendar = () => {
         const fieldLabel = { display: 'block', color: colors.textMuted, fontSize: '13px', fontWeight: '600', marginBottom: '6px' };
         const formRow = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' };
+        const fieldError = (key) => formErrors[key]
+            ? <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: colors.danger }}>{formErrors[key]}</div>
+            : null;
         const isFormPublic = calendarForm.visibility === 'public';
         const googleMeetConnected = Boolean(googleMeetStatus?.connected && googleMeetStatus?.authorized);
         const googleMeetHint = !googleMeetStatus?.connected
@@ -4888,6 +5068,7 @@ const resetCalendarForm = () => {
                             <div>
                                 <label style={fieldLabel}>Event Title *</label>
                                 <input value={calendarForm.title} onChange={(e) => setCalendarForm({ ...calendarForm, title: e.target.value })} placeholder="e.g. Digital Income Masterclass" style={s.input} required />
+                                {fieldError('title')}
                             </div>
                             <div style={formRow}>
                                 <div>
@@ -4931,6 +5112,7 @@ const resetCalendarForm = () => {
                                 <div>
                                     <label style={fieldLabel}>Start Date *</label>
                                     <input type="date" value={calendarForm.startDate} onChange={(e) => setCalendarForm({ ...calendarForm, startDate: e.target.value })} style={s.input} required />
+                                    {fieldError('startDate')}
                                 </div>
                                 <div>
                                     <label style={fieldLabel}>Start Time</label>
@@ -4941,6 +5123,7 @@ const resetCalendarForm = () => {
                                 <div>
                                     <label style={fieldLabel}>End Date</label>
                                     <input type="date" value={calendarForm.endDate} onChange={(e) => setCalendarForm({ ...calendarForm, endDate: e.target.value })} style={s.input} />
+                                    {fieldError('endDate')}
                                 </div>
                                 <div>
                                     <label style={fieldLabel}>End Time</label>
@@ -4971,6 +5154,7 @@ const resetCalendarForm = () => {
                                 <div>
                                     <label style={fieldLabel}>Location</label>
                                     <input value={calendarForm.location} onChange={(e) => setCalendarForm({ ...calendarForm, location: e.target.value })} placeholder="e.g. Emare Live Hub, Addis Ababa" style={s.input} />
+                                    {fieldError('location')}
                                 </div>
                             )}
                         </div>
@@ -4994,6 +5178,7 @@ const resetCalendarForm = () => {
                                             meetingProvider: platformToProvider[p] || p,
                                             streamUrl: p === 'jitsi' ? (getDefaultMeetingLink('jitsi', f.title) || f.streamUrl) : f.streamUrl
                                         }));
+                                        setMeetingErrors((m) => ({ ...m, streamUrl: '', meetingInvitees: '' }));
                                     }} style={s.select}>
                                         {MEETING_PLATFORMS.map((pf) => (
                                             <option key={pf.value} value={pf.value} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{pf.label}</option>
@@ -5005,7 +5190,22 @@ const resetCalendarForm = () => {
                                 {calendarForm.meetingPlatform === 'googleMeet' && (
                                     <div>
                                         <label style={fieldLabel}>Invitees</label>
-                                        <input value={calendarForm.meetingInvitees} onChange={(e) => setCalendarForm({ ...calendarForm, meetingInvitees: e.target.value })} placeholder="student1@example.com, student2@example.com" style={s.input} />
+                                        <input value={calendarForm.meetingInvitees} onChange={(e) => {
+                                            setCalendarForm({ ...calendarForm, meetingInvitees: e.target.value });
+                                            setMeetingErrors((m) => ({ ...m, meetingInvitees: '' }));
+                                        }} placeholder="student1@example.com, student2@example.com" style={s.input} />
+                                        {meetingErrors.meetingInvitees && (
+                                            <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#ef4444' }}>{meetingErrors.meetingInvitees}</div>
+                                        )}
+                                        <p style={{ margin: '6px 0 0', fontSize: 12, color: colors.textMuted }}>Comma-separated email addresses. Whitespace is trimmed, duplicates are removed and invalid addresses are rejected.</p>
+                                    </div>
+                                )}
+
+                                {/* Meeting ID — Zoom only (optional) */}
+                                {calendarForm.meetingPlatform === 'zoom' && (
+                                    <div>
+                                        <label style={fieldLabel}>Meeting ID (Optional)</label>
+                                        <input value={calendarForm.meetingId || ''} onChange={(e) => setCalendarForm({ ...calendarForm, meetingId: e.target.value })} placeholder="e.g. 846 1234 5678" style={s.input} />
                                     </div>
                                 )}
 
@@ -5015,23 +5215,35 @@ const resetCalendarForm = () => {
                                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                         <input
                                             value={calendarForm.streamUrl}
-                                            onChange={(e) => setCalendarForm({ ...calendarForm, streamUrl: e.target.value })}
+                                            onChange={(e) => {
+                                                setCalendarForm({ ...calendarForm, streamUrl: e.target.value });
+                                                setMeetingErrors((m) => ({ ...m, streamUrl: '' }));
+                                            }}
                                             placeholder="Enter a meeting link or generate one automatically"
                                             style={{ ...s.input, flex: '1 1 200px' }}
                                         />
-                                        <button
-                                            type="button"
-                                            onClick={handleGeneratePlatformMeeting}
-                                            disabled={isGeneratingMeeting}
-                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#7e22ce'; }}
-                                            onMouseLeave={(e) => { e.currentTarget.style.background = '#9333ea'; }}
-                                            style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, background: '#9333ea', color: '#fff', border: 'none', borderRadius: 8, padding: '0 16px', height: 42, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: isGeneratingMeeting ? 'not-allowed' : 'pointer', opacity: isGeneratingMeeting ? 0.7 : 1 }}
-                                        >
-                                            {isGeneratingMeeting
-                                                ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Generating...</>
-                                                : <><Wand2 size={15} /> Generate Meeting Link</>}
-                                        </button>
+                                        {GENERATABLE_PLATFORMS.includes(calendarForm.meetingPlatform) && (
+                                            <button
+                                                type="button"
+                                                onClick={handleGeneratePlatformMeeting}
+                                                disabled={isGeneratingMeeting}
+                                                onMouseEnter={(e) => { e.currentTarget.style.background = '#7e22ce'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.background = '#9333ea'; }}
+                                                style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, background: '#9333ea', color: '#fff', border: 'none', borderRadius: 8, padding: '0 16px', height: 42, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: isGeneratingMeeting ? 'not-allowed' : 'pointer', opacity: isGeneratingMeeting ? 0.7 : 1 }}
+                                            >
+                                                {isGeneratingMeeting
+                                                    ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Generating...</>
+                                                    : <><Wand2 size={15} /> Generate Meeting Link</>}
+                                            </button>
+                                        )}
                                     </div>
+                                    {fieldError('streamUrl')}
+                                    {meetingErrors.streamUrl && (
+                                        <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#ef4444' }}>{meetingErrors.streamUrl}</div>
+                                    )}
+                                    {!GENERATABLE_PLATFORMS.includes(calendarForm.meetingPlatform) && (
+                                        <p style={{ margin: '6px 0 0', fontSize: 12, color: colors.textMuted }}>Paste your external meeting / live-stream URL directly. It is validated when the event is saved.</p>
+                                    )}
                                     {calendarForm.streamUrl && (
                                         <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                             <button type="button" onClick={() => handleCopyMeetingLink(calendarForm.streamUrl)} style={{ ...s.secondaryBtn, padding: '5px 10px', fontSize: 12 }}>
@@ -5049,33 +5261,53 @@ const resetCalendarForm = () => {
                                     )}
                                 </div>
 
-                                {/* Meeting Password */}
-                                <div>
-                                    <label style={fieldLabel}>Meeting Password (Optional)</label>
-                                    <input value={calendarForm.meetingPassword} onChange={(e) => setCalendarForm({ ...calendarForm, meetingPassword: e.target.value })} placeholder="e.g. 123456 — for passcode-protected meetings / streams" style={s.input} />
-                                </div>
-
-                                {/* Google Meet connection status */}
-                                {calendarForm.meetingPlatform === 'googleMeet' && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 12px', borderRadius: 10, background: colors.bgInput, border: `1px solid ${colors.border}` }}>
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: googleMeetConnected ? '#10b981' : '#ef4444' }}>
-                                            <span style={{ width: 9, height: 9, borderRadius: '50%', background: googleMeetConnected ? '#10b981' : '#ef4444', boxShadow: googleMeetConnected ? '0 0 8px rgba(16,185,129,0.8)' : '0 0 8px rgba(239,68,68,0.6)' }} />
-                                            Google Meet {googleMeetConnected ? 'Connected' : 'Not Connected'}
-                                        </span>
-                                        {!googleMeetConnected && (
-                                            <button type="button" onClick={handleConnectGoogleMeet} disabled={isGoogleConnecting} style={{ ...s.secondaryBtn, padding: '6px 12px', fontSize: 12 }}>
-                                                {isGoogleConnecting ? 'Opening Google...' : 'Connect Google Meet'}
-                                            </button>
-                                        )}
-                                        {!googleMeetConnected && googleMeetHint && (
-                                            <span style={{ fontSize: 12, color: colors.textMuted }}>{googleMeetHint}</span>
-                                        )}
+                                {/* Meeting Password — only platforms that support one */}
+                                {PASSWORD_PLATFORMS.includes(calendarForm.meetingPlatform) && (
+                                    <div>
+                                        <label style={fieldLabel}>Meeting Password (Optional)</label>
+                                        <input value={calendarForm.meetingPassword} onChange={(e) => setCalendarForm({ ...calendarForm, meetingPassword: e.target.value })} placeholder="e.g. 123456 — for passcode-protected meetings / streams" style={s.input} />
                                     </div>
+                                )}
+
+                                {/* Google Meet connection status — Google only, never shown for other platforms */}
+                                {calendarForm.meetingPlatform === 'googleMeet' && (
+                                    googleConfigured && !googleMeetConnected ? (
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', padding: '10px 12px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#ef4444' }}>
+                                                <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 8px rgba(239,68,68,0.6)' }} />
+                                                Google Meet Not Connected
+                                            </span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                                <span style={{ fontSize: 12, color: colors.textMuted }}>Connect your Google account to automatically create Google Meet sessions.</span>
+                                                <button type="button" onClick={handleConnectGoogleMeet} disabled={isGoogleConnecting} style={{ ...s.secondaryBtn, padding: '6px 12px', fontSize: 12 }}>
+                                                    {isGoogleConnecting ? 'Opening Google...' : 'Connect Google Meet'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : !googleConfigured ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', borderRadius: 10, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.35)' }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#f59e0b' }}>
+                                                <AlertTriangle size={14} /> Google Meet Setup Required
+                                            </span>
+                                            <span style={{ fontSize: 12, color: colors.textMuted }}>The administrator must configure Google OAuth credentials on the backend.</span>
+                                            {googleMeetStatus?.missingEnv?.length > 0 && (
+                                                <span style={{ fontSize: 12, color: colors.textMuted }}>Missing backend/.env: {googleMeetStatus.missingEnv.join(', ')}</span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 12px', borderRadius: 10, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.35)' }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#10b981' }}>
+                                                <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px rgba(16,185,129,0.8)' }} />
+                                                Google Meet Connected
+                                            </span>
+                                            <span style={{ fontSize: 12, color: colors.textMuted }}>Your Google account is connected and ready to create meetings.</span>
+                                        </div>
+                                    )
                                 )}
 
                                 {isGeneratingMeeting ? (
                                     <p style={{ margin: '0', fontSize: 12, color: colors.primary, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                        <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Creating a real Google Meet meeting (Google Calendar event)...
+                                        <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Creating a real {meetingProviderLabel(calendarForm.meetingProvider)} meeting...
                                     </p>
                                 ) : calendarForm.meetingPlatform === 'googleMeet' && calendarForm.streamUrl ? (
                                     <div style={{ margin: '0', padding: '10px 12px', borderRadius: 10, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.35)' }}>
@@ -5126,10 +5358,6 @@ const resetCalendarForm = () => {
                                         </div>
                                     </div>
                                     <div>
-                                        <label style={fieldLabel}>Banner image URL</label>
-                                        <input value={calendarForm.bannerImage} onChange={(e) => setCalendarForm({ ...calendarForm, bannerImage: e.target.value })} placeholder="https://──/cover.jpg" style={s.input} />
-                                    </div>
-                                    <div>
                                         <label style={fieldLabel}>Host / Instructor</label>
                                         <select value={calendarForm.instructor} onChange={(e) => setCalendarForm({ ...calendarForm, instructor: e.target.value })} style={s.select}>
                                             <option value="" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Select host / instructor</option>
@@ -5146,6 +5374,62 @@ const resetCalendarForm = () => {
                             </div>
                         </>
                     )}
+
+                    <div style={{ height: 1, background: colors.border }} />
+
+                    {/* Upload Event Thumbnail */}
+                    <div>
+                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: colors.primary, marginBottom: 12 }}>Upload Event Thumbnail</div>
+                        <input
+                            ref={thumbnailInputRef}
+                            type="file"
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                e.target.value = '';
+                                if (f) handleEventThumbnailUpload(f);
+                            }}
+                        />
+                        {calendarForm.bannerImage ? (
+                            <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: `1px solid ${colors.border}` }}>
+                                <img src={calendarForm.bannerImage} alt="Event thumbnail preview" style={{ width: '100%', height: 170, objectFit: 'cover', display: 'block', background: colors.bgInput }} />
+                                <div
+                                    onMouseEnter={(e) => { e.currentTarget.style.opacity = 1; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.opacity = 0; }}
+                                    style={{ position: 'absolute', inset: 0, background: 'rgba(2,6,17,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: 0, transition: 'opacity 0.2s' }}
+                                >
+                                    <button type="button" onClick={() => thumbnailInputRef.current?.click()} disabled={isUploadingThumbnail} style={{ ...s.secondaryBtn, background: 'rgba(2,6,17,0.7)', color: '#fff', padding: '8px 14px', fontSize: 12 }}>
+                                        <RefreshCw size={13} /> Replace
+                                    </button>
+                                    <button type="button" onClick={() => setCalendarForm((f) => ({ ...f, bannerImage: '' }))} style={{ ...s.secondaryBtn, background: 'rgba(2,6,17,0.7)', color: '#fca5a5', padding: '8px 14px', fontSize: 12 }}>
+                                        <Trash2 size={13} /> Remove
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div
+                                onClick={() => { if (!isUploadingThumbnail) thumbnailInputRef.current?.click(); }}
+                                onDragOver={(e) => { e.preventDefault(); setThumbnailDragOver(true); }}
+                                onDragLeave={() => setThumbnailDragOver(false)}
+                                onDrop={handleThumbnailDrop}
+                                style={{
+                                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+                                    minHeight: 150, padding: '28px 16px', cursor: isUploadingThumbnail ? 'wait' : 'pointer',
+                                    borderRadius: 12, background: colors.bgInput,
+                                    border: `1.5px dashed ${thumbnailDragOver ? colors.primary : colors.border}`,
+                                    transition: 'border-color 0.15s, background 0.15s'
+                                }}
+                            >
+                                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: '50%', background: `${colors.primary}1f`, color: colors.primary }}>
+                                    {isUploadingThumbnail ? <Loader2 size={22} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={22} />}
+                                </span>
+                                <span style={{ fontSize: 14, fontWeight: 500, color: colors.textMuted }}>
+                                    {isUploadingThumbnail ? 'Uploading...' : 'Click to upload or drag and drop'}
+                                </span>
+                            </div>
+                        )}
+                    </div>
 
                     <div style={{ height: 1, background: colors.border }} />
 
@@ -5584,7 +5868,10 @@ const resetCalendarForm = () => {
                                 </div>
                                 <div>
                                     <label style={s.label}>Confirm Password *</label>
-                                    <input type="password" value={createForm.confirmPassword} onChange={(e) => setCreateForm({ ...createForm, confirmPassword: e.target.value })} placeholder="Re-enter password" style={s.input} required minLength={8} />
+                                    <div style={{ position: 'relative' }}>
+                                        <input type={showCreateConfirmPassword ? 'text' : 'password'} value={createForm.confirmPassword} onChange={(e) => setCreateForm({ ...createForm, confirmPassword: e.target.value })} placeholder="Re-enter password" style={{ ...s.input, paddingRight: '44px' }} required minLength={8} />
+                                        <button type="button" onClick={() => setShowCreateConfirmPassword(!showCreateConfirmPassword)} style={{ ...s.iconBtn, position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)' }}>{showCreateConfirmPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>
+                                    </div>
                                     {createForm.confirmPassword && createForm.securedPassword !== createForm.confirmPassword && <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>Passwords do not match</p>}
                                 </div>
                             </div>
@@ -5830,10 +6117,10 @@ const resetCalendarForm = () => {
             </Modal>
 
             {/* ─"?─"? Email Verification Modal (shown after account creation) ─"?─"? */}
-            <Modal isOpen={createVerifyStep} onClose={() => { setCreateVerifyStep(false); setIsCreateModalOpen(false); }} title="Verify Email Address">
+<Modal isOpen={createVerifyStep} onClose={() => { setCreateVerifyStep(false); setIsCreateModalOpen(false); }} title="Verify Email Address" backdrop="clear">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ textAlign: 'center', padding: '8px 0' }}>
-                        <div style={{ fontSize: 48, marginBottom: 12 }}>dY"</div>
+                        <div style={{ fontSize: 48, marginBottom: 12 }}>📧</div>
                         <p style={{ color: colors.text, fontWeight: 700, fontSize: 15, margin: '0 0 8px' }}>
                             Verification Code Sent
                         </p>
@@ -5846,7 +6133,7 @@ const resetCalendarForm = () => {
 
                     {createVerifyError && (
                         <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '10px 14px', color: '#fca5a5', fontSize: '13px', fontWeight: '600' }}>
-                            ─s─ {createVerifyError}
+                            ⚠️ {createVerifyError}
                         </div>
                     )}
 
@@ -5902,9 +6189,26 @@ const resetCalendarForm = () => {
                             Close
                         </button>
                     </div>
-                    <p style={{ color: colors.textMuted, fontSize: 12, textAlign: 'center', margin: 0 }}>
-                        Didn't receive the code? Check spam/junk folder. Code expires in 24 hours.
-                    </p>
+
+                    <div style={{ textAlign: 'center' }}>
+                        <p style={{ color: colors.textMuted, fontSize: 12, margin: '0 0 8px' }}>
+                            Didn't receive the code? Check the spam/junk folder. Code expires in 15 minutes.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={handleResendCreateVerifyCode}
+                            disabled={createVerifyResending || createVerifyCooldown > 0}
+                            style={{ ...s.secondaryBtn, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: createVerifyResending || createVerifyCooldown > 0 ? 0.6 : 1, cursor: createVerifyResending || createVerifyCooldown > 0 ? 'not-allowed' : 'pointer' }}
+                        >
+                            {createVerifyResending ? (
+                                <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Resending…</>
+                            ) : createVerifyCooldown > 0 ? (
+                                `Resend code in ${createVerifyCooldown}s`
+                            ) : (
+                                <><RefreshCw size={14} /> Resend Code</>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </Modal>
 

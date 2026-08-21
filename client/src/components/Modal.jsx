@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 /**
  * Reusable Modal Component
@@ -14,8 +14,10 @@ import React, { useEffect, useRef } from 'react';
  *   and the body scrolls vertically while the header stays fixed (default: false)
  * @param {string} maxHeight - Optional max height override when scrollable
  *   (default: calc(100vh - 80px))
+ * @param {string} backdrop - Backdrop style: 'default' (dark + blur, default) or
+ *   'clear' (light overlay, no blur, keeps the underlying page clearly visible)
  */
-export default function Modal({ isOpen, onClose, title, children, maxWidth = '480px', scrollable = false, maxHeight }) {
+export default function Modal({ isOpen, onClose, title, children, maxWidth = '480px', scrollable = false, maxHeight, backdrop = 'default' }) {
     const modalRef = useRef(null);
 
     // Close on Escape key press
@@ -40,7 +42,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = '48
     if (!isOpen) return null;
 
     return (
-        <div style={styles.backdrop} onClick={onClose}>
+        <div style={backdrop === 'clear' ? styles.backdropClear : styles.backdrop} onClick={onClose}>
             <div
                 ref={modalRef}
                 style={{
@@ -78,6 +80,16 @@ const styles = {
         inset: 0,
         background: 'rgba(0,0,0,0.6)',
         backdropFilter: 'blur(4px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: '20px'
+    },
+    backdropClear: {
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.18)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

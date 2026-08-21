@@ -57,7 +57,6 @@ const communicationRoutes = require('./routes/communicationRoutes');
 const mediaRoutes = require('./routes/mediaRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const publicEventRoutes = require('./routes/publicEventRoutes');
-const seedEvents = require('./utils/seedEvents');
 const { getAnalytics } = require('./controllers/userController');
 const { protect, authorizeRoles } = require('./middleware/auth');
 
@@ -131,9 +130,6 @@ app.use('/certificates', express.static(path.join(__dirname, 'public/certificate
 
 // ── Connect to MongoDB Atlas ───────────────────────────────
 connectDB()
-    .then(() => {
-        seedEvents().catch((err) => console.warn('⚠️  Event seed skipped:', err && err.message));
-    })
     .catch(err => {
         console.error('❌ Fatal database initialization error:', err);
         process.exit(1);
