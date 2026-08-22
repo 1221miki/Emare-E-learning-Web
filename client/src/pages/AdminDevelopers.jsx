@@ -15,7 +15,7 @@ const EMPTY_FORM = {
     experiences: [{ ...EMPTY_EXPERIENCE }]
 };
 
-export default function AdminDevelopers() {
+export function DevelopersPanel() {
     const { colors } = useTheme();
     const { isAuthenticated, isAdmin } = useAuth();
     const fileInputRef = useRef(null);
@@ -216,10 +216,7 @@ export default function AdminDevelopers() {
     };
 
     return (
-        <div style={styles.page}>
-            <h1 style={styles.heading}>Emare Developers Management</h1>
-            <p style={styles.subheading}>Create, update, and remove developer profiles shown on the public Developers page.</p>
-
+        <div>
             {/* ── Auth State Warning ───────────────────────── */}
             {!isAuthenticated ? (
                 <div style={styles.alertWarn}>
@@ -369,6 +366,17 @@ export default function AdminDevelopers() {
                     </div>
                 )}
             </div>
+        </div>
+    );
+}
+
+export default function AdminDevelopers() {
+    const { colors } = useTheme();
+    return (
+        <div style={{ minHeight: '100vh', fontFamily: "'Outfit', 'Inter', sans-serif", background: colors.bg, color: colors.text, padding: '32px 5%' }}>
+            <h1 style={{ fontSize: '28px', fontWeight: '900', margin: '0 0 6px' }}>Emare Developers Management</h1>
+            <p style={{ color: colors.textMuted, margin: '0 0 28px', fontSize: '14px' }}>Create, update, and remove developer profiles shown on the public Developers page.</p>
+            <DevelopersPanel />
         </div>
     );
 }

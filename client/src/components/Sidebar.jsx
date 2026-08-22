@@ -138,7 +138,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
             {/* Header: Logo + Notifications + Theme Toggle */}
             <div style={styles.headerBox}>
                 <Link to="/" style={{ ...styles.logoBox, cursor: 'pointer', textDecoration: 'none' }} className="transition-opacity hover:opacity-90">
-                    <img src="/images/perfectEmarelogo.jpg" alt="Emare ICT Hub Logo" className="h-10 w-10 bg-transparent object-contain mix-blend-multiply dark:mix-blend-screen" />
+                    <img src="/images/Real Emare ICT Hub logo.png" alt="Emare ICT Hub Logo" className="h-10 w-10 bg-transparent object-contain" />
                     <span style={{ color: colors.text, fontSize: '20px', fontWeight: '700', whiteSpace: 'nowrap' }}>Emare ICT Hub</span>
                 </Link>
                 <div style={styles.actionsBox}>

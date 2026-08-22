@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import API, { courseService, subscriptionService, userService, liveSessionService } from '../services/api.jsx';
+import API, { courseService, subscriptionService, userService, liveSessionService, eventService } from '../services/api.jsx';
 import Navbar from '../components/Navbar';
+import SiteFooter from '../components/SiteFooter';
 import HeroVideoControls from '../components/HeroVideoControls';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -25,6 +26,7 @@ export default function LandingPage() {
     const [contactLoading, setContactLoading] = useState(false);
     const [contactApiError, setContactApiError] = useState('');
     const [upcomingSessions, setUpcomingSessions] = useState([]); // real live sessions from DB
+    const [publicEvents, setPublicEvents] = useState([]); // published events created from the admin event form
     const [reservingId, setReservingId] = useState(null);
     const navigate = useNavigate();
     const location = useLocation();
@@ -146,6 +148,21 @@ export default function LandingPage() {
     }, []);
 
     // ── Email-check handler (anonymous path) ──────────────────────────────
+    // Fetch published events so admin-created events appear on the homepage
+    useEffect(() => {
+        let isMounted = true;
+        eventService.getAll()
+            .then(res => {
+                if (!isMounted) return;
+                const events = (res.data?.data || [])
+                    .filter(ev => ev.status !== 'CANCELLED')
+                    .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+                setPublicEvents(events);
+            })
+            .catch(() => { /* events section stays empty on failure */ });
+        return () => { isMounted = false; };
+    }, []);
+
     const handleCheckEmail = async (e) => {
         e.preventDefault();
         const email = checkEmail.trim().toLowerCase();
@@ -377,7 +394,7 @@ export default function LandingPage() {
             gap: '40px', 
             overflow: 'hidden',
             minHeight: '700px',
-            backgroundImage: 'url(/images/education-hero.jpg)',
+            backgroundImage: 'url("/images/Real Emare ICT HUB image.png")',
             backgroundSize: 'cover',
             backgroundPosition: 'center center',
             backgroundRepeat: 'no-repeat',
@@ -834,6 +851,84 @@ export default function LandingPage() {
                 </div>
             </section>
 
+            {/* 15. Upcoming Events (created from the admin event form) */}
+            <section style={{ ...p.section }}>
+                <div style={p.sectionHeader}>
+                    <span style={p.sectionBadge}>What's On</span>
+                    <h2 style={p.sectionTitle}>Upcoming Events</h2>
+                    <p style={{ ...p.sectionSubtitle }}>Masterclasses, workshops and community events — reserve your spot.</p>
+                </div>
+                {publicEvents.length === 0 ? (
+                    <div style={{ textAlign: 'center', color: colors.textMuted, padding: '40px 16px', fontSize: '16px' }}>
+                        No upcoming events at the moment. Check back soon!
+                    </div>
+                ) : (
+                    <>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                            gap: '24px',
+                            maxWidth: '1200px',
+                            margin: '0 auto'
+                        }}>
+                            {publicEvents.slice(0, 3).map(ev => {
+                                const start = ev.startDate ? new Date(ev.startDate) : null;
+                                const dateLabel = start
+                                    ? start.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                                    : 'Date TBD';
+                                const timeLabel = ev.allDay
+                                    ? 'All Day'
+                                    : (start ? start.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '');
+                                return (
+                                    <Link
+                                        key={ev._id}
+                                        to={`/events/${ev._id}`}
+                                        style={{
+                                            display: 'flex', flexDirection: 'column', textDecoration: 'none',
+                                            background: colors.bgCard, border: `1px solid ${colors.border}`,
+                                            borderRadius: '20px', overflow: 'hidden', transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                                            color: colors.text
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 16px 40px rgba(0,0,0,0.12)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+                                    >
+                                        <div style={{ position: 'relative', width: '100%', height: '170px', background: colors.bgInput, flexShrink: 0 }}>
+                                            {ev.image ? (
+                                                <img src={ev.image} alt={ev.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                            ) : null}
+                                            {ev.category && (
+                                                <span style={{ position: 'absolute', top: '12px', left: '12px', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', padding: '5px 12px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                                    {ev.category}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div style={{ padding: '18px 20px 20px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                                            <div style={{ color: colors.primary, fontWeight: '700', fontSize: '13px' }}>
+                                                📅 {dateLabel}{timeLabel ? ` · ${timeLabel}` : ''}
+                                            </div>
+                                            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: colors.text, lineHeight: 1.35 }}>{ev.title}</h3>
+                                            {(ev.venue || ev.eventType) && (
+                                                <div style={{ color: colors.textMuted, fontSize: '13px' }}>
+                                                    📍 {ev.venue || ev.eventType}
+                                                </div>
+                                            )}
+                                            <div style={{ marginTop: 'auto', paddingTop: '10px', color: colors.primary, fontWeight: '700', fontSize: '14px' }}>
+                                                View details →
+                                            </div>
+                                        </div>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                        <div style={{ textAlign: 'center', marginTop: '36px' }}>
+                            <button onClick={() => navigate('/events')} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, padding: '12px 28px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>
+                                View All Events →
+                            </button>
+                        </div>
+                    </>
+                )}
+            </section>
+
             {/* 18. Frequently Asked Questions */}
             <section style={{ ...p.section, background: colors.bgCard }}>
                 <div style={p.sectionHeader}>
@@ -1105,118 +1200,8 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* 21a. Contact Banner + Map (above footer) */}
-            <section className="contact-banner" style={p.contactBanner}>
-                <div className="contact-banner-grid" style={p.contactBannerGrid}>
-                    {/* Address */}
-                    <div style={p.contactItem}>
-                        <div style={p.contactIconBox}><MapPin size={20} aria-hidden="true" /></div>
-                        <div>
-                            <h4 style={p.contactItemHeader}>ADDRESS</h4>
-                            <p style={p.contactItemText}>Debre Berhan</p>
-                        </div>
-                    </div>
-
-                    {/* Call For Query */}
-                    <div style={p.contactItem}>
-                        <div style={p.contactIconBox}><Phone size={20} aria-hidden="true" /></div>
-                        <div>
-                            <h4 style={p.contactItemHeader}>CALL FOR QUERY</h4>
-                            <a href="tel:+251914362720" style={p.contactItemLink}>+251 914 362 720</a>
-                            <a href="tel:+251905050698" style={p.contactItemLink}>+251 905 050 698</a>
-                        </div>
-                    </div>
-
-                    {/* Send Us Message */}
-                    <div style={p.contactItem}>
-                        <div style={p.contactIconBox}><Mail size={20} aria-hidden="true" /></div>
-                        <div>
-                            <h4 style={p.contactItemHeader}>SEND US MESSAGE</h4>
-                            <a href="mailto:info@emareicthub.com" style={p.contactItemLink}>info@emareicthub.com</a>
-                            <a href="mailto:emareicthub@gmail.com" style={p.contactItemLink}>emareicthub@gmail.com</a>
-                        </div>
-                    </div>
-
-                    {/* Opening Hours */}
-                    <div style={p.contactItem}>
-                        <div style={p.contactIconBox}><Clock size={20} aria-hidden="true" /></div>
-                        <div>
-                            <h4 style={p.contactItemHeader}>OPENING HOURS</h4>
-                            <p style={p.contactItemText}>08:30 AM - 18:00 PM</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* 21b. Map Embed */}
-            <div style={p.contactMapWrap}>
-                <iframe
-                    src="https://maps.google.com/maps?q=Emare%20ICT%20Hub%2C%20Debre%20Berhan%2C%20Ethiopia&t=&z=14&ie=UTF8&iwloc=&output=embed"
-                    style={p.contactMap}
-                    title="Emare ICT Hub, Debre Berhan, Ethiopia"
-                    loading="lazy"
-                    allowFullScreen
-                    referrerPolicy="no-referrer-when-downgrade"
-                />
-            </div>
-
-            {/* 21. Footer */}
-            <footer style={p.footer}>
-                <div style={p.footerGrid}>
-                    <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                            <div style={p.logoMark}>E</div>
-                            <span style={{ color: colors.text, fontWeight: '800', fontSize: '18px' }}>Emare ICT Hub</span>
-                        </div>
-                        <p style={{ color: colors.textMuted, fontSize: '14px', lineHeight: 1.6, maxWidth: '280px' }}>
-                            A Center for Digital Innovation and Technology Development
-                        </p>
-                        <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-                            <a href="https://www.facebook.com/people/%E1%8A%A5%E1%88%9B%E1%88%AC-%E1%8B%A8%E1%88%B5%E1%88%8D%E1%8C%A0%E1%8A%93-%E1%88%9B%E1%8B%95%E1%8A%A8%E1%88%8D-Emare-ICT-Hub/61575108773808/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" style={{ color: colors.textMuted, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px', border: '1px solid rgba(51,65,85,0.5)', textDecoration: 'none', transition: 'color 0.2s, border-color 0.2s' }}><FaFacebookF /></a>
-                            <a href="https://www.tiktok.com/@emareicthub" target="_blank" rel="noopener noreferrer" aria-label="TikTok" style={{ color: colors.textMuted, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px', border: '1px solid rgba(51,65,85,0.5)', textDecoration: 'none', transition: 'color 0.2s, border-color 0.2s' }}><FaTiktok /></a>
-                            <a href="https://t.me/emareicthub" target="_blank" rel="noopener noreferrer" aria-label="Telegram" style={{ color: colors.textMuted, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px', border: '1px solid rgba(51,65,85,0.5)', textDecoration: 'none', transition: 'color 0.2s, border-color 0.2s' }}><FaTelegramPlane /></a>
-                            <a href="https://www.instagram.com/emare_ict_hub?igsh=emllYWtybmlucGh0" target="_blank" rel="noopener noreferrer" aria-label="Instagram" style={{ color: colors.textMuted, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px', border: '1px solid rgba(51,65,85,0.5)', textDecoration: 'none', transition: 'color 0.2s, border-color 0.2s' }}><FaInstagram /></a>
-                            <a href="https://www.linkedin.com/company/emareicthub" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" style={{ color: colors.textMuted, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px', border: '1px solid rgba(51,65,85,0.5)', textDecoration: 'none', transition: 'color 0.2s, border-color 0.2s' }}><FaLinkedinIn /></a>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 style={p.footerTitle}>Quick Links</h4>
-                        <Link to="/about" style={p.footerLink}>About</Link>
-                        <Link to="/developers" style={p.footerLink}>Emare Developers</Link>
-                        <Link to="/courses" style={p.footerLink}>Course Catalogs</Link>
-                        <Link to="/events" style={p.footerLink}>Events</Link>
-                        <a href="/#services" style={p.footerLink} onClick={e => { e.preventDefault(); const el = document.getElementById('services'); if (el) el.scrollIntoView({ behavior: 'smooth' }); else window.location.href = '/#services'; }}>Services</a>
-                        <a href="/#contact" style={p.footerLink} onClick={e => { e.preventDefault(); const el = document.getElementById('contact'); if (el) el.scrollIntoView({ behavior: 'smooth' }); else window.location.href = '/#contact'; }}>Contact</a>
-                    </div>
-                    <div>
-                        <h4 style={p.footerTitle}>Categories</h4>
-                        <Link to="/courses?category=Programming" style={p.footerLink}>Programming</Link>
-                        <Link to="/courses?category=Cybersecurity" style={p.footerLink}>Cybersecurity</Link>
-                        <Link to="/courses?category=Data Science" style={p.footerLink}>Data Science</Link>
-                        <Link to="/courses?free=true" style={p.footerLink}>Free Courses</Link>
-                    </div>
-                    <div>
-                        <h4 style={p.footerTitle}>Support</h4>
-                        <Link to="/help" style={p.footerLink}>Help Center</Link>
-                        <Link to="/#contact" style={p.footerLink}>Contact Us</Link>
-                        <Link to="/#contact" style={p.footerLink}>Report Issue</Link>
-                    </div>
-                    <div>
-                        <h4 style={p.footerTitle}>Legal</h4>
-                        <Link to="/privacy" style={p.footerLink}>Privacy Policy</Link>
-                        <Link to="/terms" style={p.footerLink}>Terms &amp; Conditions</Link>
-                        <Link to="/cookies" style={p.footerLink}>Cookie Policy</Link>
-                        <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-                            <div style={{ width: '32px', height: '32px', background: colors.bgInput, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}></div>
-                            <div style={{ width: '32px', height: '32px', background: colors.bgInput, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>◇</div>
-                            <div style={{ width: '32px', height: '32px', background: colors.bgInput, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>◇</div>
-                        </div>
-                    </div>
-                </div>
-                <div style={p.footerBottom}>
-                    <p>© {new Date().getFullYear()} Emare ICT Hub. All rights reserved.</p>
-                </div>
-            </footer>
+            <SiteFooter />
         </div>
     );
 }
+

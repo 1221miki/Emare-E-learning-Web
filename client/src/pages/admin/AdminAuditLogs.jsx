@@ -77,7 +77,7 @@ export default function AdminAuditLogs() {
         { key: 'cms', label: 'CMS & Comms', icon: <Megaphone size={20} aria-hidden="true" /> },
         { key: 'reports', label: 'Reports & Exports', icon: <FileBarChart size={20} aria-hidden="true" /> },
         { key: 'audit', label: 'Audit Logs', icon: <ClipboardCheck size={20} aria-hidden="true" /> },
-        { key: 'calendar', label: 'Calendar Management', icon: <Clock3 size={20} aria-hidden="true" /> },
+        { key: 'calendar', label: 'Event Management', icon: <Clock3 size={20} aria-hidden="true" /> },
         { key: 'system', label: 'System Settings', icon: <Settings size={20} aria-hidden="true" /> }
     ];
 

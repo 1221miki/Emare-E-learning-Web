@@ -72,7 +72,7 @@ const missingProviderEnv = (provider) => {
     const key = normalizeProvider(provider);
     if (key === 'googleMeet') {
         const missing = googleMeetService.missingEnv();
-        if (!googleMeetService.getStatus().authorized) missing.push('GOOGLE_REFRESH_TOKEN (authorize from Calendar Management)');
+        if (!googleMeetService.getStatus().authorized) missing.push('GOOGLE_REFRESH_TOKEN (authorize from Event Management)');
         return missing;
     }
     return PROVIDERS[key].env.filter((name) => !process.env[name]);
@@ -283,25 +283,40 @@ const generateMeetingUrl = async (eventData = {}) => {
     const { title, slug, startDate, endDate } = eventData || {};
 
     let result;
-    switch (provider) {
-        case 'googleMeet':
-            result = await createGoogleMeet({ title, startDate, endDate });
-            break;
-        case 'zoom':
-            result = await createZoomMeeting({ title, startDate, endDate });
-            break;
-        case 'microsoftTeams':
-            result = await createTeamsMeeting({ title, startDate, endDate });
-            break;
-        case 'jitsi':
-            result = { url: createJitsiLink(slug), provider: 'jitsi', generated: true };
-            break;
-        case 'custom':
-            throw new Error('Cannot auto-generate a link for a manual URL.');
-        case 'internal':
-        default:
-            result = { url: generateInternalJoinUrl(slug), provider: 'internal', generated: true };
-            break;
+    try {
+        switch (provider) {
+            case 'googleMeet':
+                result = await createGoogleMeet({ title, startDate, endDate });
+                break;
+            case 'zoom':
+                result = await createZoomMeeting({ title, startDate, endDate });
+                break;
+            case 'microsoftTeams':
+                result = await createTeamsMeeting({ title, startDate, endDate });
+                break;
+            case 'jitsi':
+                result = { url: createJitsiLink(slug), provider: 'jitsi', generated: true };
+                break;
+            case 'custom':
+                throw new Error('Cannot auto-generate a link for a manual URL.');
+            case 'internal':
+            default:
+                result = { url: generateInternalJoinUrl(slug), provider: 'internal', generated: true };
+                break;
+        }
+    } catch (error) {
+        // Graceful fallback: an unconnected premium provider (e.g. Google Meet
+        // that has not been authorized yet) must never block saving an event.
+        // Fall back to a free Jitsi room so Online/Hybrid events still get a
+        // real, joinable meeting link out of the box.
+        const unconfigured =
+            error.code === 'PROVIDER_NOT_CONFIGURED' ||
+            error.code === 'GOOGLE_NOT_AUTHORIZED' ||
+            (provider === 'googleMeet' && /not connected|not configured|authorize/i.test(String(error.message || '')));
+        if (unconfigured) {
+            return { url: createJitsiLink(slug || title), provider: 'jitsi', generated: true };
+        }
+        throw error;
     }
     return result;
 };
@@ -311,7 +326,7 @@ const missingEnvMessage = (provider) => {
     if (!isRealProvider(key) && key !== 'googleMeet') return null;
     if (key === 'googleMeet') {
         const missing = googleMeetService.missingEnv();
-        if (!googleMeetService.getStatus().authorized) missing.push('GOOGLE_REFRESH_TOKEN (authorize from Calendar Management)');
+        if (!googleMeetService.getStatus().authorized) missing.push('GOOGLE_REFRESH_TOKEN (authorize from Event Management)');
         if (missing.length === 0) return null;
         return `Google Meet is not connected yet. Add to backend/.env: ${missing.join(', ')}`;
     }

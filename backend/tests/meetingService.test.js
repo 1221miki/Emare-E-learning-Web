@@ -55,14 +55,13 @@ describe('meetingService unit tests (no DB, no network)', () => {
         assert.match(jitsi.url, /^https:\/\/meet\.jit\.si\//);
     });
 
-    test('generateMeetingUrl for googleMeet throws PROVIDER_NOT_CONFIGURED when not connected', async () => {
+    test('generateMeetingUrl for googleMeet falls back to Jitsi when not connected', async () => {
         if (googleMeetService.getStatus().connected) {
             return; // real credentials present — do not hit the live API in unit tests
         }
-        await assert.rejects(
-            () => meetingService.generateMeetingUrl({ provider: 'googleMeet', title: 'Test' }),
-            (err) => err.code === 'PROVIDER_NOT_CONFIGURED'
-        );
+        const result = await meetingService.generateMeetingUrl({ provider: 'googleMeet', title: 'Test' });
+        assert.strictEqual(result.provider, 'jitsi');
+        assert.match(result.url, /^https:\/\/meet\.jit\.si\//);
     });
 
     test('resolveMeetingUrl clears the link for Physical events', async () => {

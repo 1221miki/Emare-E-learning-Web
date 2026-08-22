@@ -5,6 +5,7 @@ import { courseService, categoryService } from '../../services/api';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import GuestModal from '../../components/GuestModal';
+import SiteFooter from '../../components/SiteFooter';
 import { categoryMatchesCourse } from '../../utils/categoryMatching';
 
 function useQuery() {
@@ -515,6 +516,7 @@ export default function CourseCatalog() {
             </div>
 
             <GuestModal isOpen={guestModal.open} onClose={() => setGuestModal({ open: false, action: '' })} action={guestModal.action} />
+            <SiteFooter />
         </div>
     );
 }

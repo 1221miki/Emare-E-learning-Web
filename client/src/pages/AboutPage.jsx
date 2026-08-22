@@ -1,10 +1,20 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import SiteFooter from '../components/SiteFooter';
 import { useTheme } from '../context/ThemeContext';
 
 export default function AboutPage() {
-    const { colors } = useTheme();
+    const { colors, theme } = useTheme();
+
+    const galleryImages = {
+        one: 'https://res.cloudinary.com/afthor2f/image/upload/v1787426018/1.jpg',
+        two: 'https://res.cloudinary.com/afthor2f/image/upload/v1787426029/2.jpg',
+        three: 'https://res.cloudinary.com/afthor2f/image/upload/v1787426042/3.jpg',
+        four: 'https://res.cloudinary.com/afthor2f/image/upload/v1787426053/4.jpg',
+        five: 'https://res.cloudinary.com/afthor2f/image/upload/v1787426062/5.jpg',
+        six: 'https://res.cloudinary.com/afthor2f/image/upload/v1787426074/6.jpg'
+    };
 
     const s = {
         page: { minHeight: '100vh', fontFamily: "'Outfit', 'Inter', sans-serif" },
@@ -14,8 +24,8 @@ export default function AboutPage() {
         badge: { display: 'inline-block', padding: '8px 22px', background: 'rgba(59,130,246,0.12)', color: '#60a5fa', borderRadius: '999px', fontWeight: '700', fontSize: '13px', letterSpacing: '0.12em', textTransform: 'uppercase', border: '1px solid rgba(59,130,246,0.24)' },
         title: { fontSize: '54px', fontWeight: '900', lineHeight: '1.03', margin: '0', color: colors.text, maxWidth: '700px' },
         description: { fontSize: '17px', lineHeight: '1.9', color: colors.textMuted, maxWidth: '760px' },
-        card: { background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '28px', padding: '42px 36px', boxShadow: `0 30px 80px rgba(0,0,0,0.08)`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', minHeight: '420px' },
-        cardLogo: { width: '100%', maxWidth: '560px', objectFit: 'contain', filter: 'drop-shadow(0 10px 24px rgba(0,0,0,0.26))' },
+        card: { background: 'transparent', border: 'none', borderRadius: '28px', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', minHeight: '420px' },
+        cardLogo: { width: '100%', maxWidth: '560px', objectFit: 'contain', mixBlendMode: theme === 'dark' ? 'screen' : 'multiply' },
         cardTitle: { fontSize: '28px', fontWeight: '900', margin: '0', color: colors.text },
         cardSubtitle: { fontSize: '13px', fontWeight: '700', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.primary, margin: '0' },
         cardUrl: { fontSize: '13px', color: colors.textMuted, letterSpacing: '0.12em', marginTop: '6px' },
@@ -41,15 +51,74 @@ export default function AboutPage() {
                     </div>
 
                     <div style={s.card}>
-                        <img src="/images/Emare-ICT-Hub-Logo.jpg" alt="Emare ICT Hub" style={s.cardLogo} />
+                        <img src="/images/Real Emare ICT Hub logo.png" alt="Emare ICT Hub" style={s.cardLogo} />
                     </div>
                 </div>
+
+                {/* ── Bento Grid Photo Gallery ─────────────────── */}
+                <section className="mt-12 w-full">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+                        {/* Top Left — Hero Card */}
+                        <div className="rounded-3xl overflow-hidden group">
+                            <img
+                                src={galleryImages.one}
+                                alt="Emare ICT Hub team"
+                                loading="lazy"
+                                className="w-full h-[380px] object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                        </div>
+
+                        {/* Top Center — 2x2 Sub-Grid */}
+                        <div className="grid grid-cols-2 gap-4 h-[380px]">
+                            {[galleryImages.two, galleryImages.three, galleryImages.four, galleryImages.five].map((src, i) => (
+                                <div key={i} className="rounded-2xl overflow-hidden group">
+                                    <img
+                                        src={src}
+                                        alt={`Gallery photo ${i + 2}`}
+                                        loading="lazy"
+                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                    />
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Top Right — Tall Portrait Card (spans both rows) */}
+                        <div className="relative rounded-3xl overflow-hidden group lg:row-span-2 lg:col-start-3 lg:row-start-1">
+                            <img
+                                src={galleryImages.six}
+                                alt="PD session portrait"
+                                loading="lazy"
+                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                            {/* Overlay label */}
+                            <span className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-sm text-white text-xs font-bold tracking-[0.18em] uppercase px-4 py-2 rounded-full border border-white/20">
+                                PD Session
+                            </span>
+                        </div>
+
+                        {/* Bottom Row — Two Wide Banners */}
+                        <div className="rounded-3xl overflow-hidden group lg:col-start-1 lg:row-start-2">
+                            <img
+                                src={galleryImages.one}
+                                alt="Team wide banner"
+                                loading="lazy"
+                                className="w-full h-[220px] object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                        </div>
+                        <div className="rounded-3xl overflow-hidden group lg:col-start-2 lg:row-start-2">
+                            <img
+                                src={galleryImages.six}
+                                alt="Portrait wide banner"
+                                loading="lazy"
+                                className="w-full h-[220px] object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                        </div>
+
+                    </div>
+                </section>
             </div>
-            <footer style={s.footer}>
-                <p>
-                    © {new Date().getFullYear()} Emare ICT Hub, Debre Birhan. <Link to="/privacy" style={s.fLink}>Privacy</Link> · <Link to="/terms" style={s.fLink}>Terms</Link> · <Link to="/contact" style={s.fLink}>Contact</Link>
-                </p>
-            </footer>
+            <SiteFooter />
         </div>
     );
 }
