@@ -6,7 +6,7 @@ import StatCard from '../../components/StatCard';
 import Modal from '../../components/Modal';
 import AdminSystemSettings from '../../components/admin/AdminSystemSettings';
 import { AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { LayoutDashboard, BarChart3, Users, UserCog, Building2, BookOpen, FolderTree, NotebookPen, Video, FileQuestion, ClipboardList, Award, Wallet, Receipt, DollarSign, TicketPercent, FileBarChart, Bell, Megaphone, MessageSquare, MessagesSquare, Bot, LifeBuoy, Settings, ShieldCheck, ClipboardCheck, DatabaseBackup, PlugZap, KeyRound, UserCircle, LogOut, TrendingUp, Clock3, Activity, PlusCircle, FilePen, Upload, Archive, Trash2, UserPlus, UserMinus, ShieldAlert, RotateCcw, CreditCard, PieChart as LucidePieChart, Mail, Eye, EyeOff, AlertTriangle, Palette, Languages, MoonStar, Database, BadgeInfo, CircleCheck, Server, GraduationCap, Search, Download, Monitor, Lock, Shield, MoreVertical, CheckCircle2, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown, Edit, Image, User, Copy, Star, Settings2, DownloadCloud, Trash, Wand2, PartyPopper, FileText, HelpCircle, Clipboard, Pin, Headphones, File, Radio, XCircle, Flag, Package, MessageCircle, Folder, RefreshCw, ScrollText, X, Trophy, CheckSquare, Check, FileEdit, Scale, Repeat, Calendar, Ban, Medal, Plus, Rocket, Zap, Book, Library, Clock, Save, FolderOpen, Link, Circle, Bookmark, Building, Eraser, Sparkles, Pause, MapPin, Tag, Globe, ExternalLink, Loader2 } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Users, UserCog, Building2, BookOpen, FolderTree, NotebookPen, Video, FileQuestion, ClipboardList, Award, Wallet, Receipt, DollarSign, TicketPercent, FileBarChart, Bell, Megaphone, MessageSquare, MessagesSquare, Bot, LifeBuoy, Settings, ShieldCheck, ClipboardCheck, DatabaseBackup, PlugZap, KeyRound, UserCircle, LogOut, TrendingUp, Clock3, Activity, PlusCircle, FilePen, Upload, Archive, Trash2, UserPlus, UserMinus, ShieldAlert, RotateCcw, CreditCard, PieChart as LucidePieChart, Mail, Eye, EyeOff, AlertTriangle, Palette, Languages, MoonStar, Database, BadgeInfo, CircleCheck, Server, GraduationCap, Search, Download, Monitor, Lock, Shield, MoreVertical, CheckCircle2, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown, Edit, Image, User, Copy, Star, Settings2, DownloadCloud, Trash, Wand2, PartyPopper, FileText, HelpCircle, Clipboard, Pin, Headphones, File, Radio, XCircle, Flag, Package, MessageCircle, Folder, RefreshCw, ScrollText, X, Trophy, CheckSquare, Check, FileEdit, Scale, Repeat, Calendar, Ban, Medal, Plus, Rocket, Zap, Book, Library, Clock, Save, FolderOpen, Link, Circle, Bookmark, Building, Eraser, Sparkles, Pause, MapPin, Tag, Globe, ExternalLink, Loader2, Code2, Inbox } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { getLiveStatus, LIVE_STATUS_META, formatEventDate, isValidUrl, EVENT_CATEGORIES } from '../../utils/eventStatus';
 import CourseCreationWizard from '../instructor/CourseCreationWizard';
@@ -5631,15 +5631,17 @@ const resetCalendarForm = () => {
         { key: 'assessments', label: 'Assessments & Certs', icon: <ClipboardList size={20} aria-hidden="true" /> },
         { key: 'finances', label: 'Finances & Revenue', icon: <Wallet size={20} aria-hidden="true" /> },
         { key: 'cms', label: 'CMS & Comms', icon: <Megaphone size={20} aria-hidden="true" /> },
+        { key: 'developers', label: 'Developers', icon: <Code2 size={20} aria-hidden="true" /> },
         { key: 'reports', label: 'Reports & Exports', icon: <FileBarChart size={20} aria-hidden="true" /> },
         { key: 'audit', label: 'Audit Logs', icon: <ClipboardCheck size={20} aria-hidden="true" /> },
+        { key: 'contact-messages', label: 'Contact Messages', path: '/admin/contact-messages', icon: <Inbox size={20} aria-hidden="true" /> },
         { key: 'calendar', label: 'Calendar Management', icon: <Clock3 size={20} aria-hidden="true" /> },
         { key: 'system', label: 'System Settings', icon: <Settings size={20} aria-hidden="true" /> }
     ];
 
     return (
         <div style={s.page}>
-            <Sidebar navItems={sidebarItems} activeTab={activeTab} onTabChange={(tab) => { if (tab === 'audit') { navigate('/admin/audit-logs'); } else { setActiveTab(tab); } }} />
+            <Sidebar navItems={sidebarItems} activeTab={activeTab} onTabChange={(tab) => { if (tab === 'audit') { navigate('/admin/audit-logs'); } else if (tab === 'developers') { navigate('/admin/developers'); } else { setActiveTab(tab); } }} />
             
             <main style={s.main}>
                 <header style={s.header}>

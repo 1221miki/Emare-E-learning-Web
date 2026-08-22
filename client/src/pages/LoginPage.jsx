@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { FaEye, FaEyeSlash, FaGoogle, FaGithub, FaArrowLeft } from 'react-icons/fa';
@@ -10,6 +10,7 @@ export default function LoginPage() {
     const isDark = theme === 'dark';
     const navigate = useNavigate();
     const location = useLocation();
+    const [searchParams] = useSearchParams();
     const [form, setForm] = useState({ accountEmail: '', securedPassword: '' });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(location.state?.success || '');
@@ -41,6 +42,13 @@ export default function LoginPage() {
     };
 
     const handleRedirect = (user) => {
+        // If the user was bounced here from a protected page (e.g. /admin/developers),
+        // send them straight back to it after logging in.
+        const redirectTarget = searchParams.get('redirect');
+        if (redirectTarget && redirectTarget.startsWith('/') && !redirectTarget.startsWith('//')) {
+            navigate(redirectTarget);
+            return;
+        }
         if (user.assignedRole === 'Admin') navigate('/admin/dashboard');
         else if (user.assignedRole === 'Instructor') navigate('/instructor/dashboard');
         else navigate('/student/dashboard');

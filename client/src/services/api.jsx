@@ -49,7 +49,9 @@ API.interceptors.response.use(
             const currentPath = window.location.pathname;
             const isPublic = publicPaths.some(p => currentPath === p || currentPath.startsWith('/courses/') || currentPath.startsWith('/instructors/') || currentPath.startsWith('/payment/'));
             if (!isPublic && currentPath !== '/login') {
-                window.location.href = '/login';
+                // Preserve the page the user was on so they are returned here
+                // right after logging back in.
+                window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
             }
         }
         return Promise.reject(error);

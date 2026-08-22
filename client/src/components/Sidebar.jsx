@@ -5,7 +5,8 @@ import { useTheme } from '../context/ThemeContext';
 import NotificationBell from './NotificationBell';
 import { 
     Sun, Moon, BookOpen, Home, LogOut, LayoutDashboard, Award, 
-    Trophy, MessageSquare, Video, User, Settings, PlusCircle, FilePlus, Shield, HelpCircle 
+    Trophy, MessageSquare, Video, User, Settings, PlusCircle, FilePlus, Shield, HelpCircle,
+    Inbox
 } from 'lucide-react';
 
 const SIDEBAR_WIDTH = 300;
@@ -35,6 +36,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                 { key: 'create-course', label: 'Create Course', path: '/instructor/courses/new', icon: <PlusCircle size={20} /> },
                 { key: 'create-assignment', label: 'Create Assignment', path: '/instructor/assignments/new', icon: <FilePlus size={20} /> },
                 { key: 'messages', label: 'Messages', path: '/messages', icon: <MessageSquare size={20} /> },
+                { key: 'support-messages', label: 'Support Messages', path: '/support-messages', icon: <Inbox size={20} /> },
                 { key: 'live', label: 'Live Sessions', path: '/live-sessions', icon: <Video size={20} /> },
                 { key: 'settings', label: 'Settings', path: '/instructor/settings', icon: <Settings size={20} /> },
             ];
@@ -42,6 +44,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
             return [
                 { key: 'dashboard', label: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
                 { key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-logs', icon: <Shield size={20} /> },
+                { key: 'contact-messages', label: 'Contact Messages', path: '/admin/contact-messages', icon: <Inbox size={20} /> },
                 { key: 'messages', label: 'Messages', path: '/messages', icon: <MessageSquare size={20} /> },
                 { key: 'live', label: 'Live Sessions', path: '/live-sessions', icon: <Video size={20} /> },
                 { key: 'catalog', label: 'Course Catalog', path: '/courses', icon: <BookOpen size={20} /> },
@@ -54,6 +57,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                 { key: 'certificates', label: 'Certificates', path: '/student/certificates', icon: <Award size={20} /> },
                 { key: 'leaderboard', label: 'Leaderboard', path: '/leaderboard', icon: <Trophy size={20} /> },
                 { key: 'messages', label: 'Messages', path: '/messages', icon: <MessageSquare size={20} /> },
+                { key: 'support-messages', label: 'Support Messages', path: '/support-messages', icon: <Inbox size={20} /> },
                 { key: 'live', label: 'Live Sessions', path: '/live-sessions', icon: <Video size={20} /> },
                 { key: 'profile', label: 'Profile', path: '/student/profile', icon: <User size={20} /> },
             ];

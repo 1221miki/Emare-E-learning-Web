@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { courseService, subscriptionService, userService, liveSessionService } from '../services/api.jsx';
+import API, { courseService, subscriptionService, userService, liveSessionService } from '../services/api.jsx';
 import Navbar from '../components/Navbar';
 import HeroVideoControls from '../components/HeroVideoControls';
 import { useTheme } from '../context/ThemeContext';
@@ -19,6 +19,11 @@ export default function LandingPage() {
     const heroVideoRef = useRef(null);
     const [heroMuted,   setHeroMuted]   = useState(true);
     const [contactStatus, setContactStatus] = useState(null);
+    // Contact form state — persisted to MongoDB via POST /api/contact
+    const [contactForm, setContactForm] = useState({ name: '', phone: '', email: '', message: '' });
+    const [contactErrors, setContactErrors] = useState({});
+    const [contactLoading, setContactLoading] = useState(false);
+    const [contactApiError, setContactApiError] = useState('');
     const [upcomingSessions, setUpcomingSessions] = useState([]); // real live sessions from DB
     const [reservingId, setReservingId] = useState(null);
     const navigate = useNavigate();
@@ -35,10 +40,61 @@ export default function LandingPage() {
         return () => window.cancelAnimationFrame(id);
     }, [location.state?.scrollTo, location.hash]);
 
-    const handleContactSubmit = (e) => {
+    // Prefill contact form from the authenticated account (still editable)
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            setContactForm(prev => ({
+                ...prev,
+                name: prev.name || user.fullName || '',
+                email: prev.email || user.accountEmail || '',
+                phone: prev.phone || user.contactPhone || ''
+            }));
+        }
+    }, [isAuthenticated, user]);
+
+    const handleContactChange = (e) => {
+        setContactForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+        setContactErrors(prev => ({ ...prev, [e.target.name]: undefined }));
+        if (contactApiError) setContactApiError('');
+    };
+
+    const validateContactForm = () => {
+        const errors = {};
+        if (!contactForm.name.trim()) errors.name = 'Name is required.';
+        if (!contactForm.phone.trim()) errors.phone = 'Phone number is required.';
+        if (!contactForm.email.trim()) errors.email = 'Email is required.';
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactForm.email.trim())) errors.email = 'Please enter a valid email address.';
+        if (contactForm.message.trim().length < 5) errors.message = 'Message must be at least 5 characters.';
+        return errors;
+    };
+
+    const handleContactSubmit = async (e) => {
         e.preventDefault();
-        setContactStatus('Your message has been sent successfully. We will get back to you soon.');
-        e.target.reset();
+        setContactStatus(null);
+        setContactApiError('');
+
+        const errors = validateContactForm();
+        if (Object.keys(errors).length > 0) {
+            setContactErrors(errors);
+            return;
+        }
+
+        try {
+            setContactLoading(true);
+            await API.post('/contact', {
+                name: contactForm.name,
+                phone: contactForm.phone,
+                email: contactForm.email,
+                message: contactForm.message
+            });
+            setContactStatus('Your message has been sent successfully. The administrator will respond to you soon — check the Support Messages page in your account (or your email) for the response.');
+            setContactForm({ name: '', phone: '', email: '', message: '' });
+            setContactErrors({});
+        } catch (err) {
+            setContactApiError(err.response?.data?.message || 'Failed to send your message. Please try again.');
+        } finally {
+            setContactLoading(false);
+        }
     };
 
     // ── Subscription state ─────────────────────────────────────────────────
@@ -1009,16 +1065,37 @@ export default function LandingPage() {
                         <span style={p.contactBadge}>CONTACT</span>
                         <h2 style={p.contactTitle}>Send your query</h2>
                         <p style={p.contactSubtitle}>Share us your Idea</p>
-                        <form onSubmit={handleContactSubmit} style={p.contactForm}>
+                        <form onSubmit={handleContactSubmit} style={p.contactForm} noValidate>
                             <div className="contact-row" style={p.contactRow}>
-                                <input className="contact-field" type="text" placeholder="Enter name" required style={p.contactInput} />
-                                <input className="contact-field" type="tel" placeholder="Enter phone number" required style={p.contactInput} />
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <input className="contact-field" type="text" name="name" placeholder="Enter name" value={contactForm.name} onChange={handleContactChange} style={{ ...p.contactInput, border: contactErrors.name ? '1px solid #ef4444' : 'none' }} />
+                                    {contactErrors.name && <span style={{ color: '#ef4444', fontSize: '12px' }}>{contactErrors.name}</span>}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <input className="contact-field" type="tel" name="phone" placeholder="Enter phone number" value={contactForm.phone} onChange={handleContactChange} style={{ ...p.contactInput, border: contactErrors.phone ? '1px solid #ef4444' : 'none' }} />
+                                    {contactErrors.phone && <span style={{ color: '#ef4444', fontSize: '12px' }}>{contactErrors.phone}</span>}
+                                </div>
                             </div>
-                            <input className="contact-field" type="email" placeholder="Enter email" required style={p.contactInput} />
-                            <textarea className="contact-field" placeholder="Message" required style={p.contactTextarea}></textarea>
-                            <button type="submit" className="contact-submit" style={p.contactSubmitBtn}>Submit</button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <input className="contact-field" type="email" name="email" placeholder="Enter email" value={contactForm.email} onChange={handleContactChange} style={{ ...p.contactInput, border: contactErrors.email ? '1px solid #ef4444' : 'none' }} />
+                                {contactErrors.email && <span style={{ color: '#ef4444', fontSize: '12px' }}>{contactErrors.email}</span>}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <textarea className="contact-field" name="message" placeholder="Message" value={contactForm.message} onChange={handleContactChange} style={{ ...p.contactTextarea, border: contactErrors.message ? '1px solid #ef4444' : 'none' }}></textarea>
+                                {contactErrors.message && <span style={{ color: '#ef4444', fontSize: '12px' }}>{contactErrors.message}</span>}
+                            </div>
+                            {isAuthenticated && (
+                                <Link to="/support/messages" style={{ color: '#0f172a', fontSize: '13px', fontWeight: '600', textDecoration: 'underline' }}>
+                                    View my support messages →
+                                </Link>
+                            )}
+                            <button type="submit" className="contact-submit" style={{ ...p.contactSubmitBtn, opacity: contactLoading ? 0.7 : 1, cursor: contactLoading ? 'not-allowed' : 'pointer' }} disabled={contactLoading}>
+                                {contactLoading ? 'Sending...' : 'Submit'}
+                            </button>
                         </form>
+
                         {contactStatus && <div style={p.contactSuccess}>{contactStatus}</div>}
+                        {!contactStatus && contactApiError && <div style={{ ...p.contactSuccess, background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}>{contactApiError}</div>}
                     </div>
 
                     {/* Right — Feature Image */}

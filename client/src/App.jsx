@@ -87,6 +87,9 @@ import AdminUserProfilePage  from './pages/admin/AdminUserProfilePage';
 import AdminCoupons          from './pages/admin/Coupons';
 import CouponDetail          from './pages/admin/CouponDetail';
 import AdminEventsPage       from './pages/admin/AdminEventsPage';
+import AdminDevelopers       from './pages/AdminDevelopers';
+import AdminContactMessages  from './pages/admin/AdminContactMessages';
+import SupportMessagesPage   from './pages/SupportMessagesPage';
 
 // Shared pages
 import VerifyCertificatePage from './pages/VerifyCertificatePage';
@@ -150,6 +153,7 @@ function AppRoutes() {
                 <Route path="/payment/success"               element={<PaymentSuccess />} />
                 <Route path="/payment/failed"                element={<PaymentFailed />} />
                 <Route path="/messages"                      element={<PrivateRoute><MessageInboxPage /></PrivateRoute>} />
+                <Route path="/support-messages"              element={<PrivateRoute><SupportMessagesPage /></PrivateRoute>} />
                 <Route path="/live-sessions"                 element={<PrivateRoute><LiveSessionsPage /></PrivateRoute>} />
                 <Route path="/events"                        element={<EventsPage />} />
                 <Route path="/events/:eventId"               element={<EventDetailPage />} />
@@ -168,6 +172,8 @@ function AppRoutes() {
                 <Route path="/admin/coupons"                 element={<PrivateRoute allowedRoles={['Admin']}><AdminCoupons /></PrivateRoute>} />
                 <Route path="/admin/coupons/:id"             element={<PrivateRoute allowedRoles={['Admin']}><CouponDetail /></PrivateRoute>} />
                 <Route path="/admin/events"                  element={<PrivateRoute allowedRoles={['Admin']}><AdminEventsPage /></PrivateRoute>} />
+                <Route path="/admin/developers"              element={<PrivateRoute allowedRoles={['Admin']}><AdminDevelopers /></PrivateRoute>} />
+                <Route path="/admin/contact-messages"        element={<PrivateRoute allowedRoles={['Admin']}><AdminContactMessages /></PrivateRoute>} />
 
                 {/* ── Fallback ─────────────────────────────────────────── */}
                 <Route path="/unauthorized" element={
