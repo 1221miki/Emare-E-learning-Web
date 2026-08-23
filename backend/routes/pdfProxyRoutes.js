@@ -22,8 +22,8 @@ const router  = express.Router();
 const { protect } = require('../middleware/auth');
 
 const STORAGE_API_KEY  = process.env.BUNNY_STORAGE_API_KEY;
-const STORAGE_ZONE     = process.env.BUNNY_STORAGE_ZONE_NAME || 'emare-elms-ict-hub';
-const CDN_DOMAIN       = process.env.BUNNY_STORAGE_DOMAIN    || 'emare-elms-ict-hub.b-cdn.net';
+const STORAGE_ZONE     = process.env.BUNNY_STORAGE_ZONE_NAME || 'emare-ict-hub1221';
+const CDN_DOMAIN       = process.env.BUNNY_STORAGE_DOMAIN    || 'vz-ece4d3e6-807.b-cdn.net';
 
 /**
  * Extract the storage path from either a Bunny CDN URL or a raw path.
@@ -35,7 +35,8 @@ const CDN_DOMAIN       = process.env.BUNNY_STORAGE_DOMAIN    || 'emare-elms-ict-
  */
 function extractStoragePath(rawPath) {
     // Strip the zone prefix that the storage API returns in paths
-    return rawPath.replace(/^\/+/, '').replace(/^emare-elms-ict-hub\//, '');
+    const zonePattern = new RegExp(`^${STORAGE_ZONE}/`);
+    return rawPath.replace(/^\/+/, '').replace(zonePattern, '');
 }
 
 /**

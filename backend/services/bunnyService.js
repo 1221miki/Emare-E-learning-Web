@@ -2,16 +2,19 @@
 const axios = require('axios');
 
 const BUNNY_VIDEO_BASE_URL = 'https://video.bunnycdn.com';
-const DEFAULT_BUNNY_API_KEY = '5ca8c78b-a3c8-45dc-96cb813c39f4-70af-4ccf';
-const DEFAULT_BUNNY_LIBRARY_ID = '724054';
+const DEFAULT_BUNNY_API_KEY = '4b01e04c-779b-46a5-9d98700cee34-adf0-4224';
+const DEFAULT_BUNNY_LIBRARY_ID = '735143';
 
 const getBunnyApiKey = () => {
-    const apiKey = process.env.BUNNY_API_KEY || process.env.BUNNY_STREAM_API_KEY || process.env.BUNNY_STORAGE_API_KEY || DEFAULT_BUNNY_API_KEY;
+    const apiKey = process.env.BUNNY_STREAM_API_KEY || process.env.BUNNY_API_KEY || process.env.BUNNY_STORAGE_API_KEY || DEFAULT_BUNNY_API_KEY;
     return apiKey && String(apiKey).trim() ? String(apiKey).trim() : null;
 };
 
 const getBunnyLibraryId = () => process.env.BUNNY_VIDEO_LIBRARY_ID || DEFAULT_BUNNY_LIBRARY_ID;
-const getBunnyStorageDomain = () => process.env.BUNNY_STORAGE_DOMAIN || 'vz-4bc99530-632.b-cdn.net';
+// Pull Zone CDN hostname (e.g. vz-ece4d3e6-807.b-cdn.net) used for video playback
+const getBunnyStorageDomain = () => process.env.BUNNY_STORAGE_DOMAIN || 'vz-ece4d3e6-807.b-cdn.net';
+// Storage zone regional endpoint (Falcon/DE region zones use a region subdomain)
+const getBunnyStorageEndpoint = () => process.env.BUNNY_STORAGE_ENDPOINT || 'https://storage.bunnycdn.com';
 
 const toErrorString = (value) => {
     if (value == null) return 'Unknown Bunny upload error';
@@ -161,7 +164,7 @@ const uploadFileToStorage = async (buffer, fileName = 'emare-upload', mimeType =
     }
 
     const storagePath = `${folder}/${fileName}`.replace(/\/+/g, '/');
-    const uploadUrl = `https://storage.bunnycdn.com/${storageZoneName}/${storagePath}`;
+    const uploadUrl = `${getBunnyStorageEndpoint()}/${storageZoneName}/${storagePath}`;
 
     try {
         const response = await axios.put(uploadUrl, buffer, {
@@ -179,7 +182,8 @@ const uploadFileToStorage = async (buffer, fileName = 'emare-upload', mimeType =
         return {
             success: true,
             storagePath,
-            storageUrl: `https://${storageZoneName}.b-cdn.net/${storagePath}`,
+            storageUrl: `https://${getBunnyStorageDomain()}/${storagePath}`,
+            cdnUrl: `https://${getBunnyStorageDomain()}/${storagePath}`,
             bunnyType: 'storage',
             response: response.data || {}
         };
@@ -196,5 +200,6 @@ module.exports = {
     createVideo,
     getBunnyApiKey,
     getBunnyLibraryId,
-    getBunnyStorageDomain
+    getBunnyStorageDomain,
+    getBunnyStorageEndpoint
 };
