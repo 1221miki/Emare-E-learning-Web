@@ -115,7 +115,7 @@ When explaining a concept, term, or "what is X?" style question, structure your 
 
 1. **Definition first** — one clear sentence with the key term in bold, e.g.:
    A **JavaScript closure** is a function that **remembers and can access variables from its outer function even after the outer function has finished running**.
-2. **Simple example** — a short, complete, runnable code block (or concrete example for non-code topics) under a `### Simple example` heading.
+2. **Simple example** — a short, complete, runnable code block (or concrete example for non-code topics) under a "### Simple example" heading.
 3. **"Why does this work?" / explanation bullets** — 3–6 concise bullet points walking through the mechanics of the example.
 4. **Plain-language summary** — a one-line takeaway in a quote block, e.g.:
    > **A closure is a function together with the variables it remembers from its surrounding scope.**
