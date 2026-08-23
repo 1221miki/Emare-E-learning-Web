@@ -32,6 +32,18 @@ const resendFrom = process.env.EMAIL_FROM || process.env.RESEND_FROM || 'Emare <
 const sendgridConfigured = emailService === 'sendgrid' && !!process.env.SENDGRID_API_KEY;
 const sendgridFrom = process.env.SENDGRID_FROM || process.env.EMAIL_FROM || process.env.SMTP_FROM || 'Emare <noreply@example.com>';
 
+// ── Provider 3: Brevo HTTP API (no domain verification required) ───────────
+// Works on hosting platforms where outbound SMTP ports are blocked (Render etc.)
+// because it uses plain HTTPS. Free tier: 300 emails/day, delivers to ANY
+// recipient after verifying just the sender address (a normal inbox click).
+const brevoApiKey = process.env.BREVO_API_KEY || '';
+const brevoConfigured = emailService === 'brevo' && !!brevoApiKey;
+// BREVO_FROM must be the email you verified inside Brevo (Senders & IP page).
+const brevoFromRaw = process.env.BREVO_FROM || process.env.EMAIL_FROM || process.env.SMTP_FROM || '';
+const brevoFromMatch = String(brevoFromRaw).match(/^(.*?)\s*<\s*([^>]+)\s*>$/) || [null, '', String(brevoFromRaw).trim()];
+const brevoFromName = (brevoFromMatch[1] || 'Emare ELMS').trim().replace(/^["']|["']$/g, '') || 'Emare ELMS';
+const brevoFromEmail = brevoFromMatch[2].trim();
+
 // Unsupported SDKs requested — surface a warning so the operator switches to
 // resend/sendgrid/smtp or installs the required SDK.
 const unsupportedProvider = ['aws-ses', 'mailgun'].includes(emailService);
@@ -64,7 +76,7 @@ const smtpTransport = smtpConfigured
       })
     : null;
 
-const emailConfigured = resendConfigured || sendgridConfigured || smtpConfigured;
+const emailConfigured = resendConfigured || sendgridConfigured || brevoConfigured || smtpConfigured;
 
 // Reply-To address: replies from recipients go here (defaults to the sender so
 // providers that reject reply-less mail stay deliverable).
@@ -86,9 +98,11 @@ const getDailyLimit = (provider) => {
     if (override) return override;
     // Resend free tier: 3 000/month → no enforced daily cap in code.
     // SendGrid free tier: 100/day.
+    // Brevo free tier: 300/day.
     // SMTP/Gmail: stay safely under the 500/day hard limit.
     if (provider === 'resend') return Infinity;
     if (provider === 'sendgrid') return 100;
+    if (provider === 'brevo') return 300;
     return 450; // safe margin under Gmail's 500/day
 };
 
@@ -132,6 +146,7 @@ const getEmailCounterStatus = () => ({
     limit: getDailyLimit(emailService),
     resendConfigured,
     sendgridConfigured,
+    brevoConfigured,
     smtpConfigured,
     emailConfigured
 });
@@ -276,7 +291,44 @@ const sendEmail = async ({ to, subject, html, text }) => {
         }
     }
 
-    // ── Provider 3: SMTP (retried once) ──────────────────────────────────
+    // ── Provider 3: Brevo HTTP API (HTTPS — no SMTP port restrictions) ───
+    if (brevoConfigured) {
+        try {
+            await enforceRateLimit('brevo');
+            const bvRes = await fetch('https://api.brevo.com/v3/smtp/email', {
+                method: 'POST',
+                headers: {
+                    'api-key': brevoApiKey,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    sender: { name: brevoFromName, email: brevoFromEmail },
+                    to: recipients.map((r) => ({ email: r })),
+                    subject,
+                    htmlContent: html,
+                    ...(text ? { textContent: text } : {}),
+                    ...(replyTo ? { replyTo: { email: replyTo } } : {}),
+                    headers: buildAntiSpamHeaders()
+                })
+            });
+            if (!bvRes.ok) {
+                const body = await bvRes.text().catch(() => '');
+                throw new Error(`Brevo API ${bvRes.status}: ${body.slice(0, 300)}`);
+            }
+            const bvData = await bvRes.json().catch(() => ({}));
+            return { id: bvData.messageId || `brevo_${Date.now()}` };
+        } catch (error) {
+            if (error.message && error.message.startsWith('EMAIL_DAILY_LIMIT')) {
+                failures.push('Brevo: daily sending limit reached');
+            } else {
+                failures.push(`Brevo: ${error.message}`);
+            }
+            console.error('Brevo Email API Error:', error.message || error);
+        }
+    }
+
+    // ── Provider 4: SMTP (retried once) ──────────────────────────────────
     if (smtpConfigured) {
         const attempts = 2;
         for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -317,6 +369,8 @@ const logEmailTransportStatus = () => {
         console.log('📧 Email service configured: Resend API (production).');
     } else if (sendgridConfigured) {
         console.log(`📧 Email service configured: SendGrid v3 API — rate-limited to ${getDailyLimit('sendgrid')} emails/day.`);
+    } else if (brevoConfigured) {
+        console.log(`📧 Email service configured: Brevo HTTP API (from: ${brevoFromEmail}) — rate-limited to ${getDailyLimit('brevo')} emails/day.`);
     } else if (smtpConfigured) {
         console.log(`📧 Email service configured: SMTP (${smtpHost}:${smtpPort}) — rate-limited to ${getDailyLimit('smtp')} emails/day.`);
         if (process.env.NODE_ENV === 'production') {
