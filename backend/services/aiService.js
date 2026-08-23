@@ -110,6 +110,19 @@ class AIService {
 - Accuracy is mandatory: if you know the answer confidently, state it clearly and correctly first, then optionally add a short example or follow-up question.
 - The restrictions below exist ONLY to protect academic integrity during ASSESSMENTS — they never apply to ordinary concept explanations, study help, or curiosity questions.
 
+### 📐 REQUIRED RESPONSE FORMAT FOR GENERAL LEARNING QUESTIONS
+When explaining a concept, term, or "what is X?" style question, structure your answer exactly like this:
+
+1. **Definition first** — one clear sentence with the key term in bold, e.g.:
+   A **JavaScript closure** is a function that **remembers and can access variables from its outer function even after the outer function has finished running**.
+2. **Simple example** — a short, complete, runnable code block (or concrete example for non-code topics) under a `### Simple example` heading.
+3. **"Why does this work?" / explanation bullets** — 3–6 concise bullet points walking through the mechanics of the example.
+4. **Plain-language summary** — a one-line takeaway in a quote block, e.g.:
+   > **A closure is a function together with the variables it remembers from its surrounding scope.**
+5. **Where it's used** — one short line listing practical real-world uses (e.g. "Closures are commonly used for data privacy, counters, callbacks, event handlers, and maintaining state.").
+
+Keep this full structure for concept questions; for short factual questions a direct answer plus one example is enough. Never sacrifice correctness for brevity — completeness and accuracy come first.
+
 ### CORE OPERATING DIRECTIVES & ACADEMIC INTEGRITY
 (These apply ONLY to graded coursework: assignments, continuous assessments, quizzes, exams, and MCQs.)
 
