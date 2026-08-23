@@ -4,6 +4,7 @@ import { quizService, gradebookService } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
+import { setAiTutorBlocked, clearAiTutorBlocked, AI_TUTOR_BLOCKED_MESSAGE } from '../../utils/aiTutorBlock';
 
 export default function QuizPage() {
     const { colors, theme } = useTheme();
@@ -49,11 +50,15 @@ export default function QuizPage() {
                 const q = res.data.data;
                 setQuiz(q);
                 setTimeLeft(q.allottedDurationMinutes * 60); // Convert to seconds
+                // Emare AI Tutor restriction: hide & block the tutor while this
+                // restricted quiz is open (server also enforces via ai-lock).
+                if (q.aiTutorEnabled === false) setAiTutorBlocked(AI_TUTOR_BLOCKED_MESSAGE);
             })
             .catch(err => {
                 alert("Quiz not found or you don't have access.");
                 navigate('/student/dashboard');
             });
+        return () => clearAiTutorBlocked();
     }, [quizId, navigate]);
 
     // Timer logic
@@ -147,6 +152,9 @@ export default function QuizPage() {
                 <div>
                     <h1 style={{ ...styles.title, color: colors.text }}>{quiz.quizTitle}</h1>
                     <p style={{ ...styles.subtitle, color: colors.textMuted }}>Answer all questions before the timer expires.</p>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px', padding: '4px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: '800', background: quiz.aiTutorEnabled === false ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)', color: quiz.aiTutorEnabled === false ? '#ef4444' : '#10b981' }}>
+                        {quiz.aiTutorEnabled === false ? '🔒 Emare AI Tutor: Disabled for this quiz' : '⊡ Emare AI Tutor: Enabled'}
+                    </span>
                 </div>
                 <div style={timeLeft < 60 ? styles.timerWarning : styles.timer}>
                     ⏱ {formatTime(timeLeft)}

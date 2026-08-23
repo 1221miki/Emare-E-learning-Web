@@ -46,6 +46,8 @@ export default function CreateAssignment({ courses, defaultCourse, onCreated, on
         dueTime:        '23:59',
         allowLate:      false,
         latePenalty:    0,
+        // Emare AI Tutor access for this assignment
+        aiTutorEnabled: true,
         // Access
         access:         'all',
         // Rubric items
@@ -114,6 +116,7 @@ export default function CreateAssignment({ courses, defaultCourse, onCreated, on
                 gradingMethod: form.gradingMethod,
                 passingScore: Number(form.passingScore),
                 latePenalty:  Number(form.latePenalty),
+                aiTutorEnabled: form.aiTutorEnabled !== false,
             };
             const res = await assignmentService.create(payload);
             onCreated(res.data.data);
@@ -258,6 +261,20 @@ export default function CreateAssignment({ courses, defaultCourse, onCreated, on
                                 <input type="time" style={{ ...input, flex: '1' }} value={form.dueTime} onChange={e => set('dueTime', e.target.value)} />
                             </div>
                         </div>
+                        {/* Emare AI Tutor Enable / Disable */}
+                        <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', padding: '14px 16px', borderRadius: '12px', border: `1px solid ${form.aiTutorEnabled !== false ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`, background: form.aiTutorEnabled !== false ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)' }}>
+                            <div>
+                                <label style={{ ...lbl, margin: 0 }}>⊡ Emare AI Tutor</label>
+                                <div style={{ color: '#64748b', fontSize: '12px', marginTop: '2px' }}>
+                                    {form.aiTutorEnabled !== false ? 'Students can use the AI Tutor for this assignment.' : 'AI Tutor is completely blocked while students work on this assignment.'}
+                                </div>
+                            </div>
+                            <div style={{ display: 'inline-flex', borderRadius: '10px', overflow: 'hidden' }}>
+                                <button type="button" onClick={() => set('aiTutorEnabled', true)} style={{ padding: '8px 18px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', border: 'none', background: form.aiTutorEnabled !== false ? '#10b981' : 'transparent', color: form.aiTutorEnabled !== false ? '#fff' : '#94a3b8', borderRight: '1px solid rgba(51,65,85,0.3)' }}>Enabled</button>
+                                <button type="button" onClick={() => set('aiTutorEnabled', false)} style={{ padding: '8px 18px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', border: 'none', background: form.aiTutorEnabled === false ? '#ef4444' : 'transparent', color: form.aiTutorEnabled === false ? '#fff' : '#94a3b8' }}>Disabled</button>
+                            </div>
+                        </div>
+
                         <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#94a3b8', fontSize: '13px', fontWeight: '600' }}>
                                 <input type="checkbox" checked={form.allowLate} onChange={e => set('allowLate', e.target.checked)} style={{ accentColor: C.orange, width: '16px', height: '16px' }} />

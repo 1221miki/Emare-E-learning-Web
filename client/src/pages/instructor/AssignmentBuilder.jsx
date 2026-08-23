@@ -21,6 +21,7 @@ export default function AssignmentBuilder() {
         dueDate: '',
         dueTime: '23:59',
         maxScore: 100,
+        aiTutorEnabled: true,
         attachment: null,
         attachmentPreview: ''
     });
@@ -61,6 +62,7 @@ export default function AssignmentBuilder() {
                 dueDate: dueAt,
                 maxScore: Number(form.maxScore),
                 allowLate: false,
+                aiTutorEnabled: form.aiTutorEnabled !== false,
                 published: false
             };
 
@@ -115,6 +117,13 @@ export default function AssignmentBuilder() {
                     <div>
                         <label style={{ color: colors.textMuted, fontSize: 13 }}>Instructions</label>
                         <textarea value={form.instructions} onChange={e => setForm({ ...form, instructions: e.target.value })} style={{ width: '100%', minHeight: 120, padding: '10px', borderRadius: 8, background: colors.bgInput, color: colors.text }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: '12px 14px', borderRadius: 8, border: `1px solid ${form.aiTutorEnabled !== false ? '#a7f3d0' : '#fecaca'}`, background: form.aiTutorEnabled !== false ? '#f0fdf4' : '#fef2f2' }}>
+                        <label style={{ margin: 0, fontWeight: 700, fontSize: 13, color: colors.text }}>⊡ Emare AI Tutor</label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700, color: form.aiTutorEnabled !== false ? '#059669' : '#dc2626' }}>
+                            <input type="checkbox" checked={form.aiTutorEnabled !== false} onChange={e => setForm({ ...form, aiTutorEnabled: e.target.checked })} style={{ accentColor: form.aiTutorEnabled !== false ? '#10b981' : '#ef4444', width: 16, height: 16 }} />
+                            {form.aiTutorEnabled !== false ? 'Enabled' : 'Disabled'}
+                        </label>
                     </div>
                     <div>
                         <label style={{ color: colors.textMuted, fontSize: 13 }}>Attachment (PDF / Word / Video)</label>

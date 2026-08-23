@@ -307,6 +307,7 @@ export const assignmentService = {
     getByCourse: (courseId) => API.get(`/assignments/course/${courseId}`),
     update: (id, data) => API.put(`/assignments/${id}`, data),
     submit: (id, data) => API.post(`/assignments/${id}/submit`, data),
+    lockAiTutor: (id) => API.post(`/assignments/${id}/ai-lock`),
     getSubmissions: (id) => API.get(`/assignments/${id}/submissions`),
     gradeSubmission: (submissionId, data) => API.patch(`/assignments/submissions/${submissionId}/grade`, data),
     getMySubmissions: () => API.get('/assignments/submissions/my'),

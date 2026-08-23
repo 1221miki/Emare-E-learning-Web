@@ -10,6 +10,7 @@ import { LayoutDashboard, BarChart3, Users, UserCog, Building2, BookOpen, Folder
 import { useTheme } from '../../context/ThemeContext';
 import { getLiveStatus, LIVE_STATUS_META, formatEventDate, isValidUrl, EVENT_CATEGORIES } from '../../utils/eventStatus';
 import CourseCreationWizard from '../instructor/CourseCreationWizard';
+import AdminContactMessages from './AdminContactMessages';
 import { DevelopersPanel } from '../AdminDevelopers';
 
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
@@ -2311,8 +2312,7 @@ const resetCalendarForm = () => {
 
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '24px' }}>
                     {[
-                        { key: 'accounts', label: 'User Accounts', icon: <Users size={16} aria-hidden="true" /> },
-                        { key: 'developers', label: 'Developers', icon: <Code2 size={16} aria-hidden="true" /> }
+                        { key: 'accounts', label: 'User Accounts', icon: <Users size={16} aria-hidden="true" /> }
                     ].map(t => {
                         const isActive = userSubTab === t.key;
                         return (
@@ -2334,9 +2334,6 @@ const resetCalendarForm = () => {
                     })}
                 </div>
 
-                {userSubTab === 'developers' ? (
-                    <DevelopersPanel />
-                ) : (
                 <>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                     <StatCard icon={<Users size={24} aria-hidden="true" />} label="Total Users" value={totalUsers} color={colors.primary} />
@@ -2414,7 +2411,6 @@ const resetCalendarForm = () => {
                     </table>
                 </div>
                 </>
-                )}
             </div>
         );
     };
@@ -5737,7 +5733,8 @@ const resetCalendarForm = () => {
         { key: 'cms', label: 'CMS & Comms', icon: <Megaphone size={20} aria-hidden="true" /> },
         { key: 'reports', label: 'Reports & Exports', icon: <FileBarChart size={20} aria-hidden="true" /> },
         { key: 'audit', label: 'Audit Logs', icon: <ClipboardCheck size={20} aria-hidden="true" /> },
-        { key: 'contact-messages', label: 'Contact Messages', path: '/admin/contact-messages', icon: <Inbox size={20} aria-hidden="true" /> },
+        { key: 'contact-messages', label: 'Contact Messages', icon: <Inbox size={20} aria-hidden="true" /> },
+        { key: 'developers', label: 'Developers', icon: <Code2 size={20} aria-hidden="true" /> },
         { key: 'calendar', label: 'Event Management', icon: <Clock3 size={20} aria-hidden="true" /> },
         { key: 'system', label: 'System Settings', icon: <Settings size={20} aria-hidden="true" /> }
     ];
@@ -5771,6 +5768,14 @@ const resetCalendarForm = () => {
                         {activeTab === 'cms' && renderCMS()}
                         {activeTab === 'reports' && renderReports()}
                         {activeTab === 'audit' && renderAuditLogs()}
+                        {activeTab === 'contact-messages' && <AdminContactMessages embedded />}
+                        {activeTab === 'developers' && (
+                            <>
+                                <h2 style={{ fontSize: '24px', fontWeight: '900', margin: '0 0 6px', color: colors.text }}>Developers Management</h2>
+                                <p style={{ color: colors.textMuted, margin: '0 0 20px', fontSize: '14px' }}>Create, update, and remove developer profiles shown on the public Developers page.</p>
+                                <DevelopersPanel />
+                            </>
+                        )}
                         {activeTab === 'calendar' && renderCalendar()}
                         {activeTab === 'system' && renderSystem()}
                     </>

@@ -55,8 +55,10 @@ export default function LandingPage() {
     }, [isAuthenticated, user]);
 
     const handleContactChange = (e) => {
-        setContactForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
-        setContactErrors(prev => ({ ...prev, [e.target.name]: undefined }));
+        const { name, value } = e.target;
+        const val = name === 'phone' ? value.replace(/\D/g, '').slice(0, 10) : value;
+        setContactForm(prev => ({ ...prev, [name]: val }));
+        setContactErrors(prev => ({ ...prev, [name]: undefined }));
         if (contactApiError) setContactApiError('');
     };
 
@@ -64,8 +66,9 @@ export default function LandingPage() {
         const errors = {};
         if (!contactForm.name.trim()) errors.name = 'Name is required.';
         if (!contactForm.phone.trim()) errors.phone = 'Phone number is required.';
+        else if (!/^(09|07)\d{8}$/.test(contactForm.phone.replace(/[\s-]/g, ''))) errors.phone = 'Phone number must start with 09 or 07 and be exactly 10 digits (e.g. 0912345678).';
         if (!contactForm.email.trim()) errors.email = 'Email is required.';
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactForm.email.trim())) errors.email = 'Please enter a valid email address.';
+        else if (!/@gmail\.com$/.test(contactForm.email.trim().toLowerCase()) || !/^[^\s@]+@gmail\.com$/.test(contactForm.email.trim().toLowerCase())) errors.email = 'Please enter a valid Gmail address (must end with @gmail.com).';
         if (contactForm.message.trim().length < 5) errors.message = 'Message must be at least 5 characters.';
         return errors;
     };
@@ -1167,7 +1170,7 @@ export default function LandingPage() {
                                     {contactErrors.name && <span style={{ color: '#ef4444', fontSize: '12px' }}>{contactErrors.name}</span>}
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <input className="contact-field" type="tel" name="phone" placeholder="Enter phone number" value={contactForm.phone} onChange={handleContactChange} style={{ ...p.contactInput, border: contactErrors.phone ? '1px solid #ef4444' : 'none' }} />
+                                    <input className="contact-field" type="tel" name="phone" placeholder="Enter phone number (e.g. 0912345678)" inputMode="numeric" maxLength={10} value={contactForm.phone} onChange={handleContactChange} style={{ ...p.contactInput, border: contactErrors.phone ? '1px solid #ef4444' : 'none' }} />
                                     {contactErrors.phone && <span style={{ color: '#ef4444', fontSize: '12px' }}>{contactErrors.phone}</span>}
                                 </div>
                             </div>

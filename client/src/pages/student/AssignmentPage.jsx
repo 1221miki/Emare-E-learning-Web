@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import { assignmentService } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
+import { setAiTutorBlocked, clearAiTutorBlocked, AI_TUTOR_BLOCKED_MESSAGE } from '../../utils/aiTutorBlock';
 
 export default function AssignmentPage() {
     const { courseId } = useParams();
@@ -30,6 +31,16 @@ export default function AssignmentPage() {
             setMySubmissions(resSubmissions.data.data);
         }).catch(console.error);
     }, [courseId]);
+
+    // Emare AI Tutor restriction — when a restricted assignment is opened for
+    // submission, hide & block the tutor and register the server-side lock.
+    useEffect(() => {
+        if (activeAssignment && activeAssignment.aiTutorEnabled === false) {
+            setAiTutorBlocked(AI_TUTOR_BLOCKED_MESSAGE);
+            assignmentService.lockAiTutor(activeAssignment._id).catch(() => {});
+        }
+        return () => clearAiTutorBlocked();
+    }, [activeAssignment]);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -82,9 +93,12 @@ export default function AssignmentPage() {
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                                         <div>
                                             <h3 style={{ color: colors.text, fontSize: '20px', fontWeight: '700', margin: '0 0 8px' }}>{a.title}</h3>
-                                            <div style={{ display: 'flex', gap: '16px', color: colors.textMuted, fontSize: '13px' }}>
+                                            <div style={{ display: 'flex', gap: '16px', color: colors.textMuted, fontSize: '13px', alignItems: 'center', flexWrap: 'wrap' }}>
                                                 <span>Due: {new Date(a.dueDate).toLocaleString()}</span>
                                                 <span>Points: {a.maxScore}</span>
+                                                <span style={{ padding: '3px 12px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', background: a.aiTutorEnabled === false ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)', color: a.aiTutorEnabled === false ? '#ef4444' : '#10b981' }}>
+                                                    {a.aiTutorEnabled === false ? '🔒 Emare AI Tutor Disabled' : '⊡ Emare AI Tutor Enabled'}
+                                                </span>
                                             </div>
                                         </div>
                                         {sub ? (

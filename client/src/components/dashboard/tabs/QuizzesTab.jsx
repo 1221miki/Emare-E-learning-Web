@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { quizService } from '../../../services/api';
 import { BrainCircuit, Target, ClipboardList, Clock, CheckCircle2, BookOpen, Rocket } from 'lucide-react';
+import { setAiTutorBlocked, clearAiTutorBlocked, AI_TUTOR_BLOCKED_MESSAGE } from '../../../utils/aiTutorBlock';
 
 export default function QuizzesTab(dash) {
     const { colors, quizzesList, activeQuiz, setActiveQuiz, quizAnswers, setQuizAnswers, quizResult, setQuizResult, quizSubmitting, setQuizSubmitting, styles } = dash;
+        // Emare AI Tutor restriction — hide & block the tutor while a
+        // restricted quiz is open (server enforces via ai-lock as well).
+        useEffect(() => {
+            if (activeQuiz && activeQuiz.aiTutorEnabled === false) {
+                setAiTutorBlocked(AI_TUTOR_BLOCKED_MESSAGE);
+            }
+            return () => clearAiTutorBlocked();
+        }, [activeQuiz]);
         const handleStartQuiz = (quiz) => {
             setActiveQuiz(quiz);
             setQuizAnswers({});
@@ -66,10 +75,13 @@ export default function QuizzesTab(dash) {
                         <div style={styles.panelCard}>
                             <div style={{ marginBottom: '24px' }}>
                                 <h2 style={{ color: colors.text, fontSize: '20px', fontWeight: '800', margin: '0 0 8px' }}>{activeQuiz.quizTitle}</h2>
-                                <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: colors.textMuted }}>
+                                <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: colors.textMuted, flexWrap: 'wrap' }}>
                                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><ClipboardList size={14} aria-hidden="true" /> {questions.length} Questions</span>
                                     {activeQuiz.timeLimitMinutes && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} aria-hidden="true" /> {activeQuiz.timeLimitMinutes} min</span>}
                                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Target size={14} aria-hidden="true" /> Passing Score: {activeQuiz.passingScore || 60}%</span>
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '3px 12px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', background: activeQuiz.aiTutorEnabled === false ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)', color: activeQuiz.aiTutorEnabled === false ? '#ef4444' : '#10b981' }}>
+                                        {activeQuiz.aiTutorEnabled === false ? '🔒 Emare AI Tutor: Disabled' : '⊡ Emare AI Tutor: Enabled'}
+                                    </span>
                                 </div>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -134,6 +146,9 @@ export default function QuizzesTab(dash) {
                                 </div>
                                 <h3 style={{ ...styles.courseTitle, marginBottom: '8px' }}>{quiz.quizTitle || 'Course Quiz'}</h3>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+                                    <span style={{ fontSize: '12px', color: quiz.aiTutorEnabled === false ? '#ef4444' : '#10b981', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        {quiz.aiTutorEnabled === false ? '🔒 Emare AI Tutor Disabled' : '⊡ Emare AI Tutor Enabled'}
+                                    </span>
                                     <span style={{ fontSize: '12px', color: colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}><ClipboardList size={13} aria-hidden="true" /> {(quiz.questions || []).length} Questions</span>
                                     {quiz.timeLimitMinutes && <span style={{ fontSize: '12px', color: colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={13} aria-hidden="true" /> {quiz.timeLimitMinutes} min time limit</span>}
                                     <span style={{ fontSize: '12px', color: colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}><Target size={13} aria-hidden="true" /> Pass at {quiz.passingScore || 60}%</span>

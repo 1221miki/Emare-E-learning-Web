@@ -2,6 +2,7 @@ const Quiz = require('../models/Quiz');
 const User = require('../models/User');
 const Course = require('../models/Course');
 const GradeBook = require('../models/GradeBook');
+const AssessmentAiBlock = require('../models/AssessmentAiBlock');
 
 // ─────────────────────────────────────────────
 // @desc    Create a new quiz for a course
@@ -32,7 +33,8 @@ const createQuiz = async (req, res, next) => {
             allottedDurationMinutes,
             passingScoreThreshold: passingScoreThreshold || 60,
             questionArray,
-            submissionDeadline
+            submissionDeadline,
+            aiTutorEnabled: req.body.aiTutorEnabled !== false
         });
 
         res.status(201).json({ success: true, data: quiz });
@@ -79,6 +81,19 @@ const getQuizById = async (req, res, next) => {
                 options: q.options
                 // correctAnswerIndex is intentionally omitted
             }));
+
+            // Server-side AI Tutor enforcement: if the instructor disabled the
+            // AI Tutor for this quiz, register a block for this student that
+            // lasts for the quiz duration + a 10 minute grace period. While the
+            // block is active, every AI Tutor endpoint rejects their requests.
+            if (quiz.aiTutorEnabled === false) {
+                const expiresAt = new Date(Date.now() + (quiz.allottedDurationMinutes + 10) * 60 * 1000);
+                await AssessmentAiBlock.findOneAndUpdate(
+                    { studentRef: req.user.id, quizRef: quiz._id },
+                    { $set: { studentRef: req.user.id, quizRef: quiz._id, courseRef: quiz.courseRef, expiresAt, reason: AssessmentAiBlock.BLOCK_MESSAGE } },
+                    { upsert: true, new: true }
+                );
+            }
         }
 
         res.status(200).json({ success: true, data: quiz });
@@ -126,6 +141,9 @@ const submitQuizAttempt = async (req, res, next) => {
 
         const scorePercentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
         const passed = scorePercentage >= quiz.passingScoreThreshold;
+
+        // The attempt is complete — release the AI Tutor block for this student
+        await AssessmentAiBlock.deleteOne({ studentRef: req.user.id, quizRef: quiz._id });
 
         // Record the grade in the GradeBook
         const gradeEntry = await GradeBook.create({
@@ -243,6 +261,11 @@ const updateQuiz = async (req, res, next) => {
         // Allow updating lessonRef (link/unlink this quiz from a lesson)
         if ('lessonRef' in req.body) {
             req.body.lessonRef = req.body.lessonRef || null;
+        }
+
+        // Emare AI Tutor toggle — normalize to a boolean
+        if ('aiTutorEnabled' in req.body) {
+            req.body.aiTutorEnabled = !!req.body.aiTutorEnabled;
         }
 
         quiz = await Quiz.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });

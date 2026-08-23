@@ -26,6 +26,11 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
         }
     };
 
+    const getProfileNavState = () => {
+        if (user?.assignedRole === 'Admin') return { activeTab: 'developers' };
+        return undefined;
+    };
+
     // Fallback default nav items if not provided by parent
     const effectiveNavItems = (navItems && navItems.length > 0) ? navItems : (() => {
         const role = user?.assignedRole;
@@ -241,8 +246,8 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                         </div>
 
                         {/* Menu Items */}
-                        <button 
-                            onClick={() => { navigate(getProfilePath()); setAccountDropdownOpen(false); }}
+                        <button
+                            onClick={() => { navigate(getProfilePath(), { state: getProfileNavState() }); setAccountDropdownOpen(false); }}
                             style={{ ...styles.dropdownItem, color: colors.text, borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '10px' }}
                         >
                             <Settings size={20} aria-hidden="true" /> Profile Settings

@@ -3,6 +3,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { aiService, uploadService } from '../services/api';
 import axios from 'axios';
+import { getAiTutorBlocked, subscribeAiTutorBlocked, AI_TUTOR_BLOCKED_MESSAGE } from '../utils/aiTutorBlock';
 
 export default function AiAssistant({ context = {}, initialPrompt = { prompt: '', id: null } }) {
     const { colors } = useTheme();
@@ -28,6 +29,15 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
     const [voiceListening, setVoiceListening] = useState(false);
     const [selectedRating, setSelectedRating] = useState(null);
     const [editingMessageIndex, setEditingMessageIndex] = useState(null);
+    // Assessment restriction: when an AI-Tutor-disabled quiz/assignment is
+    // open, the tutor is completely hidden and every entry point is blocked.
+    const [blockedReason, setBlockedReasonState] = useState(getAiTutorBlocked());
+    const blockedRef = useRef(getAiTutorBlocked());
+    useEffect(() => subscribeAiTutorBlocked((reason) => {
+        blockedRef.current = reason;
+        setBlockedReasonState(reason);
+        if (reason) setIsOpen(false);
+    }), []);
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
     const recognitionRef = useRef(null);
@@ -135,6 +145,11 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
 
     const handleSend = async (e, questionOverride, userMessage) => {
         if (e) e.preventDefault?.();
+        // Hard stop — tutor is disabled for the current restricted assessment
+        if (blockedRef.current) {
+            setError(blockedRef.current);
+            return;
+        }
         const query = (questionOverride || input).trim();
         if (!query) return;
         setError('');
@@ -160,7 +175,7 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
 
         try {
             const validCourseId = typeof context.courseId === 'string' && /^[a-fA-F0-9]{24}$/.test(context.courseId) ? context.courseId : null;
-            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
             if (validCourseId) {
                 try {
@@ -232,7 +247,7 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
     };
 
     useEffect(() => {
-        if (initialPrompt?.prompt) {
+        if (initialPrompt?.prompt && !blockedRef.current) {
             setIsOpen(true);
             setTimeout(() => {
                 handleSend(null, initialPrompt.prompt);
@@ -245,9 +260,18 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
     }, [messages, storageMessageKey]);
 
     const handleQuickPrompt = (prompt) => {
+        if (blockedRef.current) { setError(blockedRef.current); return; }
         if (!isOpen) setIsOpen(true);
         setInput(prompt);
         handleSend(null, prompt);
+    };
+
+    // Paste guard — while restricted, pasted exam/assignment content never
+    // enters the tutor input, so it can't be forwarded to the AI.
+    const handlePasteGuard = (e) => {
+        if (!blockedRef.current) return;
+        e.preventDefault();
+        setError(blockedRef.current);
     };
 
     const handleKeyDown = (e) => {
@@ -802,6 +826,31 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
         }
     };
 
+    // ── Restricted mode: the tutor is not rendered at all — no floating
+    // button, no panel, no shortcuts. Only a clear notice is displayed.
+    if (blockedReason) {
+        return (
+            <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9998, maxWidth: '320px' }}>
+                <div role="alert" aria-live="polite" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    background: '#fef2f2',
+                    color: '#991b1b',
+                    border: '1px solid #fecaca',
+                    borderRadius: '12px',
+                    padding: '12px 16px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    boxShadow: '0 8px 24px rgba(239,68,68,0.25)'
+                }}>
+                    <span aria-hidden="true" style={{ fontSize: '18px' }}>🔒</span>
+                    <span>{blockedReason}</span>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div style={s.container}>
             <style>
@@ -979,6 +1028,7 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
+                        onPaste={handlePasteGuard}
                         style={s.textarea}
                     />
                     <div style={s.inputRow}>

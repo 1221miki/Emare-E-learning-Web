@@ -18,7 +18,7 @@ const FILTERS = [
     { key: 'closed', label: 'Closed' }
 ];
 
-export default function AdminContactMessages() {
+export default function AdminContactMessages({ embedded = false }) {
     const { colors } = useTheme();
     const navigate = useNavigate();
     const [messages, setMessages] = useState([]);
@@ -107,7 +107,7 @@ export default function AdminContactMessages() {
 
     // ── Styles ─────────────────────────────────────────────
     const styles = {
-        page: { minHeight: '100vh', fontFamily: "'Outfit', 'Inter', sans-serif", background: colors.bg, color: colors.text, padding: '32px 5%' },
+        page: { fontFamily: "'Outfit', 'Inter', sans-serif", background: embedded ? 'transparent' : colors.bg, color: colors.text, padding: embedded ? '0' : '32px 5%' },
         headingRow: { display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' },
         heading: { fontSize: '28px', fontWeight: '900', margin: 0 },
         badge: { background: '#ef4444', color: '#fff', borderRadius: '999px', padding: '4px 12px', fontSize: '13px', fontWeight: '800' },
@@ -145,7 +145,7 @@ export default function AdminContactMessages() {
             <div style={styles.headingRow}>
                 <h1 style={styles.heading}>Contact Messages</h1>
                 {unreadCount > 0 && <span style={styles.badge}>{unreadCount} unread</span>}
-                <button style={styles.backBtn} onClick={() => navigate('/admin/dashboard')}>← Back to Dashboard</button>
+                {!embedded && <button style={styles.backBtn} onClick={() => navigate('/admin/dashboard')}>← Back to Dashboard</button>}
             </div>
             <p style={styles.subheading}>Messages submitted through the website Contact page. Reply to respond directly to the sender.</p>
 

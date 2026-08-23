@@ -69,7 +69,15 @@ export default function InstructorSettings() {
     });
     const updateProfile = (f, v) => setProfile(p => ({ ...p, [f]: v }));
 
+    // Phone must start with 09 or 07 and be exactly 10 digits
+    const PHONE_REGEX = /^(09|07)\d{8}$/;
+    const phoneInvalid = profile.phone.trim() !== '' && !PHONE_REGEX.test(profile.phone);
+
     const saveProfile = async () => {
+        if (profile.phone.trim() && !PHONE_REGEX.test(profile.phone.trim())) {
+            showToast('Phone number must start with 09 or 07 and be exactly 10 digits (e.g. 0912345678).', 'error');
+            return;
+        }
         setSaving(true);
         try {
             await userService.updateProfile({
@@ -317,7 +325,16 @@ export default function InstructorSettings() {
                                     </div>
                                     <div style={s.field}>
                                         <label style={s.label}>Phone Number</label>
-                                        <input style={s.input} type="tel" value={profile.phone} onChange={e => updateProfile('phone', e.target.value)} placeholder="+251 9XX XXX XXX" />
+                                        <input
+                                            style={{ ...s.input, type: 'tel', borderColor: phoneInvalid ? '#ef4444' : undefined }}
+                                            type="tel"
+                                            inputMode="numeric"
+                                            maxLength={10}
+                                            value={profile.phone}
+                                            onChange={e => updateProfile('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                            placeholder="0912345678"
+                                        />
+                                        {phoneInvalid && <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>Phone number must start with 09 or 07 and be exactly 10 digits (e.g. 0912345678).</span>}
                                     </div>
                                 </div>
                                 <div style={s.field}>

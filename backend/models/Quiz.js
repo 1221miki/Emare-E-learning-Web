@@ -44,6 +44,9 @@ const QuizSchema = new mongoose.Schema({
     submissionDeadline: { type: Date },
     attemptLimit: { type: Number, default: 1 },
     allowReview: { type: Boolean, default: true },
+    // Emare AI Tutor access for this quiz (instructor-controlled).
+    // false = students cannot use the AI Tutor while working on this quiz.
+    aiTutorEnabled: { type: Boolean, default: true },
     isActive: {
         type: Boolean,
         default: true

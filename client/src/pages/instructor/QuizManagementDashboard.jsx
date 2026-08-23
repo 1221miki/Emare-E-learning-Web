@@ -393,6 +393,14 @@ export default function QuizManagementDashboard() {
         showToastMsg('Quiz setting updated.');
     };
 
+    // Emare AI Tutor Enable/Disable for the selected quiz
+    const handleToggleAiTutor = () => {
+        const updatedQuiz = { ...selectedQuiz, aiTutorEnabled: selectedQuiz.aiTutorEnabled === false };
+        setSelectedQuiz(updatedQuiz);
+        setQuizzes(quizzes.map(q => q.id === updatedQuiz.id ? updatedQuiz : q));
+        showToastMsg(updatedQuiz.aiTutorEnabled !== false ? 'Emare AI Tutor enabled for this quiz.' : 'Emare AI Tutor disabled for this quiz.');
+    };
+
     // Styles setup
     const s = {
         page: { display: 'flex', minHeight: '100vh', fontFamily: "'Outfit', system-ui, sans-serif", background: colors.bg },
@@ -785,6 +793,16 @@ export default function QuizManagementDashboard() {
                             <p style={{ margin: '0 0 24px', color: colors.textMuted, fontSize: '14px' }}>Configure grading, attempt rules, and display settings for <strong>{selectedQuiz.title}</strong>.</p>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                {/* Emare AI Tutor Enable / Disable */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderRadius: '14px', border: `1px solid ${selectedQuiz.aiTutorEnabled === false ? '#fecaca' : colors.border}`, background: selectedQuiz.aiTutorEnabled === false ? '#fef2f2' : (colors.bgInput || colors.bg) }}>
+                                    <div>
+                                        <div style={{ fontWeight: 700, color: selectedQuiz.aiTutorEnabled === false ? '#dc2626' : colors.text, fontSize: '15px', marginBottom: '4px' }}>⊡ Emare AI Tutor: {selectedQuiz.aiTutorEnabled === false ? 'Disabled' : 'Enabled'}</div>
+                                        <div style={{ color: colors.textMuted, fontSize: '13px' }}>{selectedQuiz.aiTutorEnabled === false ? 'AI Tutor is completely blocked while students take this quiz.' : 'Students can use the AI Tutor for this quiz.'}</div>
+                                    </div>
+                                    <button onClick={handleToggleAiTutor} style={{ padding: '8px 18px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '12px', background: selectedQuiz.aiTutorEnabled === false ? '#ef4444' : '#10b981', color: '#fff' }}>
+                                        {selectedQuiz.aiTutorEnabled === false ? 'Enable' : 'Disable'}
+                                    </button>
+                                </div>
                                 {[
                                     { key: 'randomQuestions', title: 'Randomize Questions', desc: 'Shuffle the order of questions for each student attempt.' },
                                     { key: 'shuffleAnswers', title: 'Shuffle Answer Options', desc: 'Randomize the position of MCQ options per question.' },

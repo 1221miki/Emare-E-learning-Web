@@ -10,7 +10,8 @@ const sanitizeText = (value, maxLength) =>
         .trim()
         .slice(0, maxLength);
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_REGEX = /^[^\s@]+@gmail\.com$/;
+const PHONE_REGEX = /^(09|07)\d{8}$/;
 
 // Optional, fully isolated email notifications. Never throws — a missing or
 // broken email provider must never break the contact flow itself.
@@ -173,8 +174,9 @@ exports.createContactMessage = async (req, res, next) => {
         const errors = [];
         if (!name) errors.push('Name is required.');
         if (!phone) errors.push('Phone number is required.');
+        else if (!PHONE_REGEX.test(phone.replace(/[\s-]/g, ''))) errors.push('Phone number must start with 09 or 07 and be exactly 10 digits (e.g. 0912345678).');
         if (!email) errors.push('Email is required.');
-        else if (!EMAIL_REGEX.test(email)) errors.push('Please provide a valid email address.');
+        else if (!EMAIL_REGEX.test(email)) errors.push('Please provide a valid Gmail address (must end with @gmail.com).');
         if (!message || message.length < 5) errors.push('Message must be at least 5 characters long.');
         if (errors.length > 0) {
             return res.status(400).json({ success: false, message: errors.join(' ') });

@@ -18,6 +18,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
         allottedDurationMinutes: 15,
         passingScoreThreshold: 60,
         attemptLimit: 1,
+        aiTutorEnabled: true,
         questionArray: []
     });
 
@@ -70,6 +71,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
             allottedDurationMinutes: 15,
             passingScoreThreshold: 60,
             attemptLimit: 1,
+            aiTutorEnabled: true,
             questionArray: []
         });
         setShowQuestionForm(false);
@@ -85,6 +87,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
             allottedDurationMinutes: quiz.allottedDurationMinutes || 15,
             passingScoreThreshold: quiz.passingScoreThreshold || 60,
             attemptLimit: quiz.attemptLimit || 1,
+            aiTutorEnabled: quiz.aiTutorEnabled !== false,
             questionArray: quiz.questionArray || []
         });
         setShowQuestionForm(false);
@@ -305,6 +308,9 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
                                     <td style={s.td}>
                                         <div style={{ color: colors.text, fontWeight: 600 }}>⏱ {quiz.allottedDurationMinutes} mins</div>
                                         <div style={{ fontSize: '12px', color: colors.textMuted }}>Pass: {quiz.passingScoreThreshold}%</div>
+                                        <span style={{ display: 'inline-block', marginTop: '6px', padding: '2px 10px', borderRadius: '999px', fontSize: '10px', fontWeight: 800, background: quiz.aiTutorEnabled === false ? '#fee2e2' : '#d1fae5', color: quiz.aiTutorEnabled === false ? '#b91c1c' : '#065f46' }}>
+                                            {quiz.aiTutorEnabled === false ? '🔒 AI Tutor Disabled' : '⊡ AI Tutor Enabled'}
+                                        </span>
                                     </td>
                                     <td style={s.td}>
                                         <span style={qs.badge(quiz.isActive !== false)}>
@@ -408,6 +414,32 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
                                             value={qForm.attemptLimit}
                                             onChange={(e) => setQForm({ ...qForm, attemptLimit: parseInt(e.target.value) || 1 })}
                                         />
+                                    </div>
+                                </div>
+
+                                {/* Emare AI Tutor Enable / Disable */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', padding: '14px 16px', borderRadius: '12px', border: `1px solid ${qForm.aiTutorEnabled ? '#a7f3d0' : '#fecaca'}`, background: qForm.aiTutorEnabled ? '#f0fdf4' : '#fef2f2' }}>
+                                    <div>
+                                        <label style={{ margin: 0, fontWeight: 700, fontSize: '13px', color: colors.text }}>⊡ Emare AI Tutor</label>
+                                        <span style={{ display: 'block', fontSize: '11px', color: colors.textMuted, marginTop: '2px' }}>
+                                            {qForm.aiTutorEnabled ? 'Students can use the AI Tutor for this quiz.' : 'AI Tutor is completely blocked while students take this quiz.'}
+                                        </span>
+                                    </div>
+                                    <div style={{ display: 'inline-flex', borderRadius: '10px', overflow: 'hidden', border: `1px solid ${qForm.aiTutorEnabled ? '#6ee7b7' : '#fca5a5'}` }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setQForm({ ...qForm, aiTutorEnabled: true })}
+                                            style={{ padding: '8px 18px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', border: 'none', background: qForm.aiTutorEnabled ? '#10b981' : '#fff', color: qForm.aiTutorEnabled ? '#fff' : '#64748b' }}
+                                        >
+                                            Enabled
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setQForm({ ...qForm, aiTutorEnabled: false })}
+                                            style={{ padding: '8px 18px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', border: 'none', background: !qForm.aiTutorEnabled ? '#ef4444' : '#fff', color: !qForm.aiTutorEnabled ? '#fff' : '#64748b' }}
+                                        >
+                                            Disabled
+                                        </button>
                                     </div>
                                 </div>
                             </div>

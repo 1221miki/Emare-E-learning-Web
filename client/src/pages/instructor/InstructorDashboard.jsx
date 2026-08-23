@@ -148,7 +148,7 @@ export default function InstructorDashboard() {
         learningObjectives: '', requirements: '', tags: ''
     });
     const [quizForm, setQuizForm] = useState({
-        quizTitle: '', allottedDurationMinutes: 15, passingScoreThreshold: 60,
+        quizTitle: '', allottedDurationMinutes: 15, passingScoreThreshold: 60, aiTutorEnabled: true,
         questions: [{ questionText: '', options: ['', '', '', ''], correctAnswerIndex: 0 }]
     });
     const [gradeForm, setGradeForm] = useState({ numericalScoreEarned: 0, instructorReviewNotes: '' });
@@ -679,12 +679,13 @@ export default function InstructorDashboard() {
                 allottedDurationMinutes: quizForm.allottedDurationMinutes,
                 passingScoreThreshold: quizForm.passingScoreThreshold,
                 submissionDeadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-                questionArray: quizForm.questions
+                questionArray: quizForm.questions,
+                aiTutorEnabled: quizForm.aiTutorEnabled !== false
             };
             await quizService.create(payload);
             alert('Quiz created successfully!');
             setIsQuizModalOpen(false);
-            setQuizForm({ quizTitle: '', allottedDurationMinutes: 15, passingScoreThreshold: 60, questions: [{ questionText: '', options: ['', '', '', ''], correctAnswerIndex: 0 }] });
+            setQuizForm({ quizTitle: '', allottedDurationMinutes: 15, passingScoreThreshold: 60, aiTutorEnabled: true, questions: [{ questionText: '', options: ['', '', '', ''], correctAnswerIndex: 0 }] });
         } catch (err) { alert(err.response?.data?.message || 'Failed to create quiz'); }
     };
 
@@ -702,6 +703,10 @@ export default function InstructorDashboard() {
     // ── Profile Actions ────────────────────────────────────────
     const handleProfileUpdate = async (e) => {
         e.preventDefault();
+        if (profileForm.contactPhone && !/^(09|07)\d{8}$/.test(profileForm.contactPhone)) {
+            setProfileMsg('Phone number must start with 09 or 07 and be exactly 10 digits (e.g. 0912345678).');
+            return;
+        }
         setProfileMsg('');
         try {
             const payload = {
@@ -759,7 +764,18 @@ export default function InstructorDashboard() {
                     </div>
                     <div style={s.formGroup}>
                         <label style={s.label}>Phone Number</label>
-                        <input style={s.input} value={profileForm.contactPhone} onChange={e => setProfileForm({ ...profileForm, contactPhone: e.target.value })} placeholder="+251 9XX XXX XXX" />
+                        <input
+                            style={{ ...s.input, borderColor: profileForm.contactPhone && !/^(09|07)\d{8}$/.test(profileForm.contactPhone) ? '#ef4444' : undefined }}
+                            type="tel"
+                            inputMode="numeric"
+                            maxLength={10}
+                            value={profileForm.contactPhone}
+                            onChange={e => setProfileForm({ ...profileForm, contactPhone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                            placeholder="0912345678"
+                        />
+                        {profileForm.contactPhone && !/^(09|07)\d{8}$/.test(profileForm.contactPhone) && (
+                            <span style={{ color: '#ef4444', fontSize: '12px' }}>Phone number must start with 09 or 07 and be exactly 10 digits (e.g. 0912345678).</span>
+                        )}
                     </div>
                     <div style={{ ...s.formGroup, gridColumn: '1 / -1' }}>
                         <label style={s.label}>Biography</label>
@@ -1720,6 +1736,15 @@ export default function InstructorDashboard() {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                     <div style={s.formGroup}><label style={s.label}>Duration (min)</label><input style={s.input} type="number" min="5" max="180" value={quizForm.allottedDurationMinutes} onChange={e => setQuizForm({ ...quizForm, allottedDurationMinutes: e.target.value })} /></div>
                                     <div style={s.formGroup}><label style={s.label}>Passing Score (%)</label><input style={s.input} type="number" min="0" max="100" value={quizForm.passingScoreThreshold} onChange={e => setQuizForm({ ...quizForm, passingScoreThreshold: e.target.value })} /></div>
+                                </div>
+
+                                {/* Emare AI Tutor Enable / Disable */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', padding: '12px 14px', borderRadius: '10px', border: `1px solid ${quizForm.aiTutorEnabled !== false ? '#a7f3d0' : '#fecaca'}`, background: quizForm.aiTutorEnabled !== false ? '#f0fdf4' : '#fef2f2' }}>
+                                    <label style={{ margin: 0, fontWeight: 700, fontSize: '13px', color: colors.text }}>⊡ Emare AI Tutor</label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: quizForm.aiTutorEnabled !== false ? '#059669' : '#dc2626' }}>
+                                        <input type="checkbox" checked={quizForm.aiTutorEnabled !== false} onChange={e => setQuizForm({ ...quizForm, aiTutorEnabled: e.target.checked })} style={{ accentColor: quizForm.aiTutorEnabled !== false ? '#10b981' : '#ef4444', width: 16, height: 16 }} />
+                                        {quizForm.aiTutorEnabled !== false ? 'Enabled' : 'Disabled'}
+                                    </label>
                                 </div>
 
                                 {/* Question Builder */}

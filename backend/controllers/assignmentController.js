@@ -1,6 +1,7 @@
 const Assignment = require('../models/Assignment');
 const Submission = require('../models/Submission');
 const Enrollment = require('../models/Enrollment');
+const AssessmentAiBlock = require('../models/AssessmentAiBlock');
 const streamifier = require('streamifier');
 const cloudinary = require('../config/cloudinary');
 const { createNotification } = require('./notificationController');
@@ -68,6 +69,34 @@ exports.getMyAssignments = async (req, res) => {
     }
 };
 
+// @route   POST /api/assignments/:id/ai-lock
+// @desc    Student opened an AI-Tutor-disabled assignment — server registers a
+//          temporary block so the AI Tutor cannot be used until it expires or
+//          the assignment is submitted. Enforced server-side, cannot be bypassed.
+// @access  Private (Student only)
+exports.lockAiTutorForAssignment = async (req, res) => {
+    try {
+        const assignment = await Assignment.findById(req.params.id).select('_id courseRef aiTutorEnabled');
+        if (!assignment) return res.status(404).json({ success: false, message: 'Assignment not found' });
+
+        if (assignment.aiTutorEnabled !== false) {
+            return res.json({ success: true, data: { blocked: false } });
+        }
+
+        const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hour working window
+        await AssessmentAiBlock.findOneAndUpdate(
+            { studentRef: getUserId(req), assignmentRef: assignment._id },
+            { $set: { studentRef: getUserId(req), assignmentRef: assignment._id, courseRef: assignment.courseRef, expiresAt, reason: AssessmentAiBlock.BLOCK_MESSAGE } },
+            { upsert: true, new: true }
+        );
+
+        res.json({ success: true, data: { blocked: true, expiresAt } });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Failed to update AI Tutor status' });
+    }
+};
+
 exports.submitAssignment = async (req, res) => {
     try {
         const assignmentId = req.params.id;
@@ -82,6 +111,9 @@ exports.submitAssignment = async (req, res) => {
 
         const previous = await Submission.findOne({ assignmentRef: assignmentId, studentRef: getUserId(req) }).sort({ version: -1 });
         const version = previous ? previous.version + 1 : 1;
+
+        // Assignment submitted — release the AI Tutor block for this student
+        await AssessmentAiBlock.deleteOne({ studentRef: getUserId(req), assignmentRef: assignmentId });
 
         const submission = await Submission.create({
             assignmentRef: assignmentId,
@@ -137,6 +169,9 @@ exports.submitAssignmentMultipart = async (req, res) => {
 
         const previous = await Submission.findOne({ assignmentRef: assignmentId, studentRef: getUserId(req) }).sort({ version: -1 });
         const version = previous ? previous.version + 1 : 1;
+
+        // Assignment submitted — release the AI Tutor block for this student
+        await AssessmentAiBlock.deleteOne({ studentRef: getUserId(req), assignmentRef: assignmentId });
 
         const submission = await Submission.create({
             assignmentRef: assignmentId,

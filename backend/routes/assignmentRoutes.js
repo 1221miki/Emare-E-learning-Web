@@ -7,6 +7,7 @@ router.use(protect);
 
 // Student routes
 router.get('/my-submissions', authorizeRoles('Student'), assignmentController.getMySubmissions);
+router.post('/:id/ai-lock', authorizeRoles('Student'), assignmentController.lockAiTutorForAssignment);
 router.post('/:id/submit', denySuspendedActions, authorizeRoles('Student'), assignmentController.submitAssignment);
 router.post('/:id/submit-multipart', upload.array('files'), assignmentController.submitAssignmentMultipart);
 

@@ -73,6 +73,12 @@ const AssignmentSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    // Emare AI Tutor access for this assignment (instructor-controlled).
+    // false = students cannot use the AI Tutor while working on this assignment.
+    aiTutorEnabled: {
+        type: Boolean,
+        default: true
+    },
     isActive: {
         type: Boolean,
         default: true

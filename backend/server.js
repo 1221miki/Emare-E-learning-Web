@@ -105,6 +105,7 @@ const allowedOrigins = [
 const isAllowedOrigin = (origin) =>
     !origin ||                                                        // server-to-server / curl
     allowedOrigins.includes(origin) ||
+    origin.endsWith('.vercel.app') ||                                 // Vercel deploys & previews
     origin.endsWith('.netlify.app') ||                                // Netlify deploys & previews
     origin.endsWith('.onrender.com') ||                               // Render previews
     /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||     // localhost any port

@@ -60,7 +60,8 @@ function EditModal({ assignment, onSave, onClose }) {
         dueDate: assignment.dueDate ? new Date(assignment.dueDate).toISOString().slice(0, 10) : '',
         maxScore: assignment.maxScore || 100,
         allowLate: assignment.allowLate || false,
-        published: assignment.published || false
+        published: assignment.published || false,
+        aiTutorEnabled: assignment.aiTutorEnabled !== false
     });
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState('');
@@ -93,12 +94,15 @@ function EditModal({ assignment, onSave, onClose }) {
                         <div><label style={lbl}>Due Date</label><input type="date" style={inp} value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} /></div>
                         <div><label style={lbl}>Max Score</label><input type="number" min="0" style={inp} value={form.maxScore} onChange={e => setForm(f => ({ ...f, maxScore: Number(e.target.value) }))} /></div>
                     </div>
-                    <div style={{ display: 'flex', gap: '20px' }}>
+                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#94a3b8', fontSize: '13px' }}>
                             <input type="checkbox" checked={form.allowLate} onChange={e => setForm(f => ({ ...f, allowLate: e.target.checked }))} style={{ accentColor: C.orange }} /> Allow Late
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#94a3b8', fontSize: '13px' }}>
                             <input type="checkbox" checked={form.published} onChange={e => setForm(f => ({ ...f, published: e.target.checked }))} style={{ accentColor: C.green }} /> Published
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: form.aiTutorEnabled ? '#10b981' : '#ef4444' }}>
+                            <input type="checkbox" checked={form.aiTutorEnabled} onChange={e => setForm(f => ({ ...f, aiTutorEnabled: e.target.checked }))} style={{ accentColor: form.aiTutorEnabled ? '#10b981' : '#ef4444' }} /> ⊡ Emare AI Tutor
                         </label>
                     </div>
                 </div>
@@ -192,6 +196,9 @@ export default function AssignmentList({ assignments, allSubmissions, courses, s
                                                 <div>
                                                     <div style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: '700' }}>{asgn.title}</div>
                                                     <div style={{ color: '#475569', fontSize: '11px', marginTop: '2px' }}>{asgn.maxScore} pts · {asgn.allowLate ? 'Late OK' : 'No late'}</div>
+                                                    <span style={{ display: 'inline-block', marginTop: '4px', padding: '2px 10px', borderRadius: '999px', fontSize: '10px', fontWeight: 800, background: asgn.aiTutorEnabled === false ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)', color: asgn.aiTutorEnabled === false ? '#f87171' : '#34d399' }}>
+                                                        {asgn.aiTutorEnabled === false ? '🔒 AI Tutor Disabled' : '⊡ AI Tutor Enabled'}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </td>

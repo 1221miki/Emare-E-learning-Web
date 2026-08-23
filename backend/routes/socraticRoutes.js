@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
+const { assertAiTutorAllowed } = require('../middleware/aiTutorGuard');
 const socraticTutorController = require('../controllers/socraticTutorController');
 
 // All routes require authentication
@@ -17,14 +18,14 @@ router.use(protect);
  * @desc    Start a new Socratic tutoring session
  * @access  Private/Student
  */
-router.post('/session/:courseId/start', socraticTutorController.startSocraticSession);
+router.post('/session/:courseId/start', assertAiTutorAllowed, socraticTutorController.startSocraticSession);
 
 /**
  * @route   POST /api/socratic/ask
  * @desc    Stream Socratic tutoring response (SSE)
  * @access  Private/Student
  */
-router.post('/ask', socraticTutorController.streamSocraticResponse);
+router.post('/ask', assertAiTutorAllowed, socraticTutorController.streamSocraticResponse);
 
 /**
  * @route   POST /api/socratic/evaluate

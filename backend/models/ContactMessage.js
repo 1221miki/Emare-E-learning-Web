@@ -20,7 +20,8 @@ const ContactMessageSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Phone number is required'],
         trim: true,
-        maxlength: [30, 'Phone number must be 30 characters or less']
+        maxlength: [30, 'Phone number must be 30 characters or less'],
+        match: [/^(09|07)\d{8}$/, 'Phone number must start with 09 or 07 and be exactly 10 digits']
     },
     email: {
         type: String,
@@ -28,7 +29,7 @@ const ContactMessageSchema = new mongoose.Schema({
         trim: true,
         lowercase: true,
         maxlength: [254, 'Email must be 254 characters or less'],
-        match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please provide a valid email address']
+        match: [/^[^\s@]+@gmail\.com$/, 'Please provide a valid Gmail address (must end with @gmail.com)']
     },
     message: {
         type: String,
