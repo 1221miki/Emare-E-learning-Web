@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "React Frontend for the Emare E-Learning Management System",
   "private": true,
+  "allowScripts": {
+    "esbuild": true
+  },
   "scripts": {
     "dev": "vite",
     "start": "vite --port 5173 --strictPort",
