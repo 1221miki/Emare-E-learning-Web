@@ -289,7 +289,6 @@ export default function AdminDashboard() {
     const [moderationCurrentPage, setModerationCurrentPage] = useState(1);
 
     const [moderationItems, setModerationItems] = useState([]);
-    const [moderationItems, setModerationItems] = useState([]);
 
     const [moderationReports, setModerationReports] = useState([]);
 
