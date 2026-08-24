@@ -37,19 +37,20 @@ function publicCertPayload(cert) {
 }
 
 /**
- * Backend base URL for QR / verification links.
+ * Frontend base URL for QR / verification links embedded in certificates.
  *
  * Priority:
- *  1. APP_BASE_URL env var — set this to your LAN IP or public domain.
- *     Local dev example:  APP_BASE_URL=http://10.18.56.22:5000
- *     Production example: APP_BASE_URL=https://asamenew.onrender.com
- *  2. The request host (req.protocol + req.get('host')) — ONLY used when
- *     APP_BASE_URL is not set. On localhost this yields http://127.0.0.1:5000
- *     which is unreachable from phones/external devices, so always prefer the
- *     env var in any environment where the server isn't the only client.
+ *  1. FRONTEND_URL env var — the React app's LAN IP or public domain.
+ *     QR codes point to /verify-certificate/:id on the React app.
+ *     Local dev example:  FRONTEND_URL=http://10.18.56.22:5173
+ *     Production example: FRONTEND_URL=https://emare.example.com
+ *  2. APP_BASE_URL env var — backend base (used as fallback).
+ *  3. The request host (req.protocol + req.get('host')) — last resort.
+ *     On localhost this yields http://127.0.0.1:5000 which is unreachable
+ *     from phones/external devices, so always prefer the env vars above.
  */
 const reqBaseUrl = (req) =>
-    (process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
+    (process.env.FRONTEND_URL || process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
 
 // ── GET /certificates/check/:courseId  (protected) ───────────────────────────
 exports.checkEligibility = async (req, res) => {
@@ -517,10 +518,18 @@ exports.reissueCertificate = async (req, res) => {
 exports.verifyCertificate = exports.verify;
 
 // ── GET /certificates/verify-page/:certificateId  (PUBLIC — HTML page) ───────
-// Self-contained HTML page so QR codes work from ANY device without a frontend.
+// QR codes on PDFs point here. We always redirect to the Vercel frontend so
+// the full React certificate page is shown on any device, any network.
 exports.verifyPage = async (req, res) => {
     const { certificateId } = req.params;
     if (!certificateId) return res.redirect('/api/certificates/verify-page');
+
+    // ── Always redirect to the React frontend ─────────────────────────────────
+    // FRONTEND_URL is set on Render env vars dashboard.
+    // Hard-coded Vercel fallback ensures old QR codes keep working even if
+    // the env var is missing on the deployment.
+    const frontendBase = (process.env.FRONTEND_URL || 'https://asamnew-emare-elearning.vercel.app').replace(/\/+$/, '');
+    return res.redirect(301, `${frontendBase}/verify-certificate/${certificateId}`);
 
     const cert = await Certificate.findOne({ certificateId })
         .populate('studentRef', 'fullName username')
@@ -529,11 +538,11 @@ exports.verifyPage = async (req, res) => {
     const isValid = cert && (cert.status === 'Issued' || cert.status === 'Reissued');
     const d = cert ? publicCertPayload(cert) : null;
 
-    // Silently fix any stale 127.0.0.1 / localhost qrCodeData stored in the DB
-    // so the next PDF download will embed the correct accessible URL.
+    // Silently fix any stale qrCodeData stored in the DB so the next PDF
+    // download will embed the correct, accessible frontend URL.
     if (cert) {
-        const correctBase = (process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
-        const correctUrl  = `${correctBase}/api/certificates/verify-page/${certificateId}`;
+        const correctBase = (process.env.FRONTEND_URL || process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
+        const correctUrl  = `${correctBase}/verify-certificate/${certificateId}`;
         if (cert.qrCodeData !== correctUrl) {
             Certificate.findByIdAndUpdate(cert._id, { qrCodeData: correctUrl }).catch(() => {});
         }

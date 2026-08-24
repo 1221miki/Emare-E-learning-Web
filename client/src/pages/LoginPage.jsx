@@ -183,7 +183,7 @@ export default function LoginPage() {
             <div style={cardStyle}>
                 {/* Logo & Header */}
                 <div style={styles.header}>
-                    <div style={styles.logo}>E</div>
+                    <img src="/images/image.png" alt="Emare ICT Hub Logo" style={styles.logo} />
                     <h1 style={titleStyle}>Emare ELMS</h1>
                     <p style={subtitleStyle}>Sign in to your account</p>
                 </div>
@@ -413,7 +413,7 @@ const styles = {
     backButton: { position: 'absolute', top: '24px', left: '24px', display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', textDecoration: 'none', fontSize: '14px', fontWeight: '600', transition: 'color 0.2s', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' },
     card: { background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '48px 40px', width: '100%', maxWidth: '420px', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' },
     header: { textAlign: 'center', marginBottom: '32px' },
-    logo: { width: '60px', height: '60px', borderRadius: '16px', background: 'linear-gradient(135deg, #16a34a, #15803d)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: '900', color: '#fff', marginBottom: '16px' },
+    logo: { width: '60px', height: '60px', objectFit: 'contain', background: 'transparent', marginBottom: '16px' },
     title: { color: '#fff', fontSize: '26px', fontWeight: '800', margin: '0 0 6px' },
     subtitle: { color: '#94a3b8', fontSize: '14px', margin: 0 },
     errorBox: { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', padding: '12px 16px', borderRadius: '10px', fontSize: '14px', marginBottom: '20px' },

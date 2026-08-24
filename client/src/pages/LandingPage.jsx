@@ -559,7 +559,7 @@ export default function LandingPage() {
                         <button type="submit" style={p.searchBtn}>Search Courses</button>
                     </form>
                     <div className="landing-hero-actions" style={p.heroActions}>
-                        <button onClick={() => navigate('/courses')} style={p.primaryBtn}>Browse Courses</button>
+                        <button onClick={() => navigate(isAuthenticated ? '/courses' : '/register')} style={p.primaryBtn}>{isAuthenticated ? 'Browse Courses' : 'Register to See All Courses'}</button>
                         {!isAuthenticated ? (
                             <button onClick={() => navigate('/register')} style={p.secondaryBtn}>Start Learning for Free</button>
                         ) : (
@@ -814,11 +814,42 @@ export default function LandingPage() {
                             maxWidth: '1200px',
                             margin: '0 auto'
                         }}>
-                            {allCourses.slice(0, coursesVisible).map(c => renderCourseCard(c, c.price === 0 ? 'FREE' : 'COURSE', c.price === 0 ? colors.success : colors.primary))}
+                            {allCourses.slice(0, isAuthenticated ? coursesVisible : 8).map(c => renderCourseCard(c, c.price === 0 ? 'FREE' : 'COURSE', c.price === 0 ? colors.success : colors.primary))}
                         </div>
 
-                        {/* Load More / Show Less */}
-                        {allCourses.length > 8 && (
+                        {/* Guests must sign up to browse the full catalog */}
+                        {!isAuthenticated && allCourses.length > 8 && (
+                            <div style={{ textAlign: 'center', marginTop: '40px' }}>
+                                <div style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '10px',
+                                    background: colors.primarySoft, border: `1px solid ${colors.border}`,
+                                    borderRadius: '999px', padding: '10px 20px', marginBottom: '18px',
+                                    color: colors.textMuted, fontSize: '14px', fontWeight: '600'
+                                }}>
+                                    🔒 Sign up free to unlock all {allCourses.length} courses
+                                </div>
+                                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                    <button
+                                        onClick={() => navigate('/register')}
+                                        onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.12)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; }}
+                                        style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', border: 'none', padding: '13px 32px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
+                                    >
+                                        Register to See All Courses
+                                    </button>
+                                    <button
+                                        onClick={() => navigate('/login')}
+                                        onMouseEnter={ghostBtnHover} onMouseLeave={ghostBtnLeave}
+                                        style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, padding: '13px 24px', borderRadius: '10px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
+                                    >
+                                        Login
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Load More / Show Less (logged-in users) */}
+                        {isAuthenticated && allCourses.length > 8 && (
                             <div style={{ textAlign: 'center', marginTop: '40px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
                                 {coursesVisible < allCourses.length && (
                                     <button
@@ -848,7 +879,17 @@ export default function LandingPage() {
                                 </button>
                             </div>
                         )}
-                        {allCourses.length <= 8 && (
+                        {allCourses.length <= 8 && !isAuthenticated && (
+                            <div style={{ textAlign: 'center', marginTop: '32px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                <button onClick={() => navigate('/register')} onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.12)'; }} onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; }} style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', border: 'none', padding: '12px 28px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>
+                                    Register to See All Courses
+                                </button>
+                                <button onClick={() => navigate('/login')} onMouseEnter={ghostBtnHover} onMouseLeave={ghostBtnLeave} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, padding: '12px 24px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
+                                    Login
+                                </button>
+                            </div>
+                        )}
+                        {allCourses.length <= 8 && isAuthenticated && (
                             <div style={{ textAlign: 'center', marginTop: '32px' }}>
                                 <button onClick={() => navigate('/courses')} onMouseEnter={ghostBtnHover} onMouseLeave={ghostBtnLeave} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, padding: '12px 28px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>
                                     View Full Catalog →

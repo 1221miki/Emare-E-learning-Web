@@ -273,7 +273,7 @@ export default function RegisterPage() {
                 </Link>
 
                 <div style={styles.header}>
-                    <div style={styles.logo}>E</div>
+                    <img src="/images/image.png" alt="Emare ICT Hub Logo" style={styles.logo} />
                     <h1 style={titleStyle}>Create your Emare account</h1>
                     <p style={subtitleStyle}>Join Emare and start your learning journey today.</p>
                 </div>
@@ -463,7 +463,7 @@ const styles = {
     backButton: { position: 'absolute', top: '20px', left: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', textDecoration: 'none', fontSize: '13px', fontWeight: '600', transition: 'color 0.2s', padding: '7px 11px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' },
     card: { background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px', padding: '32px', width: '100%', maxWidth: '780px', boxShadow: '0 20px 45px rgba(0,0,0,0.45)' },
     header: { textAlign: 'center', marginBottom: '28px' },
-    logo: { width: '54px', height: '54px', borderRadius: '16px', background: 'linear-gradient(135deg, #22c55e, #22c55e)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', fontWeight: '900', color: '#fff', marginBottom: '14px' },
+    logo: { width: '54px', height: '54px', objectFit: 'contain', background: 'transparent', marginBottom: '14px' },
     title: { color: '#fff', fontSize: '22px', fontWeight: '800', margin: '0 0 6px' },
     subtitle: { color: '#94a3b8', fontSize: '13px', margin: 0 },
     errorBox: { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', marginBottom: '18px' },

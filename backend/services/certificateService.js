@@ -144,23 +144,19 @@ async function generateCertificatePdf({
     const filename = `${certificateId}.pdf`;
     const filePath = path.join(certsDir, filename);
 
-    // ── Verification URL ───────────────────────────────────────────────────────
-    // Priority order for the QR base URL:
-    //   1. APP_BASE_URL env var  — set this to your LAN IP or public domain so
-    //      phones on the same network (or internet) can reach the verify page.
-    //      e.g. APP_BASE_URL=http://10.18.56.22:5000   (local network)
-    //           APP_BASE_URL=https://asamenew.onrender.com  (production)
-    //   2. verificationBaseUrl   — the host extracted from the HTTP request.
-    //      NEVER use this as the primary source: when the server runs on
-    //      localhost, req.get('host') resolves to 127.0.0.1 which is
-    //      unreachable from any other device (phone, tablet, remote user).
-    //   3. Hard-coded fallback   — http://localhost:5000 (dev only, LAN-broken).
-    const backendBase = (
-        process.env.APP_BASE_URL ||
-        verificationBaseUrl      ||
-        'http://localhost:5000'
+    // ── Verification URL (QR code target) ────────────────────────────────────
+    // Always points to the React frontend /verify-certificate/:id route.
+    // This URL must be publicly reachable (Vercel = global HTTPS).
+    //
+    // Priority:
+    //   1. FRONTEND_URL env var (set on Render dashboard for production)
+    //   2. Hard-coded Vercel URL — guarantees QR codes always work even if
+    //      the env var is missing from the deployment environment.
+    const frontendBase = (
+        process.env.FRONTEND_URL ||
+        'https://asamnew-emare-elearning.vercel.app'
     ).replace(/\/+$/, '');
-    const verifyUrl = `${backendBase}/api/certificates/verify-page/${certificateId}`;
+    const verifyUrl = `${frontendBase}/verify-certificate/${certificateId}`;
 
     // ── Date strings ──────────────────────────────────────────────────────────
     const issueDateStr = new Date(issueDate || Date.now()).toLocaleDateString('en-US', {
