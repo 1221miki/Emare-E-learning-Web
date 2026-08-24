@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useGoogleLogin } from '@react-oauth/google';
 import { FaGoogle, FaGithub, FaEye, FaEyeSlash, FaArrowLeft } from 'react-icons/fa';
 
 export default function RegisterPage() {
@@ -48,12 +49,7 @@ export default function RegisterPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    // Social Registration Modal State
-    const [showSocialModal, setShowSocialModal] = useState(false);
-    const [socialProvider, setSocialProvider] = useState('Google');
-    const [socialEmail, setSocialEmail] = useState('');
-    const [socialName, setSocialName] = useState('');
-    const [socialRole, setSocialRole] = useState('Student');
+    // Social auth state
     const [socialLoading, setSocialLoading] = useState(false);
     const [socialError, setSocialError] = useState('');
 
@@ -154,66 +150,41 @@ export default function RegisterPage() {
         }
     };
 
-    const openSocialModal = (provider) => {
-        setSocialProvider(provider);
-        const namePrefill = (form.firstName || form.lastName) 
-            ? `${form.firstName} ${form.lastName}`.trim() 
-            : `${provider} Student`;
-        const emailPrefill = form.accountEmail || `${provider.toLowerCase()}.student@emare.edu`;
-        setSocialName(namePrefill);
-        setSocialEmail(emailPrefill);
-        setSocialRole(form.assignedRole || 'Student');
-        setSocialError('');
-        setShowSocialModal(true);
-    };
-
-    const handleSocialSubmit = async (e) => {
-        e.preventDefault();
-        setSocialError('');
-
-        // Normalize + validate the provider profile before hitting the backend.
-        // Forward an OAuth token as `idToken` when your provider SDK returns one
-        // (Google "credential"/idToken); otherwise the profile object is sent and
-        // the email is used to match or create the account.
-        const email = (socialEmail || '').trim().toLowerCase();
-        if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-            setSocialError('A valid email address is required for social registration.');
-            return;
-        }
-
-        setSocialLoading(true);
-        try {
-            const payload = {
-                provider: socialProvider.toLowerCase(),
-                email,
-                name: socialName.trim(),
-                socialId: `soc_${socialProvider.toLowerCase()}_${Date.now()}`,
-                role: socialRole,
-            };
-
-            const user = await socialAuth(payload);
-
-            if (user.assignedRole === 'Admin') {
-                navigate('/admin/dashboard');
-            } else {
-                navigate('/student/dashboard');
+    // ── Real Google OAuth via popup ───────────────────────────────────────────
+    const googleLogin = useGoogleLogin({
+        onSuccess: async (tokenResponse) => {
+            setSocialLoading(true);
+            setSocialError('');
+            try {
+                const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+                });
+                const profile = await profileRes.json();
+                const user = await socialAuth({
+                    provider: 'google',
+                    email: profile.email,
+                    name: profile.name || profile.given_name || 'Google User',
+                    socialId: profile.sub,
+                    idToken: tokenResponse.access_token,
+                    role: form.assignedRole || 'Student',
+                });
+                if (user.assignedRole === 'Admin') navigate('/admin/dashboard');
+                else navigate('/student/dashboard');
+            } catch (err) {
+                setSocialError(err.response?.data?.message || 'Google sign-in failed. Please try again.');
+            } finally {
+                setSocialLoading(false);
             }
-        } catch (err) {
-            setSocialError(err.response?.data?.message || err.response?.data?.error || `Unable to authorize ${socialProvider}. Please try again.`);
-        } finally {
-            setSocialLoading(false);
-        }
-    };
+        },
+        onError: () => {
+            setSocialError('Google sign-in was cancelled or failed. Please try again.');
+        },
+        flow: 'implicit',
+    });
 
-    const renderProviderIcon = (provider) => {
-        switch (provider) {
-            case 'Google':
-                return <FaGoogle style={{ color: '#ea4335' }} />;
-            case 'GitHub':
-                return <FaGithub style={{ color: '#24292e' }} />;
-            default:
-                return null;
-        }
+    // ── GitHub — redirect to normal register (no GitHub OAuth app configured) ─
+    const handleGitHubClick = () => {
+        navigate('/register');
     };
 
     const pageStyle = {
@@ -383,9 +354,19 @@ export default function RegisterPage() {
 
                 <div style={styles.socialContainer}>
                     <p style={{ ...styles.socialText, color: colors.textMuted }}>Or continue with</p>
+                    {socialError && <div style={{ ...styles.errorBox, marginBottom: '10px' }}>{socialError}</div>}
                     <div style={styles.socialButtons}>
-                        <button type="button" onClick={() => openSocialModal('Google')} style={styles.socialBtn} title="Register with Google"><FaGoogle style={{ color: '#ea4335' }} /></button>
-                        <button type="button" onClick={() => openSocialModal('GitHub')} style={styles.socialBtn} title="Register with GitHub"><FaGithub style={{ color: '#24292e' }} /></button>
+                        {/* Google — real OAuth popup */}
+                        <button type="button" onClick={() => googleLogin()} style={styles.socialBtn} title="Register with Google" disabled={socialLoading}>
+                            {socialLoading
+                                ? <span style={{ fontSize: '11px', color: '#666' }}>...</span>
+                                : <FaGoogle style={{ color: '#ea4335' }} />
+                            }
+                        </button>
+                        {/* GitHub — redirects to register (no GitHub OAuth app configured) */}
+                        <button type="button" onClick={handleGitHubClick} style={styles.socialBtn} title="Register with GitHub" disabled={socialLoading}>
+                            <FaGithub style={{ color: isDark ? '#fff' : '#24292e' }} />
+                        </button>
                     </div>
                 </div>
 
@@ -393,67 +374,6 @@ export default function RegisterPage() {
                     Already have an account? <Link to="/login" style={{ ...styles.link, color: colors.primary }}>Sign in</Link>
                 </p>
             </div>
-
-            {showSocialModal && (
-                <div style={styles.modalOverlay}>
-                    <div style={modalStyle}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                {renderProviderIcon(socialProvider)}
-                                <h3 style={{ color: '#fff', margin: 0, fontSize: '18px', fontWeight: '800' }}>
-                                    Register with {socialProvider}
-                                </h3>
-                            </div>
-                            <button onClick={() => setShowSocialModal(false)} style={styles.closeBtn}></button>
-                        </div>
-
-                        {socialError && <div style={styles.errorBox}>{socialError}</div>}
-
-                        <form onSubmit={handleSocialSubmit} style={styles.form}>
-                            <p style={{ color: colors.textMuted, fontSize: '13px', margin: '0 0 16px' }}>
-                                Authorize your {socialProvider} account to automatically register and log in to Emare ELMS.
-                            </p>
-
-                            <div style={styles.fieldGroup}>
-                                <label style={labelStyle}>Full Name</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={socialName}
-                                    onChange={e => setSocialName(e.target.value)}
-                                    style={inputStyle}
-                                />
-                            </div>
-
-                            <div style={styles.fieldGroup}>
-                                <label style={labelStyle}>{socialProvider} Account Email</label>
-                                <input
-                                    type="email"
-                                    required
-                                    value={socialEmail}
-                                    onChange={e => setSocialEmail(e.target.value)}
-                                    style={inputStyle}
-                                />
-                            </div>
-
-                            <div style={styles.fieldGroup}>
-                                <label style={labelStyle}>Register As</label>
-                                <select 
-                                    value={socialRole} 
-                                    onChange={e => setSocialRole(e.target.value)} 
-                                    style={{ ...inputStyle, cursor: 'pointer' }}
-                                >
-                                    <option value="Student">Student</option>
-                                    <option value="Instructor">Instructor</option>
-                                </select>
-                            </div>
-                            <button type="submit" style={socialLoading ? { ...styles.btn, opacity: 0.7 } : styles.btn} disabled={socialLoading}>
-                                {socialLoading ? `Authorizing ${socialProvider}...` : `Continue with ${socialProvider} →`}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

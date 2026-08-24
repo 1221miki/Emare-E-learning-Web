@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useGoogleLogin } from '@react-oauth/google';
 import { FaEye, FaEyeSlash, FaGoogle, FaGithub, FaArrowLeft } from 'react-icons/fa';
 
 export default function LoginPage() {
@@ -28,22 +29,12 @@ export default function LoginPage() {
     const [forgotError, setForgotError] = useState('');
     const [forgotSuccess, setForgotSuccess] = useState('');
 
-    // Social Login Modal State
-    const [showSocialModal, setShowSocialModal] = useState(false);
-    const [socialProvider, setSocialProvider] = useState('Google');
-    const [socialEmail, setSocialEmail] = useState('');
-    const [socialName, setSocialName] = useState('');
-    const [socialRole, setSocialRole] = useState('Student');
-    const [socialError, setSocialError] = useState('');
-
     const handleChange = (e) => {
-        if (error) setError('');                       // Clear error banner once user types again
+        if (error) setError('');
         setForm({ ...form, [e.target.name]: e.target.value });
     };
 
     const handleRedirect = (user) => {
-        // If the user was bounced here from a protected page (e.g. /admin/developers),
-        // send them straight back to it after logging in.
         const redirectTarget = searchParams.get('redirect');
         if (redirectTarget && redirectTarget.startsWith('/') && !redirectTarget.startsWith('//')) {
             navigate(redirectTarget);
@@ -71,46 +62,43 @@ export default function LoginPage() {
         }
     };
 
-    const openSocialModal = (provider) => {
-        setSocialProvider(provider);
-        setSocialEmail(form.accountEmail || `${provider.toLowerCase()}.user@emare.edu`);
-        setSocialName(`${provider} User`);
-        setSocialRole('Student');
-        setSocialError('');
-        setShowSocialModal(true);
-    };
+    // ── Real Google OAuth via popup ───────────────────────────────────────────
+    const googleLogin = useGoogleLogin({
+        onSuccess: async (tokenResponse) => {
+            setSocialLoading(true);
+            setError('');
+            try {
+                // Fetch the user's profile from Google using the access token
+                const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+                });
+                const profile = await profileRes.json();
+                const user = await socialAuth({
+                    provider: 'google',
+                    email: profile.email,
+                    name: profile.name || profile.given_name || 'Google User',
+                    socialId: profile.sub,
+                    idToken: tokenResponse.access_token,
+                });
+                handleRedirect(user);
+            } catch (err) {
+                setError(err.response?.data?.message || 'Google sign-in failed. Please try again.');
+            } finally {
+                setSocialLoading(false);
+            }
+        },
+        onError: (err) => {
+            console.error('Google OAuth error:', err);
+            setError('Google sign-in was cancelled or failed. Please try again.');
+        },
+        flow: 'implicit',
+    });
 
-    const handleSocialSubmit = async (e) => {
-        e.preventDefault();
-        setSocialError('');
-
-        // Normalize + validate the provider profile before hitting the backend.
-        // If your OAuth SDK returns a token (Google "credential"/idToken, GitHub code,
-        // etc.), forward it as `idToken` so the backend can verify it — otherwise the
-        // user profile object is sent and email is used to match the account.
-        const email = (socialEmail || '').trim().toLowerCase();
-        if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-            setSocialError('A valid email address is required for social sign-in.');
-            return;
-        }
-
-        setSocialLoading(true);
-        try {
-            const payload = {
-                provider: socialProvider.toLowerCase(),
-                email,
-                name: socialName.trim(),
-                socialId: `soc_${socialProvider.toLowerCase()}_${Date.now()}`,
-                role: socialRole
-            };
-            const user = await socialAuth(payload);
-            setShowSocialModal(false);
-            handleRedirect(user);
-        } catch (err) {
-            setSocialError(err.response?.data?.message || err.response?.data?.error || `Social login with ${socialProvider} failed.`);
-        } finally {
-            setSocialLoading(false);
-        }
+    // ── GitHub OAuth redirect ─────────────────────────────────────────────────
+    // GitHub requires a server-side OAuth app. Since none is configured,
+    // we redirect users to a normal sign-in/register instead.
+    const handleGitHubClick = () => {
+        navigate('/register');
     };
 
     const handleForgotSubmit = async (e) => {
@@ -127,17 +115,6 @@ export default function LoginPage() {
             setForgotStep(2);
         } catch (err) {
             setForgotError(err.response?.data?.message || 'Failed to request password reset.');
-        }
-    };
-
-    const renderProviderIcon = (provider) => {
-        const iconColor = isDark ? '#fff' : '#0f172a';
-        switch (provider) {
-            case 'Google': return <FaGoogle style={{ color: '#ea4335', fontSize: '24px' }} />;
-            case 'GitHub': return <FaGithub style={{ color: iconColor, fontSize: '24px' }} />;
-            case 'Microsoft': return <FaMicrosoft style={{ color: '#00a4ef', fontSize: '24px' }} />;
-            case 'Facebook': return <FaFacebook style={{ color: '#1877f2', fontSize: '24px' }} />;
-            default: return null;
         }
     };
 
@@ -169,11 +146,6 @@ export default function LoginPage() {
     };
 
     const labelStyle = { ...styles.label, color: colors.textMuted };
-    const titleStyle = { ...styles.title, color: colors.text };
-    const subtitleStyle = { ...styles.subtitle, color: colors.textMuted };
-    const sectionHeaderStyle = { ...styles.sectionHeader, color: colors.text };
-    const footerTextStyle = { ...styles.footerText, color: colors.textMuted };
-    const linkStyle = { ...styles.link, color: colors.primary };
 
     return (
         <div style={pageStyle}>
@@ -184,8 +156,8 @@ export default function LoginPage() {
                 {/* Logo & Header */}
                 <div style={styles.header}>
                     <img src="/images/image.png" alt="Emare ICT Hub Logo" style={styles.logo} />
-                    <h1 style={titleStyle}>Emare ELMS</h1>
-                    <p style={subtitleStyle}>Sign in to your account</p>
+                    <h1 style={{ ...styles.title, color: colors.text }}>Emare ELMS</h1>
+                    <p style={{ ...styles.subtitle, color: colors.textMuted }}>Sign in to your account</p>
                 </div>
 
                 {success && <div style={styles.successBox}>{success}</div>}
@@ -208,8 +180,8 @@ export default function LoginPage() {
                     <div style={styles.fieldGroup}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <label style={styles.label}>Password</label>
-                            <span 
-                                style={{ cursor: 'pointer', ...styles.link, fontSize: '12px' }} 
+                            <span
+                                style={{ cursor: 'pointer', ...styles.link, fontSize: '12px', color: colors.primary }}
                                 onClick={() => { setShowForgotModal(true); setForgotStep(1); setForgotError(''); setForgotSuccess(''); }}
                             >
                                 Forgot Password?
@@ -222,13 +194,12 @@ export default function LoginPage() {
                                 type={showPassword ? "text" : "password"}
                                 required
                                 placeholder="••••••••"
-                                className="login-password-input"
                                 value={form.securedPassword}
                                 onChange={handleChange}
                                 style={{ ...inputStyle, ...styles.loginPasswordInput, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }}
                             />
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 onClick={() => setShowPassword(!showPassword)}
                                 style={styles.eyeIcon}
                             >
@@ -241,27 +212,32 @@ export default function LoginPage() {
                     </button>
                 </form>
 
-                {/* Social Login Buttons */}
+                {/* Social Login Buttons — real OAuth */}
                 <div style={styles.socialContainer}>
                     <p style={{ ...styles.socialText, color: colors.textMuted }}>Or continue with</p>
                     <div style={styles.socialButtons}>
+                        {/* Google — opens real Google account chooser popup */}
                         <button
                             type="button"
                             title="Sign in with Google"
-                            onClick={() => openSocialModal('Google')}
+                            onClick={() => googleLogin()}
                             style={styles.socialBtn}
-                            disabled={socialLoading}
+                            disabled={socialLoading || loading}
                         >
-                            <FaGoogle style={{ color: '#ea4335' }} />
+                            {socialLoading
+                                ? <span style={{ fontSize: '12px', color: '#666' }}>...</span>
+                                : <FaGoogle style={{ color: '#ea4335' }} />
+                            }
                         </button>
+                        {/* GitHub — redirects to register page (no GitHub OAuth app configured) */}
                         <button
                             type="button"
-                            title="Sign in with GitHub"
-                            onClick={() => openSocialModal('GitHub')}
+                            title="Sign up with GitHub"
+                            onClick={handleGitHubClick}
                             style={styles.socialBtn}
-                            disabled={socialLoading}
+                            disabled={socialLoading || loading}
                         >
-                            <FaGithub style={{ color: '#24292e' }} />
+                            <FaGithub style={{ color: isDark ? '#fff' : '#24292e' }} />
                         </button>
                     </div>
                 </div>
@@ -271,69 +247,6 @@ export default function LoginPage() {
                 </p>
             </div>
 
-            {/* Social Login Modal */}
-            {showSocialModal && (
-                <div style={styles.modalOverlay}>
-                    <div style={modalStyle}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                {renderProviderIcon(socialProvider)}
-                                <h3 style={{ color: colors.text, margin: 0, fontSize: '18px', fontWeight: '800' }}>
-                                    Sign in with {socialProvider}
-                                </h3>
-                            </div>
-                            <button onClick={() => setShowSocialModal(false)} style={styles.closeBtn} />
-                        </div>
-
-                        {socialError && <div style={styles.errorBox}>{socialError}</div>}
-
-                        <form onSubmit={handleSocialSubmit} style={styles.form}>
-                            <p style={{ color: colors.textMuted, fontSize: '13px', margin: '0 0 16px' }}>
-                                Confirm your {socialProvider} profile credentials to sign in to Emare ELMS.
-                            </p>
-
-                            <div style={styles.fieldGroup}>
-                                <label style={labelStyle}>Account Name</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={socialName}
-                                    onChange={e => setSocialName(e.target.value)}
-                                    style={inputStyle}
-                                />
-                            </div>
-
-                            <div style={styles.fieldGroup}>
-                                <label style={labelStyle}>{socialProvider} Account Email</label>
-                                <input
-                                    type="email"
-                                    required
-                                    value={socialEmail}
-                                    onChange={e => setSocialEmail(e.target.value)}
-                                    style={inputStyle}
-                                />
-                            </div>
-
-                            <div style={styles.fieldGroup}>
-                                <label style={labelStyle}>Role</label>
-                                <select
-                                    value={socialRole}
-                                    onChange={e => setSocialRole(e.target.value)}
-                                    style={{ ...inputStyle, cursor: 'pointer' }}
-                                >
-                                    <option value="Student">Student</option>
-                                    <option value="Instructor">Instructor</option>
-                                </select>
-                            </div>
-
-                            <button type="submit" style={socialLoading ? { ...styles.btn, opacity: 0.7 } : styles.btn} disabled={socialLoading}>
-                                {socialLoading ? `Authenticating ${socialProvider}...` : `Continue with ${socialProvider} →`}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            )}
-
             {/* Forgot Password Modal */}
             {showForgotModal && (
                 <div style={styles.modalOverlay}>
@@ -342,12 +255,10 @@ export default function LoginPage() {
                             <h3 style={{ color: colors.text, margin: 0, fontSize: '18px', fontWeight: '800' }}>
                                 {forgotStep === 1 ? '▣ Reset Password' : '◈ Set New Password'}
                             </h3>
-                            <button 
+                            <button
                                 onClick={() => setShowForgotModal(false)}
                                 style={styles.closeBtn}
-                            >
-                                
-                            </button>
+                            />
                         </div>
 
                         {forgotError && <div style={styles.errorBox}>{forgotError}</div>}
@@ -380,21 +291,21 @@ export default function LoginPage() {
                                     A password reset link has been sent to <strong style={{ color: colors.text }}>{forgotEmail}</strong>
                                 </p>
                                 <p style={{ color: colors.textMuted, fontSize: '13px', marginBottom: '20px' }}>
-                                     Check your inbox and click the link to reset your password. The link expires in 15 minutes.
+                                    Check your inbox and click the link to reset your password. The link expires in 15 minutes.
                                 </p>
                                 <p style={{ color: colors.textMuted, fontSize: '12px', marginBottom: '20px' }}>
-                                     Can't find the email? Check your spam or junk folder.
+                                    Can't find the email? Check your spam or junk folder.
                                 </p>
-                                <button 
-                                    type="button" 
-                                    onClick={() => { setForgotStep(1); setForgotEmail(''); setForgotSuccess(''); }} 
+                                <button
+                                    type="button"
+                                    onClick={() => { setForgotStep(1); setForgotEmail(''); setForgotSuccess(''); }}
                                     style={{ ...styles.link, color: colors.text, background: 'rgba(34,197,94,0.12)', border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', marginBottom: '12px' }}
                                 >
                                     Try Another Email
                                 </button>
-                                <button 
-                                    type="button" 
-                                    onClick={() => setShowForgotModal(false)} 
+                                <button
+                                    type="button"
+                                    onClick={() => setShowForgotModal(false)}
                                     style={{ ...styles.link, color: colors.text, background: colors.bgInput, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '10px 20px', cursor: 'pointer' }}
                                 >
                                     Close
@@ -436,3 +347,4 @@ const styles = {
     closeBtn: { background: 'none', border: 'none', color: '#94a3b8', fontSize: '20px', cursor: 'pointer' },
     loginPasswordInput: { MozAppearance: 'textfield', WebkitAppearance: 'none', appearance: 'none' }
 };
+
