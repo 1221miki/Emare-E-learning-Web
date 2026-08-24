@@ -352,7 +352,7 @@ const socialLogin = async (req, res, next) => {
                 preferredLanguage: preferredLanguage || 'English',
                 professionalTitle: professionalTitle || '',
                 biography: biography || '',
-                skills: skills ? (Array.isArray(skills) ? skills : skills.split(',').map(s => s.trim())) : [],
+                skills: skills ? (Array.isArray(skills) ? skills.join(', ') : skills) : '',
                 lastLoginTimestamp: Date.now()
             });
         }
