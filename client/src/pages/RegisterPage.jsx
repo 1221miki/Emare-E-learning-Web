@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useGoogleLogin } from '@react-oauth/google';
-import { FaGoogle, FaGithub, FaEye, FaEyeSlash, FaArrowLeft } from 'react-icons/fa';
+import { FaGoogle, FaEye, FaEyeSlash, FaArrowLeft } from 'react-icons/fa';
 
 export default function RegisterPage() {
     const { register, socialAuth } = useAuth();
@@ -182,10 +182,8 @@ export default function RegisterPage() {
         flow: 'implicit',
     });
 
-    // ── GitHub — redirect to normal register (no GitHub OAuth app configured) ─
-    const handleGitHubClick = () => {
-        navigate('/register');
-    };
+
+
 
     const pageStyle = {
         ...styles.page,
@@ -362,10 +360,6 @@ export default function RegisterPage() {
                                 ? <span style={{ fontSize: '11px', color: '#666' }}>...</span>
                                 : <FaGoogle style={{ color: '#ea4335' }} />
                             }
-                        </button>
-                        {/* GitHub — redirects to register (no GitHub OAuth app configured) */}
-                        <button type="button" onClick={handleGitHubClick} style={styles.socialBtn} title="Register with GitHub" disabled={socialLoading}>
-                            <FaGithub style={{ color: isDark ? '#fff' : '#24292e' }} />
                         </button>
                     </div>
                 </div>

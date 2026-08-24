@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useGoogleLogin } from '@react-oauth/google';
-import { FaEye, FaEyeSlash, FaGoogle, FaGithub, FaArrowLeft } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaGoogle, FaArrowLeft } from 'react-icons/fa';
 
 export default function LoginPage() {
     const { login, socialAuth, requestPasswordReset, resetPassword } = useAuth();
@@ -94,12 +94,8 @@ export default function LoginPage() {
         flow: 'implicit',
     });
 
-    // ── GitHub OAuth redirect ─────────────────────────────────────────────────
-    // GitHub requires a server-side OAuth app. Since none is configured,
-    // we redirect users to a normal sign-in/register instead.
-    const handleGitHubClick = () => {
-        navigate('/register');
-    };
+
+
 
     const handleForgotSubmit = async (e) => {
         e.preventDefault();
@@ -228,16 +224,6 @@ export default function LoginPage() {
                                 ? <span style={{ fontSize: '12px', color: '#666' }}>...</span>
                                 : <FaGoogle style={{ color: '#ea4335' }} />
                             }
-                        </button>
-                        {/* GitHub — redirects to register page (no GitHub OAuth app configured) */}
-                        <button
-                            type="button"
-                            title="Sign up with GitHub"
-                            onClick={handleGitHubClick}
-                            style={styles.socialBtn}
-                            disabled={socialLoading || loading}
-                        >
-                            <FaGithub style={{ color: isDark ? '#fff' : '#24292e' }} />
                         </button>
                     </div>
                 </div>
