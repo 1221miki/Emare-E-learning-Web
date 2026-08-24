@@ -513,7 +513,7 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                     )}
 
                     {(draft.quizCheckpoints || []).map((cp, cpIdx) => (
-                        <div key={cp.checkpointId} style={{ background: 'rgba(15,23,42,0.5)', borderRadius: 10, border: '1px solid rgba(71,85,105,0.45)', padding: '12px 14px', marginBottom: 12 }}>
+                        <div key={cp.checkpointId} style={{ background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0', padding: '12px 14px', marginBottom: 12 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                                 <span style={{ fontSize: 12, fontWeight: 800, color: '#f59e0b' }}>⏸ Checkpoint {cpIdx + 1}</span>
                                 <button type="button" onClick={() => removeCheckpoint(cpIdx)} style={{
@@ -541,9 +541,9 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
 
                             {/* Questions */}
                             {(cp.questions || []).map((q, qIdx) => (
-                                <div key={qIdx} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid rgba(71,85,105,0.35)', padding: '10px 12px', marginBottom: 8 }}>
+                                <div key={qIdx} style={{ background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', padding: '10px 12px', marginBottom: 8 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                                        <span style={{ fontSize: 11, fontWeight: 700, color: '#cbd5e1' }}>Question {qIdx + 1}</span>
+                                        <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>Question {qIdx + 1}</span>
                                         <button type="button" onClick={() => removeCheckpointQuestion(cpIdx, qIdx)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: 2 }}>✕ Remove</button>
                                     </div>
                                     <input style={{ ...styles.input, marginBottom: 8 }} value={q.questionText} onChange={e => updateCheckpointQuestion(cpIdx, qIdx, { questionText: e.target.value })} placeholder="Enter the question text" />
@@ -1136,32 +1136,32 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
 
 const styles = {
     stepper: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 },
-    stepItem: { display: 'flex', alignItems: 'center', gap: 12, padding: 16, borderRadius: 16, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' },
+    stepItem: { display: 'flex', alignItems: 'center', gap: 12, padding: 16, borderRadius: 16, background: '#f8fafc', border: '1px solid #e2e8f0' },
     stepCircle: { width: 36, height: 36, borderRadius: '50%', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0 },
     grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 },
     formGroup: { display: 'flex', flexDirection: 'column', gap: 6 },
-    label: { color: '#94a3b8', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' },
-    input: { background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, color: '#0f172a', padding: '11px 13px', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' },
+    label: { color: '#64748b', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' },
+    input: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 10, color: '#0f172a', padding: '11px 13px', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' },
     panel: { display: 'flex', flexDirection: 'column', gap: 18 },
-    sectionTitle: { fontSize: 17, color: '#f1f5f9', margin: 0, fontWeight: 700 },
-    sectionSubtitle: { color: '#94a3b8', fontSize: 13, margin: 0, lineHeight: 1.6 },
-    secondaryBtn: { background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.35)', color: '#bbf7d0', borderRadius: 12, padding: '11px 16px', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13 },
+    sectionTitle: { fontSize: 17, color: '#0f172a', margin: 0, fontWeight: 700 },
+    sectionSubtitle: { color: '#64748b', fontSize: 13, margin: 0, lineHeight: 1.6 },
+    secondaryBtn: { background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.4)', color: '#15803d', borderRadius: 12, padding: '11px 16px', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13 },
     primaryBtn: { background: 'linear-gradient(135deg, #16a34a, #15803d)', border: 'none', borderRadius: 12, color: '#fff', padding: '11px 16px', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13 },
-    emptyBox: { padding: 24, borderRadius: 16, background: 'rgba(15,23,42,0.65)', border: '1px dashed rgba(71,85,105,0.5)', color: '#94a3b8', lineHeight: 1.7 },
-    chapterCard: { background: 'rgba(15,23,42,0.75)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: 18, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 },
+    emptyBox: { padding: 24, borderRadius: 16, background: '#f8fafc', border: '1px dashed #cbd5e1', color: '#64748b', lineHeight: 1.7 },
+    chapterCard: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 18, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 },
     chapterHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
-    lessonRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(71,85,105,0.3)' },
-    badge: { padding: '3px 10px', borderRadius: 999, background: 'rgba(22,163,74,0.15)', color: '#86efac', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' },
+    lessonRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: '#f8fafc', border: '1px solid #e2e8f0' },
+    badge: { padding: '3px 10px', borderRadius: 999, background: 'rgba(22,163,74,0.1)', color: '#15803d', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' },
     reviewGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 },
-    panelCard: { padding: 20, borderRadius: 18, border: '1px solid rgba(71,85,105,0.35)', background: 'rgba(15,23,42,0.75)' },
-    summaryRow: { display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 10, color: '#e2e8f0', fontSize: 14 },
-    chapterSummary: { padding: 12, borderRadius: 12, border: '1px solid rgba(71,85,105,0.3)', marginBottom: 10, background: 'rgba(15,23,42,0.85)' },
-    lessonSummary: { display: 'flex', justifyContent: 'space-between', marginTop: 8, color: '#cbd5e1', fontSize: 13 },
-    fileInput: { border: 'none', color: '#fff', marginTop: 8 },
-    preview: { marginTop: 8, color: '#d1fae5', fontSize: 13, fontWeight: 600 },
-    textBtn: { border: 'none', background: 'transparent', color: '#4ade80', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13 },
-    card: { background: 'rgba(15,23,42,0.75)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: 18, padding: 20, display: 'flex', flexDirection: 'column', gap: 12 },
-    cardHeader: { display: 'flex', alignItems: 'center', gap: 10, color: '#f1f5f9', fontWeight: 700 },
+    panelCard: { padding: 20, borderRadius: 18, border: '1px solid #e2e8f0', background: '#ffffff' },
+    summaryRow: { display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 10, color: '#374151', fontSize: 14 },
+    chapterSummary: { padding: 12, borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 10, background: '#f8fafc' },
+    lessonSummary: { display: 'flex', justifyContent: 'space-between', marginTop: 8, color: '#64748b', fontSize: 13 },
+    fileInput: { border: 'none', color: '#0f172a', marginTop: 8 },
+    preview: { marginTop: 8, color: '#15803d', fontSize: 13, fontWeight: 600 },
+    textBtn: { border: 'none', background: 'transparent', color: '#16a34a', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13 },
+    card: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 18, padding: 20, display: 'flex', flexDirection: 'column', gap: 12 },
+    cardHeader: { display: 'flex', alignItems: 'center', gap: 10, color: '#0f172a', fontWeight: 700 },
     cardTitle: { fontSize: 15 },
     cardDescription: { color: '#94a3b8', fontSize: 13, margin: 0 },
     emptyText: { color: '#94a3b8', fontSize: 14 },
