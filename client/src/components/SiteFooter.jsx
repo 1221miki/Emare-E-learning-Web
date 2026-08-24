@@ -116,7 +116,7 @@ export default function SiteFooter() {
 
             {/* ── Footer ───────────────────────────────────── */}
             <footer style={s.footer}>
-                <div style={s.footerGrid}>
+                <div className="emare-footer-grid" style={s.footerGrid}>
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
                             <div style={s.logoMark}>E</div>

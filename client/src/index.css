@@ -344,3 +344,185 @@ body.emare-sidebar-right main {
     padding: 40px 5% !important;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   Responsive layer for the Landing Page / Navbar / Footer.
+   The pages use inline styles which cannot have media queries,
+   so these rules use !important to adapt layouts per breakpoint.
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Navbar logo scaling ─────────────────────────────────────── */
+@media (max-width: 767px) {
+  .emare-nav-logo-link { gap: 10px !important; }
+  .emare-nav-logo-img { width: 120px !important; height: 34px !important; }
+  .emare-nav-logo-text { font-size: 12px !important; letter-spacing: 0.3px !important; }
+}
+
+@media (max-width: 380px) {
+  .emare-nav-logo-img { width: 96px !important; height: 28px !important; }
+  .emare-nav-logo-text { display: none !important; }
+}
+
+/* ── Hero ────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .landing-hero {
+    padding: 100px 5% 60px !important;
+    min-height: 0 !important;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-hero {
+    padding: 88px 5% 44px !important;
+    gap: 28px !important;
+  }
+
+  .landing-hero h1 {
+    font-size: clamp(30px, 8.5vw, 42px) !important;
+    letter-spacing: -1px !important;
+  }
+
+  .emare-hero-subtitle {
+    font-size: 20px !important;
+    margin-bottom: 24px !important;
+    min-height: 0 !important;
+  }
+
+  /* Video wrapper: stop forcing a 520px flex basis / 680px height */
+  .landing-hero-image-wrapper {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    max-width: 400px !important;
+    min-height: 0 !important;
+    height: auto !important;
+    aspect-ratio: 9 / 13 !important;
+    margin: 0 auto;
+  }
+}
+
+/* ── Stats strip ─────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .emare-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 16px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .emare-stats-grid { grid-template-columns: 1fr 1fr !important; }
+}
+
+/* ── Section rhythm (smaller vertical padding on phones/tablets) */
+@media (max-width: 767px) {
+  #services {
+    padding: 52px 5% !important;
+  }
+
+  #services h2 {
+    font-size: clamp(22px, 6vw, 30px) !important;
+    margin-bottom: 32px !important;
+  }
+
+  #services > div:last-child {
+    grid-template-columns: 1fr !important;
+  }
+
+  #services .emare-services-grid > div {
+    padding: 24px 20px !important;
+  }
+
+  .emare-section,
+  #contact {
+    padding-top: 52px !important;
+    padding-bottom: 52px !important;
+  }
+}
+
+/* ── Popular Categories: 6 columns never fits small screens ──── */
+@media (max-width: 1024px) {
+  .emare-categories-grid { grid-template-columns: repeat(3, 1fr) !important; }
+}
+
+@media (max-width: 640px) {
+  .emare-categories-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 14px !important; }
+}
+
+@media (max-width: 380px) {
+  .emare-categories-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ── Courses / Events grids: prevent horizontal scroll at 320px ─ */
+@media (max-width: 640px) {
+  .emare-courses-grid,
+  .emare-events-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 900px) {
+  .emare-courses-grid,
+  .emare-events-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ── Live class cards: stack on mobile ────────────────────────── */
+@media (max-width: 767px) {
+  .emare-live-card {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+  }
+
+  .emare-live-card-right {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+  }
+
+  .emare-live-card-right button {
+    padding: 12px 22px !important;
+  }
+}
+
+/* ── Subscription section headings ────────────────────────────── */
+@media (max-width: 480px) {
+  .emare-subscribe h3 {
+    font-size: 22px !important;
+  }
+}
+
+/* ── Contact split image: don't double the scroll length ──────── */
+@media (max-width: 860px) {
+  .emare-contact-image-wrap,
+  .emare-contact-image-wrap img {
+    min-height: 260px !important;
+    max-height: 320px;
+  }
+}
+
+/* ── Footer link columns: 5-column grid collapses progressively ─ */
+@media (max-width: 1024px) {
+  .emare-footer-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 32px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .emare-footer-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 28px !important;
+  }
+
+  footer {
+    padding-top: 48px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .emare-footer-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

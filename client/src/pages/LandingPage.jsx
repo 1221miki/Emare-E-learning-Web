@@ -528,7 +528,7 @@ export default function LandingPage() {
                 <div className="landing-hero-content" style={p.heroContent}>
                     <div style={p.heroBadge}>🎓 Trusted by 2,500+ learners across Ethiopia</div>
                     <h1 style={p.heroTitle}>Welcome to Emare ICT Hub</h1>
-                    <h2 style={p.heroSubtitleAnimated}>
+                    <h2 className="emare-hero-subtitle" style={p.heroSubtitleAnimated}>
                         Master In-Demand Tech Skills, Build Your Future, and Become Job Ready.
                     </h2>
                     <form onSubmit={handleSearch} style={p.searchForm}>
@@ -594,7 +594,7 @@ export default function LandingPage() {
 
             {/* 4. Platform Statistics */}
             <section style={p.statsSection}>
-                <div style={p.statsGrid}>
+                <div className="emare-stats-grid" style={p.statsGrid}>
                     {stats.map((s, i) => (
                         <div key={i} style={p.statBox}>
                             <span style={{ fontSize: '32px' }}>{s.icon}</span>
@@ -641,7 +641,7 @@ export default function LandingPage() {
                 </h2>
 
                 {/* 7 Service Cards — responsive grid */}
-                <div style={{
+                <div className="emare-services-grid" style={{
                     maxWidth: '1200px',
                     margin: '0 auto',
                     display: 'grid',
@@ -745,13 +745,13 @@ export default function LandingPage() {
             </section>
 
             {/* 5. Popular Categories */}
-            <section style={p.section}>
+            <section className="emare-section" style={p.section}>
                 <div style={p.sectionHeader}>
                     <span style={p.sectionBadge}>Explore</span>
                     <h2 style={p.sectionTitle}>Popular Categories</h2>
                     <p style={p.sectionSubtitle}>Find courses in your area of interest</p>
                 </div>
-                <div style={p.grid6}>
+                <div className="emare-categories-grid" style={p.grid6}>
                     {categories.slice(0, 6).map((cat, i) => (
                         <div key={i} style={{ ...p.categoryCard, cursor: 'pointer' }}
                             onClick={() => navigate(`/courses?category=${encodeURIComponent(cat.name)}`)}
@@ -773,7 +773,7 @@ export default function LandingPage() {
             </section>
 
             {/* 6. Explore Our Courses — unified, deduplicated */}
-            <section style={{ ...p.section, background: colors.bgCard }}>
+            <section className="emare-section" style={{ ...p.section, background: colors.bgCard }}>
                 <div style={p.sectionHeader}>
                     <span style={p.sectionBadge}>EXPLORE COURSES</span>
                     <h2 style={p.sectionTitle}>Explore Our Courses</h2>
@@ -787,7 +787,7 @@ export default function LandingPage() {
                     </div>
                 ) : (
                     <>
-                        <div style={{
+                        <div className="emare-courses-grid" style={{
                             display: 'grid',
                             gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
                             gap: '24px',
@@ -840,7 +840,7 @@ export default function LandingPage() {
             </section>
 
             {/* 14. Upcoming Live Classes */}
-            <section style={{ ...p.section, background: colors.bgCard }}>
+            <section className="emare-section" style={{ ...p.section, background: colors.bgCard }}>
                 <div style={p.sectionHeader}>
                     <span style={p.sectionBadge}>Live Interaction</span>
                     <h2 style={p.sectionTitle}>Upcoming Live Classes</h2>
@@ -855,7 +855,7 @@ export default function LandingPage() {
                             const isReserved = Boolean(live.isReserved);
                             const isReserving = reservingId === live._id;
                             return (
-                                <div key={live._id} style={p.liveCard}>
+                                <div key={live._id} className="emare-live-card" style={p.liveCard}>
                                     <div>
                                         <h3 style={{ margin: '0 0 8px', color: colors.text, fontSize: '18px' }}>{live.title}</h3>
                                         <p style={{ margin: 0, color: colors.textMuted, fontSize: '14px' }}>
@@ -865,7 +865,7 @@ export default function LandingPage() {
                                             {live.reservations?.length || 0} reserved
                                         </p>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                                    <div className="emare-live-card-right" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
                                         <div style={{ color: colors.primary, fontWeight: '700' }}>▦ {formatLiveDate(live.startTime)}</div>
                                         <button
                                             onClick={() => handleReserveSeat(live._id)}
@@ -883,7 +883,7 @@ export default function LandingPage() {
             </section>
 
             {/* 15. Upcoming Events (created from the admin event form) */}
-            <section style={{ ...p.section }}>
+            <section className="emare-section" style={{ ...p.section }}>
                 <div style={p.sectionHeader}>
                     <span style={p.sectionBadge}>What's On</span>
                     <h2 style={p.sectionTitle}>Upcoming Events</h2>
@@ -895,7 +895,7 @@ export default function LandingPage() {
                     </div>
                 ) : (
                     <>
-                        <div style={{
+                        <div className="emare-events-grid" style={{
                             display: 'grid',
                             gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
                             gap: '24px',
@@ -961,7 +961,7 @@ export default function LandingPage() {
             </section>
 
             {/* 18. Frequently Asked Questions */}
-            <section style={{ ...p.section, background: colors.bgCard }}>
+            <section className="emare-section" style={{ ...p.section, background: colors.bgCard }}>
                 <div style={p.sectionHeader}>
                     <span style={p.sectionBadge}>Support</span>
                     <h2 style={p.sectionTitle}>Frequently Asked Questions</h2>
@@ -980,7 +980,7 @@ export default function LandingPage() {
             </section>
 
             {/* 19. Discount Subscription */}
-            <section style={{
+            <section className="emare-subscribe" style={{
                 padding: '72px 5%',
                 background: theme === 'dark'
                     ? 'linear-gradient(135deg, rgba(37,99,235,0.15) 0%, rgba(124,58,237,0.15) 100%)'
@@ -1225,7 +1225,7 @@ export default function LandingPage() {
                     </div>
 
                     {/* Right — Feature Image */}
-                    <div style={p.contactImageWrap}>
+                    <div className="emare-contact-image-wrap" style={p.contactImageWrap}>
                         <img src="/images/contact.jpg" alt="Emare ICT Hub — contact us" style={p.contactImage} />
                     </div>
                 </div>
