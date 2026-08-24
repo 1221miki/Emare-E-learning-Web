@@ -53,7 +53,7 @@ const GENERATABLE_PLATFORMS = ['googleMeet', 'zoom', 'microsoftTeams', 'jitsi'];
 // -- Event thumbnail normalization -------------------------
 // Every uploaded thumbnail is center-cropped to a uniform 16:9 (1280x720)
 // canvas and re-encoded as WebP (~85 quality) so all event cards get a
-// consistent size, aspect ratio and format — smaller uploads, no layout shifts.
+// consistent size, aspect ratio and format ï¿½ smaller uploads, no layout shifts.
 const THUMB_WIDTH = 1280;
 const THUMB_HEIGHT = 720;
 
@@ -76,7 +76,7 @@ const normalizeEventThumbnail = async (file) => {
         ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, THUMB_WIDTH, THUMB_HEIGHT);
         bitmap.close();
         const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', 0.85));
-        // Some browsers cannot encode WebP — fall back to JPEG, then the original
+        // Some browsers cannot encode WebP ï¿½ fall back to JPEG, then the original
         let output = blob;
         if (!output) {
             output = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
@@ -86,7 +86,7 @@ const normalizeEventThumbnail = async (file) => {
         const baseName = (file.name || 'event-thumbnail').replace(/\.[^.]+$/, '');
         return new File([output], `${baseName}.${isWebp ? 'webp' : 'jpg'}`, { type: output.type });
     } catch {
-        return file; // unreadable image — upload the original untouched
+        return file; // unreadable image ï¿½ upload the original untouched
     }
 };
 
@@ -288,19 +288,10 @@ export default function AdminDashboard() {
     const [moderationRowsPerPage, setModerationRowsPerPage] = useState(10);
     const [moderationCurrentPage, setModerationCurrentPage] = useState(1);
 
-    const [moderationItems, setModerationItems] = useState([
-        { id: 'MOD-101', title: 'React Hooks Deep Dive Video Lecture', course: 'React Masterclass', instructor: 'Daniel Berhe', type: 'Video Lecture', date: '2026-08-01', reports: 0, status: 'Approved', visibility: 'Visible', category: 'Programming', language: 'English', videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-        { id: 'MOD-102', title: 'Intro to Machine Learning PDF syllabus', course: 'Intro to AI', instructor: 'Selam M.', type: 'PDF', date: '2026-08-03', reports: 3, status: 'Pending', visibility: 'Hidden', category: 'AI & ML', language: 'English', pdfUrl: 'https://pdfobject.com/pdf/sample.pdf' },
-        { id: 'MOD-103', title: 'SQL Joins Practice Quiz', course: 'Database Design', instructor: 'Yonas A.', type: 'Quiz', date: '2026-08-04', reports: 0, status: 'Flagged', visibility: 'Visible', category: 'Database', language: 'English' },
-        { id: 'MOD-104', title: 'Figma Mockup Portfolio Assignment', course: 'UI/UX Design', instructor: 'Meseret T.', type: 'Assignment', date: '2026-08-05', reports: 1, status: 'Pending', visibility: 'Visible', category: 'Design', language: 'English' },
-        { id: 'MOD-105', title: 'Introduction to Firewalls Exam', course: 'Cybersecurity Essentials', instructor: 'Mekdes G.', type: 'Exam', date: '2026-08-05', reports: 5, status: 'Rejected', visibility: 'Hidden', category: 'Security', language: 'Amharic' },
-        { id: 'MOD-106', title: 'Advanced Docker & Kubernetes Audio Guide', course: 'DevOps Bootcamp', instructor: 'Biniam K.', type: 'Audio', date: '2026-08-06', reports: 0, status: 'Archived', visibility: 'Hidden', category: 'Programming', language: 'English' }
-    ]);
+    const [moderationItems, setModerationItems] = useState([]);
+    const [moderationItems, setModerationItems] = useState([]);
 
-    const [moderationReports, setModerationReports] = useState([
-        { id: 'REP-201', contentId: 'MOD-102', reporter: 'Abebe K.', reason: 'Low Quality', severity: 'Medium', date: '2026-08-04', status: 'Pending', assigned: 'Admin User' },
-        { id: 'REP-202', contentId: 'MOD-105', reporter: 'Tsion Y.', reason: 'Copyright Violation', severity: 'High', date: '2026-08-05', status: 'Reviewed', assigned: 'Admin User' }
-    ]);
+    const [moderationReports, setModerationReports] = useState([]);
 
     const [moderationLogs, setModerationLogs] = useState([
         { moderator: 'Admin User', action: 'Approve Content', item: 'React Hooks Deep Dive Video Lecture', date: '2026-08-05 10:24', ip: '192.168.1.1' },
@@ -662,7 +653,7 @@ const handleConnectGoogleMeet = async () => {
                     form: calendarForm,
                     editingId: calendarEditingId
                 }));
-            } catch (e) { /* non-fatal — the form simply resets on return */ }
+            } catch (e) { /* non-fatal ï¿½ the form simply resets on return */ }
             window.location.href = url;
         } catch (error) {
             setIsGoogleConnecting(false);
@@ -1110,7 +1101,7 @@ const handleConnectGoogleMeet = async () => {
                         : '');
                     setIsCreateModalOpen(false);
                     setCreateVerifyStep(true);
-                    // Lock the "Resend Code" button so the admin cannot spam it —
+                    // Lock the "Resend Code" button so the admin cannot spam it ï¿½
                     // longer cooldown when the server reports a daily quota / rate limit.
                     startCreateVerifyCooldown(response.data.deliveryRateLimited
                         ? (response.data.retryAfterSeconds || 60)
@@ -1168,7 +1159,7 @@ const handleConnectGoogleMeet = async () => {
         let cooldownSeconds = 30;
         try {
             // Backend generates a fresh 6-digit code and emails it directly to the
-            // registered inbox. Codes are NEVER returned in the API response — the
+            // registered inbox. Codes are NEVER returned in the API response ï¿½ the
             // UI relies purely on live delivery, so on failure we surface the error
             // and keep the 30s cooldown before a retry is allowed.
             const res = await authService.resendVerification({ accountEmail: createVerifyEmail });
@@ -1191,7 +1182,7 @@ const handleConnectGoogleMeet = async () => {
             }
         } finally {
             setCreateVerifyResending(false);
-            // Always restart the cooldown (success or failure) to prevent spamming —
+            // Always restart the cooldown (success or failure) to prevent spamming ï¿½
             // longer when the server reports a rate limit.
             startCreateVerifyCooldown(cooldownSeconds);
         }
@@ -1752,7 +1743,7 @@ const resetCalendarForm = () => {
         setIsUploadingThumbnail(true);
         setFormError('');
         try {
-            // Normalize first: uniform 1280x720 (16:9) WebP — smaller, consistent
+            // Normalize first: uniform 1280x720 (16:9) WebP ï¿½ smaller, consistent
             const normalized = await normalizeEventThumbnail(file);
             const fd = new FormData();
             fd.append('file', normalized);
@@ -1789,11 +1780,11 @@ const resetCalendarForm = () => {
         if (start && end && end < start) errors.endDate = 'End date/time must be after the start date/time.';
         if (calendarForm.eventType === 'Physical' && !(calendarForm.location || '').trim()) errors.location = 'Location is required for a physical event.';
         const trimmedUrl = (calendarForm.streamUrl || '').trim();
-        if (calendarForm.eventType !== 'Physical' && trimmedUrl && !isValidUrl(trimmedUrl)) errors.streamUrl = 'Meeting URL is invalid — use a full http(s) link.';
-        if (calendarForm.bannerImage && !isValidUrl(calendarForm.bannerImage)) errors.bannerImage = 'Event thumbnail URL is invalid — use a full http(s) link.';
+        if (calendarForm.eventType !== 'Physical' && trimmedUrl && !isValidUrl(trimmedUrl)) errors.streamUrl = 'Meeting URL is invalid ï¿½ use a full http(s) link.';
+        if (calendarForm.bannerImage && !isValidUrl(calendarForm.bannerImage)) errors.bannerImage = 'Event thumbnail URL is invalid ï¿½ use a full http(s) link.';
         const inviteesResult = normalizeInviteesInput(calendarForm.meetingInvitees);
         if (inviteesResult.invalid.length) errors.meetingInvitees = `Invalid invitee email(s): ${inviteesResult.invalid.join(', ')}`;
-        // NOTE: a disconnected Google Meet no longer blocks saving — the backend
+        // NOTE: a disconnected Google Meet no longer blocks saving ï¿½ the backend
         // automatically falls back to a free Jitsi link so Online/Hybrid events
         // always save with a working meeting URL.
         if (isPublic) {
@@ -2004,8 +1995,8 @@ const resetCalendarForm = () => {
 
     const handleGenerateMeetingLink = async (overrideProvider) => {
         const provider = overrideProvider || calendarForm.meetingProvider;
-        if (provider === 'custom') return showNotification('Manual URLs are entered directly in the link field — no generation needed.');
-        // NOTE: an unconnected provider no longer blocks generation — the backend
+        if (provider === 'custom') return showNotification('Manual URLs are entered directly in the link field ï¿½ no generation needed.');
+        // NOTE: an unconnected provider no longer blocks generation ï¿½ the backend
         // automatically falls back to a free Jitsi link so a working meeting URL
         // is always produced.
         if (!calendarForm.title.trim()) return showNotification('Enter an event title before generating a link.');
@@ -2024,7 +2015,7 @@ const resetCalendarForm = () => {
             if (!url) throw new Error('No meeting link was returned.');
             setCalendarForm((f) => ({ ...f, streamUrl: url, meetingProvider: finalProvider }));
             showNotification(provider !== finalProvider
-                ? `${meetingProviderLabel(provider)} is not connected — created a ${meetingProviderLabel(finalProvider)} link instead.`
+                ? `${meetingProviderLabel(provider)} is not connected ï¿½ created a ${meetingProviderLabel(finalProvider)} link instead.`
                 : (provider === 'googleMeet'
                     ? 'Real Google Meet meeting created and attached to this event.'
                     : `${meetingProviderLabel(finalProvider)} link generated.`));
@@ -3084,18 +3075,12 @@ const resetCalendarForm = () => {
     };
 
     const renderCourses = () => {
-        const screenshotData = [
-            { id: 'COURSE-001', title: 'Web Development Fundamentals', instructor: 'Daniel Berhe', img: 'https://i.pravatar.cc/150?u=daniel', category: 'Programming', catColor: '#10b981', catBg: 'rgba(16,185,129,0.15)', students: 245, status: 'Published', statusColor: '#10b981', statusBg: 'rgba(16,185,129,0.15)', date: 'May 20, 2024', iconBg: '#14532d', icon: <Monitor size={20} color="#4ade80" /> },
-            { id: 'COURSE-002', title: 'Introduction to Artificial Intelligence', instructor: 'Selam M.', img: 'https://i.pravatar.cc/150?u=selam', category: 'AI & ML', catColor: '#22c55e', catBg: 'rgba(34,197,94,0.15)', students: 198, status: 'Published', statusColor: '#10b981', statusBg: 'rgba(16,185,129,0.15)', date: 'May 18, 2024', iconBg: '#1e1b4b', icon: <CheckCircle2 size={20} color="#4ade80" /> },
-            { id: 'COURSE-003', title: 'Database Management Systems', instructor: 'Yonas A.', img: 'https://i.pravatar.cc/150?u=yonas', category: 'Database', catColor: '#22c55e', catBg: 'rgba(139,92,246,0.15)', students: 176, status: 'Published', statusColor: '#10b981', statusBg: 'rgba(16,185,129,0.15)', date: 'May 15, 2024', iconBg: '#2e1065', icon: <Database size={20} color="#4ade80" /> },
-            { id: 'COURSE-004', title: 'UI/UX Design Principles', instructor: 'Meseret T.', img: 'https://i.pravatar.cc/150?u=meseret', category: 'Design', catColor: '#f59e0b', catBg: 'rgba(245,158,11,0.15)', students: 134, status: 'Draft', statusColor: '#f59e0b', statusBg: 'rgba(245,158,11,0.15)', date: 'May 10, 2024', iconBg: '#4c1d95', icon: <Palette size={20} color="#c084fc" /> },
-            { id: 'COURSE-005', title: 'Cybersecurity Essentials', instructor: 'Mekdes G.', img: 'https://i.pravatar.cc/150?u=mekdes', category: 'Security', catColor: '#ef4444', catBg: 'rgba(239,68,68,0.15)', students: 95, status: 'Draft', statusColor: '#f59e0b', statusBg: 'rgba(245,158,11,0.15)', date: 'May 8, 2024', iconBg: '#022c22', icon: <Shield size={20} color="#34d399" /> },
-        ];
+        const screenshotData = [];
 
-        const totalCourses = analytics?.totalCourses || allCourses.length || 56;
-        const publishedCourses = analytics?.activeCourses || allCourses.filter(c => ['Published', 'Active'].includes(c.publicationState)).length || 42;
-        const draftCourses = analytics?.draftCourses || allCourses.filter(c => c.publicationState === 'Draft').length || 9;
-        const totalEnrollments = enrollments.length || 1248;
+        const totalCourses = analytics?.totalCourses || allCourses.length || 0;
+        const publishedCourses = analytics?.activeCourses || allCourses.filter(c => ['Published', 'Active'].includes(c.publicationState)).length || 0;
+        const draftCourses = analytics?.draftCourses || allCourses.filter(c => c.publicationState === 'Draft').length || 0;
+        const totalEnrollments = enrollments.length || 0;
 
         // Apply status filter
         let filteredCourses = allCourses.length > 0 ? [...allCourses] : [];
@@ -4877,7 +4862,7 @@ const resetCalendarForm = () => {
         const googleMeetConnected = Boolean(googleMeetStatus?.connected && googleMeetStatus?.authorized);
         const googleMeetHint = !googleMeetStatus?.connected
             ? (googleMeetStatus?.missingEnv?.length ? `Missing backend/.env: ${googleMeetStatus.missingEnv.join(', ')}` : 'Checking connection...')
-            : (!googleMeetStatus?.authorized ? 'Authorized account required — connect below.' : '');
+            : (!googleMeetStatus?.authorized ? 'Authorized account required ï¿½ connect below.' : '');
 
         // -"?-"? Unified event data (Internal + Public) -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?
         const internalRows = calendarEvents.map((e) => ({
@@ -5307,7 +5292,7 @@ const resetCalendarForm = () => {
                                     </div>
                                 )}
 
-                                {/* Meeting ID — Zoom only (optional) */}
+                                {/* Meeting ID ï¿½ Zoom only (optional) */}
                                 {calendarForm.meetingPlatform === 'zoom' && (
                                     <div>
                                         <label style={fieldLabel}>Meeting ID (Optional)</label>
@@ -5367,15 +5352,15 @@ const resetCalendarForm = () => {
                                     )}
                                 </div>
 
-                                {/* Meeting Password — only platforms that support one */}
+                                {/* Meeting Password ï¿½ only platforms that support one */}
                                 {PASSWORD_PLATFORMS.includes(calendarForm.meetingPlatform) && (
                                     <div>
                                         <label style={fieldLabel}>Meeting Password (Optional)</label>
-                                        <input value={calendarForm.meetingPassword} onChange={(e) => setCalendarForm({ ...calendarForm, meetingPassword: e.target.value })} placeholder="e.g. 123456 — for passcode-protected meetings / streams" style={s.input} />
+                                        <input value={calendarForm.meetingPassword} onChange={(e) => setCalendarForm({ ...calendarForm, meetingPassword: e.target.value })} placeholder="e.g. 123456 ï¿½ for passcode-protected meetings / streams" style={s.input} />
                                     </div>
                                 )}
 
-                                {/* Google Meet connection status — Google only, never shown for other platforms */}
+                                {/* Google Meet connection status ï¿½ Google only, never shown for other platforms */}
                                 {calendarForm.meetingPlatform === 'googleMeet' && (
                                     googleConfigured && !googleMeetConnected ? (
                                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', padding: '10px 12px', borderRadius: 10, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)' }}>
@@ -5384,7 +5369,7 @@ const resetCalendarForm = () => {
                                                 Google Meet Not Connected
                                             </span>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                                                <span style={{ fontSize: 12, color: colors.textMuted }}>Optional — the event saves fine with an automatic free Jitsi link. Connect your Google account if you prefer real Meet sessions.</span>
+                                                <span style={{ fontSize: 12, color: colors.textMuted }}>Optional ï¿½ the event saves fine with an automatic free Jitsi link. Connect your Google account if you prefer real Meet sessions.</span>
                                                 <button type="button" onClick={handleConnectGoogleMeet} disabled={isGoogleConnecting} style={{ ...s.secondaryBtn, padding: '6px 12px', fontSize: 12 }}>
                                                     {isGoogleConnecting ? 'Opening Google...' : 'Connect Google Meet'}
                                                 </button>
@@ -5534,7 +5519,7 @@ const resetCalendarForm = () => {
                                     {isUploadingThumbnail ? 'Normalizing & uploading...' : 'Click to upload or drag and drop'}
                                 </span>
                                 <span style={{ fontSize: 11, color: colors.textMuted, opacity: 0.8 }}>
-                                    Auto-normalized to 1280×720 (16:9) WebP · max 8 MB
+                                    Auto-normalized to 1280ï¿½720 (16:9) WebP ï¿½ max 8 MB
                                 </span>
                             </div>
                         )}
@@ -5563,7 +5548,7 @@ const resetCalendarForm = () => {
                                     <div style={{ display: 'grid', gap: 4, fontSize: 13, color: colors.textMuted }}>
                                         <div><strong style={{ color: colors.text }}>{calendarForm.isAllDay ? 'All day' : 'Scheduled'}: </strong>{pStart ? formatEventDate(pStart.toISOString()) : '-"'}{pEnd && !calendarForm.isAllDay ? ` -+' ${formatEventDate(pEnd.toISOString())}` : ''}</div>
                                         <div><strong style={{ color: colors.text }}>Format: </strong>{pType} {pType === 'Physical' ? `-- ${calendarForm.location || 'No location set'}` : pType === 'Hybrid' ? `-- ${calendarForm.location || 'Online + venue TBD'}` : ''}</div>
-                                        {pType !== 'Physical' && <div><strong style={{ color: colors.text }}>Meeting: </strong>{meetingProviderLabel(calendarForm.meetingProvider)}{calendarForm.streamUrl ? ` — ${calendarForm.streamUrl}` : (calendarForm.meetingProvider === 'googleMeet' ? ' — real Google Meet will be created on save' : ' — will be created on save')}</div>}
+                                        {pType !== 'Physical' && <div><strong style={{ color: colors.text }}>Meeting: </strong>{meetingProviderLabel(calendarForm.meetingProvider)}{calendarForm.streamUrl ? ` ï¿½ ${calendarForm.streamUrl}` : (calendarForm.meetingProvider === 'googleMeet' ? ' ï¿½ real Google Meet will be created on save' : ' ï¿½ will be created on save')}</div>}
                                         {isFormPublic && <div><strong style={{ color: colors.text }}>Price: </strong>{calendarForm.price || 'FREE'}{calendarForm.capacity !== '' ? ` -- Capacity: ${calendarForm.capacity}` : ''}</div>}
                                         <div><strong style={{ color: colors.text }}>Visibility: </strong>{isFormPublic ? 'Public (review pipeline)' : 'Internal (calendar only)'}</div>
                                     </div>
@@ -6340,7 +6325,7 @@ const resetCalendarForm = () => {
                             style={{ ...s.secondaryBtn, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: createVerifyResending || createVerifyCooldown > 0 ? 0.6 : 1, cursor: createVerifyResending || createVerifyCooldown > 0 ? 'not-allowed' : 'pointer' }}
                         >
                             {createVerifyResending ? (
-                                <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Resending…</>
+                                <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Resendingï¿½</>
                             ) : createVerifyCooldown > 0 ? (
                                 `Resend code in ${createVerifyCooldown}s`
                             ) : (
