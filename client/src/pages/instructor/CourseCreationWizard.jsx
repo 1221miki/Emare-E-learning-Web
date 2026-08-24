@@ -1141,7 +1141,7 @@ const styles = {
     grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 },
     formGroup: { display: 'flex', flexDirection: 'column', gap: 6 },
     label: { color: '#94a3b8', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' },
-    input: { background: 'rgba(15,23,42,0.85)', border: '1px solid rgba(71,85,105,0.3)', borderRadius: 10, color: '#f1f5f9', padding: '11px 13px', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' },
+    input: { background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, color: '#0f172a', padding: '11px 13px', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' },
     panel: { display: 'flex', flexDirection: 'column', gap: 18 },
     sectionTitle: { fontSize: 17, color: '#f1f5f9', margin: 0, fontWeight: 700 },
     sectionSubtitle: { color: '#94a3b8', fontSize: 13, margin: 0, lineHeight: 1.6 },
