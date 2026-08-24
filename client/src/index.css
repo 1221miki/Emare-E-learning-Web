@@ -370,6 +370,12 @@ body.emare-sidebar-right main {
     min-height: 0 !important;
     justify-content: center;
   }
+
+  .landing-hero-image-wrapper {
+    height: auto !important;
+    width: min(88vw, 420px) !important;
+    aspect-ratio: 9 / 16 !important;
+  }
 }
 
 @media (max-width: 640px) {
@@ -392,11 +398,10 @@ body.emare-sidebar-right main {
   /* Video wrapper: stop forcing a 520px flex basis / 680px height */
   .landing-hero-image-wrapper {
     flex: 0 0 auto !important;
-    width: 100% !important;
-    max-width: 400px !important;
+    width: min(88vw, 380px) !important;
     min-height: 0 !important;
     height: auto !important;
-    aspect-ratio: 9 / 13 !important;
+    aspect-ratio: 9 / 16 !important;
     margin: 0 auto;
   }
 }

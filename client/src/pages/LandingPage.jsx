@@ -409,31 +409,28 @@ export default function LandingPage() {
 
     const p = {
         page: { minHeight: '100vh', fontFamily: "'Inter', 'Segoe UI', sans-serif", overflowX: 'hidden' },
-        hero: { 
-            position: 'relative', 
-            padding: '120px 5% 100px', 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            flexWrap: 'wrap', 
-            gap: '40px', 
+        hero: {
+            position: 'relative',
+            padding: '120px 5% 100px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '40px',
             overflow: 'hidden',
             minHeight: '700px',
-            backgroundImage: 'url("/images/Real Emare ICT HUB image.png")',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center center',
-            backgroundRepeat: 'no-repeat',
+            background: '#0b1325',
         },
-        heroOverlay: { 
-            position: 'absolute', 
-            inset: 0, 
-            background: 'linear-gradient(120deg, rgba(4,8,32,0.62) 0%, rgba(10,16,60,0.42) 55%, rgba(30,20,90,0.35) 100%), linear-gradient(to bottom, rgba(2,6,23,0.15), rgba(2,6,23,0.45))',
+        heroOverlay: {
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(100deg, rgba(4,8,32,0.45) 0%, rgba(10,16,60,0.22) 45%, rgba(30,20,90,0.05) 100%)',
             zIndex: 1,
             pointerEvents: 'none'
         },
         heroContent: { flex: '1 1 520px', maxWidth: '700px', zIndex: 2, position: 'relative', textAlign: 'left', minWidth: '280px' },
-        heroImageWrapper: { flex: '0 0 520px', width: '100%', maxWidth: '620px', aspectRatio: '9 / 13', minHeight: '680px', height: '100%', borderRadius: '24px', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative', background: '#0b1325', boxShadow: '0 30px 70px rgba(2,6,23,0.45)', border: '1px solid rgba(148,163,184,0.18)' },
-        heroImageOverlay: { position: 'absolute', inset: 0, borderRadius: '24px', background: 'linear-gradient(180deg, rgba(2,6,23,0.08) 0%, rgba(2,6,23,0.28) 100%)', pointerEvents: 'none' },
+        heroImageWrapper: { flex: '0 0 auto', width: 'auto', maxWidth: '620px', aspectRatio: '9 / 16', height: 'min(74vh, 680px)', borderRadius: '24px', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative', background: '#0b1325', boxShadow: '0 30px 70px rgba(2,6,23,0.45)', border: '1px solid rgba(148,163,184,0.18)' },
+        heroImageOverlay: { position: 'absolute', inset: 0, borderRadius: '24px', background: 'transparent', pointerEvents: 'none' },
         heroImage: { width: '100%', height: '100%', borderRadius: '24px', objectFit: 'cover', objectPosition: 'center center', display: 'block', background: '#020817' },
         // Hero copy always sits on the photo → fixed white for guaranteed AA contrast
         heroBadge: { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 16px', borderRadius: '999px', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)', color: '#ffffff', fontSize: '13px', fontWeight: '700', letterSpacing: '0.04em', marginBottom: '22px' },
@@ -522,6 +519,32 @@ export default function LandingPage() {
 
             {/* 3. Hero Section */}
             <section className="landing-hero" style={p.hero}>
+                {/* SVG sharpening filter for the upscaled background photo */}
+                <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true" focusable="false">
+                    <defs>
+                        <filter id="emare-sharpen">
+                            <feConvolveMatrix order="3" preserveAlpha="true" kernelMatrix="0 -0.6 0 -0.6 3.4 -0.6 0 -0.6 0" />
+                        </filter>
+                    </defs>
+                </svg>
+
+                {/* Background image rendered as <img> so it can be sharpened + brightened */}
+                <img
+                    src="/images/Real Emare ICT HUB image.png"
+                    alt=""
+                    aria-hidden="true"
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: 'center center',
+                        filter: 'url(#emare-sharpen) brightness(1.12) saturate(1.08)',
+                        zIndex: 0
+                    }}
+                />
+
                 {/* Background overlay for better text readability */}
                 <div style={p.heroOverlay} />
                 
@@ -565,26 +588,23 @@ export default function LandingPage() {
                             onClick={handleHeroVideoUnmute}
                             style={{
                                 position: 'absolute',
-                                inset: 0,
+                                left: '50%',
+                                bottom: '18px',
+                                transform: 'translateX(-50%)',
                                 zIndex: 30,
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                background: 'rgba(2, 6, 23, 0.55)',
-                                border: '1px solid rgba(148, 163, 184, 0.28)',
-                                borderRadius: '30px',
+                                gap: '8px',
+                                background: 'rgba(2, 6, 23, 0.72)',
+                                border: '1px solid rgba(148, 163, 184, 0.35)',
+                                borderRadius: '999px',
                                 cursor: 'pointer',
                                 color: '#fff',
-                                padding: 0,
+                                padding: '8px 16px',
                             }}
                         >
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', padding: '20px', textAlign: 'center' }}>
-                                <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(79,70,229,0.45)' }}>
-                                    <Volume2 size={34} color="#ffffff" aria-hidden="true" />
-                                </div>
-                                <div style={{ fontSize: '18px', fontWeight: '800', letterSpacing: '0.04em' }}>Your Video Is Playing</div>
-                                <div style={{ color: '#c7d2fe', fontSize: '14px', fontWeight: '700', letterSpacing: '0.02em' }}>Click to Unmute</div>
-                            </div>
+                            <Volume2 size={18} color="#ffffff" aria-hidden="true" />
+                            <span style={{ fontSize: '13px', fontWeight: '700', whiteSpace: 'nowrap' }}>Click to Unmute</span>
                         </button>
                     )}
 
