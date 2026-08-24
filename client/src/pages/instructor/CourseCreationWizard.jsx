@@ -56,7 +56,17 @@ const newLesson = () => ({
     quizRequired: false,
     assignmentRequired: false,
     linkedQuizId: '',
-    linkedAssignmentId: ''
+    linkedAssignmentId: '',
+    quizCheckpoints: []
+});
+
+/** Create an empty in-video quiz checkpoint */
+const newCheckpoint = () => ({
+    checkpointId: `cp_${uid()}`,
+    title: '',
+    timestampSeconds: 0,
+    passingScorePercent: 60,
+    questions: []
 });
 
 /** Create a fresh empty chapter (always a new object — never reuse) */
@@ -76,6 +86,7 @@ const newDraft = () => ({
     assignmentRequired: false,
     linkedQuizId: '',
     linkedAssignmentId: '',
+    quizCheckpoints: [],
     videoProgress: null,   // null | 'uploading' | 'done' | 'error'
     pdfProgress: null,
     uploading: false
@@ -94,6 +105,53 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
 
     const setDraftField = (field, value) =>
         setDraft(prev => ({ ...prev, [field]: value }));
+
+    // ── In-video quiz checkpoint draft helpers ───────────────────────────────
+
+    const addCheckpoint = () =>
+        setDraft(prev => ({ ...prev, quizCheckpoints: [...(prev.quizCheckpoints || []), newCheckpoint()] }));
+
+    const removeCheckpoint = (cpIdx) =>
+        setDraft(prev => ({ ...prev, quizCheckpoints: prev.quizCheckpoints.filter((_, i) => i !== cpIdx) }));
+
+    const updateCheckpoint = (cpIdx, patch) =>
+        setDraft(prev => ({
+            ...prev,
+            quizCheckpoints: prev.quizCheckpoints.map((cp, i) => i === cpIdx ? { ...cp, ...patch } : cp)
+        }));
+
+    const addCheckpointQuestion = (cpIdx) => {
+        const cp = draft.quizCheckpoints[cpIdx];
+        updateCheckpoint(cpIdx, {
+            questions: [...(cp?.questions || []), { questionText: '', options: ['', ''], correctAnswerIndex: 0 }]
+        });
+    };
+
+    const removeCheckpointQuestion = (cpIdx, qIdx) => {
+        const cp = draft.quizCheckpoints[cpIdx];
+        updateCheckpoint(cpIdx, { questions: cp.questions.filter((_, i) => i !== qIdx) });
+    };
+
+    const updateCheckpointQuestion = (cpIdx, qIdx, patch) => {
+        const cp = draft.quizCheckpoints[cpIdx];
+        updateCheckpoint(cpIdx, {
+            questions: cp.questions.map((q, i) => i === qIdx ? { ...q, ...patch } : q)
+        });
+    };
+
+    const addCheckpointOption = (cpIdx, qIdx) => {
+        const q = draft.quizCheckpoints[cpIdx].questions[qIdx];
+        updateCheckpointQuestion(cpIdx, qIdx, { options: [...q.options, ''] });
+    };
+
+    const removeCheckpointOption = (cpIdx, qIdx, oIdx) => {
+        const q = draft.quizCheckpoints[cpIdx].questions[qIdx];
+        const options = q.options.filter((_, i) => i !== oIdx);
+        let correctAnswerIndex = q.correctAnswerIndex;
+        if (correctAnswerIndex === oIdx) correctAnswerIndex = 0;
+        else if (correctAnswerIndex > oIdx) correctAnswerIndex -= 1;
+        updateCheckpointQuestion(cpIdx, qIdx, { options, correctAnswerIndex: Math.min(correctAnswerIndex, options.length - 1) });
+    };
 
     // ── Video upload (Bunny Stream) ──────────────────────────────────────────
 
@@ -160,7 +218,23 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
             quizRequired: draft.quizRequired,
             assignmentRequired: draft.assignmentRequired,
             linkedQuizId: draft.linkedQuizId.trim() || '',
-            linkedAssignmentId: draft.linkedAssignmentId.trim() || ''
+            linkedAssignmentId: draft.linkedAssignmentId.trim() || '',
+            // In-video quiz checkpoints — each must have 3–5 answerable questions
+            quizCheckpoints: (draft.quizCheckpoints || []).filter(cp =>
+                cp.timestampSeconds >= 0 &&
+                (cp.questions || []).length >= 3 && (cp.questions || []).length <= 5 &&
+                cp.questions.every(q => q.questionText.trim() && q.options.filter(o => o.trim()).length >= 2)
+            ).map(cp => ({
+                checkpointId: cp.checkpointId,
+                title: cp.title.trim(),
+                timestampSeconds: Number(cp.timestampSeconds) || 0,
+                passingScorePercent: Number(cp.passingScorePercent) || 60,
+                questions: cp.questions.map(q => ({
+                    questionText: q.questionText.trim(),
+                    options: q.options.map(o => o.trim()),
+                    correctAnswerIndex: Number(q.correctAnswerIndex) || 0
+                }))
+            }))
         };
         onUpdate({ ...chapter, lessons: [...chapter.lessons, lesson] });
         // Reset ONLY this chapter's draft — do not touch any other chapter
@@ -234,6 +308,15 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                                     }}>
                                         Assignment: {lesson.assignmentRequired ? 'ON' : 'OFF'}
                                     </span>
+                                    {(lesson.quizCheckpoints || []).length > 0 && (
+                                        <span style={{
+                                            padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700,
+                                            background: 'rgba(99,102,241,0.18)', color: '#a5b4fc',
+                                            border: '1px solid rgba(99,102,241,0.35)'
+                                        }}>
+                                            ⏸ {lesson.quizCheckpoints.length} in-video quiz{(lesson.quizCheckpoints.length > 1) ? 'zes' : ''}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
@@ -403,6 +486,92 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                     )}
                     {draft.pdfProgress === 'done' && <div style={{ marginTop: 5, color: '#10b981', fontSize: 12, fontWeight: 600 }}>✓ PDF uploaded to Bunny Storage</div>}
                     {draft.pdfProgress === 'error' && <div style={{ marginTop: 5, color: '#ef4444', fontSize: 12, fontWeight: 600 }}>✗ PDF upload failed — try again</div>}
+                </div>
+
+                {/* Row 3b: In-video quiz checkpoints */}
+                <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, border: '1px solid rgba(71,85,105,0.35)', padding: '12px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            In-Video Quiz Checkpoints
+                        </p>
+                        <button type="button" onClick={addCheckpoint} style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.4)', color: '#a5b4fc',
+                            borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer'
+                        }}>
+                            <Plus size={13} /> Add Checkpoint Quiz
+                        </button>
+                    </div>
+                    <p style={{ margin: '0 0 12px', fontSize: 11, color: '#94a3b8' }}>
+                        The video automatically pauses at each checkpoint timestamp and shows a quiz covering that segment. Each quiz needs 3–5 questions, and students must pass it to continue watching. Checkpoints with fewer than 3 or more than 5 complete questions will not be saved.
+                    </p>
+
+                    {(draft.quizCheckpoints || []).length === 0 && (
+                        <p style={{ margin: 0, fontSize: 12, color: '#64748b', fontStyle: 'italic' }}>
+                            No checkpoints yet — add one to embed a mandatory quiz in this lesson's video timeline.
+                        </p>
+                    )}
+
+                    {(draft.quizCheckpoints || []).map((cp, cpIdx) => (
+                        <div key={cp.checkpointId} style={{ background: 'rgba(15,23,42,0.5)', borderRadius: 10, border: '1px solid rgba(71,85,105,0.45)', padding: '12px 14px', marginBottom: 12 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                                <span style={{ fontSize: 12, fontWeight: 800, color: '#f59e0b' }}>⏸ Checkpoint {cpIdx + 1}</span>
+                                <button type="button" onClick={() => removeCheckpoint(cpIdx)} style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                                    background: 'transparent', border: '1px solid rgba(239,68,68,0.35)', color: '#ef4444',
+                                    borderRadius: 7, padding: '4px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer'
+                                }}>
+                                    <Trash2 size={12} /> Remove
+                                </button>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Title</label>
+                                    <input style={styles.input} value={cp.title} onChange={e => updateCheckpoint(cpIdx, { title: e.target.value })} placeholder={`Segment ${cpIdx + 1} quiz`} />
+                                </div>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Pause At (seconds)</label>
+                                    <input type="number" min="0" style={styles.input} value={cp.timestampSeconds} onChange={e => updateCheckpoint(cpIdx, { timestampSeconds: Number(e.target.value) || 0 })} placeholder="300" />
+                                </div>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Passing Score (%)</label>
+                                    <input type="number" min="0" max="100" style={styles.input} value={cp.passingScorePercent} onChange={e => updateCheckpoint(cpIdx, { passingScorePercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })} />
+                                </div>
+                            </div>
+
+                            {/* Questions */}
+                            {(cp.questions || []).map((q, qIdx) => (
+                                <div key={qIdx} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid rgba(71,85,105,0.35)', padding: '10px 12px', marginBottom: 8 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                        <span style={{ fontSize: 11, fontWeight: 700, color: '#cbd5e1' }}>Question {qIdx + 1}</span>
+                                        <button type="button" onClick={() => removeCheckpointQuestion(cpIdx, qIdx)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: 2 }}>✕ Remove</button>
+                                    </div>
+                                    <input style={{ ...styles.input, marginBottom: 8 }} value={q.questionText} onChange={e => updateCheckpointQuestion(cpIdx, qIdx, { questionText: e.target.value })} placeholder="Enter the question text" />
+                                    {(q.options || []).map((opt, oIdx) => (
+                                        <div key={oIdx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                            <input type="radio" name={`correct_${cpIdx}_${qIdx}`} checked={q.correctAnswerIndex === oIdx} onChange={() => updateCheckpointQuestion(cpIdx, qIdx, { correctAnswerIndex: oIdx })} style={{ accentColor: '#10b981', width: 15, height: 15, flexShrink: 0 }} title="Mark as correct answer" />
+                                            <input style={{ ...styles.input, marginBottom: 0 }} value={opt} onChange={e => updateCheckpointQuestion(cpIdx, qIdx, { options: q.options.map((o, i) => i === oIdx ? e.target.value : o) })} placeholder={`Option ${oIdx + 1}`} />
+                                            {(q.options.length > 2) && (
+                                                <button type="button" onClick={() => removeCheckpointOption(cpIdx, qIdx, oIdx)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 13, padding: 2 }}>✕</button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
+                                        <button type="button" onClick={() => addCheckpointOption(cpIdx, qIdx)} style={{ background: 'transparent', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: 0 }}>+ Add Option</button>
+                                        <span style={{ fontSize: 10, color: '#94a3b8' }}>◉ = correct answer</span>
+                                    </div>
+                                </div>
+                            ))}
+
+                            <button type="button" onClick={() => addCheckpointQuestion(cpIdx)} style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 6,
+                                background: 'transparent', border: '1px dashed rgba(148,163,184,0.4)', color: '#94a3b8',
+                                borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                            }}>
+                                <Plus size={12} /> Add Question
+                            </button>
+                        </div>
+                    ))}
                 </div>
 
                 {/* Row 4: action buttons */}
@@ -577,7 +746,9 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
                 quizRequired:       !!l.quizRequired,
                 assignmentRequired: !!l.assignmentRequired,
                 linkedQuizId:       l.linkedQuizId       && l.linkedQuizId.trim()       ? l.linkedQuizId.trim()       : null,
-                linkedAssignmentId: l.linkedAssignmentId && l.linkedAssignmentId.trim() ? l.linkedAssignmentId.trim() : null
+                linkedAssignmentId: l.linkedAssignmentId && l.linkedAssignmentId.trim() ? l.linkedAssignmentId.trim() : null,
+                // In-video quiz checkpoints embedded in the lesson video timeline
+                quizCheckpoints:    Array.isArray(l.quizCheckpoints) ? l.quizCheckpoints : []
             }))
         }))
     });

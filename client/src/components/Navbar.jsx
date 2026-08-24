@@ -76,6 +76,18 @@ export default function Navbar() {
         }
     };
 
+    // Shared hover feedback for nav links & ghost buttons
+    const linkHover = (e) => {
+        e.currentTarget.style.color = colors.primary;
+        e.currentTarget.style.background = colors.primarySoft;
+    };
+    const linkLeave = (e) => {
+        e.currentTarget.style.color = colors.text;
+        e.currentTarget.style.background = 'transparent';
+    };
+    const registerHover = (e) => { e.currentTarget.style.filter = 'brightness(1.12)'; };
+    const registerLeave = (e) => { e.currentTarget.style.filter = 'none'; };
+
     const s = {
         wrapper: {
             position: 'fixed',
@@ -102,12 +114,12 @@ export default function Navbar() {
         logoBox: { display: 'flex', alignItems: 'center', gap: '12px' },
         logoMark: { width: '180px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', objectFit: 'contain' },
         logoText: { fontSize: '14px', fontWeight: '800', letterSpacing: '0.45px', color: colors.text, whiteSpace: 'nowrap' },
-        navCenter: { display: 'flex', alignItems: 'center', gap: '20px' },
-        navLink: { textDecoration: 'none', fontWeight: '500', fontSize: '13px', transition: 'color 0.2s', color: colors.text },
+        navCenter: { display: 'flex', alignItems: 'center', gap: '6px' },
+        navLink: { textDecoration: 'none', fontWeight: '600', fontSize: '14px', transition: 'color 0.15s ease, background 0.15s ease', color: colors.text, padding: '8px 12px', borderRadius: '8px' },
         navRight: { display: 'flex', alignItems: 'center', gap: '12px' },
-        iconBtn: { background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '20px', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-        loginBtn: { textDecoration: 'none', fontWeight: '600', fontSize: '14px', padding: '8px 16px', background: 'transparent', border: 'none', cursor: 'pointer', color: colors.text },
-        registerBtn: { background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', textDecoration: 'none', padding: '10px 22px', borderRadius: '10px', fontWeight: '700', fontSize: '14px' },
+        iconBtn: { background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '20px', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '10px' },
+        loginBtn: { textDecoration: 'none', fontWeight: '600', fontSize: '14px', padding: '10px 16px', background: 'transparent', border: 'none', cursor: 'pointer', color: colors.text, borderRadius: '10px' },
+        registerBtn: { background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', textDecoration: 'none', padding: '10px 22px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', boxShadow: `0 4px 14px -4px ${colors.primary}66` },
         logoutBtn: { background: `${colors.danger}15`, border: `1px solid ${colors.danger}30`, color: colors.danger, borderRadius: '8px', padding: '10px 16px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', transition: 'background 0.2s' },
         mobileMenuButton: { display: 'none', border: 'none', background: 'transparent', color: colors.text, fontSize: '24px', cursor: 'pointer', padding: '4px 8px' },
         
@@ -136,19 +148,26 @@ export default function Navbar() {
                 <button className="emare-mobile-menu-button" aria-label="Open navigation" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} style={s.mobileMenuButton}>☰</button>
 
                 <div className="emare-nav-center" style={s.navCenter}>
-                    <Link to="/" style={s.navLink}>Home</Link>
-                    <Link to="/about" style={s.navLink}>About</Link>
-                    <Link to="/developers" style={s.navLink}>Emare Developers</Link>
-                    <Link to="/courses" style={s.navLink}>Course Catalogs</Link>
-                    <Link to="/events" style={s.navLink}>Events</Link>
-                    <a href="#services" style={s.navLink} onClick={e => { e.preventDefault(); goToSection('services'); }}>Services</a>
-                    <a href="#contact" style={s.navLink} onClick={e => { e.preventDefault(); goToSection('contact'); }}>Contact</a>
+                    <Link to="/" style={s.navLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>Home</Link>
+                    <Link to="/about" style={s.navLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>About</Link>
+                    <Link to="/developers" style={s.navLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>Emare Developers</Link>
+                    <Link to="/courses" style={s.navLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>Course Catalogs</Link>
+                    <Link to="/events" style={s.navLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>Events</Link>
+                    <a href="#services" style={s.navLink} onMouseEnter={linkHover} onMouseLeave={linkLeave} onClick={e => { e.preventDefault(); goToSection('services'); }}>Services</a>
+                    <a href="#contact" style={s.navLink} onMouseEnter={linkHover} onMouseLeave={linkLeave} onClick={e => { e.preventDefault(); goToSection('contact'); }}>Contact</a>
                 </div>
 
                 <div className="emare-nav-right" style={s.navRight}>
                     {/* Language Switcher */}
                     <div style={s.langDropdownContainer} ref={dropdownRef}>
-                        <button onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)} style={s.langBtn}>
+                        <button
+                            onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
+                            style={s.langBtn}
+                            aria-haspopup="listbox"
+                            aria-expanded={isLangDropdownOpen}
+                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = colors.primary; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = isLangDropdownOpen ? colors.primary : colors.border; }}
+                        >
                             ◉ {currentLanguageName}
                         </button>
                         <div style={s.langDropdown}>
@@ -171,7 +190,14 @@ export default function Navbar() {
                     </div>
 
                     {/* Dark Mode Toggle */}
-                    <button onClick={toggleTheme} style={s.iconBtn} title="Toggle Theme">
+                    <button
+                        onClick={toggleTheme}
+                        style={s.iconBtn}
+                        title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                        aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = colors.bgInput; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                    >
                         {theme === 'dark' ? '☀️' : '🌙'}
                     </button>
                     
@@ -192,8 +218,8 @@ export default function Navbar() {
                         </button>
                     ) : (
                         <>
-                            <Link to="/login" style={s.loginBtn}>Login</Link>
-                            <Link to="/register" style={s.registerBtn}>Register</Link>
+                            <Link to="/login" style={s.loginBtn} onMouseEnter={linkHover} onMouseLeave={linkLeave}>Login</Link>
+                            <Link to="/register" style={s.registerBtn} onMouseEnter={registerHover} onMouseLeave={registerLeave}>Register</Link>
                         </>
                     )}
                 </div>

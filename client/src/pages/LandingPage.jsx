@@ -250,6 +250,18 @@ export default function LandingPage() {
         if (searchQuery.trim()) navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
     };
 
+    // Shared hover feedback for outline ("ghost") buttons
+    const ghostBtnHover = (e) => {
+        e.currentTarget.style.borderColor = colors.primary;
+        e.currentTarget.style.color = colors.primary;
+        e.currentTarget.style.background = colors.primarySoft;
+    };
+    const ghostBtnLeave = (e) => {
+        e.currentTarget.style.borderColor = colors.border;
+        e.currentTarget.style.color = colors.text;
+        e.currentTarget.style.background = 'transparent';
+    };
+
     const handleHeroVideoUnmute = async () => {
         const video = heroVideoRef.current;
         if (!video) return;
@@ -359,7 +371,17 @@ export default function LandingPage() {
 
     // Helper to generate generic course cards to satisfy the visual requirements of 11, 12, 13
     const renderCourseCard = (course, tag, tagColor) => (
-        <div key={course._id} onClick={() => navigate(`/courses/${course._id}`)} style={p.courseCard}>
+        <div key={course._id} onClick={() => navigate(`/courses/${course._id}`)} style={p.courseCard}
+            onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 14px 34px -8px rgba(16,24,40,0.22)';
+                e.currentTarget.style.borderColor = colors.primary;
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = colors.shadowSm;
+                e.currentTarget.style.borderColor = colors.border;
+            }}>
             <div style={p.courseImage}>
                 {course.thumbnailUrl ? <img src={course.thumbnailUrl} alt={course.courseTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '48px' }}>◈</span>}
             </div>
@@ -386,7 +408,7 @@ export default function LandingPage() {
     // ── STYLES ──────────────────────────────────────────────────────────────
 
     const p = {
-        page: { minHeight: '100vh', fontFamily: "'Outfit', 'Inter', sans-serif", overflowX: 'hidden' },
+        page: { minHeight: '100vh', fontFamily: "'Inter', 'Segoe UI', sans-serif", overflowX: 'hidden' },
         hero: { 
             position: 'relative', 
             padding: '120px 5% 100px', 
@@ -405,44 +427,47 @@ export default function LandingPage() {
         heroOverlay: { 
             position: 'absolute', 
             inset: 0, 
-            background: 'linear-gradient(135deg, rgba(6,10,78,0.25), rgba(20,30,100,0.20))',
+            background: 'linear-gradient(120deg, rgba(4,8,32,0.62) 0%, rgba(10,16,60,0.42) 55%, rgba(30,20,90,0.35) 100%), linear-gradient(to bottom, rgba(2,6,23,0.15), rgba(2,6,23,0.45))',
             zIndex: 1,
             pointerEvents: 'none'
         },
         heroContent: { flex: '1 1 520px', maxWidth: '700px', zIndex: 2, position: 'relative', textAlign: 'left', minWidth: '280px' },
-        heroImageWrapper: { flex: '0 0 520px', width: '100%', maxWidth: '620px', aspectRatio: '9 / 13', minHeight: '680px', height: '100%', borderRadius: '30px', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative', background: '#0b1325', boxShadow: '0 30px 70px rgba(15,23,42,0.22)', border: '1px solid rgba(148,163,184,0.12)' },
-        heroImageOverlay: { position: 'absolute', inset: 0, borderRadius: '30px', background: 'linear-gradient(180deg, rgba(2,6,23,0.08) 0%, rgba(2,6,23,0.18) 100%)', pointerEvents: 'none' },
-        heroImage: { width: '100%', height: '100%', borderRadius: '30px', objectFit: 'cover', objectPosition: 'center center', display: 'block', background: '#020817' },
-        heroTitle: { fontSize: '60px', fontWeight: '900', lineHeight: 1.1, margin: '0 0 16px', letterSpacing: '-2px', color: colors.text },
-        heroSubtitleAnimated: { fontSize: '32px', fontWeight: '700', lineHeight: 1.2, margin: '0 0 40px', maxWidth: '600px', color: colors.primary, minHeight: '50px' },
-        heroSubtitle: { fontSize: '18px', color: colors.textMuted, lineHeight: 1.7, margin: '0 0 32px', maxWidth: '600px' },
-        searchForm: { display: 'flex', flexWrap: 'wrap', gap: '10px', maxWidth: '600px', margin: '0 0 32px', background: colors.bgCard, borderRadius: '14px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' },
+        heroImageWrapper: { flex: '0 0 520px', width: '100%', maxWidth: '620px', aspectRatio: '9 / 13', minHeight: '680px', height: '100%', borderRadius: '24px', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative', background: '#0b1325', boxShadow: '0 30px 70px rgba(2,6,23,0.45)', border: '1px solid rgba(148,163,184,0.18)' },
+        heroImageOverlay: { position: 'absolute', inset: 0, borderRadius: '24px', background: 'linear-gradient(180deg, rgba(2,6,23,0.08) 0%, rgba(2,6,23,0.28) 100%)', pointerEvents: 'none' },
+        heroImage: { width: '100%', height: '100%', borderRadius: '24px', objectFit: 'cover', objectPosition: 'center center', display: 'block', background: '#020817' },
+        // Hero copy always sits on the photo → fixed white for guaranteed AA contrast
+        heroBadge: { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 16px', borderRadius: '999px', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)', color: '#ffffff', fontSize: '13px', fontWeight: '700', letterSpacing: '0.04em', marginBottom: '22px' },
+        heroTitle: { fontSize: 'clamp(38px, 5vw, 60px)', fontWeight: '900', lineHeight: 1.08, margin: '0 0 16px', letterSpacing: '-2px', color: '#ffffff', textShadow: '0 2px 24px rgba(2,6,23,0.45)' },
+        heroSubtitleAnimated: { fontSize: '30px', fontWeight: '700', lineHeight: 1.22, margin: '0 0 36px', maxWidth: '600px', color: '#a5b4fc', minHeight: '50px', textShadow: '0 2px 18px rgba(2,6,23,0.5)' },
+        heroSubtitle: { fontSize: '18px', color: 'rgba(255,255,255,0.88)', lineHeight: 1.7, margin: '0 0 30px', maxWidth: '600px' },
+        searchForm: { display: 'flex', flexWrap: 'wrap', gap: '10px', maxWidth: '600px', margin: '0 0 30px', background: colors.bgCard, borderRadius: '14px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: colors.shadow },
         searchInput: { flex: '1 1 260px', background: 'transparent', border: 'none', color: colors.text, padding: '18px 24px', fontSize: '15px', outline: 'none', minWidth: '180px' },
-        searchBtn: { background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', border: 'none', padding: '16px 28px', fontWeight: '700', cursor: 'pointer', fontSize: '15px', flex: '0 0 auto' },
-        heroActions: { display: 'flex', gap: '16px', justifyContent: 'flex-start', flexWrap: 'wrap' },
-        primaryBtn: { background: colors.text, color: colors.bg, border: 'none', padding: '14px 32px', borderRadius: '12px', fontSize: '15px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' },
-        secondaryBtn: { background: colors.bgInput, color: colors.text, border: `1px solid ${colors.border}`, padding: '14px 32px', borderRadius: '12px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' },
+        searchBtn: { background: colors.gradient, color: '#fff', border: 'none', padding: '16px 28px', fontWeight: '700', cursor: 'pointer', fontSize: '15px', flex: '0 0 auto' },
+        heroActions: { display: 'flex', gap: '14px', justifyContent: 'flex-start', flexWrap: 'wrap' },
+        primaryBtn: { background: colors.gradient, color: '#ffffff', border: 'none', padding: '15px 34px', borderRadius: '12px', fontSize: '15px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 10px 26px -6px rgba(79,70,229,0.55)', transition: 'transform 0.15s ease, box-shadow 0.15s ease' },
+        secondaryBtn: { background: 'rgba(255,255,255,0.10)', color: '#ffffff', border: '1px solid rgba(255,255,255,0.35)', backdropFilter: 'blur(6px)', padding: '15px 34px', borderRadius: '12px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', transition: 'background 0.15s ease' },
         heroGlow1: { position: 'absolute', width: '600px', height: '600px', background: colors.primary, filter: 'blur(150px)', opacity: 0, top: '-200px', left: '-100px', borderRadius: '50%', pointerEvents: 'none' },
         heroGlow2: { position: 'absolute', width: '500px', height: '500px', background: colors.accent, filter: 'blur(150px)', opacity: 0, bottom: '-100px', right: '-100px', borderRadius: '50%', pointerEvents: 'none' },
 
-        statsSection: { padding: '40px 5%', background: colors.bgCard, borderBottom: `1px solid ${colors.border}` },
-        statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '20px', maxWidth: '1400px', margin: '0 auto' },
+        statsSection: { padding: '44px 5%', background: colors.bgCard, borderBottom: `1px solid ${colors.border}` },
+        statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '20px', maxWidth: '1400px', margin: '0 auto' },
         statBox: { textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' },
-        statValue: { fontSize: '24px', fontWeight: '900', color: colors.text },
-        statLabel: { color: colors.textMuted, fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' },
+        statValue: { fontSize: '26px', fontWeight: '800', color: colors.primary, letterSpacing: '-0.02em' },
+        statLabel: { color: colors.textMuted, fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.06em' },
 
-        section: { padding: '80px 5%', maxWidth: '1400px', margin: '0 auto' },
-        sectionHeader: { textAlign: 'center', marginBottom: '50px' },
-        sectionBadge: { display: 'inline-block', padding: '6px 16px', background: `${colors.primary}15`, color: colors.primary, borderRadius: '20px', fontWeight: '700', fontSize: '13px', marginBottom: '16px', border: `1px solid ${colors.primary}30` },
-        sectionTitle: { fontSize: '36px', fontWeight: '900', margin: '0 0 12px', color: colors.text },
+        section: { padding: '88px 5%', maxWidth: '1400px', margin: '0 auto' },
+        sectionHeader: { textAlign: 'center', marginBottom: '56px' },
+        sectionBadge: { display: 'inline-block', padding: '6px 16px', background: colors.primarySoft, color: colors.primary, borderRadius: '999px', fontWeight: '700', fontSize: '13px', marginBottom: '16px', border: `1px solid ${colors.border}` },
+        sectionTitle: { fontSize: 'clamp(28px, 3.4vw, 38px)', fontWeight: '800', margin: '0 0 14px', color: colors.textBright, letterSpacing: '-0.02em' },
         sectionSubtitle: { color: colors.textMuted, fontSize: '17px', margin: 0 },
 
         grid4: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' },
         grid6: { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '20px' },
         
-        categoryCard: { background: colors.bgCard, borderRadius: '16px', padding: '24px', border: `1px solid ${colors.border}`, cursor: 'pointer', textAlign: 'center', transition: 'transform 0.2s', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' },
+        cardShadow: colors.shadow,
+        categoryCard: { background: colors.bgCard, borderRadius: '16px', padding: '24px', border: `1px solid ${colors.border}`, cursor: 'pointer', textAlign: 'center', transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: colors.shadowSm },
         
-        courseCard: { background: colors.bgCard, borderRadius: '16px', border: `1px solid ${colors.border}`, overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' },
+        courseCard: { background: colors.bgCard, borderRadius: '16px', border: `1px solid ${colors.border}`, overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: colors.shadowSm },
         courseImage: { height: '180px', background: `linear-gradient(135deg, ${colors.primary}15, ${colors.accent}15)`, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: `1px solid ${colors.border}` },
         courseBody: { padding: '22px' },
         courseBadge: { display: 'inline-block', padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', marginBottom: '10px' },
@@ -453,41 +478,34 @@ export default function LandingPage() {
         coursePrice: { fontSize: '20px', fontWeight: '800', color: colors.text },
         enrollBtn: { background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' },
 
-        pathCard: { background: colors.bgCard, borderRadius: '16px', padding: '28px', border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' },
+        pathCard: { background: colors.bgCard, borderRadius: '16px', padding: '28px', border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '20px', boxShadow: colors.shadowSm },
         
-        instructorCard: { background: colors.bgCard, borderRadius: '16px', padding: '24px', border: `1px solid ${colors.border}`, textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' },
+        instructorCard: { background: colors.bgCard, borderRadius: '16px', padding: '24px', border: `1px solid ${colors.border}`, textAlign: 'center', boxShadow: colors.shadowSm, transition: 'transform 0.2s, box-shadow 0.2s' },
         instructorAvatar: { width: '80px', height: '80px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: '800', margin: '0 auto 16px' },
 
         liveCard: { background: colors.bgCard, borderRadius: '16px', padding: '24px', border: `1px solid ${colors.primary}50`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: `0 4px 20px ${colors.primary}10` },
 
         faqContainer: { maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px' },
-        faqItem: { background: colors.bgCard, borderRadius: '12px', padding: '20px 24px', border: `1px solid ${colors.border}`, cursor: 'pointer', transition: 'border-color 0.2s', boxShadow: '0 4px 15px rgba(0,0,0,0.02)' },
+        faqItem: { background: colors.bgCard, borderRadius: '12px', padding: '20px 24px', border: `1px solid ${colors.border}`, cursor: 'pointer', transition: 'border-color 0.2s, box-shadow 0.2s', boxShadow: colors.shadowSm },
+        faqQuestion: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', fontSize: '16px', fontWeight: '600', color: colors.text, lineHeight: 1.4 },
+        faqAnswer: { margin: '14px 0 0', color: colors.textMuted, fontSize: '15px', lineHeight: 1.65 },
         
-        contactSection: { padding: '80px 5%', background: '#eef2ff' },
+        contactSection: { padding: '88px 5%', background: colors.bgDarker },
         contactContainer: { maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', alignItems: 'stretch' },
         contactLeft: { display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '8px' },
-        contactBadge: { letterSpacing: '0.25em', color: '#22c55e', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' },
-        contactTitle: { fontSize: '44px', fontWeight: '900', color: '#0f172a', margin: '0', lineHeight: 1.1, letterSpacing: '-1px' },
-        contactSubtitle: { fontSize: '17px', color: '#64748b', margin: '0 0 28px' },
+        contactBadge: { letterSpacing: '0.25em', color: colors.primary, fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' },
+        contactTitle: { fontSize: 'clamp(30px, 3.6vw, 44px)', fontWeight: '800', color: colors.textBright, margin: '0', lineHeight: 1.12, letterSpacing: '-0.02em' },
+        contactSubtitle: { fontSize: '17px', color: colors.textMuted, margin: '0 0 28px' },
         contactForm: { display: 'flex', flexDirection: 'column', gap: '16px' },
         contactRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
-        contactInput: { width: '100%', background: '#ffffff', border: 'none', color: '#0f172a', padding: '14px 18px', borderRadius: '12px', fontSize: '15px', outline: 'none', boxSizing: 'border-box' },
-        contactTextarea: { width: '100%', background: '#ffffff', border: 'none', color: '#0f172a', padding: '14px 18px', borderRadius: '12px', fontSize: '15px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', minHeight: '140px', fontFamily: 'inherit' },
-        contactSubmitBtn: { alignSelf: 'flex-start', background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: '#ffffff', border: 'none', borderRadius: '12px', padding: '14px 40px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', marginTop: '4px', boxShadow: '0 12px 28px rgba(59,130,246,0.35)' },
-        contactSuccess: { background: '#f0fdf4', color: '#166534', padding: '14px 18px', borderRadius: '12px', border: '1px solid #86efac', fontSize: '14px', marginTop: '16px' },
+        contactInput: { width: '100%', background: colors.bgCard, border: `1px solid ${colors.border}`, color: colors.text, padding: '14px 18px', borderRadius: '12px', fontSize: '15px', outline: 'none', boxSizing: 'border-box' },
+        contactTextarea: { width: '100%', background: colors.bgCard, border: `1px solid ${colors.border}`, color: colors.text, padding: '14px 18px', borderRadius: '12px', fontSize: '15px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', minHeight: '140px', fontFamily: 'inherit' },
+        contactSubmitBtn: { alignSelf: 'flex-start', background: colors.gradient, color: '#ffffff', border: 'none', borderRadius: '12px', padding: '14px 40px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', marginTop: '4px', boxShadow: '0 12px 28px -6px rgba(79,70,229,0.5)' },
+        contactSuccess: { background: `${colors.success}14`, color: colors.success, padding: '14px 18px', borderRadius: '12px', border: `1px solid ${colors.success}45`, fontSize: '14px', marginTop: '16px' },
         contactImageWrap: { position: 'relative', borderRadius: '24px', overflow: 'hidden', minHeight: '420px' },
         contactImage: { width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius: '24px', minHeight: '420px' },
 
-        // Contact banner + map (just above the footer)
-        contactBanner: { background: '#ffffff', padding: '56px 5%', borderTop: `1px solid ${colors.border}` },
-        contactBannerGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '32px', maxWidth: '1400px', margin: '0 auto' },
-        contactItem: { display: 'flex', alignItems: 'flex-start', gap: '14px', color: '#0f172a' },
-        contactIconBox: { width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(0,230,153,0.12)', border: '1px solid rgba(0,230,153,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#00E699' },
-        contactItemHeader: { margin: '0 0 8px', fontSize: '13px', fontWeight: '800', letterSpacing: '1.2px', color: '#00E699' },
-        contactItemText: { margin: '0', fontSize: '15px', lineHeight: 1.6, color: '#f8fafc', wordBreak: 'break-word' },
-        contactItemLink: { color: '#f8fafc', textDecoration: 'none', transition: 'color 0.2s', fontSize: '15px', lineHeight: 1.6, display: 'block' },
-        contactMap: { display: 'block', width: '100%', height: '380px', border: '0' },
-        contactMapWrap: { width: '100%', lineHeight: 0 },
+        // Contact banner + map now live in the shared SiteFooter component
 
         footer: { padding: '80px 5% 0', borderTop: `1px solid ${colors.border}`, background: colors.bgCard },
         footerGrid: { display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '40px', maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' },
@@ -508,6 +526,7 @@ export default function LandingPage() {
                 <div style={p.heroOverlay} />
                 
                 <div className="landing-hero-content" style={p.heroContent}>
+                    <div style={p.heroBadge}>🎓 Trusted by 2,500+ learners across Ethiopia</div>
                     <h1 style={p.heroTitle}>Welcome to Emare ICT Hub</h1>
                     <h2 style={p.heroSubtitleAnimated}>
                         Master In-Demand Tech Skills, Build Your Future, and Become Job Ready.
@@ -518,7 +537,11 @@ export default function LandingPage() {
                     </form>
                     <div className="landing-hero-actions" style={p.heroActions}>
                         <button onClick={() => navigate('/courses')} style={p.primaryBtn}>Browse Courses</button>
-                        <button onClick={() => navigate('/courses')} style={p.secondaryBtn}>Start Learning for Free</button>
+                        {!isAuthenticated ? (
+                            <button onClick={() => navigate('/register')} style={p.secondaryBtn}>Start Learning for Free</button>
+                        ) : (
+                            <button onClick={() => navigate('/student/dashboard')} style={p.secondaryBtn}>Go to My Dashboard</button>
+                        )}
                     </div>
                 </div>
                 <div className="landing-hero-image-wrapper" style={p.heroImageWrapper}>
@@ -556,11 +579,11 @@ export default function LandingPage() {
                             }}
                         >
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', padding: '20px', textAlign: 'center' }}>
-                                <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(245,158,11,0.35)' }}>
-                                    <Volume2 size={34} color="#0f172a" aria-hidden="true" />
+                                <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(79,70,229,0.45)' }}>
+                                    <Volume2 size={34} color="#ffffff" aria-hidden="true" />
                                 </div>
                                 <div style={{ fontSize: '18px', fontWeight: '800', letterSpacing: '0.04em' }}>Your Video Is Playing</div>
-                                <div style={{ color: '#fbbf24', fontSize: '14px', fontWeight: '700', letterSpacing: '0.02em' }}>Click to Unmute</div>
+                                <div style={{ color: '#c7d2fe', fontSize: '14px', fontWeight: '700', letterSpacing: '0.02em' }}>Click to Unmute</div>
                             </div>
                         </button>
                     )}
@@ -593,12 +616,12 @@ export default function LandingPage() {
                 <div style={{ textAlign: 'center', marginBottom: '16px' }}>
                     <span style={{
                         display: 'inline-block',
-                        background: 'rgba(34,197,94,0.12)',
-                        color: '#22c55e',
-                        border: '1px solid rgba(34,197,94,0.3)',
+                        background: 'rgba(96,165,250,0.14)',
+                        color: '#93c5fd',
+                        border: '1px solid rgba(96,165,250,0.35)',
                         borderRadius: '999px',
-                        padding: '5px 18px',
-                        fontSize: '11px',
+                        padding: '6px 18px',
+                        fontSize: '12px',
                         fontWeight: '800',
                         letterSpacing: '0.1em',
                         textTransform: 'uppercase'
@@ -673,7 +696,7 @@ export default function LandingPage() {
                                 cursor: 'default'
                             }}
                             onMouseEnter={e => {
-                                e.currentTarget.style.borderColor = 'rgba(34,197,94,0.45)';
+                                e.currentTarget.style.borderColor = 'rgba(96,165,250,0.5)';
                                 e.currentTarget.style.transform = 'translateY(-4px)';
                             }}
                             onMouseLeave={e => {
@@ -686,8 +709,8 @@ export default function LandingPage() {
                                 width: '52px',
                                 height: '52px',
                                 borderRadius: '14px',
-                                background: 'rgba(34,197,94,0.1)',
-                                border: '1px solid rgba(34,197,94,0.25)',
+                                background: `linear-gradient(135deg, rgba(37,99,235,0.18), rgba(124,58,237,0.18))`,
+                                border: '1px solid rgba(96,165,250,0.3)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -742,6 +765,7 @@ export default function LandingPage() {
                 </div>
                 <div style={{ textAlign: 'center', marginTop: '32px' }}>
                     <button onClick={() => navigate('/categories')}
+                        onMouseEnter={ghostBtnHover} onMouseLeave={ghostBtnLeave}
                         style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, padding: '12px 28px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>
                         View All Categories →
                     </button>
@@ -779,6 +803,8 @@ export default function LandingPage() {
                                 {coursesVisible < allCourses.length && (
                                     <button
                                         onClick={() => setCoursesVisible(v => Math.min(v + 8, allCourses.length))}
+                                        onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.12)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; }}
                                         style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', border: 'none', padding: '13px 32px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
                                     >
                                         Load More Courses ({allCourses.length - coursesVisible} remaining)
@@ -787,6 +813,7 @@ export default function LandingPage() {
                                 {coursesVisible > 8 && (
                                     <button
                                         onClick={() => setCoursesVisible(8)}
+                                        onMouseEnter={ghostBtnHover} onMouseLeave={ghostBtnLeave}
                                         style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, padding: '13px 24px', borderRadius: '10px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
                                     >
                                         Show Less
@@ -794,6 +821,7 @@ export default function LandingPage() {
                                 )}
                                 <button
                                     onClick={() => navigate('/courses')}
+                                    onMouseEnter={ghostBtnHover} onMouseLeave={ghostBtnLeave}
                                     style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, padding: '13px 24px', borderRadius: '10px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
                                 >
                                     View Full Catalog →
@@ -802,7 +830,7 @@ export default function LandingPage() {
                         )}
                         {allCourses.length <= 8 && (
                             <div style={{ textAlign: 'center', marginTop: '32px' }}>
-                                <button onClick={() => navigate('/courses')} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, padding: '12px 28px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>
+                                <button onClick={() => navigate('/courses')} onMouseEnter={ghostBtnHover} onMouseLeave={ghostBtnLeave} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, padding: '12px 28px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>
                                     View Full Catalog →
                                 </button>
                             </div>
@@ -924,7 +952,7 @@ export default function LandingPage() {
                             })}
                         </div>
                         <div style={{ textAlign: 'center', marginTop: '36px' }}>
-                            <button onClick={() => navigate('/events')} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, padding: '12px 28px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>
+                            <button onClick={() => navigate('/events')} onMouseEnter={ghostBtnHover} onMouseLeave={ghostBtnLeave} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, padding: '12px 28px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>
                                 View All Events →
                             </button>
                         </div>
@@ -1148,8 +1176,8 @@ export default function LandingPage() {
             <section id="contact" style={p.contactSection}>
                 <style>{`
                     .contact-field::placeholder { color: #94a3b8; }
-                    .contact-field:focus { box-shadow: 0 0 0 2px rgba(34,197,94,0.6); }
-                    .contact-submit:hover { background: #14233a; }
+                    .contact-field:focus { box-shadow: 0 0 0 3px rgba(59,130,246,0.35); border-color: ${colors.primary} !important; }
+                    .contact-submit:hover { filter: brightness(1.1); }
                     @media (max-width: 860px) {
                         .contact-split { grid-template-columns: 1fr; }
                     }
@@ -1183,7 +1211,7 @@ export default function LandingPage() {
                                 {contactErrors.message && <span style={{ color: '#ef4444', fontSize: '12px' }}>{contactErrors.message}</span>}
                             </div>
                             {isAuthenticated && (
-                                <Link to="/support/messages" style={{ color: '#0f172a', fontSize: '13px', fontWeight: '600', textDecoration: 'underline' }}>
+                                <Link to="/support/messages" style={{ color: colors.primary, fontSize: '13px', fontWeight: '600', textDecoration: 'underline' }}>
                                     View my support messages →
                                 </Link>
                             )}
@@ -1193,7 +1221,7 @@ export default function LandingPage() {
                         </form>
 
                         {contactStatus && <div style={p.contactSuccess}>{contactStatus}</div>}
-                        {!contactStatus && contactApiError && <div style={{ ...p.contactSuccess, background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}>{contactApiError}</div>}
+                        {!contactStatus && contactApiError && <div style={{ ...p.contactSuccess, background: 'rgba(220,38,38,0.08)', color: colors.danger, border: '1px solid rgba(220,38,38,0.35)' }}>{contactApiError}</div>}
                     </div>
 
                     {/* Right — Feature Image */}

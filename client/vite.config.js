@@ -5,6 +5,12 @@ export default defineConfig({
     plugins: [
         react({
             include: ['**/*.{js,jsx,ts,tsx}'],
+            // AdminDashboard.jsx exceeds Babel's 500KB generator limit, which
+            // spams the "[BABEL] Note: The code generator has deoptimised…"
+            // warning on every dev start. Vite's built-in esbuild compiles
+            // this file instead (JSX is fully supported) — the only trade-off
+            // is full-page reload instead of fast-refresh when editing it.
+            exclude: ['**/AdminDashboard.jsx'],
         }),
     ],
     esbuild: {

@@ -48,7 +48,25 @@ const LessonSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Assignment',
         default: null
-    }
+    },
+    // ── In-video quiz checkpoints ───────────────────────────────────────────
+    // Each checkpoint pauses the lesson video at timestampSeconds and shows a
+    // short quiz covering the segment just watched. Students cannot continue
+    // past a checkpoint until they pass it. Lesson completion requires every
+    // checkpoint to be passed (enforced server-side).
+    quizCheckpoints: [{
+        _id: false,
+        checkpointId: { type: String, required: true }, // stable client/server id
+        title: { type: String, default: '', trim: true, maxlength: 120 },
+        timestampSeconds: { type: Number, required: true, min: 0 },
+        passingScorePercent: { type: Number, default: 60, min: 0, max: 100 },
+        questions: [{
+            _id: false,
+            questionText: { type: String, required: true, trim: true },
+            options: { type: [String], required: true },
+            correctAnswerIndex: { type: Number, required: true, min: 0 }
+        }]
+    }]
 });
 
 const ChapterSchema = new mongoose.Schema({

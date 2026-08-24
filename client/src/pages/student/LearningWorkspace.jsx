@@ -14,7 +14,7 @@
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { courseService, learningProgressService, certificateService } from '../../services/api.jsx';
+import { courseService, learningProgressService, certificateService, inVideoQuizService } from '../../services/api.jsx';
 import { getPdfUrl } from '../../services/api.jsx';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -61,7 +61,7 @@ function firstUncompletedIndex(flat, completedSet) {
 }
 
 // ── RequirementsBlocker — professional blocking panel shown below nav row ─────
-function RequirementsBlocker({ reqStatus, courseId, lessonId, onDismiss, colors, isDark }) {
+function RequirementsBlocker({ reqStatus, courseId, lessonId, onDismiss, onJumpToCheckpoint, colors, isDark }) {
     const navigate = useNavigate();
     const border  = isDark ? '#334155' : '#e2e8f0';
     const text    = isDark ? '#f1f5f9' : '#0f172a';
@@ -90,6 +90,30 @@ function RequirementsBlocker({ reqStatus, courseId, lessonId, onDismiss, colors,
             todoText: 'Not submitted',
             action: linkedAssignmentId ? () => navigate(`/student/assignments/${courseId}`) : null,
             actionLabel: 'Submit Assignment'
+        });
+    }
+    // In-video checkpoint quizzes embedded in the lesson video timeline
+    if (reqStatus.checkpointsRequired && !reqStatus.checkpointsPassed) {
+        const total = reqStatus.checkpointsTotal || 0;
+        items.push({
+            done: false,
+            label: `In-video checkpoint quiz${total > 1 ? `zes (${total})` : ''}`,
+            doneText: 'All passed',
+            todoText: 'Watch the video and pass every checkpoint quiz that pops up',
+            action: onJumpToCheckpoint,
+            actionLabel: '▶ Watch & Take Quiz'
+        });
+    }
+    // Full watch-through requirement (HTML5 video lessons only)
+    if (reqStatus.videoWatchRequired && !reqStatus.videoWatched) {
+        items.push({
+            done: false,
+            label: 'Watch full video',
+            doneText: 'Fully watched',
+            todoText: `You've watched ${reqStatus.videoWatchedPercent || 0}% of this lesson video — keep watching to reach 100%`,
+            hint: null,
+            action: onJumpToCheckpoint,
+            actionLabel: '▶ Resume Video'
         });
     }
 
@@ -154,7 +178,7 @@ function RequirementsBlocker({ reqStatus, courseId, lessonId, onDismiss, colors,
                         )}
                         {!item.done && !item.action && (
                             <span style={{ fontSize: 11, color: muted, fontStyle: 'italic', flexShrink: 0 }}>
-                                Not linked yet
+                                {item.hint || 'Not linked yet'}
                             </span>
                         )}
                     </div>
@@ -173,6 +197,7 @@ export default function LearningWorkspace() {
     // ── Core state ────────────────────────────────────────────────────────────
     const [course,          setCourse]          = useState(null);
     const [pageError,       setPageError]       = useState(null);
+    const [courseLoading,   setCourseLoading]   = useState(true);
 
     // Progress — source of truth from backend
     const [completedSet,    setCompletedSet]    = useState(new Set());
@@ -186,6 +211,22 @@ export default function LearningWorkspace() {
     const [videoUrl,        setVideoUrl]        = useState('');
     const [videoError,      setVideoError]      = useState('');
     const [videoLoading,    setVideoLoading]    = useState(false);
+
+    // ── In-video quiz checkpoints ─────────────────────────────────────────────
+    const videoRef                 = useRef(null);
+    const playbackTimeRef          = useRef(0);
+    const firedCheckpointsRef      = useRef(new Set());   // checkpointIds already popped this session
+    const watchedSecondsRef        = useRef(0);           // real played seconds (seek-immune)
+    const lastTickRef              = useRef(-1);          // previous currentTime for delta calc
+    const lastHeartbeatRef         = useRef(0);           // throttle for periodic progress saves
+    const [checkpointsData,        setCheckpointsData]        = useState(null);
+    const [activeCheckpoint,       setActiveCheckpoint]       = useState(null);  // checkpoint open in quiz modal
+    const [checkpointAnswers,      setCheckpointAnswers]      = useState({});
+    const [checkpointResult,       setCheckpointResult]       = useState(null);
+    const [checkpointSubmitting,   setCheckpointSubmitting]   = useState(false);
+    const [checkpointError,        setCheckpointError]        = useState('');
+    const [playbackFailed,         setPlaybackFailed]         = useState(false);
+    const [playbackRetryKey,       setPlaybackRetryKey]       = useState(0);
 
     // Completion actions
     const [markingDone,     setMarkingDone]     = useState(false);
@@ -245,25 +286,33 @@ export default function LearningWorkspace() {
     // ── Load course + backend progress ────────────────────────────────────────
     useEffect(() => {
         let cancelled = false;
+        setCourseLoading(true);
         Promise.all([
             courseService.getById(courseId),
             learningProgressService.getCourseProgress(courseId).catch(() => ({ data: { data: null } }))
         ]).then(([courseRes, progressRes]) => {
             if (cancelled) return;
-            const courseData   = courseRes.data.data;
+            const courseData   = courseRes.data?.data;
+            if (!courseData) { setPageError('This course does not exist or is no longer available.'); return; }
             const progressData = progressRes.data?.data;
             setCourse(courseData);
             const flat = flattenLessons(courseData.curriculumTree);
             const done = buildCompletedSet(progressData?.progressItems);
-            const pct  = progressData?.completionPercentage ?? 0;
+            // Progress % computed against the CURRENT curriculum — never trust
+            // a stale backend percentage (curriculum may have changed).
+            const doneInCurrentTree = flat.filter(f => done.has(`${f.chapterIndex}-${f.lessonIndex}`)).length;
+            const pct = flat.length > 0 ? Math.round((doneInCurrentTree / flat.length) * 100) : 0;
             setCompletedSet(done);
             setProgressPct(pct);
             const resumeIdx = Math.min(firstUncompletedIndex(flat, done), Math.max(0, flat.length - 1));
             setActiveFlatIdx(resumeIdx);
             setExpandedChapters(new Set([flat[resumeIdx]?.chapterIndex ?? 0]));
-            if (pct >= 100 && flat.length > 0) setShowCompletion(true);
+            // Celebration screen only when EVERY lesson in the current tree is done
+            if (flat.length > 0 && doneInCurrentTree === flat.length) setShowCompletion(true);
         }).catch(err => {
             if (!cancelled) setPageError(err.response?.data?.message || 'Failed to load workspace.');
+        }).finally(() => {
+            if (!cancelled) setCourseLoading(false);
         });
         return () => { cancelled = true; };
     }, [courseId]);
@@ -273,6 +322,20 @@ export default function LearningWorkspace() {
         if (!activeLesson) return;
         setShowBlocker(false);
         setReqStatus(null);
+        // Reset in-video checkpoint state for the new lesson
+        setCheckpointsData(null);
+        setActiveCheckpoint(null);
+        setCheckpointAnswers({});
+        setCheckpointResult(null);
+        setCheckpointError('');
+        firedCheckpointsRef.current = new Set();
+        playbackTimeRef.current = 0;
+        watchedSecondsRef.current = 0;
+        lastTickRef.current = -1;
+        lastHeartbeatRef.current = 0;
+        autoAdvancingRef.current = false;
+        setPlaybackFailed(false);
+
         const raw = getLessonVideoUrl(activeLesson);
         if (!raw) { setVideoUrl(''); setVideoError('No video available for this lesson.'); return; }
         setVideoLoading(true);
@@ -284,6 +347,21 @@ export default function LearningWorkspace() {
         }
         setVideoLoading(false);
         setTab('overview');
+
+        // Fetch in-video quiz checkpoints — when present, swap to the direct
+        // MP4 URL so we can control playback (pause at checkpoints, block skips)
+        let cancelled = false;
+        inVideoQuizService.getLessonCheckpoints(courseId, activeLesson._id.toString())
+            .then(res => {
+                if (cancelled) return;
+                const data = res.data?.data || null;
+                setCheckpointsData(data);
+                if (data?.checkpoints?.length > 0 && data.directVideoUrl) {
+                    setVideoUrl(data.directVideoUrl);
+                }
+            })
+            .catch(() => { if (!cancelled) setCheckpointsData(null); });
+        return () => { cancelled = true; };
     }, [activeFlatIdx, activeLesson]);
 
     // ── Fetch requirement status whenever the active lesson changes ───────────
@@ -293,7 +371,7 @@ export default function LearningWorkspace() {
         if (!lessonHasRequirements) { setReqStatus(null); return; }
         let cancelled = false;
         setReqLoading(true);
-        learningProgressService.getLessonRequirementsStatus(courseId, activeLesson._id.toString())
+        learningProgressService.getLessonRequirementsStatus(courseId, activeLesson._id.toString(), liveWatchParams())
             .then(res => {
                 if (!cancelled) setReqStatus(res.data?.data || null);
             })
@@ -303,30 +381,174 @@ export default function LearningWorkspace() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeFlatIdx, activeLesson, isCurrentDone, lessonHasRequirements]);
 
-    // ── Save lesson completion to backend ─────────────────────────────────────
-    const saveCompletionToBackend = useCallback(async (ciIdx, liIdx) => {
-        if (saveInFlight.current || !course) return;
-        saveInFlight.current = true;
+    // ── In-video checkpoint logic ─────────────────────────────────────────────
+    const hasCheckpoints = !!(checkpointsData?.checkpoints?.length > 0);
+    const isCheckpointPassed = useCallback((cp) => {
+        const status = checkpointsData?.attemptStatus?.[cp.checkpointId];
+        return !!status?.passed;
+    }, [checkpointsData]);
+
+    // Pause + open quiz modal when a checkpoint timestamp is reached.
+    // Also accumulates REAL watched time (normal forward playback only —
+    // seeking ahead adds nothing) and heartbeats progress to the backend.
+    const handleVideoTimeUpdate = (e) => {
+        const t = e.target.currentTime;
+        const dt = t - lastTickRef.current;
+        if (dt > 0 && dt < 1.5) watchedSecondsRef.current += dt; // ignore seeks/repeats
+        lastTickRef.current = t;
+        playbackTimeRef.current = t;
+
+        // Persist watch progress every ~30s so completion survives reloads
+        const now = Date.now();
+        if (activeLesson && now - lastHeartbeatRef.current > 30000 && watchedSecondsRef.current > 5) {
+            lastHeartbeatRef.current = now;
+            learningProgressService.saveLessonProgress(courseId, activeLesson._id.toString(), {
+                completed: false,
+                currentTime: Math.round(t),
+                watchedSeconds: Math.round(watchedSecondsRef.current),
+                videoDurationSeconds: Math.round(e.target.duration || 0)
+            }).catch(() => {});
+        }
+
+        if (!hasCheckpoints || activeCheckpoint) return;
+        // Only consider the earliest pending checkpoint — later ones stay dormant
+        let nearest = null;
+        for (const cp of checkpointsData.checkpoints) {
+            if (firedCheckpointsRef.current.has(cp.checkpointId)) continue;
+            if (isCheckpointPassed(cp)) { firedCheckpointsRef.current.add(cp.checkpointId); continue; }
+            if (!nearest || cp.timestampSeconds < nearest.timestampSeconds) nearest = cp;
+        }
+        if (nearest && t >= nearest.timestampSeconds - 0.25) {
+            e.target.pause();
+            firedCheckpointsRef.current.add(nearest.checkpointId);
+            setActiveCheckpoint(nearest);
+            setCheckpointAnswers({});
+            setCheckpointResult(null);
+            setCheckpointError('');
+        }
+    };
+
+    // Block seeking past the next unanswered checkpoint
+    const handleVideoSeeking = (e) => {
+        if (!hasCheckpoints || activeCheckpoint) return;
+        const pending = (checkpointsData.checkpoints || []).filter(cp => !isCheckpointPassed(cp));
+        if (pending.length === 0) return;
+        const limit = Math.min(...pending.map(cp => cp.timestampSeconds)) - 0.2;
+        if (e.target.currentTime > limit) {
+            e.target.currentTime = Math.min(playbackTimeRef.current, Math.max(limit, 0));
+        }
+    };
+
+    const toggleCheckpointAnswer = (questionIndex, optionIndex) => {
+        setCheckpointAnswers(prev => ({ ...prev, [questionIndex]: optionIndex }));
+        setCheckpointError('');
+    };
+
+    const submitCheckpoint = async () => {
+        if (!activeCheckpoint || !activeLesson) return;
+        const total = activeCheckpoint.questions?.length || 0;
+        if (Object.keys(checkpointAnswers).length < total) {
+            setCheckpointError('Please answer all questions before submitting.');
+            return;
+        }
+        setCheckpointSubmitting(true);
+        setCheckpointError('');
         try {
-            const lesson = course.curriculumTree?.[ciIdx]?.lessons?.[liIdx];
-            if (!lesson) return;
-            const res = await learningProgressService.saveLessonProgress(
-                courseId,
-                lesson._id.toString(),
-                { completed: true, lessonTitle: lesson.lessonTitle || '' }
-            );
-            const updated = res.data?.data;
-            if (updated) {
-                const newDone = buildCompletedSet(updated.progressItems);
-                setCompletedSet(newDone);
-                setProgressPct(updated.completionPercentage ?? 0);
-                setShowBlocker(false);
-                if (updated.completionPercentage >= 100) {
-                    setTimeout(() => setShowCompletion(true), 600);
-                }
-            }
+            const payload = {
+                checkpointId: activeCheckpoint.checkpointId,
+                answers: Object.entries(checkpointAnswers).map(([questionIndex, selectedIndex]) => ({
+                    questionIndex: Number(questionIndex),
+                    selectedIndex: Number(selectedIndex)
+                }))
+            };
+            const res = await inVideoQuizService.submitCheckpointAttempt(courseId, activeLesson._id.toString(), payload);
+            const result = res.data?.data;
+            setCheckpointResult(result);
+            // Update local pass status so gating reflects immediately
+            setCheckpointsData(prev => prev ? {
+                ...prev,
+                attemptStatus: {
+                    ...prev.attemptStatus,
+                    [activeCheckpoint.checkpointId]: {
+                        passed: result.passed,
+                        scorePercent: result.scorePercent,
+                        correctCount: result.correctCount,
+                        totalQuestions: result.totalQuestions,
+                        attemptsUsed: (prev.attemptStatus?.[activeCheckpoint.checkpointId]?.attemptsUsed || 0) + 1
+                    }
+                },
+                allCheckpointsPassed: (prev.checkpoints || []).every(cp =>
+                    cp.checkpointId === activeCheckpoint.checkpointId ? result.passed : (prev.attemptStatus?.[cp.checkpointId]?.passed || false))
+            } : prev);
         } catch (err) {
-            // 422 = requirements not met — backend returned the detailed status
+            setCheckpointError(err.response?.data?.message || 'Failed to submit the quiz. Please try again.');
+        } finally {
+            setCheckpointSubmitting(false);
+        }
+    };
+
+    // Resume playback from the exact paused timestamp after passing
+    const resumeAfterCheckpoint = () => {
+        const resumeAt = checkpointResult?.resumeAtSeconds ?? activeCheckpoint?.timestampSeconds ?? 0;
+        setActiveCheckpoint(null);
+        setCheckpointAnswers({});
+        setCheckpointResult(null);
+        setCheckpointError('');
+        // If this was the last checkpoint, refresh gating status so "Mark as
+        // Complete" reflects the pass immediately.
+        const allPassed = (checkpointsData?.checkpoints || []).every(cp =>
+            cp.checkpointId === activeCheckpoint?.checkpointId
+                ? true
+                : (checkpointsData?.attemptStatus?.[cp.checkpointId]?.passed || false));
+        if (allPassed && lessonHasRequirements) refreshReqStatus();
+        if (videoRef.current) {
+            videoRef.current.currentTime = resumeAt;
+            videoRef.current.play().catch(() => {});
+        }
+        // Final checkpoint of the lesson → auto-complete + open next video once
+        // the remaining segment has played out (retries on video 'ended').
+        if (allPassed) {
+            setTimeout(() => tryAutoCompleteAndAdvance(), 400);
+        }
+    };
+
+    // ── Mark Complete button handler ──────────────────────────────────────────
+    const performCompletion = useCallback(async () => {
+        const lesson = course?.curriculumTree?.[activeChapterIndex]?.lessons?.[activeLessonIndex];
+        if (!lesson) return null;
+        const res = await learningProgressService.saveLessonProgress(
+            courseId,
+            lesson._id.toString(),
+            {
+                completed: true,
+                lessonTitle: lesson.lessonTitle || '',
+                currentTime: Math.round(playbackTimeRef.current),
+                watchedSeconds: Math.round(watchedSecondsRef.current),
+                videoDurationSeconds: Math.round(videoRef.current?.duration || 0)
+            }
+        );
+        const updated = res.data?.data;
+        if (updated) {
+            const newDone = buildCompletedSet(updated.progressItems);
+            setCompletedSet(newDone);
+            // Recompute % against the CURRENT curriculum tree
+            const doneInCurrentTree = flatLessons.filter(f => newDone.has(`${f.chapterIndex}-${f.lessonIndex}`)).length;
+            const pct = flatLessons.length > 0 ? Math.round((doneInCurrentTree / flatLessons.length) * 100) : 0;
+            setProgressPct(pct);
+            setShowBlocker(false);
+            if (flatLessons.length > 0 && doneInCurrentTree === flatLessons.length) {
+                setTimeout(() => setShowCompletion(true), 800);
+            }
+        }
+        return updated;
+    }, [course, courseId, activeChapterIndex, activeLessonIndex, flatLessons]);
+
+    const handleMarkComplete = async () => {
+        if (isCurrentDone || markingDone) return;
+        setMarkingDone(true);
+        try {
+            await performCompletion();
+        } catch (err) {
             if (err.response?.status === 422 && err.response?.data?.data) {
                 setReqStatus(err.response.data.data);
                 setShowBlocker(true);
@@ -334,27 +556,43 @@ export default function LearningWorkspace() {
                 console.error('[LearningWorkspace] save progress failed:', err.message);
             }
         } finally {
-            saveInFlight.current = false;
+            setMarkingDone(false);
         }
-    }, [course, courseId]);
-
-    // ── Mark Complete button handler ──────────────────────────────────────────
-    const handleMarkComplete = async () => {
-        if (isCurrentDone || markingDone) return;
-        setMarkingDone(true);
-        await saveCompletionToBackend(activeChapterIndex, activeLessonIndex);
-        setMarkingDone(false);
     };
 
     // ── Refresh requirement status (called after student returns from quiz/assignment) ──
+    // Sends the player's LIVE watch data so the backend gate reflects reality
+    // even before the 30s heartbeat has persisted anything.
+    const liveWatchParams = () => ({
+        watchedSeconds: Math.round(watchedSecondsRef.current),
+        durationSeconds: Math.round(videoRef.current?.duration || 0)
+    });
+
     const refreshReqStatus = useCallback(() => {
         if (!activeLesson || !lessonHasRequirements) return;
         setReqLoading(true);
-        learningProgressService.getLessonRequirementsStatus(courseId, activeLesson._id.toString())
+        learningProgressService.getLessonRequirementsStatus(courseId, activeLesson._id.toString(), liveWatchParams())
             .then(res => setReqStatus(res.data?.data || null))
             .catch(() => {})
             .finally(() => setReqLoading(false));
     }, [activeLesson, lessonHasRequirements, courseId]);
+
+    // Jump back into the lesson video so students blocked at "Mark as Complete"
+    // have a one-click path: resumes playback at the earliest unanswered
+    // checkpoint, or from the current position when only watch-through is missing.
+    const jumpToNextCheckpoint = useCallback(() => {
+        setShowBlocker(false);
+        window.scrollTo(0, 0);
+        if (!videoRef.current) return;
+        let target = Math.max(0, playbackTimeRef.current - 2);
+        if (hasCheckpoints) {
+            const pending = (checkpointsData.checkpoints || []).filter(cp => !isCheckpointPassed(cp));
+            if (pending.length === 0) { refreshReqStatus(); return; }
+            target = Math.max(0, Math.min(...pending.map(cp => cp.timestampSeconds)) - 5);
+        }
+        videoRef.current.currentTime = target;
+        videoRef.current.play().catch(() => {});
+    }, [hasCheckpoints, checkpointsData, isCheckpointPassed, refreshReqStatus]);
 
     // ── Navigate to a flat lesson index ──────────────────────────────────────
     const goToFlatIdx = useCallback((idx) => {
@@ -365,6 +603,48 @@ export default function LearningWorkspace() {
         window.scrollTo(0, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [flatLessons, completedSet]);
+
+    // ── Auto-advance ──────────────────────────────────────────────────────────
+    // When the student finishes a lesson video (all checkpoints passed AND the
+    // video fully played), automatically complete the lesson and open the next
+    // one — no manual clicking required.
+    const autoAdvancingRef = useRef(false);
+
+    const tryAutoCompleteAndAdvance = useCallback(async () => {
+        if (!activeLesson || isCurrentDone || autoAdvancingRef.current) return;
+
+        // Every embedded checkpoint quiz must be passed first
+        const cps = checkpointsData?.checkpoints || [];
+        const allPassed = cps.every(cp => isCheckpointPassed(cp));
+        if (cps.length > 0 && !allPassed) return;
+
+        // And the video must be (nearly) fully watched — mirrors backend rule
+        const duration = Math.round(videoRef.current?.duration || 0);
+        if (duration > 30 && watchedSecondsRef.current < duration * 0.85) return;
+
+        autoAdvancingRef.current = true;
+        try {
+            const updated = await performCompletion();
+            if (updated && activeFlatIdx < totalLessons - 1) {
+                goToFlatIdx(activeFlatIdx + 1);
+            }
+        } catch (err) {
+            // Requirements unmet (422) or network issue → student keeps watching;
+            // auto-advance retries on the next natural trigger (video ended /
+            // final checkpoint passed).
+            if (err.response?.status === 422 && err.response?.data?.data) {
+                setReqStatus(err.response.data.data);
+            } else {
+                console.error('[LearningWorkspace] auto-advance failed:', err.message);
+            }
+        } finally {
+            autoAdvancingRef.current = false;
+        }
+    }, [activeLesson, isCurrentDone, checkpointsData, isCheckpointPassed, performCompletion, activeFlatIdx, totalLessons, goToFlatIdx]);
+
+    const handleVideoEnded = useCallback(() => {
+        tryAutoCompleteAndAdvance();
+    }, [tryAutoCompleteAndAdvance]);
 
     const goPrev = () => { if (activeFlatIdx > 0) goToFlatIdx(activeFlatIdx - 1); };
 
@@ -393,9 +673,15 @@ export default function LearningWorkspace() {
         });
     };
 
-    // ── Error screens ─────────────────────────────────────────────────────────
+    // ── Error / loading screens ───────────────────────────────────────────────
     if (pageError) return <div style={{ color: '#ef4444', padding: 40, textAlign: 'center' }}>{pageError}</div>;
-    if (!course)   return <div style={{ color: '#ef4444', padding: 40, textAlign: 'center' }}>Course not found.</div>;
+    if (courseLoading || !course) return (
+        <div style={{ minHeight: '100vh', background: bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, color: muted }}>
+            <div style={{ width: 42, height: 42, borderRadius: '50%', border: '3px solid rgba(148,163,184,0.3)', borderTopColor: accent, animation: 'spin 0.8s linear infinite' }} />
+            <span style={{ fontSize: 14, fontWeight: 600 }}>Loading course…</span>
+        </div>
+    );
+    if (!course) return <div style={{ color: '#ef4444', padding: 40, textAlign: 'center' }}>Course not found.</div>;
 
     // ── 🎉 Completion Screen ──────────────────────────────────────────────────
     if (showCompletion) return (
@@ -462,6 +748,18 @@ export default function LearningWorkspace() {
                 .action-link:hover { transform: translateY(-1px); opacity: 0.92; }
                 @keyframes spin { to { transform: rotate(360deg); } }
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+                /* ── Responsive: tablet ── */
+                @media (max-width: 1024px) {
+                    .lw-sidebar { position: fixed; top: 60px; right: 0; bottom: 0; width: min(85vw, 340px) !important; z-index: 60; box-shadow: -8px 0 30px rgba(0,0,0,0.35); }
+                    .lw-nav-center { display: none; }
+                    .lw-content-title { font-size: 18px !important; }
+                }
+                /* ── Responsive: phone ── */
+                @media (max-width: 640px) {
+                    .lw-nav-secondary { display: none; }
+                    .lw-content-padding { padding: 16px 16px 24px !important; }
+                    .lw-info-padding { padding: 14px 14px 0 !important; }
+                }
             `}</style>
 
             {/* ── Top Navbar ─────────────────────────────────────────────── */}
@@ -472,13 +770,13 @@ export default function LearningWorkspace() {
                     <div style={{ width: 1, height: 20, background: border }} />
                     <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: text, maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{course.courseTitle}</h2>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, maxWidth: 280, margin: '0 20px' }}>
+                <div className="lw-nav-center" style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, maxWidth: 280, margin: '0 20px' }}>
                     <div style={{ flex: 1, height: 6, background: border, borderRadius: 3, overflow: 'hidden' }}>
                         <div style={{ width: `${progressPct}%`, height: '100%', background: `linear-gradient(90deg, ${accent}, ${green})`, borderRadius: 3, transition: 'width 0.5s ease' }} />
                     </div>
                     <span style={{ fontSize: 12, fontWeight: 700, color: muted, whiteSpace: 'nowrap' }}>{progressPct}% done</span>
                 </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div className="lw-nav-secondary" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <button onClick={() => navigate(`/student/discussions/${course._id}`)} style={{ background: `${accent}18`, border: `1px solid ${accent}30`, color: accent, borderRadius: 7, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Q&amp;A</button>
                     <button onClick={() => navigate(`/student/assignments/${course._id}`)} style={{ background: `${blue}18`, border: `1px solid ${blue}30`, color: blue, borderRadius: 7, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Assignments</button>
                     <button onClick={toggleTheme} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: muted, display: 'flex', padding: 6 }}>{isDark ? <IconSun /> : <IconMoon />}</button>
@@ -510,8 +808,36 @@ export default function LearningWorkspace() {
                                 )}
                             </div>
                         ) : videoUrl ? (
-                            getVideoRenderMode(videoUrl) === 'video' ? (
-                                <video key={videoUrl} src={videoUrl} controls controlsList="nodownload" style={{ width: '100%', height: '100%', background: '#000' }} title={activeLesson?.lessonTitle || 'Lesson video'} />
+                            (getVideoRenderMode(videoUrl) === 'video' || hasCheckpoints) && getVideoRenderMode(videoUrl) !== 'iframe' ? (
+                                playbackFailed ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: 30, textAlign: 'center' }}>
+                                        <div style={{ fontSize: 30 }}>⚠️</div>
+                                        <div style={{ color: '#fca5a5', fontWeight: 700, fontSize: 15 }}>Video could not be loaded</div>
+                                        <div style={{ color: '#94a3b8', fontSize: 13, maxWidth: 380, lineHeight: 1.6 }}>
+                                            The video file for this lesson is not responding. Try again, or come back later.
+                                        </div>
+                                        <button onClick={() => { setPlaybackFailed(false); setPlaybackRetryKey(k => k + 1); }} style={{ background: `linear-gradient(135deg, ${accent}, #7c3aed)`, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 22px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                                            ↻ Retry
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <video
+                                        key={`${videoUrl}#${playbackRetryKey}`}
+                                        ref={videoRef}
+                                        src={videoUrl}
+                                        controls
+                                        controlsList="nodownload noplaybackrate"
+                                                                        onTimeUpdate={handleVideoTimeUpdate}
+                                        onSeeking={hasCheckpoints ? handleVideoSeeking : undefined}
+                                        onError={() => hasCheckpoints && setPlaybackFailed(true)}
+                                        onEnded={handleVideoEnded}
+                                        onContextMenu={(e) => hasCheckpoints && e.preventDefault()}
+                                        preload="metadata"
+                                        playsInline
+                                        style={{ width: '100%', height: '100%', background: '#000' }}
+                                        title={activeLesson?.lessonTitle || 'Lesson video'}
+                                    />
+                                )
                             ) : (
                                 <iframe key={videoUrl} src={videoUrl} title={activeLesson?.lessonTitle || 'Lesson video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen style={{ width: '100%', height: '100%', border: 'none' }} />
                             )
@@ -524,12 +850,12 @@ export default function LearningWorkspace() {
                     </div>
 
                     {/* Lesson Info */}
-                    <div style={{ padding: '20px 28px 0', animation: 'fadeIn 0.25s ease' }}>
+                    <div className="lw-info-padding" style={{ padding: '20px 28px 0', animation: 'fadeIn 0.25s ease' }}>
                         {/* Chapter / Lesson label */}
                         <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 600, color: accent, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                             {activeItem?.chapterTitle} — Lesson {activeLessonIndex + 1}
                         </p>
-                        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: text, lineHeight: 1.3 }}>
+                        <h1 className="lw-content-title" style={{ margin: 0, fontSize: 22, fontWeight: 800, color: text, lineHeight: 1.3 }}>
                             {activeLesson?.lessonTitle || 'Welcome to the course'}
                         </h1>
                         {activeLesson?.durationMinutes > 0 && (
@@ -617,6 +943,7 @@ export default function LearningWorkspace() {
                                 courseId={courseId}
                                 lessonId={activeLesson?._id?.toString()}
                                 onDismiss={() => setShowBlocker(false)}
+                                onJumpToCheckpoint={jumpToNextCheckpoint}
                                 colors={colors}
                                 isDark={isDark}
                             />
@@ -633,7 +960,7 @@ export default function LearningWorkspace() {
                     </div>
 
                     {/* Tab content */}
-                    <div style={{ flex: 1, padding: '20px 28px 32px', animation: 'fadeIn 0.2s ease' }}>
+                    <div className="lw-content-padding" style={{ flex: 1, padding: '20px 28px 32px', animation: 'fadeIn 0.2s ease' }}>
                         {tab === 'overview' && (
                             <div>
                                 <p style={{ margin: '0 0 20px', color: muted, fontSize: 14, lineHeight: 1.7 }}>
@@ -713,7 +1040,7 @@ export default function LearningWorkspace() {
 
                 {/* ── Right Sidebar ─────────────────────────────────────── */}
                 {sidebarOpen && (
-                    <div style={{ width: 340, display: 'flex', flexDirection: 'column', background: bgSide, borderLeft: `1px solid ${border}`, flexShrink: 0, overflow: 'hidden' }}>
+                    <div className="lw-sidebar" style={{ width: 340, display: 'flex', flexDirection: 'column', background: bgSide, borderLeft: `1px solid ${border}`, flexShrink: 0, overflow: 'hidden' }}>
                         {/* Header */}
                         <div style={{ padding: '14px 18px', borderBottom: `1px solid ${border}`, background: bgCard, flexShrink: 0 }}>
                             <h3 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 700, color: text }}>Course Content</h3>
@@ -776,6 +1103,113 @@ export default function LearningWorkspace() {
             </div>
 
             <AiAssistant context={{ courseName: course.courseTitle, courseId }} />
+
+            {/* ── In-Video Quiz Checkpoint Modal (full-screen, cannot be dismissed) ── */}
+            {activeCheckpoint && (
+                <div style={{ position: 'fixed', inset: 0, zIndex: 5000, background: 'rgba(2,6,23,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', overflowY: 'auto' }}>
+                    <div style={{ background: bgCard, borderRadius: 18, border: `1px solid ${border}`, width: 'min(100%, 720px)', maxHeight: '94vh', overflowY: 'auto', padding: '26px 26px 22px', boxShadow: '0 30px 90px rgba(0,0,0,0.5)' }}>
+                        {!checkpointResult ? (
+                            <>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
+                                    <span style={{ background: `${gold}20`, color: gold, borderRadius: 999, padding: '3px 12px', fontSize: 11, fontWeight: 800 }}>⏸ CHECKPOINT QUIZ</span>
+                                    <span style={{ fontSize: 12, color: muted }}>{activeCheckpoint.title || `Checkpoint at ${Math.floor(activeCheckpoint.timestampSeconds / 60)}:${String(activeCheckpoint.timestampSeconds % 60).padStart(2, '0')}`}</span>
+                                </div>
+                                <h2 style={{ margin: '6px 0 4px', fontSize: 19, fontWeight: 800, color: text }}>
+                                    Quiz time! Answer all questions to continue watching
+                                </h2>
+                                <p style={{ margin: '0 0 18px', fontSize: 13, color: muted }}>
+                                    This quiz covers the lesson segment you just watched. You need {activeCheckpoint.passingScorePercent ?? 60}% to continue — the video resumes right where it stopped.
+                                </p>
+
+                                {(activeCheckpoint.questions || []).map((q, qi) => (
+                                    <div key={qi} style={{ background: isDark ? '#0f172a' : '#f8fafc', border: `1px solid ${border}`, borderRadius: 14, padding: '16px 18px', marginBottom: 14 }}>
+                                        <p style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: text }}>
+                                            <span style={{ color: accent, marginRight: 6 }}>Q{qi + 1}.</span>{q.questionText}
+                                        </p>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                            {(q.options || []).map((opt, oi) => {
+                                                const selected = checkpointAnswers[qi] === oi;
+                                                return (
+                                                    <label key={oi} style={{
+                                                        display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                                                        padding: '10px 14px', borderRadius: 10, fontSize: 13.5,
+                                                        color: text, transition: 'all 0.15s',
+                                                        border: `1.5px solid ${selected ? accent : border}`,
+                                                        background: selected ? `${accent}12` : 'transparent',
+                                                        fontWeight: selected ? 700 : 500
+                                                    }}>
+                                                        <input type="radio" name={`cpq_${qi}`} checked={selected} onChange={() => toggleCheckpointAnswer(qi, oi)} style={{ accentColor: accent, width: 16, height: 16 }} />
+                                                        {opt}
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {checkpointError && (
+                                    <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', color: '#ef4444', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{checkpointError}</div>
+                                )}
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: 12, color: muted }}>
+                                        {Object.keys(checkpointAnswers).length}/{activeCheckpoint.questions?.length || 0} answered · video paused
+                                    </span>
+                                    <button onClick={submitCheckpoint} disabled={checkpointSubmitting} style={{ background: `linear-gradient(135deg, ${accent}, #7c3aed)`, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 30px', fontWeight: 800, fontSize: 14, cursor: checkpointSubmitting ? 'not-allowed' : 'pointer', opacity: checkpointSubmitting ? 0.7 : 1 }}>
+                                        {checkpointSubmitting ? 'Submitting…' : 'Submit Answers'}
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            /* ── Result view with instant feedback ── */
+                            <>
+                                <div style={{ textAlign: 'center', padding: '10px 0 4px' }}>
+                                    <div style={{ fontSize: 52, fontWeight: 900, color: checkpointResult.passed ? green : '#ef4444', lineHeight: 1.1 }}>
+                                        {checkpointResult.scorePercent}%
+                                    </div>
+                                    <div style={{ fontSize: 17, fontWeight: 800, color: text, margin: '6px 0 2px' }}>
+                                        {checkpointResult.passed ? '🎉 Checkpoint passed!' : 'Almost there — try again'}
+                                    </div>
+                                    <div style={{ fontSize: 13, color: muted }}>
+                                        {checkpointResult.correctCount}/{checkpointResult.totalQuestions} correct · passing score {checkpointResult.passingScorePercent}%{!checkpointResult.passed && ' · review the explanations below and retake the quiz'}
+                                    </div>
+                                </div>
+
+                                <div style={{ margin: '18px 0' }}>
+                                    {(activeCheckpoint.questions || []).map((q, qi) => {
+                                        const rev = checkpointResult.review?.find(r => r.questionIndex === qi);
+                                        return (
+                                            <div key={qi} style={{ background: isDark ? '#0f172a' : '#f8fafc', border: `1px solid ${border}`, borderRadius: 12, padding: '13px 16px', marginBottom: 10 }}>
+                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                                                    <span style={{ color: rev?.isCorrect ? green : '#ef4444', fontWeight: 900 }}>{rev?.isCorrect ? '✓' : '✗'}</span>
+                                                    <div style={{ flex: 1 }}>
+                                                        <p style={{ margin: '0 0 6px', fontSize: 13.5, fontWeight: 700, color: text }}>{q.questionText}</p>
+                                                        <p style={{ margin: 0, fontSize: 12.5, color: rev?.isCorrect ? green : '#ef4444', fontWeight: 600 }}>
+                                                            Your answer: {q.options?.[rev?.selectedIndex] ?? '—'}{!rev?.isCorrect && ` · Correct answer: ${q.options?.[rev?.correctAnswerIndex] ?? '—'}`}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'center', gap: 10, paddingBottom: 4 }}>
+                                    {checkpointResult.passed ? (
+                                        <button onClick={resumeAfterCheckpoint} style={{ background: `linear-gradient(135deg, ${green}, #059669)`, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 32px', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+                                            ▶ Continue Watching
+                                        </button>
+                                    ) : (
+                                        <button onClick={() => { setCheckpointResult(null); setCheckpointAnswers({}); setCheckpointError(''); }} style={{ background: `linear-gradient(135deg, ${accent}, #7c3aed)`, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 32px', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+                                            ↻ Retake Quiz
+                                        </button>
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

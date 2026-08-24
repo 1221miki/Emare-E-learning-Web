@@ -6,15 +6,35 @@
 
 @tailwind utilities;
 
+:root {
+  /* Design tokens mirrored as CSS variables (kept in sync by ThemeProvider).
+     Defaults here match the light theme so first paint is correct. */
+  --emare-bg: #f5f7fb;
+  --emare-bg-card: #ffffff;
+  --emare-border: #e3e8f0;
+  --emare-text: #16213a;
+  --emare-text-muted: #5a6580;
+  --emare-primary: #1d4ed8;
+  --emare-accent: #7c3aed;
+  --emare-gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  --emare-shadow: 0 1px 2px rgba(16,24,40,0.05), 0 10px 30px -8px rgba(16,24,40,0.16);
+  --emare-radius-md: 12px;
+}
+
 html {
   overflow-x: hidden;
+  scroll-behavior: smooth;
 }
 
 body {
   font-family: 'Inter', 'Segoe UI', sans-serif;
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: var(--emare-bg);
+  color: var(--emare-text);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'cv11', 'ss01';
+  line-height: 1.55;
   overflow-x: hidden;
 }
 
@@ -36,13 +56,38 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #e2e8f0; }
-::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: #64748b; }
+/* ── Typography rhythm ─────────────────────────────────────────────── */
+h1, h2, h3, h4 {
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+/* ── Accessibility: visible, consistent focus ring everywhere ──────── */
+:focus-visible {
+  outline: 2px solid var(--emare-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: rgba(124, 58, 237, 0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--emare-border); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--emare-text-muted); }
 
 button:focus, input:focus, select:focus, textarea:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--emare-primary);
   outline-offset: 2px;
 }
 
@@ -69,6 +114,22 @@ option {
 }
 
 a { color: inherit; }
+
+/* ── Consistent interactive feedback across all links ─────────────── */
+a {
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+/* ── Consistent control transitions (buttons, inputs) ─────────────── */
+button {
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease,
+    opacity 0.15s ease;
+}
+
+input, select, textarea {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
 
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
@@ -220,16 +281,21 @@ body.emare-sidebar-right main {
   .emare-mobile-drawer {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 16px 24px 24px;
-    background: rgba(248, 250, 252, 0.98);
-    border-bottom: 1px solid rgba(15,23,42,0.1);
+    gap: 4px;
+    padding: 12px 20px 24px;
+    background: var(--emare-bg-card);
+    border-bottom: 1px solid var(--emare-border);
+    box-shadow: var(--emare-shadow);
   }
 
   .emare-mobile-drawer a,
   .emare-mobile-drawer button {
-    font-size: 14px;
+    font-size: 15px;
+    font-weight: 600;
     width: 100%;
+    text-align: left;
+    padding: 12px 10px;
+    border-radius: 10px;
   }
 }
 

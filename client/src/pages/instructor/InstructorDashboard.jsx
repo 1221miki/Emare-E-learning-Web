@@ -500,6 +500,92 @@ export default function InstructorDashboard() {
         } catch (err) { alert('Failed to delete lesson'); }
     };
 
+    // ── In-video quiz checkpoint editing ──────────────────────────────────────
+    const [checkpointEdit, setCheckpointEdit] = useState(null); // { chapterIdx, lessonIdx }
+
+    const checkpointEditLesson = checkpointEdit
+        ? selectedCourse?.curriculumTree?.[checkpointEdit.chapterIdx]?.lessons?.[checkpointEdit.lessonIdx]
+        : null;
+
+    const updateCheckpointEdit = (quizCheckpoints) => {
+        if (!checkpointEdit) return;
+        setSelectedCourse(prev => {
+            const tree = [...prev.curriculumTree];
+            const lessons = [...(tree[checkpointEdit.chapterIdx].lessons || [])];
+            lessons[checkpointEdit.lessonIdx] = { ...lessons[checkpointEdit.lessonIdx], quizCheckpoints };
+            tree[checkpointEdit.chapterIdx] = { ...tree[checkpointEdit.chapterIdx], lessons };
+            return { ...prev, curriculumTree: tree };
+        });
+    };
+
+    const addEditedCheckpoint = () => {
+        const cps = Array.isArray(checkpointEditLesson?.quizCheckpoints) ? [...checkpointEditLesson.quizCheckpoints] : [];
+        if (cps.length >= 10) return;
+        cps.push({ checkpointId: `cp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, title: '', timestampSeconds: 0, passingScorePercent: 60, questions: [] });
+        updateCheckpointEdit(cps);
+    };
+
+    const removeEditedCheckpoint = (idx) => {
+        updateCheckpointEdit(checkpointEditLesson.quizCheckpoints.filter((_, i) => i !== idx));
+    };
+
+    const patchEditedCheckpoint = (idx, patch) => {
+        updateCheckpointEdit(checkpointEditLesson.quizCheckpoints.map((cp, i) => i === idx ? { ...cp, ...patch } : cp));
+    };
+
+    const addEditedQuestion = (cpIdx) => {
+        const cp = checkpointEditLesson.quizCheckpoints[cpIdx];
+        if ((cp.questions || []).length >= 5) return alert('A checkpoint quiz can have at most 5 questions.');
+        patchEditedCheckpoint(cpIdx, { questions: [...(cp.questions || []), { questionText: '', options: ['', ''], correctAnswerIndex: 0 }] });
+    };
+
+    const removeEditedQuestion = (cpIdx, qIdx) => {
+        const cp = checkpointEditLesson.quizCheckpoints[cpIdx];
+        patchEditedCheckpoint(cpIdx, { questions: cp.questions.filter((_, i) => i !== qIdx) });
+    };
+
+    const patchEditedQuestion = (cpIdx, qIdx, patch) => {
+        const cp = checkpointEditLesson.quizCheckpoints[cpIdx];
+        patchEditedCheckpoint(cpIdx, { questions: cp.questions.map((q, i) => i === qIdx ? { ...q, ...patch } : q) });
+    };
+
+    const addEditedOption = (cpIdx, qIdx) => {
+        const q = checkpointEditLesson.quizCheckpoints[cpIdx].questions[qIdx];
+        patchEditedQuestion(cpIdx, qIdx, { options: [...q.options, ''] });
+    };
+
+    const removeEditedOption = (cpIdx, qIdx, oIdx) => {
+        const q = checkpointEditLesson.quizCheckpoints[cpIdx].questions[qIdx];
+        const options = q.options.filter((_, i) => i !== oIdx);
+        let correctAnswerIndex = q.correctAnswerIndex;
+        if (correctAnswerIndex === oIdx) correctAnswerIndex = 0;
+        else if (correctAnswerIndex > oIdx) correctAnswerIndex -= 1;
+        patchEditedQuestion(cpIdx, qIdx, { options, correctAnswerIndex: Math.min(correctAnswerIndex, options.length - 1) });
+    };
+
+    const handleSaveCheckpointEdit = async () => {
+        if (!checkpointEditLesson) return;
+        const cps = checkpointEditLesson.quizCheckpoints || [];
+        for (let i = 0; i < cps.length; i++) {
+            const qs = cps[i].questions || [];
+            if (qs.length < 3 || qs.length > 5)
+                return alert(`Checkpoint ${i + 1} needs between 3 and 5 questions (currently ${qs.length}).`);
+            if (!qs.every(q => q.questionText.trim() && q.options.filter(o => o.trim()).length >= 2))
+                return alert(`Checkpoint ${i + 1} has incomplete questions — every question needs text and at least 2 non-empty options.`);
+            if (Number(cps[i].timestampSeconds) <= 0)
+                return alert(`Checkpoint ${i + 1} must pause at a timestamp greater than 0 seconds.`);
+        }
+        try {
+            const res = await courseService.update(selectedCourse._id, { ...selectedCourse });
+            setSelectedCourse(res.data.data);
+            setCourses(prev => prev.map(c => c._id === res.data.data._id ? res.data.data : c));
+            setCheckpointEdit(null);
+            alert('In-video quiz checkpoints saved');
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to save checkpoints');
+        }
+    };
+
     const handleUpdateSelectedCourseField = (field, value) => {
         setSelectedCourse(prev => prev ? ({ ...prev, [field]: value }) : prev);
     };
@@ -1619,8 +1705,18 @@ export default function InstructorDashboard() {
                                                                 {chapter.lessons && chapter.lessons.length > 0 && (
                                                                     <div style={{ marginTop: '4px', maxHeight: '100px', overflowY: 'auto' }}>
                                                                         {chapter.lessons.map((lesson, lessonIdx) => (
-                                                                            <div key={lessonIdx} style={{ paddingLeft: '12px', color: '#94a3b8', fontSize: '11px', marginTop: '2px' }}>
-                                                                                ▪ {lesson.lessonTitle || `Lesson ${lessonIdx + 1}`}
+                                                                            <div key={lessonIdx} style={{ paddingLeft: '12px', color: '#94a3b8', fontSize: '11px', marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                                    ▪ {lesson.lessonTitle || `Lesson ${lessonIdx + 1}`}
+                                                                                </span>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={(e) => { e.stopPropagation(); setCheckpointEdit({ chapterIdx: idx, lessonIdx }); }}
+                                                                                    title="Edit in-video quiz checkpoints"
+                                                                                    style={{ flexShrink: 0, background: (lesson.quizCheckpoints || []).length > 0 ? 'rgba(245,158,11,0.15)' : 'transparent', border: '1px solid rgba(245,158,11,0.4)', color: '#f59e0b', borderRadius: 5, padding: '1px 7px', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}
+                                                                                >
+                                                                                    ⏸ {(lesson.quizCheckpoints || []).length || 0} quiz{(lesson.quizCheckpoints || []).length === 1 ? '' : 'zes'}
+                                                                                </button>
                                                                             </div>
                                                                         ))}
                                                                     </div>
@@ -1791,6 +1887,75 @@ export default function InstructorDashboard() {
                                 <div style={s.formGroup}><label style={s.label}>Feedback Notes</label><textarea style={{ ...s.input, minHeight: '100px' }} placeholder="Constructive feedback..." value={gradeForm.instructorReviewNotes} onChange={e => setGradeForm({ ...gradeForm, instructorReviewNotes: e.target.value })} /></div>
                                 <button type="submit" style={s.primaryBtn}>Save Grade</button>
                             </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── In-Video Quiz Checkpoint Editor Modal ── */}
+            {checkpointEdit && checkpointEditLesson && (
+                <div style={s.backdrop} onClick={() => setCheckpointEdit(null)}>
+                    <div style={{ ...s.modal, maxWidth: '720px', maxHeight: '88vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+                        <div style={s.modalHeader}>
+                            <h3 style={s.modalTitle}>In-Video Quiz Checkpoints — {checkpointEditLesson.lessonTitle || 'Lesson'}</h3>
+                            <button onClick={() => setCheckpointEdit(null)} style={s.closeBtn}><X size={18} aria-hidden="true" /></button>
+                        </div>
+                        <div style={{ ...s.modalBody, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <p style={{ margin: 0, fontSize: '12px', color: colors.textMuted, lineHeight: 1.6 }}>
+                                The lesson video pauses at each checkpoint timestamp and shows a mandatory quiz. Each checkpoint needs 3–5 questions; students must reach the passing score to continue watching.
+                            </p>
+
+                            {(checkpointEditLesson.quizCheckpoints || []).length === 0 && (
+                                <div style={{ padding: '12px', border: '1px dashed rgba(51,65,85,0.5)', borderRadius: 8, color: colors.textMuted, fontSize: '12px', textAlign: 'center' }}>
+                                    No checkpoints yet for this lesson.
+                                </div>
+                            )}
+
+                            {(checkpointEditLesson.quizCheckpoints || []).map((cp, cpIdx) => (
+                                <div key={cp.checkpointId} style={{ background: 'rgba(9,13,22,0.4)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: 10, padding: '12px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 8, flexWrap: 'wrap' }}>
+                                        <span style={{ fontSize: 12, fontWeight: 800, color: '#f59e0b' }}>⏸ Checkpoint {cpIdx + 1}</span>
+                                        <button type="button" onClick={() => removeEditedCheckpoint(cpIdx)} style={{ background: 'transparent', border: '1px solid rgba(239,68,68,0.35)', color: '#ef4444', borderRadius: 6, padding: '3px 10px', fontSize: 11, cursor: 'pointer' }}>Remove</button>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 10 }}>
+                                        <div style={s.formGroup}><label style={s.label}>Title</label><input style={s.input} value={cp.title} onChange={e => patchEditedCheckpoint(cpIdx, { title: e.target.value })} placeholder={`Segment ${cpIdx + 1} quiz`} /></div>
+                                        <div style={s.formGroup}><label style={s.label}>Pause At (seconds)</label><input style={s.input} type="number" min="1" value={cp.timestampSeconds} onChange={e => patchEditedCheckpoint(cpIdx, { timestampSeconds: Number(e.target.value) || 0 })} /></div>
+                                        <div style={s.formGroup}><label style={s.label}>Passing Score (%)</label><input style={s.input} type="number" min="0" max="100" value={cp.passingScorePercent} onChange={e => patchEditedCheckpoint(cpIdx, { passingScorePercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })} /></div>
+                                    </div>
+                                    {(cp.questions || []).map((q, qIdx) => (
+                                        <div key={qIdx} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '10px', marginBottom: 8, border: '1px solid rgba(51,65,85,0.4)' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                                <span style={{ fontSize: 11, fontWeight: 700, color: '#cbd5e1' }}>Question {qIdx + 1}</span>
+                                                <button type="button" onClick={() => removeEditedQuestion(cpIdx, qIdx)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 11, padding: 0 }}>✕ Remove</button>
+                                            </div>
+                                            <input style={{ ...s.input, marginBottom: 8 }} value={q.questionText} onChange={e => patchEditedQuestion(cpIdx, qIdx, { questionText: e.target.value })} placeholder="Enter the question text" />
+                                            {(q.options || []).map((opt, oIdx) => (
+                                                <div key={oIdx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                                    <input type="radio" name={`correct_${cpIdx}_${qIdx}`} checked={q.correctAnswerIndex === oIdx} onChange={() => patchEditedQuestion(cpIdx, qIdx, { correctAnswerIndex: oIdx })} style={{ accentColor: '#10b981', width: 15, height: 15, flexShrink: 0 }} title="Mark as correct answer" />
+                                                    <input style={{ ...s.input, marginBottom: 0 }} value={opt} onChange={e => patchEditedQuestion(cpIdx, qIdx, { options: q.options.map((o, i) => i === oIdx ? e.target.value : o) })} placeholder={`Option ${oIdx + 1}`} />
+                                                    {(q.options.length > 2) && (
+                                                        <button type="button" onClick={() => removeEditedOption(cpIdx, qIdx, oIdx)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 13, padding: 0 }}>✕</button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            <div style={{ display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
+                                                <button type="button" onClick={() => addEditedOption(cpIdx, qIdx)} style={{ background: 'transparent', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: 0 }}>+ Add Option</button>
+                                                <span style={{ fontSize: 10, color: colors.textMuted }}>◉ = correct answer</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <button type="button" onClick={() => addEditedQuestion(cpIdx)} style={{ ...s.actionBtnAlt, fontSize: '12px' }}>+ Add Question ({(cp.questions || []).length}/5)</button>
+                                </div>
+                            ))}
+
+                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                <button type="button" onClick={addEditedCheckpoint} style={s.actionBtnAlt}>+ Add Checkpoint</button>
+                            </div>
+
+                            <div style={{ borderTop: '1px solid rgba(30,41,59,0.4)', paddingTop: 12, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                <button type="button" onClick={() => setCheckpointEdit(null)} style={s.actionBtnAlt}>Cancel</button>
+                                <button type="button" onClick={handleSaveCheckpointEdit} style={s.primaryBtn}>Save Checkpoints</button>
+                            </div>
                         </div>
                     </div>
                 </div>

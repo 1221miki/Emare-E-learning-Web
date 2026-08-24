@@ -18,11 +18,23 @@ export default function SiteFooter() {
         footer: { padding: '80px 5% 0', borderTop: `1px solid ${colors.border}`, background: colors.bgCard },
         footerGrid: { display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '40px', maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' },
         footerTitle: { color: colors.text, fontSize: '15px', fontWeight: '700', margin: '0 0 20px' },
-        footerLink: { display: 'block', color: colors.textMuted, textDecoration: 'none', fontSize: '14px', marginBottom: '12px', transition: 'color 0.2s' },
+        footerLink: { display: 'block', color: colors.textMuted, textDecoration: 'none', fontSize: '14px', marginBottom: '12px', transition: 'color 0.15s ease', fontWeight: 500 },
         footerBottom: { borderTop: `1px solid ${colors.border}`, padding: '24px 0', textAlign: 'center', color: colors.textMuted, fontSize: '13px' },
         logoMark: { width: '32px', height: '32px', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', fontWeight: '900', fontSize: '18px' },
-        socialBtn: { color: colors.textMuted, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px', border: '1px solid rgba(51,65,85,0.5)', textDecoration: 'none', transition: 'color 0.2s, border-color 0.2s' }
+        socialBtn: { color: colors.textMuted, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px', border: `1px solid ${colors.border}`, textDecoration: 'none', transition: 'color 0.2s, border-color 0.2s' },
+
+        // Contact info bar — brand-consistent & theme-aware
+        infoBar: { background: colors.bgCard, borderTop: `1px solid ${colors.border}` },
+        infoGrid: { maxWidth: '1280px', margin: '0 auto', padding: '56px 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '28px' },
+        infoItem: { display: 'flex', alignItems: 'flex-start', gap: '16px' },
+        infoIconBox: { width: '44px', height: '44px', borderRadius: '12px', background: colors.primarySoft, border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: colors.primary },
+        infoTitle: { margin: '0 0 6px', fontSize: '12px', fontWeight: '800', letterSpacing: '0.09em', textTransform: 'uppercase', color: colors.textMuted },
+        infoText: { margin: 0, fontSize: '15px', lineHeight: 1.6, fontWeight: 500, color: colors.text, wordBreak: 'break-word' },
+        infoLink: { display: 'block', fontSize: '15px', lineHeight: 1.6, fontWeight: 500, color: colors.text, textDecoration: 'none', wordBreak: 'break-word', transition: 'color 0.15s ease' }
     };
+
+    const linkHover = (e) => { e.currentTarget.style.color = colors.primary; };
+    const linkLeave = (e) => { e.currentTarget.style.color = colors.text; };
 
     const scrollToHomeSection = (id) => (e) => {
         e.preventDefault();
@@ -33,53 +45,57 @@ export default function SiteFooter() {
 
     return (
         <>
+            <style>{`
+                .emare-footer-link:hover { color: var(--emare-primary) !important; }
+                .emare-social-btn:hover { color: var(--emare-primary); border-color: var(--emare-primary); }
+            `}</style>
             {/* ── Contact Info Bar ─────────────────────────── */}
-            <section className="w-full bg-white border-t border-slate-200">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <section style={s.infoBar}>
+                <div style={s.infoGrid}>
 
                     {/* Address */}
-                    <div className="flex items-start gap-4">
-                        <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0 text-emerald-500">
+                    <div style={s.infoItem}>
+                        <div style={s.infoIconBox}>
                             <MapPin size={20} aria-hidden="true" />
                         </div>
                         <div>
-                            <h4 className="m-0 mb-2 text-[13px] font-extrabold uppercase tracking-[1.2px] text-emerald-600">Address</h4>
-                            <p className="m-0 text-[15px] leading-relaxed font-medium text-slate-800 break-words">Debre Berhan</p>
+                            <h4 style={s.infoTitle}>Address</h4>
+                            <p style={s.infoText}>Debre Berhan</p>
                         </div>
                     </div>
 
                     {/* Call For Query */}
-                    <div className="flex items-start gap-4">
-                        <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0 text-emerald-500">
+                    <div style={s.infoItem}>
+                        <div style={s.infoIconBox}>
                             <Phone size={20} aria-hidden="true" />
                         </div>
                         <div>
-                            <h4 className="m-0 mb-2 text-[13px] font-extrabold uppercase tracking-[1.2px] text-emerald-600">Call For Query</h4>
-                            <a href="tel:+251914362720" className="block text-[15px] leading-relaxed font-medium text-slate-800 no-underline hover:text-emerald-600 transition-colors">+251 914 362 720</a>
-                            <a href="tel:+251905050698" className="block text-[15px] leading-relaxed font-medium text-slate-800 no-underline hover:text-emerald-600 transition-colors">+251 905 050 698</a>
+                            <h4 style={s.infoTitle}>Call For Query</h4>
+                            <a href="tel:+251914362720" style={s.infoLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>+251 914 362 720</a>
+                            <a href="tel:+251905050698" style={s.infoLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>+251 905 050 698</a>
                         </div>
                     </div>
 
                     {/* Send Us Message */}
-                    <div className="flex items-start gap-4">
-                        <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0 text-emerald-500">
+                    <div style={s.infoItem}>
+                        <div style={s.infoIconBox}>
                             <Mail size={20} aria-hidden="true" />
                         </div>
                         <div>
-                            <h4 className="m-0 mb-2 text-[13px] font-extrabold uppercase tracking-[1.2px] text-emerald-600">Send Us Message</h4>
-                            <a href="mailto:info@emareicthub.com" className="block text-[15px] leading-relaxed font-medium text-slate-800 no-underline hover:text-emerald-600 transition-colors break-words">info@emareicthub.com</a>
-                            <a href="mailto:emareicthub@gmail.com" className="block text-[15px] leading-relaxed font-medium text-slate-800 no-underline hover:text-emerald-600 transition-colors break-words">emareicthub@gmail.com</a>
+                            <h4 style={s.infoTitle}>Send Us Message</h4>
+                            <a href="mailto:info@emareicthub.com" style={s.infoLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>info@emareicthub.com</a>
+                            <a href="mailto:emareicthub@gmail.com" style={s.infoLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>emareicthub@gmail.com</a>
                         </div>
                     </div>
 
                     {/* Opening Hours */}
-                    <div className="flex items-start gap-4">
-                        <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0 text-emerald-500">
+                    <div style={s.infoItem}>
+                        <div style={s.infoIconBox}>
                             <Clock size={20} aria-hidden="true" />
                         </div>
                         <div>
-                            <h4 className="m-0 mb-2 text-[13px] font-extrabold uppercase tracking-[1.2px] text-emerald-600">Opening Hours</h4>
-                            <p className="m-0 text-[15px] leading-relaxed font-medium text-slate-800">08:30 AM - 18:00 PM</p>
+                            <h4 style={s.infoTitle}>Opening Hours</h4>
+                            <p style={s.infoText}>08:30 AM - 18:00 PM</p>
                         </div>
                     </div>
 
@@ -110,44 +126,44 @@ export default function SiteFooter() {
                             A Center for Digital Innovation and Technology Development
                         </p>
                         <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-                            <a href="https://www.facebook.com/people/%E1%8A%A5%E1%88%9B%E1%88%AC-%E1%8B%A8%E1%88%B5%E1%88%8D%E1%8C%A0%E1%8A%93-%E1%88%9B%E1%8B%95%E1%8A%A8%E1%88%8D-Emare-ICT-Hub/61575108773808/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" style={s.socialBtn}><FaFacebookF /></a>
-                            <a href="https://www.tiktok.com/@emareicthub" target="_blank" rel="noopener noreferrer" aria-label="TikTok" style={s.socialBtn}><FaTiktok /></a>
-                            <a href="https://t.me/emareicthub" target="_blank" rel="noopener noreferrer" aria-label="Telegram" style={s.socialBtn}><FaTelegramPlane /></a>
-                            <a href="https://www.instagram.com/emare_ict_hub?igsh=emllYWtybmlucGh0" target="_blank" rel="noopener noreferrer" aria-label="Instagram" style={s.socialBtn}><FaInstagram /></a>
-                            <a href="https://www.linkedin.com/company/emareicthub" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" style={s.socialBtn}><FaLinkedinIn /></a>
+                            <a className="emare-social-btn" href="https://www.facebook.com/people/%E1%8A%A5%E1%88%9B%E1%88%AC-%E1%8B%A8%E1%88%B5%E1%88%8D%E1%8C%A0%E1%8A%93-%E1%88%9B%E1%8B%95%E1%8A%A8%E1%88%8D-Emare-ICT-Hub/61575108773808/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" style={s.socialBtn}><FaFacebookF /></a>
+                            <a className="emare-social-btn" href="https://www.tiktok.com/@emareicthub" target="_blank" rel="noopener noreferrer" aria-label="TikTok" style={s.socialBtn}><FaTiktok /></a>
+                            <a className="emare-social-btn" href="https://t.me/emareicthub" target="_blank" rel="noopener noreferrer" aria-label="Telegram" style={s.socialBtn}><FaTelegramPlane /></a>
+                            <a className="emare-social-btn" href="https://www.instagram.com/emare_ict_hub?igsh=emllYWtybmlucGh0" target="_blank" rel="noopener noreferrer" aria-label="Instagram" style={s.socialBtn}><FaInstagram /></a>
+                            <a className="emare-social-btn" href="https://www.linkedin.com/company/emareicthub" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" style={s.socialBtn}><FaLinkedinIn /></a>
                         </div>
                     </div>
                     <div>
                         <h4 style={s.footerTitle}>Quick Links</h4>
-                        <Link to="/about" style={s.footerLink}>About</Link>
-                        <Link to="/developers" style={s.footerLink}>Emare Developers</Link>
-                        <Link to="/courses" style={s.footerLink}>Course Catalogs</Link>
-                        <Link to="/events" style={s.footerLink}>Events</Link>
-                        <a href="/#services" style={s.footerLink} onClick={scrollToHomeSection('services')}>Services</a>
-                        <a href="/#contact" style={s.footerLink} onClick={scrollToHomeSection('contact')}>Contact</a>
+                        <Link to="/about" className="emare-footer-link" style={s.footerLink}>About</Link>
+                        <Link to="/developers" className="emare-footer-link" style={s.footerLink}>Emare Developers</Link>
+                        <Link to="/courses" className="emare-footer-link" style={s.footerLink}>Course Catalogs</Link>
+                        <Link to="/events" className="emare-footer-link" style={s.footerLink}>Events</Link>
+                        <a href="/#services" className="emare-footer-link" style={s.footerLink} onClick={scrollToHomeSection('services')}>Services</a>
+                        <a href="/#contact" className="emare-footer-link" style={s.footerLink} onClick={scrollToHomeSection('contact')}>Contact</a>
                     </div>
                     <div>
                         <h4 style={s.footerTitle}>Categories</h4>
-                        <Link to="/courses?category=Artificial Intelligence" style={s.footerLink}>Artificial Intelligence</Link>
-                        <Link to="/courses?category=Business & Management" style={s.footerLink}>Business &amp; Management</Link>
-                        <Link to="/courses?category=Cloud Computing" style={s.footerLink}>Cloud Computing</Link>
-                        <Link to="/courses?category=Cybersecurity" style={s.footerLink}>Cybersecurity</Link>
-                        <Link to="/courses?category=Data Science" style={s.footerLink}>Data Science</Link>
-                        <Link to="/courses?category=Databases" style={s.footerLink}>Databases</Link>
-                        <Link to="/courses?category=DevOps & CI/CD" style={s.footerLink}>DevOps &amp; CI/CD</Link>
-                        <Link to="/courses?category=Graphic Design" style={s.footerLink}>Graphic Design</Link>
+                        <Link to="/courses?category=Artificial Intelligence" className="emare-footer-link" style={s.footerLink}>Artificial Intelligence</Link>
+                        <Link to="/courses?category=Business & Management" className="emare-footer-link" style={s.footerLink}>Business &amp; Management</Link>
+                        <Link to="/courses?category=Cloud Computing" className="emare-footer-link" style={s.footerLink}>Cloud Computing</Link>
+                        <Link to="/courses?category=Cybersecurity" className="emare-footer-link" style={s.footerLink}>Cybersecurity</Link>
+                        <Link to="/courses?category=Data Science" className="emare-footer-link" style={s.footerLink}>Data Science</Link>
+                        <Link to="/courses?category=Databases" className="emare-footer-link" style={s.footerLink}>Databases</Link>
+                        <Link to="/courses?category=DevOps & CI/CD" className="emare-footer-link" style={s.footerLink}>DevOps &amp; CI/CD</Link>
+                        <Link to="/courses?category=Graphic Design" className="emare-footer-link" style={s.footerLink}>Graphic Design</Link>
                     </div>
                     <div>
                         <h4 style={s.footerTitle}>Support</h4>
-                        <Link to="/help" style={s.footerLink}>Help Center</Link>
-                        <Link to="/contact" style={s.footerLink}>Contact Us</Link>
-                        <Link to="/contact" style={s.footerLink}>Report Issue</Link>
+                        <Link to="/help" className="emare-footer-link" style={s.footerLink}>Help Center</Link>
+                        <Link to="/contact" className="emare-footer-link" style={s.footerLink}>Contact Us</Link>
+                        <Link to="/contact" className="emare-footer-link" style={s.footerLink}>Report Issue</Link>
                     </div>
                     <div>
                         <h4 style={s.footerTitle}>Legal</h4>
-                        <Link to="/privacy" style={s.footerLink}>Privacy Policy</Link>
-                        <Link to="/terms" style={s.footerLink}>Terms &amp; Conditions</Link>
-                        <Link to="/cookies" style={s.footerLink}>Cookie Policy</Link>
+                        <Link to="/privacy" className="emare-footer-link" style={s.footerLink}>Privacy Policy</Link>
+                        <Link to="/terms" className="emare-footer-link" style={s.footerLink}>Terms &amp; Conditions</Link>
+                        <Link to="/cookies" className="emare-footer-link" style={s.footerLink}>Cookie Policy</Link>
                     </div>
                 </div>
                 <div style={s.footerBottom}>

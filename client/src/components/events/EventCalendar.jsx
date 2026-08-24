@@ -22,21 +22,21 @@ export default function EventCalendar({ selected, onSelect, availableDays = [5, 
     const isSelected = (d) => selected.year === year && selected.month === month && selected.day === d;
 
     return (
-        <div className="rounded-3xl border border-amber-500/20 bg-[#12131A] p-6">
+        <div className="rounded-3xl border border-blue-500/20 bg-[#12131A] p-6">
             <div className="mb-5 flex items-center justify-between">
                 <h3 className="text-base font-bold text-white">{monthLabel}</h3>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={prev}
                         aria-label="Previous month"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-amber-500/20 text-gray-300 transition hover:border-amber-400/50 hover:text-amber-400"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-500/20 text-gray-300 transition hover:border-blue-400/50 hover:text-blue-400"
                     >
                         <ChevronRight className="h-4 w-4 rotate-180" />
                     </button>
                     <button
                         onClick={next}
                         aria-label="Next month"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-amber-500/20 text-gray-300 transition hover:border-amber-400/50 hover:text-amber-400"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-500/20 text-gray-300 transition hover:border-blue-400/50 hover:text-blue-400"
                     >
                         <ChevronRight className="h-4 w-4" />
                     </button>
@@ -62,9 +62,9 @@ export default function EventCalendar({ selected, onSelect, availableDays = [5, 
                             onClick={() => onSelect({ year, month, day: d })}
                             className={`flex h-10 items-center justify-center rounded-xl text-sm font-semibold transition ${
                                 selectedNow
-                                    ? 'bg-gradient-to-br from-amber-400 to-amber-500 text-black shadow-[0_0_20px_rgba(255,193,7,0.4)]'
+                                    ? 'bg-gradient-to-br from-blue-400 to-violet-500 text-black shadow-[0_0_20px_rgba(96,165,250,0.4)]'
                                     : available
-                                      ? 'border border-amber-500/30 bg-amber-400/10 text-amber-300 hover:border-amber-400 hover:bg-amber-400/20 hover:shadow-[0_0_14px_rgba(255,193,7,0.25)]'
+                                      ? 'border border-blue-500/30 bg-blue-400/10 text-blue-300 hover:border-blue-400 hover:bg-blue-400/20 hover:shadow-[0_0_14px_rgba(96,165,250,0.25)]'
                                       : past
                                         ? 'cursor-not-allowed text-gray-700'
                                         : 'text-gray-300 hover:bg-white/5'
@@ -77,7 +77,7 @@ export default function EventCalendar({ selected, onSelect, availableDays = [5, 
             </div>
 
             <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-white/5 pt-4 text-[11px] text-gray-400">
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-400" /> Available date</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-blue-400" /> Available date</span>
                 <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-white/20" /> Unavailable</span>
             </div>
         </div>

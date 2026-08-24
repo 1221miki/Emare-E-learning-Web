@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { courseService, quizService, assignmentService, userService, enrollmentService, analyticsService, systemService, notificationService, authService, reportService, certificateService, contentService, uploadService, auditService, calendarService, eventService } from '../../services/api';
 import Sidebar from '../../components/Sidebar';
@@ -50,10 +50,10 @@ const MEETING_PLATFORMS = [
 const platformToProvider = { googleMeet: 'googleMeet', zoom: 'zoom', microsoftTeams: 'microsoftTeams', jitsi: 'jitsi', custom: 'custom', youtubeLive: 'custom', rtmp: 'custom' };
 const GENERATABLE_PLATFORMS = ['googleMeet', 'zoom', 'microsoftTeams', 'jitsi'];
 
-// ── Event thumbnail normalization ─────────────────────────
+// -- Event thumbnail normalization -------------------------
 // Every uploaded thumbnail is center-cropped to a uniform 16:9 (1280x720)
 // canvas and re-encoded as WebP (~85 quality) so all event cards get a
-// consistent size, aspect ratio and format — smaller uploads, no layout shifts.
+// consistent size, aspect ratio and format � smaller uploads, no layout shifts.
 const THUMB_WIDTH = 1280;
 const THUMB_HEIGHT = 720;
 
@@ -76,7 +76,7 @@ const normalizeEventThumbnail = async (file) => {
         ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, THUMB_WIDTH, THUMB_HEIGHT);
         bitmap.close();
         const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', 0.85));
-        // Some browsers cannot encode WebP — fall back to JPEG, then the original
+        // Some browsers cannot encode WebP � fall back to JPEG, then the original
         let output = blob;
         if (!output) {
             output = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
@@ -86,7 +86,7 @@ const normalizeEventThumbnail = async (file) => {
         const baseName = (file.name || 'event-thumbnail').replace(/\.[^.]+$/, '');
         return new File([output], `${baseName}.${isWebp ? 'webp' : 'jpg'}`, { type: output.type });
     } catch {
-        return file; // unreadable image — upload the original untouched
+        return file; // unreadable image � upload the original untouched
     }
 };
 
@@ -140,9 +140,9 @@ const formatTimeShort = (dateStr) => {
     return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 };
 const formatDateShort = (dateStr) => {
-    if (!dateStr) return '─"';
+    if (!dateStr) return '-"';
     const d = new Date(dateStr);
-    if (Number.isNaN(d.getTime())) return '─"';
+    if (Number.isNaN(d.getTime())) return '-"';
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 const statusChip = (live) => ({
@@ -176,7 +176,7 @@ export default function AdminDashboard() {
     const location = useLocation();
     const [activeTab, setActiveTab] = useState(() => location.state?.activeTab || 'overview');
     const [userSubTab, setUserSubTab] = useState('accounts');
-    const [loading, setLoading] = useState(false); // start false ─" show skeleton immediately
+    const [loading, setLoading] = useState(false); // start false -" show skeleton immediately
 
     useEffect(() => {
         if (location.state?.activeTab) {
@@ -242,7 +242,7 @@ export default function AdminDashboard() {
     const [isAiCourseGenModalOpen, setIsAiCourseGenModalOpen] = useState(false);
     const [aiPromptInput, setAiPromptInput] = useState('');
 
-    // ─"?─"? Fixed-position course action menu (escapes table overflow clipping) ─"?─"?
+    // -"?-"? Fixed-position course action menu (escapes table overflow clipping) -"?-"?
     const [courseMenuOpenId, setCourseMenuOpenId] = useState(null);   // course._id or null
     const [courseMenuPos,    setCourseMenuPos]    = useState({ top: 0, right: 0 });
 
@@ -662,7 +662,7 @@ const handleConnectGoogleMeet = async () => {
                     form: calendarForm,
                     editingId: calendarEditingId
                 }));
-            } catch (e) { /* non-fatal — the form simply resets on return */ }
+            } catch (e) { /* non-fatal � the form simply resets on return */ }
             window.location.href = url;
         } catch (error) {
             setIsGoogleConnecting(false);
@@ -1009,7 +1009,7 @@ const handleConnectGoogleMeet = async () => {
         showNotification('Certificate template removed.');
     };
 
-    // ─"?─"? User Management ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?
+    // -"?-"? User Management -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?
 
     const handleToggleUserStatus = async (user) => {
         try {
@@ -1110,7 +1110,7 @@ const handleConnectGoogleMeet = async () => {
                         : '');
                     setIsCreateModalOpen(false);
                     setCreateVerifyStep(true);
-                    // Lock the "Resend Code" button so the admin cannot spam it —
+                    // Lock the "Resend Code" button so the admin cannot spam it �
                     // longer cooldown when the server reports a daily quota / rate limit.
                     startCreateVerifyCooldown(response.data.deliveryRateLimited
                         ? (response.data.retryAfterSeconds || 60)
@@ -1168,7 +1168,7 @@ const handleConnectGoogleMeet = async () => {
         let cooldownSeconds = 30;
         try {
             // Backend generates a fresh 6-digit code and emails it directly to the
-            // registered inbox. Codes are NEVER returned in the API response — the
+            // registered inbox. Codes are NEVER returned in the API response � the
             // UI relies purely on live delivery, so on failure we surface the error
             // and keep the 30s cooldown before a retry is allowed.
             const res = await authService.resendVerification({ accountEmail: createVerifyEmail });
@@ -1191,7 +1191,7 @@ const handleConnectGoogleMeet = async () => {
             }
         } finally {
             setCreateVerifyResending(false);
-            // Always restart the cooldown (success or failure) to prevent spamming —
+            // Always restart the cooldown (success or failure) to prevent spamming �
             // longer when the server reports a rate limit.
             startCreateVerifyCooldown(cooldownSeconds);
         }
@@ -1230,7 +1230,7 @@ const handleConnectGoogleMeet = async () => {
         }
     };
 
-    // ─"?─"? Course Management ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?
+    // -"?-"? Course Management -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?
 
     const handleApproveCourse = async (id) => {
         try {
@@ -1639,7 +1639,7 @@ const handleConnectGoogleMeet = async () => {
         }
     };
 
-    // ─"?─"? System Management ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?
+    // -"?-"? System Management -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?
 
     const handleAssetUpload = async (fieldName, file) => {
         if (!file) return;
@@ -1752,7 +1752,7 @@ const resetCalendarForm = () => {
         setIsUploadingThumbnail(true);
         setFormError('');
         try {
-            // Normalize first: uniform 1280x720 (16:9) WebP — smaller, consistent
+            // Normalize first: uniform 1280x720 (16:9) WebP � smaller, consistent
             const normalized = await normalizeEventThumbnail(file);
             const fd = new FormData();
             fd.append('file', normalized);
@@ -1789,11 +1789,11 @@ const resetCalendarForm = () => {
         if (start && end && end < start) errors.endDate = 'End date/time must be after the start date/time.';
         if (calendarForm.eventType === 'Physical' && !(calendarForm.location || '').trim()) errors.location = 'Location is required for a physical event.';
         const trimmedUrl = (calendarForm.streamUrl || '').trim();
-        if (calendarForm.eventType !== 'Physical' && trimmedUrl && !isValidUrl(trimmedUrl)) errors.streamUrl = 'Meeting URL is invalid — use a full http(s) link.';
-        if (calendarForm.bannerImage && !isValidUrl(calendarForm.bannerImage)) errors.bannerImage = 'Event thumbnail URL is invalid — use a full http(s) link.';
+        if (calendarForm.eventType !== 'Physical' && trimmedUrl && !isValidUrl(trimmedUrl)) errors.streamUrl = 'Meeting URL is invalid � use a full http(s) link.';
+        if (calendarForm.bannerImage && !isValidUrl(calendarForm.bannerImage)) errors.bannerImage = 'Event thumbnail URL is invalid � use a full http(s) link.';
         const inviteesResult = normalizeInviteesInput(calendarForm.meetingInvitees);
         if (inviteesResult.invalid.length) errors.meetingInvitees = `Invalid invitee email(s): ${inviteesResult.invalid.join(', ')}`;
-        // NOTE: a disconnected Google Meet no longer blocks saving — the backend
+        // NOTE: a disconnected Google Meet no longer blocks saving � the backend
         // automatically falls back to a free Jitsi link so Online/Hybrid events
         // always save with a working meeting URL.
         if (isPublic) {
@@ -2004,8 +2004,8 @@ const resetCalendarForm = () => {
 
     const handleGenerateMeetingLink = async (overrideProvider) => {
         const provider = overrideProvider || calendarForm.meetingProvider;
-        if (provider === 'custom') return showNotification('Manual URLs are entered directly in the link field — no generation needed.');
-        // NOTE: an unconnected provider no longer blocks generation — the backend
+        if (provider === 'custom') return showNotification('Manual URLs are entered directly in the link field � no generation needed.');
+        // NOTE: an unconnected provider no longer blocks generation � the backend
         // automatically falls back to a free Jitsi link so a working meeting URL
         // is always produced.
         if (!calendarForm.title.trim()) return showNotification('Enter an event title before generating a link.');
@@ -2024,7 +2024,7 @@ const resetCalendarForm = () => {
             if (!url) throw new Error('No meeting link was returned.');
             setCalendarForm((f) => ({ ...f, streamUrl: url, meetingProvider: finalProvider }));
             showNotification(provider !== finalProvider
-                ? `${meetingProviderLabel(provider)} is not connected — created a ${meetingProviderLabel(finalProvider)} link instead.`
+                ? `${meetingProviderLabel(provider)} is not connected � created a ${meetingProviderLabel(finalProvider)} link instead.`
                 : (provider === 'googleMeet'
                     ? 'Real Google Meet meeting created and attached to this event.'
                     : `${meetingProviderLabel(finalProvider)} link generated.`));
@@ -2085,7 +2085,7 @@ const resetCalendarForm = () => {
         }
     };
 
-    // ─"?─"? RENDERERS ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?
+    // -"?-"? RENDERERS -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?
 
     const s = {
         page: { display: 'flex', minHeight: '100vh', fontFamily: "'Outfit', 'Inter', sans-serif", background: colors.bg },
@@ -2263,7 +2263,7 @@ const resetCalendarForm = () => {
                                 <div key={item.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '12px', background: colors.bgInput }}>
                                     <div>
                                         <div style={{ color: colors.text, fontWeight: '700' }}>{item.name}</div>
-                                        <div style={{ color: colors.textMuted, fontSize: '13px' }}>{item.courseCount} course{item.courseCount === 1 ? '' : 's'} ── {item.enrollments} enrollments</div>
+                                        <div style={{ color: colors.textMuted, fontSize: '13px' }}>{item.courseCount} course{item.courseCount === 1 ? '' : 's'} -- {item.enrollments} enrollments</div>
                                     </div>
                                     <span style={{ color: colors.accent, fontWeight: '800' }}>{item.rating}/5</span>
                                 </div>
@@ -2476,7 +2476,7 @@ const resetCalendarForm = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
                 <div>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', color: colors.text, margin: '0 0 4px 0' }}>Security & Roles</h2>
-                    <p style={{ fontSize: '13px', color: colors.textMuted, margin: 0 }}>Dashboard ── Security & Roles</p>
+                    <p style={{ fontSize: '13px', color: colors.textMuted, margin: 0 }}>Dashboard -- Security & Roles</p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
                     <div style={{ position: 'relative' }}>
@@ -2653,7 +2653,7 @@ const resetCalendarForm = () => {
                 <div style={{ background: colors.bgCard, borderRadius: '12px', border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ padding: '20px 24px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h3 style={{ fontSize: '16px', fontWeight: '600', color: colors.text, margin: 0 }}>Recent Security Events</h3>
-                        <button onClick={() => setActiveTab('audit')} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}>View All Logs ─+'</button>
+                        <button onClick={() => setActiveTab('audit')} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}>View All Logs -+'</button>
                     </div>
                     <div style={{ padding: '0', overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
@@ -2747,7 +2747,7 @@ const resetCalendarForm = () => {
                 <div style={{ background: colors.bgCard, borderRadius: '12px', border: `1px solid ${colors.border}`, padding: '24px', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                         <h3 style={{ fontSize: '16px', fontWeight: '600', color: colors.text, margin: 0 }}>Security Status</h3>
-                        <button onClick={() => setActiveTab('audit')} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}>View Full Report ─+'</button>
+                        <button onClick={() => setActiveTab('audit')} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}>View Full Report -+'</button>
                     </div>
                     <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flex: 1 }}>
                         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -3063,7 +3063,7 @@ const resetCalendarForm = () => {
                             {analytics.topPerformers.map((student, index) => (
                                 <div key={index} style={{ padding: '14px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
                                     <div style={{ color: colors.text, fontWeight: '700' }}>{student.studentName}</div>
-                                    <div style={{ color: colors.textMuted, fontSize: '13px' }}>{student.avgScore}% avg score ── {student.totalAttempts} attempts</div>
+                                    <div style={{ color: colors.textMuted, fontSize: '13px' }}>{student.avgScore}% avg score -- {student.totalAttempts} attempts</div>
                                 </div>
                             ))}
                         </div>
@@ -3141,7 +3141,7 @@ const resetCalendarForm = () => {
                 status: st,
                 statusColor: sc.color,
                 statusBg: sc.bg,
-                date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '─"',
+                date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '-"',
                 iconBg: '#1e3a8a', icon: <BookOpen size={20} color="#60a5fa" />,
                 _id: c._id, isFeatured: c.isFeatured, raw: c
             };
@@ -3173,7 +3173,7 @@ const resetCalendarForm = () => {
                                 <button onClick={handleBulkPublish} title="Publish Selected" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#10b981', color: colors.text, border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
                                     <Upload size={14} /> Publish
                                 </button>
-                                <button onClick={handleBulkArchive} title="Archive Selected" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f59e0b', color: colors.text, border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                                <button onClick={handleBulkArchive} title="Archive Selected" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.35)', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
                                     <Archive size={14} /> Archive
                                 </button>
                                 <button onClick={handleBulkCategoryAssign} title="Assign Category" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: colors.bgCard, color: colors.text, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
@@ -3440,7 +3440,7 @@ const resetCalendarForm = () => {
         };
         const statusConfig = {
             'Approved': { color: '#10b981', bg: '#f0fdf4', icon: <CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} /> },
-            'Pending':  { color: '#f59e0b', bg: '#fffbeb', icon: '─3' },
+            'Pending':  { color: '#f59e0b', bg: '#fffbeb', icon: '-3' },
             'Rejected': { color: '#ef4444', bg: '#fef2f2', icon: <XCircle size={16} style={{ marginRight: '6px', color: '#ef4444' }} /> },
             'Flagged':  { color: '#f97316', bg: '#fff7ed', icon: <Flag size={16} style={{ marginRight: '6px' }} /> },
             'Archived': { color: colors.textMuted, bg: '#f8fafc', icon: <Package size={16} style={{ marginRight: '6px' }} /> },
@@ -3490,7 +3490,7 @@ const resetCalendarForm = () => {
 
         const statsData = [
             { label: 'Total Content',    value: moderationItems.length, icon: <Folder size={16} style={{ marginRight: '6px' }} />, color: '#3b82f6', bg: '#eff6ff' },
-            { label: 'Pending Review',   value: moderationItems.filter(i => i.status === 'Pending').length, icon: '─3', color: '#f59e0b', bg: '#fffbeb' },
+            { label: 'Pending Review',   value: moderationItems.filter(i => i.status === 'Pending').length, icon: '-3', color: '#f59e0b', bg: '#fffbeb' },
             { label: 'Approved',         value: moderationItems.filter(i => i.status === 'Approved').length, icon: <CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} />, color: '#10b981', bg: '#f0fdf4' },
             { label: 'Rejected',         value: moderationItems.filter(i => i.status === 'Rejected').length, icon: <XCircle size={16} style={{ marginRight: '6px', color: '#ef4444' }} />, color: '#ef4444', bg: '#fef2f2' },
             { label: 'Reported Content', value: moderationItems.filter(i => i.reports > 0).length, icon: <Flag size={16} style={{ marginRight: '6px' }} />, color: '#f97316', bg: '#fff7ed' },
@@ -3505,8 +3505,8 @@ const resetCalendarForm = () => {
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
-                        <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Dashboard ─+' Content & Moderation</div>
-                        <h2 style={{ fontSize: '24px', fontWeight: '800', color: colors.text, margin: 0 }}> <Shield size={16} style={{ marginRight: '6px' }} /> ─,? Content & Moderation</h2>
+                        <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Dashboard -+' Content & Moderation</div>
+                        <h2 style={{ fontSize: '24px', fontWeight: '800', color: colors.text, margin: 0 }}> <Shield size={16} style={{ marginRight: '6px' }} /> -,? Content & Moderation</h2>
                         <p style={{ fontSize: '13px', color: colors.textMuted, margin: '4px 0 0' }}>Review, approve, monitor, and manage all content uploads across the LMS platform.</p>
                     </div>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -3533,7 +3533,7 @@ const resetCalendarForm = () => {
                     ))}
                 </div>
 
-                {/* ─"?─"?─"? ALL CONTENT TABLE VIEW ─"?─"?─"? */}
+                {/* -"?-"?-"? ALL CONTENT TABLE VIEW -"?-"?-"? */}
                 <div style={{ background: colors.bgCard, borderRadius: '16px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                     {/* Table Title Section */}
                     <div style={{ padding: '16px 20px', borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: colors.bgCard }}>
@@ -3548,7 +3548,7 @@ const resetCalendarForm = () => {
                                 <button onClick={() => handleBulkModAction('approve')} style={{ ...inputStyle, background: '#10b981', color: colors.text, border: 'none', padding: '6px 14px' }}> <CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} />  Approve</button>
                                 <button onClick={() => handleBulkModAction('reject')}  style={{ ...inputStyle, background: '#ef4444', color: colors.text, border: 'none', padding: '6px 14px' }}> <XCircle size={16} style={{ marginRight: '6px', color: '#ef4444' }} />  Reject</button>
                                 <button onClick={() => handleBulkModAction('archive')} style={{ ...inputStyle, background: '#64748b', color: colors.text, border: 'none', padding: '6px 14px' }}> <Package size={16} style={{ marginRight: '6px' }} />  Archive</button>
-                                <button onClick={() => handleBulkModAction('delete')}  style={{ ...inputStyle, background: '#dc2626', color: colors.text, border: 'none', padding: '6px 14px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> ─,? Delete</button>
+                                <button onClick={() => handleBulkModAction('delete')}  style={{ ...inputStyle, background: '#dc2626', color: colors.text, border: 'none', padding: '6px 14px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> -,? Delete</button>
                                 <button onClick={() => setSelectedModerationItems([])} style={{ ...inputStyle, padding: '6px 12px', marginLeft: 'auto' }}> <X size={16} style={{ marginRight: '6px' }} />  Deselect</button>
                             </div>
                         )}
@@ -3572,8 +3572,8 @@ const resetCalendarForm = () => {
                                 {[...new Set(moderationItems.map(i => i.category))].map(c => <option key={c} value={c} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{c}</option>)}
                             </select>
                             <select value={modSortBy} onChange={e => setModSortBy(e.target.value)} style={inputStyle}>
-                                <option value="Newest" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>─── Newest First</option>
-                                <option value="Oldest" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>──+ Oldest First</option>
+                                <option value="Newest" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>--- Newest First</option>
+                                <option value="Oldest" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>--+ Oldest First</option>
                                 <option value="Most Reported" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}> <Flag size={16} style={{ marginRight: '6px' }} />  Most Reported</option>
                                 <option value="Title A-Z" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>A-Z Title</option>
                             </select>
@@ -3601,7 +3601,7 @@ const resetCalendarForm = () => {
                                         <tr><td colSpan={10} style={{ padding: '48px', textAlign: 'center', color: colors.textMuted, fontSize: '14px' }}>No content matches your current filters.</td></tr>
                                     ) : pagedItems.map((item, idx) => {
                                         const typeConf = contentTypeConfig[item.type] || { icon: <Folder size={16} style={{ marginRight: '6px' }} />, color: colors.textMuted, bg: '#f8fafc' };
-                                        const statConf = statusConfig[item.status] || { color: colors.textMuted, bg: '#f8fafc', icon: '──' };
+                                        const statConf = statusConfig[item.status] || { color: colors.textMuted, bg: '#f8fafc', icon: '--' };
                                         const isSelected = selectedModerationItems.includes(item.id);
                                         return (
                                             <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', background: isSelected ? '#eff6ff' : 'transparent', transition: 'background 0.15s' }}
@@ -3625,7 +3625,7 @@ const resetCalendarForm = () => {
                                                 <td style={{ padding: '14px 16px', color: colors.textMuted, whiteSpace: 'nowrap' }}>{item.date}</td>
                                                 <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                                                     {item.reports > 0 ? <span style={{ background: '#fef2f2', color: '#dc2626', padding: '3px 10px', borderRadius: '20px', fontWeight: '700', fontSize: '12px' }}> <Flag size={16} style={{ marginRight: '6px' }} />  {item.reports}</span>
-                                                        : <span style={{ color: colors.textMuted, fontSize: '12px' }}>─"</span>}
+                                                        : <span style={{ color: colors.textMuted, fontSize: '12px' }}>-"</span>}
                                                 </td>
                                                 <td style={{ padding: '14px 16px' }}>
                                                     <span style={{ background: statConf.bg, color: statConf.color, padding: '4px 10px', borderRadius: '20px', fontWeight: '600', fontSize: '12px', whiteSpace: 'nowrap' }}>
@@ -3652,22 +3652,22 @@ const resetCalendarForm = () => {
                         {/* Pagination */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderTop: `1px solid ${colors.border}`, flexWrap: 'wrap', gap: '10px' }}>
                             <div style={{ fontSize: '13px', color: colors.textMuted }}>
-                                Showing {Math.min(pageStart + 1, filteredItems.length)}─"{Math.min(pageStart + moderationRowsPerPage, filteredItems.length)} of {filteredItems.length} items &nbsp;|&nbsp;
+                                Showing {Math.min(pageStart + 1, filteredItems.length)}-"{Math.min(pageStart + moderationRowsPerPage, filteredItems.length)} of {filteredItems.length} items &nbsp;|&nbsp;
                                 Rows per page: <select value={moderationRowsPerPage} onChange={e => { setModerationRowsPerPage(Number(e.target.value)); setModerationCurrentPage(1); }} style={{ ...inputStyle, padding: '3px 8px', fontSize: '12px', display: 'inline-block', width: 'auto' }}>
                                     {[5, 10, 25, 50].map(n => <option key={n} value={n} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{n}</option>)}
                                 </select>
                             </div>
                             <div style={{ display: 'flex', gap: '6px' }}>
-                                <button disabled={moderationCurrentPage === 1} onClick={() => setModerationCurrentPage(p => p - 1)} style={{ ...inputStyle, padding: '6px 12px', opacity: moderationCurrentPage === 1 ? 0.4 : 1 }}>─+? Prev</button>
+                                <button disabled={moderationCurrentPage === 1} onClick={() => setModerationCurrentPage(p => p - 1)} style={{ ...inputStyle, padding: '6px 12px', opacity: moderationCurrentPage === 1 ? 0.4 : 1 }}>-+? Prev</button>
                                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
                                     <button key={n} onClick={() => setModerationCurrentPage(n)} style={{ ...inputStyle, padding: '6px 12px', background: n === moderationCurrentPage ? '#2563eb' : '#fff', color: n === moderationCurrentPage ? '#fff' : '#334155', fontWeight: n === moderationCurrentPage ? '700' : '500', border: n === moderationCurrentPage ? 'none' : '1px solid #e2e8f0' }}>{n}</button>
                                 ))}
-                                <button disabled={moderationCurrentPage === totalPages} onClick={() => setModerationCurrentPage(p => p + 1)} style={{ ...inputStyle, padding: '6px 12px', opacity: moderationCurrentPage === totalPages ? 0.4 : 1 }}>Next ─+'</button>
+                                <button disabled={moderationCurrentPage === totalPages} onClick={() => setModerationCurrentPage(p => p + 1)} style={{ ...inputStyle, padding: '6px 12px', opacity: moderationCurrentPage === totalPages ? 0.4 : 1 }}>Next -+'</button>
                             </div>
                         </div>
                     </div>
 
-                {/* ─"?─"?─"? CONTENT REVIEW DRAWER ─"?─"?─"? */}
+                {/* -"?-"?-"? CONTENT REVIEW DRAWER -"?-"?-"? */}
                 {isReviewDrawerOpen && reviewItem && (
                     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex' }}>
                         <div style={{ flex: 1, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(3px)' }} onClick={() => setIsReviewDrawerOpen(false)} />
@@ -3703,7 +3703,7 @@ const resetCalendarForm = () => {
 
                                 {/* Preview Area */}
                                 <div>
-                                    <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '700', color: colors.text }}>─- Content Preview</h4>
+                                    <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '700', color: colors.text }}>-- Content Preview</h4>
                                     {reviewItem.type === 'Video Lecture' && reviewItem.videoUrl ? (
                                         <video src={reviewItem.videoUrl} controls style={{ width: '100%', borderRadius: '10px', background: colors.bg, maxHeight: '220px' }} />
                                     ) : reviewItem.type === 'PDF' && reviewItem.pdfUrl ? (
@@ -3760,7 +3760,7 @@ const resetCalendarForm = () => {
 
                                 {/* Notes */}
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: colors.text, marginBottom: '6px' }}> <FileEdit size={16} style={{ marginRight: '6px' }} /> ─,? Internal Moderator Notes</label>
+                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: colors.text, marginBottom: '6px' }}> <FileEdit size={16} style={{ marginRight: '6px' }} /> -,? Internal Moderator Notes</label>
                                     <textarea value={moderatorNotes} onChange={e => setModeratorNotes(e.target.value)} placeholder="Add internal notes (not visible to instructor)..." rows={2} style={{ width: '100%', padding: '10px 12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '13px', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
                                 </div>
                                 <div>
@@ -3770,12 +3770,12 @@ const resetCalendarForm = () => {
 
                                 {/* Admin Decision Buttons */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: colors.text }}> <Scale size={16} style={{ marginRight: '6px' }} /> ─,? Admin Decision</h4>
+                                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: colors.text }}> <Scale size={16} style={{ marginRight: '6px' }} /> -,? Admin Decision</h4>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                         {[
                                             { label: <><CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} />  Approve</>, action: 'approve', style: { background: '#10b981', color: colors.text, border: 'none' } },
                                             { label: <><XCircle size={16} style={{ marginRight: '6px', color: '#ef4444' }} />  Reject</>,  action: 'reject',  style: { background: '#ef4444', color: colors.text, border: 'none' } },
-                                            { label: <><Repeat size={16} style={{ marginRight: '6px' }} />  Request Revision</>, action: 'hide',   style: { background: '#f59e0b', color: colors.text, border: 'none' } },
+                                            { label: <><Repeat size={16} style={{ marginRight: '6px' }} />  Request Revision</>, action: 'hide',   style: { background: 'rgba(245,158,11,0.15)', color: '#b45309', border: '1px solid rgba(245,158,11,0.35)' } },
                                             { label: <><Package size={16} style={{ marginRight: '6px' }} />  Archive</>, action: 'archive', style: { background: '#64748b', color: colors.text, border: 'none' } },
                                         ].map(btn => (
                                             <button key={btn.action} onClick={() => {
@@ -3785,7 +3785,7 @@ const resetCalendarForm = () => {
                                             }} style={{ ...btn.style, padding: '10px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>{btn.label}</button>
                                         ))}
                                     </div>
-                                    <button onClick={() => { if (window.confirm('Permanently delete this content?')) { handleModAction('delete', reviewItem); setIsReviewDrawerOpen(false); } }} style={{ padding: '10px', background: colors.bgCard, border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> ─,? Delete Content Permanently</button>
+                                    <button onClick={() => { if (window.confirm('Permanently delete this content?')) { handleModAction('delete', reviewItem); setIsReviewDrawerOpen(false); } }} style={{ padding: '10px', background: colors.bgCard, border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> -,? Delete Content Permanently</button>
                                 </div>
                             </div>
                         </div>
@@ -3893,7 +3893,7 @@ const resetCalendarForm = () => {
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
-                        <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Dashboard ─+' Assessment & Certificate</div>
+                        <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Dashboard -+' Assessment & Certificate</div>
                         <h2 style={{ fontSize: '24px', fontWeight: '800', color: colors.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Medal size={22} color="#3b82f6" /> Assessment & Certificate Control Center
                         </h2>
@@ -3955,7 +3955,7 @@ const resetCalendarForm = () => {
                     ))}
                 </div>
 
-                {/* ─?─?─?─?─?─?─?─?─?─?─? 1. ASSESSMENTS TABLE VIEW ─?─?─?─?─?─?─?─?─?─?─? */}
+                {/* -?-?-?-?-?-?-?-?-?-?-? 1. ASSESSMENTS TABLE VIEW -?-?-?-?-?-?-?-?-?-?-? */}
                 {asmTabSubView === 'assessments' && (
                     <div style={{ background: colors.bgCard, borderRadius: '16px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
 
@@ -3964,8 +3964,8 @@ const resetCalendarForm = () => {
                             <div style={{ padding: '10px 20px', background: '#eff6ff', borderBottom: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                                 <span style={{ fontWeight: '700', fontSize: '13px', color: '#2563eb' }}>{selectedAsmRows.length} selected</span>
                                 <button onClick={() => handleBulkAsmAction('publish')}   style={{ ...inp, background: '#10b981', color: colors.text, border: 'none', padding: '6px 14px' }}> <CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} />  Publish</button>
-                                <button onClick={() => handleBulkAsmAction('unpublish')} style={{ ...inp, background: '#f59e0b', color: colors.text, border: 'none', padding: '6px 14px' }}> <FilePen size={16} style={{ marginRight: '6px' }} />  Set to Draft</button>
-                                <button onClick={() => handleBulkAsmAction('delete')}    style={{ ...inp, background: '#dc2626', color: colors.text, border: 'none', padding: '6px 14px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> ─,? Delete</button>
+                                <button onClick={() => handleBulkAsmAction('unpublish')} style={{ ...inp, background: 'rgba(245,158,11,0.15)', color: '#b45309', border: '1px solid rgba(245,158,11,0.35)', padding: '6px 14px' }}> <FilePen size={16} style={{ marginRight: '6px' }} />  Set to Draft</button>
+                                <button onClick={() => handleBulkAsmAction('delete')}    style={{ ...inp, background: '#dc2626', color: colors.text, border: 'none', padding: '6px 14px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> -,? Delete</button>
                                 <button onClick={() => setSelectedAsmRows([])} style={{ ...inp, padding: '6px 12px', marginLeft: 'auto' }}> <X size={16} style={{ marginRight: '6px' }} />  Deselect</button>
                             </div>
                         )}
@@ -3991,8 +3991,8 @@ const resetCalendarForm = () => {
                                 {[...new Set(assessmentsList.map(a => a.course))].map(c => <option key={c} value={c} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{c}</option>)}
                             </select>
                             <select value={asmSortBy} onChange={e => setAsmSortBy(e.target.value)} style={inp}>
-                                <option value="Newest" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>─── Newest First</option>
-                                <option value="Oldest" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>──+ Oldest First</option>
+                                <option value="Newest" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>--- Newest First</option>
+                                <option value="Oldest" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>--+ Oldest First</option>
                                 <option value="Most Attempts" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Most Attempts</option>
                                 <option value="Name A-Z" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>A-Z Name</option>
                             </select>
@@ -4022,14 +4022,14 @@ const resetCalendarForm = () => {
                                         <tr><td colSpan={11} style={{ padding: '48px', textAlign: 'center', color: colors.textMuted, fontSize: '14px' }}>No assessments found.</td></tr>
                                     ) : pagedAsm.map(asm => {
                                         const tb = typeBadges[asm.type] || { icon: <FileText size={14} />, color: colors.textMuted, bg: 'rgba(148, 163, 184, 0.15)' };
-                                        const sb = statusBadges[asm.status] || { icon: '──', color: colors.textMuted, bg: 'rgba(148, 163, 184, 0.15)' };
+                                        const sb = statusBadges[asm.status] || { icon: '--', color: colors.textMuted, bg: 'rgba(148, 163, 184, 0.15)' };
                                         const isSel = selectedAsmRows.includes(asm.id);
                                         return (
                                             <tr key={asm.id} style={{ borderBottom: `1px solid ${colors.border}`, background: isSel ? 'rgba(59, 130, 246, 0.1)' : 'transparent' }}>
                                                 <td style={{ padding: '14px 16px' }}><input type="checkbox" checked={isSel} onChange={() => setSelectedAsmRows(prev => isSel ? prev.filter(id => id !== asm.id) : [...prev, asm.id])} /></td>
                                                 <td style={{ padding: '14px 16px', maxWidth: '240px' }}>
                                                     <div style={{ fontWeight: '600', color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asm.name}</div>
-                                                    <div style={{ fontSize: '11px', color: colors.textMuted }}>{asm.id} ── Created {asm.date}</div>
+                                                    <div style={{ fontSize: '11px', color: colors.textMuted }}>{asm.id} -- Created {asm.date}</div>
                                                 </td>
                                                 <td style={{ padding: '14px 16px', color: colors.textMuted, whiteSpace: 'nowrap' }}>{asm.course}</td>
                                                 <td style={{ padding: '14px 16px', color: colors.textMuted, whiteSpace: 'nowrap' }}>{asm.instructor}</td>
@@ -4039,7 +4039,7 @@ const resetCalendarForm = () => {
                                                 <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '600', color: colors.text }}>{asm.totalQuestions}</td>
                                                 <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '600', color: '#10b981' }}>{asm.passingScore}%</td>
                                                 <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '600', color: '#3b82f6' }}>{asm.attempts}</td>
-                                                <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '700', color: asm.avgScore >= 75 ? '#10b981' : asm.avgScore > 0 ? '#f59e0b' : colors.textMuted }}>{asm.avgScore ? `${asm.avgScore}%` : '─"'}</td>
+                                                <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '700', color: asm.avgScore >= 75 ? '#10b981' : asm.avgScore > 0 ? '#f59e0b' : colors.textMuted }}>{asm.avgScore ? `${asm.avgScore}%` : '-"'}</td>
                                                 <td style={{ padding: '14px 16px' }}>
                                                     <span style={{ background: sb.bg, color: sb.color, padding: '4px 10px', borderRadius: '20px', fontWeight: '600', fontSize: '12px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>{sb.icon} {asm.status}</span>
                                                 </td>
@@ -4064,21 +4064,21 @@ const resetCalendarForm = () => {
                         {/* Pagination */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderTop: `1px solid ${colors.border}`, flexWrap: 'wrap', gap: '10px' }}>
                             <div style={{ fontSize: '13px', color: colors.textMuted }}>
-                                Showing {Math.min(pageStart + 1, filteredAsm.length)}─"{Math.min(pageStart + asmRowsPerPage, filteredAsm.length)} of {filteredAsm.length} assessments
+                                Showing {Math.min(pageStart + 1, filteredAsm.length)}-"{Math.min(pageStart + asmRowsPerPage, filteredAsm.length)} of {filteredAsm.length} assessments
                             </div>
                             <div style={{ display: 'flex', gap: '6px' }}>
-                                <button disabled={asmCurrentPage === 1} onClick={() => setAsmCurrentPage(p => p - 1)} style={{ ...inp, padding: '6px 12px', opacity: asmCurrentPage === 1 ? 0.4 : 1 }}>─+? Prev</button>
+                                <button disabled={asmCurrentPage === 1} onClick={() => setAsmCurrentPage(p => p - 1)} style={{ ...inp, padding: '6px 12px', opacity: asmCurrentPage === 1 ? 0.4 : 1 }}>-+? Prev</button>
                                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
                                     <button key={n} onClick={() => setAsmCurrentPage(n)} style={{ ...inp, padding: '6px 12px', background: n === asmCurrentPage ? '#2563eb' : '#fff', color: n === asmCurrentPage ? '#fff' : '#334155', fontWeight: n === asmCurrentPage ? '700' : '500', border: n === asmCurrentPage ? 'none' : '1px solid #e2e8f0' }}>{n}</button>
                                 ))}
-                                <button disabled={asmCurrentPage === totalPages} onClick={() => setAsmCurrentPage(p => p + 1)} style={{ ...inp, padding: '6px 12px', opacity: asmCurrentPage === totalPages ? 0.4 : 1 }}>Next ─+'</button>
+                                <button disabled={asmCurrentPage === totalPages} onClick={() => setAsmCurrentPage(p => p + 1)} style={{ ...inp, padding: '6px 12px', opacity: asmCurrentPage === totalPages ? 0.4 : 1 }}>Next -+'</button>
                             </div>
                         </div>
                     </div>
                 )}
 
 
-                {/* ─?─?─?─?─?─?─?─?─?─?─? 3. GRADEBOOK VIEW ─?─?─?─?─?─?─?─?─?─?─? */}
+                {/* -?-?-?-?-?-?-?-?-?-?-? 3. GRADEBOOK VIEW -?-?-?-?-?-?-?-?-?-?-? */}
                 {asmTabSubView === 'grades' && (
                     <div style={{ background: colors.bgCard, borderRadius: '16px', border: `1px solid ${colors.border}`, overflow: 'hidden' }}>
                         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -4120,7 +4120,7 @@ const resetCalendarForm = () => {
                     </div>
                 )}
 
-                {/* ─?─?─?─?─?─?─?─?─?─?─? 4. CERTIFICATES & TEMPLATES VIEW ─?─?─?─?─?─?─?─?─?─?─? */}
+                {/* -?-?-?-?-?-?-?-?-?-?-? 4. CERTIFICATES & TEMPLATES VIEW -?-?-?-?-?-?-?-?-?-?-? */}
                 {asmTabSubView === 'certificates' && (
                     <div style={{ display: 'grid', gap: '24px' }}>
                         {/* Issued Certificates Section */}
@@ -4214,7 +4214,7 @@ const resetCalendarForm = () => {
                     </div>
                 )}
 
-                {/* ─?─?─?─?─?─?─?─?─?─?─? 5. PERFORMANCE ANALYTICS VIEW ─?─?─?─?─?─?─?─?─?─?─? */}
+                {/* -?-?-?-?-?-?-?-?-?-?-? 5. PERFORMANCE ANALYTICS VIEW -?-?-?-?-?-?-?-?-?-?-? */}
                 {asmTabSubView === 'analytics' && (() => {
                     const totalAsm = assessmentsList.length || 1;
                     const totalAtt = assessmentsList.reduce((acc, a) => acc + a.attempts, 0);
@@ -4260,7 +4260,7 @@ const resetCalendarForm = () => {
                 })()}
 
 
-                {/* ─?─?─?─?─?─?─?─?─?─?─? CREATE ASSESSMENT MODAL ─?─?─?─?─?─?─?─?─?─?─? */}
+                {/* -?-?-?-?-?-?-?-?-?-?-? CREATE ASSESSMENT MODAL -?-?-?-?-?-?-?-?-?-?-? */}
                 {isCreateAsmOpen && (
                     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(3px)' }} onClick={() => setIsCreateAsmOpen(false)} />
@@ -4413,7 +4413,7 @@ const resetCalendarForm = () => {
                             Mark as reminder message
                         </label>
                         <button type="submit" disabled={isNotificationSubmitting} style={{ ...s.primaryBtn, opacity: isNotificationSubmitting ? 0.7 : 1 }}>
-                            {isNotificationSubmitting ? 'Sending──' : 'Send Notification'}
+                            {isNotificationSubmitting ? 'Sending--' : 'Send Notification'}
                         </button>
                     </form>
                 </div>
@@ -4455,7 +4455,7 @@ const resetCalendarForm = () => {
                             <label style={s.label}>Content JSON / Text</label>
                             <textarea value={contentForm.content} onChange={(e) => setContentForm({ ...contentForm, content: e.target.value })} rows="10" style={{ ...s.input, minHeight: '220px', fontFamily: 'monospace' }} />
                             <button type="submit" disabled={isContentSaving} style={{ ...s.primaryBtn, opacity: isContentSaving ? 0.7 : 1 }}>
-                                {isContentSaving ? 'Saving──' : 'Save Content'}
+                                {isContentSaving ? 'Saving--' : 'Save Content'}
                             </button>
                         </form>
                     </div>
@@ -4476,7 +4476,7 @@ const resetCalendarForm = () => {
         };
         const statusConf = {
             'Completed':  { icon: <CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} />, color: '#10b981', bg: '#f0fdf4' },
-            'Processing': { icon: '─3', color: '#f59e0b', bg: '#fffbeb' },
+            'Processing': { icon: '-3', color: '#f59e0b', bg: '#fffbeb' },
             'Scheduled':  { icon: <Calendar size={16} style={{ marginRight: '6px' }} />, color: '#3b82f6', bg: '#eff6ff' },
             'Failed':     { icon: <XCircle size={16} style={{ marginRight: '6px', color: '#ef4444' }} />, color: '#ef4444', bg: '#fef2f2' },
             'Cancelled':  { icon: <Ban size={16} style={{ marginRight: '6px', color: '#ef4444' }} />, color: colors.textMuted, bg: '#f1f5f9' },
@@ -4563,7 +4563,7 @@ const resetCalendarForm = () => {
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
-                        <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Dashboard ─+' Reports & Export</div>
+                        <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Dashboard -+' Reports & Export</div>
                         <h2 style={{ fontSize: '24px', fontWeight: '800', color: colors.text, margin: 0 }}> <BarChart3 size={16} style={{ marginRight: '6px' }} />  Reports & Export</h2>
                         <p style={{ fontSize: '13px', color: colors.textMuted, margin: '4px 0 0' }}>Generate, schedule, analyze, and export institutional performance reports across all LMS modules.</p>
                     </div>
@@ -4616,7 +4616,7 @@ const resetCalendarForm = () => {
                     ))}
                 </div>
 
-                {/* ─?─?─?─?─?─?─?─?─?─?─? ALL REPORTS TABLE VIEW ─?─?─?─?─?─?─?─?─?─?─? */}
+                {/* -?-?-?-?-?-?-?-?-?-?-? ALL REPORTS TABLE VIEW -?-?-?-?-?-?-?-?-?-?-? */}
                 {rptSubView === 'all' && (
                     <div style={{ background: colors.bgCard, borderRadius: '16px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
 
@@ -4626,7 +4626,7 @@ const resetCalendarForm = () => {
                                 <span style={{ fontWeight: '700', fontSize: '13px', color: '#2563eb' }}>{selectedReportRows.length} selected</span>
                                 <button onClick={() => handleBulkRptAction('download')} style={{ ...inp, background: '#10b981', color: colors.text, border: 'none', padding: '6px 14px' }}> <Download size={16} style={{ marginRight: '6px' }} />  Download</button>
                                 <button onClick={() => handleBulkRptAction('archive')}  style={{ ...inp, background: '#64748b', color: colors.text, border: 'none', padding: '6px 14px' }}> <Package size={16} style={{ marginRight: '6px' }} />  Archive</button>
-                                <button onClick={() => handleBulkRptAction('delete')}   style={{ ...inp, background: '#dc2626', color: colors.text, border: 'none', padding: '6px 14px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> ─,? Delete</button>
+                                <button onClick={() => handleBulkRptAction('delete')}   style={{ ...inp, background: '#dc2626', color: colors.text, border: 'none', padding: '6px 14px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> -,? Delete</button>
                                 <button onClick={() => setSelectedReportRows([])} style={{ ...inp, padding: '6px 12px', marginLeft: 'auto' }}> <X size={16} style={{ marginRight: '6px' }} />  Deselect</button>
                             </div>
                         )}
@@ -4646,8 +4646,8 @@ const resetCalendarForm = () => {
                                 {Object.keys(formatConfig).map(f => <option key={f} value={f} style={{ background: colors.bgCard, color: colors.text }}>{f}</option>)}
                             </select>
                             <select value={rptSortBy} onChange={e => setRptSortBy(e.target.value)} style={inp}>
-                                <option value="Newest" style={{ background: colors.bgCard, color: colors.text }}>─── Newest First</option>
-                                <option value="Oldest" style={{ background: colors.bgCard, color: colors.text }}>──+ Oldest First</option>
+                                <option value="Newest" style={{ background: colors.bgCard, color: colors.text }}>--- Newest First</option>
+                                <option value="Oldest" style={{ background: colors.bgCard, color: colors.text }}>--+ Oldest First</option>
                                 <option value="Most Downloaded" style={{ background: colors.bgCard, color: colors.text }}> <Download size={16} style={{ marginRight: '6px' }} />  Most Downloaded</option>
                                 <option value="Name A-Z" style={{ background: colors.bgCard, color: colors.text }}>A-Z Name</option>
                             </select>
@@ -4676,7 +4676,7 @@ const resetCalendarForm = () => {
                                         <tr><td colSpan={10} style={{ padding: '48px', textAlign: 'center', color: colors.textMuted, fontSize: '14px' }}>No reports match your filters.</td></tr>
                                     ) : paged.map(rpt => {
                                         const fc = formatConfig[rpt.format] || { icon: <FileText size={16} style={{ marginRight: '6px' }} />, color: colors.textMuted, bg: '#f8fafc' };
-                                        const sc = statusConf[rpt.status]  || { icon: '──', color: colors.textMuted, bg: '#f8fafc' };
+                                        const sc = statusConf[rpt.status]  || { icon: '--', color: colors.textMuted, bg: '#f8fafc' };
                                         const isSel = selectedReportRows.includes(rpt.id);
                                         return (
                                             <tr key={rpt.id} style={{ borderBottom: '1px solid #f1f5f9', background: isSel ? '#eff6ff' : 'transparent', transition: 'background 0.15s' }}
@@ -4705,7 +4705,7 @@ const resetCalendarForm = () => {
                                                         <button title="Download" onClick={() => handleDownloadReport(rpt)} style={{ padding: '5px 9px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }} disabled={rpt.status !== 'Completed'}> <Download size={16} style={{ marginRight: '6px' }} /> </button>
                                                         <button title="Duplicate" onClick={() => { const dup = { ...rpt, id: `RPT-${String(generatedReports.length + 1).padStart(3, '0')}`, name: `${rpt.name} (Copy)`, date: new Date().toISOString().split('T')[0], downloads: 0 }; setGeneratedReports(prev => [dup, ...prev]); showNotification(`Duplicated: ${rpt.name}`); }} style={{ padding: '5px 9px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}> <Clipboard size={16} style={{ marginRight: '6px' }} /> </button>
                                                         <button title="Share" onClick={() => { navigator.clipboard?.writeText(`Report: ${rpt.name} | ID: ${rpt.id}`); showNotification('Report link copied to clipboard.'); }} style={{ padding: '5px 9px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}> <Link size={16} style={{ marginRight: '6px' }} /> </button>
-                                                        <button title="Delete" onClick={() => { if (window.confirm(`Delete "${rpt.name}"?`)) { setGeneratedReports(prev => prev.filter(r => r.id !== rpt.id)); showNotification(`Deleted: ${rpt.name}`); }}} style={{ padding: '5px 9px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', color: '#dc2626', fontSize: '13px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> ─,?</button>
+                                                        <button title="Delete" onClick={() => { if (window.confirm(`Delete "${rpt.name}"?`)) { setGeneratedReports(prev => prev.filter(r => r.id !== rpt.id)); showNotification(`Deleted: ${rpt.name}`); }}} style={{ padding: '5px 9px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', color: '#dc2626', fontSize: '13px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> -,?</button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -4718,23 +4718,23 @@ const resetCalendarForm = () => {
                         {/* Pagination */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderTop: `1px solid ${colors.border}`, flexWrap: 'wrap', gap: '10px' }}>
                             <div style={{ fontSize: '13px', color: colors.textMuted }}>
-                                Showing {Math.min(pageStart + 1, filtered.length)}─"{Math.min(pageStart + rptRowsPerPage, filtered.length)} of {filtered.length} reports &nbsp;|&nbsp;
+                                Showing {Math.min(pageStart + 1, filtered.length)}-"{Math.min(pageStart + rptRowsPerPage, filtered.length)} of {filtered.length} reports &nbsp;|&nbsp;
                                 Rows: <select value={rptRowsPerPage} onChange={e => { setRptRowsPerPage(Number(e.target.value)); setRptCurrentPage(1); }} style={{ ...inp, padding: '3px 8px', fontSize: '12px', display: 'inline-block', width: 'auto' }}>
                                     {[5, 10, 25, 50].map(n => <option key={n} value={n} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{n}</option>)}
                                 </select>
                             </div>
                             <div style={{ display: 'flex', gap: '6px' }}>
-                                <button disabled={rptCurrentPage === 1} onClick={() => setRptCurrentPage(p => p - 1)} style={{ ...inp, padding: '6px 12px', opacity: rptCurrentPage === 1 ? 0.4 : 1 }}>─+? Prev</button>
+                                <button disabled={rptCurrentPage === 1} onClick={() => setRptCurrentPage(p => p - 1)} style={{ ...inp, padding: '6px 12px', opacity: rptCurrentPage === 1 ? 0.4 : 1 }}>-+? Prev</button>
                                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
                                     <button key={n} onClick={() => setRptCurrentPage(n)} style={{ ...inp, padding: '6px 12px', background: n === rptCurrentPage ? '#2563eb' : '#fff', color: n === rptCurrentPage ? '#fff' : '#334155', fontWeight: n === rptCurrentPage ? '700' : '500', border: n === rptCurrentPage ? 'none' : '1px solid #e2e8f0' }}>{n}</button>
                                 ))}
-                                <button disabled={rptCurrentPage === totalPages} onClick={() => setRptCurrentPage(p => p + 1)} style={{ ...inp, padding: '6px 12px', opacity: rptCurrentPage === totalPages ? 0.4 : 1 }}>Next ─+'</button>
+                                <button disabled={rptCurrentPage === totalPages} onClick={() => setRptCurrentPage(p => p + 1)} style={{ ...inp, padding: '6px 12px', opacity: rptCurrentPage === totalPages ? 0.4 : 1 }}>Next -+'</button>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* ─?─?─?─?─?─?─?─?─?─?─? GENERATE REPORT MODAL ─?─?─?─?─?─?─?─?─?─?─? */}
+                {/* -?-?-?-?-?-?-?-?-?-?-? GENERATE REPORT MODAL -?-?-?-?-?-?-?-?-?-?-? */}
                 {isGenReportOpen && (
                     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(3px)' }} onClick={() => setIsGenReportOpen(false)} />
@@ -4785,7 +4785,7 @@ const resetCalendarForm = () => {
 
                                 {/* Description */}
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: colors.text, marginBottom: '6px' }}> <FileEdit size={16} style={{ marginRight: '6px' }} /> ─,? Description (optional)</label>
+                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: colors.text, marginBottom: '6px' }}> <FileEdit size={16} style={{ marginRight: '6px' }} /> -,? Description (optional)</label>
                                     <textarea value={genReportForm.description} onChange={e => setGenReportForm(p => ({ ...p, description: e.target.value }))} placeholder="Add notes about this report..." rows={2} style={{ width: '100%', padding: '10px 14px', border: `1px solid ${colors.border}`, borderRadius: '10px', fontSize: '13px', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
                                 </div>
 
@@ -4857,7 +4857,7 @@ const resetCalendarForm = () => {
                                 </div>
                                 <div style={{ color: colors.textMuted, fontSize: '14px', marginBottom: '6px' }}>{log.description || 'No description provided.'}</div>
                                 <div style={{ fontSize: '13px', color: colors.textMuted }}>
-                                    User: {log.userRef?.fullName || 'System'} A─ Role: {log.userRef?.assignedRole || 'N/A'} A─ IP: {log.ipAddress || 'N/A'}
+                                    User: {log.userRef?.fullName || 'System'} A- Role: {log.userRef?.assignedRole || 'N/A'} A- IP: {log.ipAddress || 'N/A'}
                                 </div>
                             </div>
                         )) : <div style={{ color: colors.textMuted }}>No audit logs found for the selected filter.</div>}
@@ -4877,9 +4877,9 @@ const resetCalendarForm = () => {
         const googleMeetConnected = Boolean(googleMeetStatus?.connected && googleMeetStatus?.authorized);
         const googleMeetHint = !googleMeetStatus?.connected
             ? (googleMeetStatus?.missingEnv?.length ? `Missing backend/.env: ${googleMeetStatus.missingEnv.join(', ')}` : 'Checking connection...')
-            : (!googleMeetStatus?.authorized ? 'Authorized account required — connect below.' : '');
+            : (!googleMeetStatus?.authorized ? 'Authorized account required � connect below.' : '');
 
-        // ─"?─"? Unified event data (Internal + Public) ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?
+        // -"?-"? Unified event data (Internal + Public) -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?
         const internalRows = calendarEvents.map((e) => ({
             ...e,
             visibility: 'internal',
@@ -4893,7 +4893,7 @@ const resetCalendarForm = () => {
         const allEvents = [...internalRows, ...publicRows];
         const eventLive = (e) => getLiveStatus(e);
 
-        // ─"?─"? Filters ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?
+        // -"?-"? Filters -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?
         const q = eventSearch.trim().toLowerCase();
         const filteredEvents = allEvents.filter((e) => {
             const titleOk = !q || (e.title || '').toLowerCase().includes(q);
@@ -4979,12 +4979,12 @@ const resetCalendarForm = () => {
 
         const renderDateCell = (event) => {
             const allDay = Boolean(event.isAllDay);
-            const startTxt = event.startDate ? `${formatDateShort(event.startDate)}${allDay ? '' : ` A─ ${formatTimeShort(event.startDate)}`}` : '─"';
-            const endTxt = event.endDate ? `${formatDateShort(event.endDate)}${allDay ? '' : ` A─ ${formatTimeShort(event.endDate)}`}` : '';
+            const startTxt = event.startDate ? `${formatDateShort(event.startDate)}${allDay ? '' : ` A- ${formatTimeShort(event.startDate)}`}` : '-"';
+            const endTxt = event.endDate ? `${formatDateShort(event.endDate)}${allDay ? '' : ` A- ${formatTimeShort(event.endDate)}`}` : '';
             return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ color: colors.text, fontSize: 13, fontWeight: 600 }}>{startTxt}</span>
-                    {endTxt && <span style={{ color: colors.textMuted, fontSize: 12 }}>─+' {endTxt}</span>}
+                    {endTxt && <span style={{ color: colors.textMuted, fontSize: 12 }}>-+' {endTxt}</span>}
                 </div>
             );
         };
@@ -4998,7 +4998,7 @@ const resetCalendarForm = () => {
                     {showStream && (
                         <a href={event.streamUrl} target="_blank" rel="noopener noreferrer" style={{ color: colors.primary, fontSize: 12, fontWeight: 600, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.streamUrl}</a>
                     )}
-                    {!loc && !showStream && <span style={{ color: colors.textMuted, fontSize: 13 }}>─"</span>}
+                    {!loc && !showStream && <span style={{ color: colors.textMuted, fontSize: 13 }}>-"</span>}
                 </div>
             );
         };
@@ -5011,7 +5011,7 @@ const resetCalendarForm = () => {
                 @media (min-width: 960px) { .em-cal-table { display: block; } .em-cal-cards { display: none; } }
             `}</style>
 
-            {/* ─"?─"? Header ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"? */}
+            {/* -"?-"? Header -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"? */}
             <div style={{ ...s.sectionHeader, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
                 <div>
                     <h2 style={s.sectionTitle}>Event Management</h2>
@@ -5022,7 +5022,7 @@ const resetCalendarForm = () => {
                 </button>
             </div>
 
-            {/* ─"?─"? Statistics row ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"? */}
+            {/* -"?-"? Statistics row -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"? */}
             <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', marginBottom: 20 }}>
                 {statCard('Total Events', stats.total, colors.text)}
                 {statCard('Upcoming', stats.upcoming, '#3b82f6')}
@@ -5030,10 +5030,10 @@ const resetCalendarForm = () => {
                 {statCard('Completed', stats.completed, '#64748b')}
             </div>
 
-            {/* ─"?─"? Filter toolbar ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"? */}
+            {/* -"?-"? Filter toolbar -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"? */}
             <div style={s.card}>
                 <div style={filterStyle}>
-                    <input value={eventSearch} onChange={(e) => setEventSearch(e.target.value)} placeholder="Search events──" style={filterInputStyle} />
+                    <input value={eventSearch} onChange={(e) => setEventSearch(e.target.value)} placeholder="Search events--" style={filterInputStyle} />
                     <select value={eventCategoryFilter} onChange={(e) => setEventCategoryFilter(e.target.value)} style={filterSelectStyle}>
                         <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Categories</option>
                         {allCatKeys.map((c) => (
@@ -5062,7 +5062,7 @@ const resetCalendarForm = () => {
                 </div>
             </div>
 
-            {/* ─"?─"? Event Management ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"? */}
+            {/* -"?-"? Event Management -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"? */}
             <div style={{ ...s.card, marginTop: 20, padding: 0, overflow: 'hidden' }}>
                 <div style={{ padding: '20px 24px', borderBottom: `1px solid ${colors.border}` }}>
                     <h3 style={{ ...s.cardTitle, margin: 0 }}>Event Management</h3>
@@ -5146,7 +5146,7 @@ const resetCalendarForm = () => {
                                             </div>
                                             <div style={{ display: 'grid', gap: 4, fontSize: 13, color: colors.textMuted }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Calendar size={13} style={{ flexShrink: 0 }} /> {renderDateCell(event)}</div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MapPin size={13} style={{ flexShrink: 0 }} /> {(event.location || (event.eventType === 'Online' ? 'Online Live Stream' : '─"'))}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MapPin size={13} style={{ flexShrink: 0 }} /> {(event.location || (event.eventType === 'Online' ? 'Online Live Stream' : '-"'))}</div>
                                             </div>
                                             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                                                 {renderRowActions(event)}
@@ -5160,7 +5160,7 @@ const resetCalendarForm = () => {
                 )}
             </div>
 
-            {/* ─"?─"? Create / Edit Event Modal ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"? */}
+            {/* -"?-"? Create / Edit Event Modal -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"? */}
             <Modal isOpen={isEventModalOpen} onClose={resetCalendarForm} title={calendarEditingId ? 'Edit Event' : 'Create Event'} maxWidth="680px" scrollable>
                 <form onSubmit={handleSaveCalendarEvent} style={{ display: 'grid', gap: 16 }}>
                     {formError && (
@@ -5203,7 +5203,7 @@ const resetCalendarForm = () => {
                             </div>
                             <div>
                                 <label style={fieldLabel}>Description</label>
-                                <textarea value={calendarForm.description} onChange={(e) => setCalendarForm({ ...calendarForm, description: e.target.value })} placeholder={isFormPublic ? 'One paragraph per line ─" each line becomes a section on the public page' : 'Short description'} rows="3" style={s.input}></textarea>
+                                <textarea value={calendarForm.description} onChange={(e) => setCalendarForm({ ...calendarForm, description: e.target.value })} placeholder={isFormPublic ? 'One paragraph per line -" each line becomes a section on the public page' : 'Short description'} rows="3" style={s.input}></textarea>
                             </div>
                         </div>
                     </div>
@@ -5307,7 +5307,7 @@ const resetCalendarForm = () => {
                                     </div>
                                 )}
 
-                                {/* Meeting ID — Zoom only (optional) */}
+                                {/* Meeting ID � Zoom only (optional) */}
                                 {calendarForm.meetingPlatform === 'zoom' && (
                                     <div>
                                         <label style={fieldLabel}>Meeting ID (Optional)</label>
@@ -5334,8 +5334,8 @@ const resetCalendarForm = () => {
                                                 onClick={handleGeneratePlatformMeeting}
                                                 disabled={isGeneratingMeeting}
                                                 onMouseEnter={(e) => { e.currentTarget.style.background = '#7e22ce'; }}
-                                                onMouseLeave={(e) => { e.currentTarget.style.background = '#9333ea'; }}
-                                                style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, background: '#9333ea', color: '#fff', border: 'none', borderRadius: 8, padding: '0 16px', height: 42, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: isGeneratingMeeting ? 'not-allowed' : 'pointer', opacity: isGeneratingMeeting ? 0.7 : 1 }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.background = '#7c3aed'; }}
+                                                style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 8, padding: '0 16px', height: 42, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: isGeneratingMeeting ? 'not-allowed' : 'pointer', opacity: isGeneratingMeeting ? 0.7 : 1 }}
                                             >
                                                 {isGeneratingMeeting
                                                     ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Generating...</>
@@ -5367,15 +5367,15 @@ const resetCalendarForm = () => {
                                     )}
                                 </div>
 
-                                {/* Meeting Password — only platforms that support one */}
+                                {/* Meeting Password � only platforms that support one */}
                                 {PASSWORD_PLATFORMS.includes(calendarForm.meetingPlatform) && (
                                     <div>
                                         <label style={fieldLabel}>Meeting Password (Optional)</label>
-                                        <input value={calendarForm.meetingPassword} onChange={(e) => setCalendarForm({ ...calendarForm, meetingPassword: e.target.value })} placeholder="e.g. 123456 — for passcode-protected meetings / streams" style={s.input} />
+                                        <input value={calendarForm.meetingPassword} onChange={(e) => setCalendarForm({ ...calendarForm, meetingPassword: e.target.value })} placeholder="e.g. 123456 � for passcode-protected meetings / streams" style={s.input} />
                                     </div>
                                 )}
 
-                                {/* Google Meet connection status — Google only, never shown for other platforms */}
+                                {/* Google Meet connection status � Google only, never shown for other platforms */}
                                 {calendarForm.meetingPlatform === 'googleMeet' && (
                                     googleConfigured && !googleMeetConnected ? (
                                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', padding: '10px 12px', borderRadius: 10, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.3)' }}>
@@ -5384,7 +5384,7 @@ const resetCalendarForm = () => {
                                                 Google Meet Not Connected
                                             </span>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                                                <span style={{ fontSize: 12, color: colors.textMuted }}>Optional — the event saves fine with an automatic free Jitsi link. Connect your Google account if you prefer real Meet sessions.</span>
+                                                <span style={{ fontSize: 12, color: colors.textMuted }}>Optional � the event saves fine with an automatic free Jitsi link. Connect your Google account if you prefer real Meet sessions.</span>
                                                 <button type="button" onClick={handleConnectGoogleMeet} disabled={isGoogleConnecting} style={{ ...s.secondaryBtn, padding: '6px 12px', fontSize: 12 }}>
                                                     {isGoogleConnecting ? 'Opening Google...' : 'Connect Google Meet'}
                                                 </button>
@@ -5534,7 +5534,7 @@ const resetCalendarForm = () => {
                                     {isUploadingThumbnail ? 'Normalizing & uploading...' : 'Click to upload or drag and drop'}
                                 </span>
                                 <span style={{ fontSize: 11, color: colors.textMuted, opacity: 0.8 }}>
-                                    Auto-normalized to 1280×720 (16:9) WebP · max 8 MB
+                                    Auto-normalized to 1280�720 (16:9) WebP � max 8 MB
                                 </span>
                             </div>
                         )}
@@ -5542,7 +5542,7 @@ const resetCalendarForm = () => {
 
                     <div style={{ height: 1, background: colors.border }} />
 
-                    {/* Live Preview ─" updates automatically as the form changes */}
+                    {/* Live Preview -" updates automatically as the form changes */}
                     {(() => {
                         const pStart = calendarForm.startDate ? combineDateAndTime(calendarForm.startDate, calendarForm.isAllDay ? '00:00' : (calendarForm.startTime || '00:00')) : null;
                         const pEnd = calendarForm.endDate ? combineDateAndTime(calendarForm.endDate, calendarForm.isAllDay ? '23:59' : (calendarForm.endTime || '23:59')) : null;
@@ -5561,10 +5561,10 @@ const resetCalendarForm = () => {
                                         <span style={chip(psc.color, psc.bg)}>{psc.label}</span>
                                     </div>
                                     <div style={{ display: 'grid', gap: 4, fontSize: 13, color: colors.textMuted }}>
-                                        <div><strong style={{ color: colors.text }}>{calendarForm.isAllDay ? 'All day' : 'Scheduled'}: </strong>{pStart ? formatEventDate(pStart.toISOString()) : '─"'}{pEnd && !calendarForm.isAllDay ? ` ─+' ${formatEventDate(pEnd.toISOString())}` : ''}</div>
-                                        <div><strong style={{ color: colors.text }}>Format: </strong>{pType} {pType === 'Physical' ? `── ${calendarForm.location || 'No location set'}` : pType === 'Hybrid' ? `── ${calendarForm.location || 'Online + venue TBD'}` : ''}</div>
-                                        {pType !== 'Physical' && <div><strong style={{ color: colors.text }}>Meeting: </strong>{meetingProviderLabel(calendarForm.meetingProvider)}{calendarForm.streamUrl ? ` — ${calendarForm.streamUrl}` : (calendarForm.meetingProvider === 'googleMeet' ? ' — real Google Meet will be created on save' : ' — will be created on save')}</div>}
-                                        {isFormPublic && <div><strong style={{ color: colors.text }}>Price: </strong>{calendarForm.price || 'FREE'}{calendarForm.capacity !== '' ? ` ── Capacity: ${calendarForm.capacity}` : ''}</div>}
+                                        <div><strong style={{ color: colors.text }}>{calendarForm.isAllDay ? 'All day' : 'Scheduled'}: </strong>{pStart ? formatEventDate(pStart.toISOString()) : '-"'}{pEnd && !calendarForm.isAllDay ? ` -+' ${formatEventDate(pEnd.toISOString())}` : ''}</div>
+                                        <div><strong style={{ color: colors.text }}>Format: </strong>{pType} {pType === 'Physical' ? `-- ${calendarForm.location || 'No location set'}` : pType === 'Hybrid' ? `-- ${calendarForm.location || 'Online + venue TBD'}` : ''}</div>
+                                        {pType !== 'Physical' && <div><strong style={{ color: colors.text }}>Meeting: </strong>{meetingProviderLabel(calendarForm.meetingProvider)}{calendarForm.streamUrl ? ` � ${calendarForm.streamUrl}` : (calendarForm.meetingProvider === 'googleMeet' ? ' � real Google Meet will be created on save' : ' � will be created on save')}</div>}
+                                        {isFormPublic && <div><strong style={{ color: colors.text }}>Price: </strong>{calendarForm.price || 'FREE'}{calendarForm.capacity !== '' ? ` -- Capacity: ${calendarForm.capacity}` : ''}</div>}
                                         <div><strong style={{ color: colors.text }}>Visibility: </strong>{isFormPublic ? 'Public (review pipeline)' : 'Internal (calendar only)'}</div>
                                     </div>
                                 </div>
@@ -5583,7 +5583,7 @@ const resetCalendarForm = () => {
                 </form>
             </Modal>
 
-            {/* ─"?─"? Event Details Modal ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"? */}
+            {/* -"?-"? Event Details Modal -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"? */}
             {viewingEvent && (
                 <Modal isOpen={Boolean(viewingEvent)} onClose={() => setViewingEvent(null)} title="Event Details" maxWidth="560px">
                     {(() => {
@@ -5603,11 +5603,11 @@ const resetCalendarForm = () => {
                                 </div>
                                 <div style={{ display: 'grid', gap: 8, fontSize: 14, marginBottom: 14 }}>
                                     <div><span style={{ color: colors.textMuted }}>Category: </span><strong style={{ textTransform: 'capitalize' }}>{ev.category || 'Event'}</strong></div>
-                                    <div><span style={{ color: colors.textMuted }}>Starts: </span><strong>{ev.startDate ? formatEventDate(ev.startDate) : '─"'}</strong></div>
+                                    <div><span style={{ color: colors.textMuted }}>Starts: </span><strong>{ev.startDate ? formatEventDate(ev.startDate) : '-"'}</strong></div>
                                     {ev.endDate && <div><span style={{ color: colors.textMuted }}>Ends: </span><strong>{formatEventDate(ev.endDate)}</strong></div>}
                                     {ev.isAllDay && <div><span style={{ color: colors.textMuted }}>All day: </span><strong>Yes</strong></div>}
                                     <div><span style={{ color: colors.textMuted }}>Format: </span><strong>{ev.eventType || 'Hybrid'}</strong></div>
-                                    <div><span style={{ color: colors.textMuted }}>Location: </span><strong>{ev.location || (ev.eventType === 'Online' ? 'Online Live Stream' : '─"')}</strong></div>
+                                    <div><span style={{ color: colors.textMuted }}>Location: </span><strong>{ev.location || (ev.eventType === 'Online' ? 'Online Live Stream' : '-"')}</strong></div>
 {ev.meetingUrl || ev.streamUrl ? (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                             <span style={{ color: colors.textMuted }}>Meeting URL ({meetingProviderLabel(ev.meetingProvider)}): </span>
@@ -5665,7 +5665,7 @@ const resetCalendarForm = () => {
                 </Modal>
             )}
 
-            {/* ─"?─"? Cancel Event Modal ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"? */}
+            {/* -"?-"? Cancel Event Modal -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"? */}
             {cancelTarget && (
                 <Modal isOpen={Boolean(cancelTarget)} onClose={() => setCancelTarget(null)} title="Cancel Event" maxWidth="460px">
                     <p style={{ margin: '0 0 12px', fontSize: 14, color: colors.textMuted }}>
@@ -5679,13 +5679,13 @@ const resetCalendarForm = () => {
                         style={{ ...s.input, marginBottom: 16 }}
                     />
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                        <button type="button" onClick={confirmCancelPublicEvent} style={{ ...s.primaryBtn, background: '#f59e0b' }}>Confirm Cancel</button>
+                        <button type="button" onClick={confirmCancelPublicEvent} style={{ ...s.primaryBtn, background: '#dc2626' }}>Confirm Cancel</button>
                         <button type="button" onClick={() => setCancelTarget(null)} style={s.secondaryBtn}>Keep Event</button>
                     </div>
                 </Modal>
             )}
 
-            {/* ─"?─"? Delete Event Modal ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?─"? */}
+            {/* -"?-"? Delete Event Modal -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"? */}
             {deleteTarget && (
                 <Modal isOpen={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} title="Delete Event?" maxWidth="460px">
                     <p style={{ margin: '0 0 16px', fontSize: 14, color: colors.textMuted }}>
@@ -5754,7 +5754,7 @@ const resetCalendarForm = () => {
                     </div>
                 )}
 
-                {/* Render immediately ─" each section shows skeletons while data loads */}
+                {/* Render immediately -" each section shows skeletons while data loads */}
                     <>
                                 {activeTab === 'overview' && renderOverview()}
                         {activeTab === 'users' && renderUsers()}
@@ -5823,7 +5823,7 @@ const resetCalendarForm = () => {
                                                 <div style={{ color: colors.textMuted, fontSize: '14px' }}>
                                                     {section.lessons?.map((lesson, lessonIdx) => (
                                                         <div key={lessonIdx} style={{ marginBottom: '6px' }}>
-                                                            ── {lesson.lessonTitle || 'Untitled lesson'} ({lesson.durationMinutes || '---'} min)
+                                                            -- {lesson.lessonTitle || 'Untitled lesson'} ({lesson.durationMinutes || '---'} min)
                                                         </div>
                                                     ))}
                                                 </div>
@@ -5905,9 +5905,9 @@ const resetCalendarForm = () => {
                             <div key={step} style={{ flex: 1, height: '4px', borderRadius: '2px', background: createFormStep >= step ? colors.primary : colors.bgInput, transition: 'background 0.3s' }} />
                         ))}
                     </div>
-                    <p style={{ ...s.sectionSub, marginBottom: '16px', fontSize: '12px' }}>Step {createFormStep} of 3 ─" {createFormStep === 1 ? 'Personal & Account Info' : createFormStep === 2 ? (createForm.assignedRole === 'Instructor' ? 'Professional Info' : 'Employment & Security') : 'Documents & Settings'}</p>
+                    <p style={{ ...s.sectionSub, marginBottom: '16px', fontSize: '12px' }}>Step {createFormStep} of 3 -" {createFormStep === 1 ? 'Personal & Account Info' : createFormStep === 2 ? (createForm.assignedRole === 'Instructor' ? 'Professional Info' : 'Employment & Security') : 'Documents & Settings'}</p>
 
-                    {/* ─"?─"?─"? STEP 1: Personal & Account ─"?─"?─"? */}
+                    {/* -"?-"?-"? STEP 1: Personal & Account -"?-"?-"? */}
                     {createFormStep === 1 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <div>
@@ -5997,7 +5997,7 @@ const resetCalendarForm = () => {
                         </div>
                     )}
 
-                    {/* ─"?─"?─"? STEP 2: Professional / Employment ─"?─"?─"? */}
+                    {/* -"?-"?-"? STEP 2: Professional / Employment -"?-"?-"? */}
                     {createFormStep === 2 && createForm.assignedRole === 'Instructor' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <p style={{ color: colors.primary, fontWeight: '700', fontSize: '15px', margin: '0 0 4px' }}> <Clipboard size={16} style={{ marginRight: '6px' }} />  Professional Information</p>
@@ -6085,7 +6085,7 @@ const resetCalendarForm = () => {
                                     <input type="text" value={createForm.securityAnswer} onChange={(e) => setCreateForm({ ...createForm, securityAnswer: e.target.value })} placeholder="Answer" style={s.input} />
                                 </div>
                             </div>
-                            <p style={{ color: colors.primary, fontWeight: '700', fontSize: '15px', margin: '12px 0 4px' }}> <Shield size={16} style={{ marginRight: '6px' }} /> ─,? Permissions</p>
+                            <p style={{ color: colors.primary, fontWeight: '700', fontSize: '15px', margin: '12px 0 4px' }}> <Shield size={16} style={{ marginRight: '6px' }} /> -,? Permissions</p>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                 {Object.entries(createForm.permissions).map(([key, val]) => (
                                     <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -6097,7 +6097,7 @@ const resetCalendarForm = () => {
                         </div>
                     )}
 
-                    {/* ─"?─"?─"? STEP 3: Documents & Settings ─"?─"?─"? */}
+                    {/* -"?-"?-"? STEP 3: Documents & Settings -"?-"?-"? */}
                     {createFormStep === 3 && createForm.assignedRole === 'Instructor' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <p style={{ color: colors.primary, fontWeight: '700', fontSize: '15px', margin: '0 0 4px' }}> <Folder size={16} style={{ marginRight: '6px' }} />  Document Uploads</p>
@@ -6184,16 +6184,16 @@ const resetCalendarForm = () => {
                         {/* Step validation / submit error */}
                         {(createStepError || createSubmitError) && (
                             <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '10px 14px', color: '#fca5a5', fontSize: '13px', fontWeight: '600' }}>
-                                ⚠️ {createSubmitError || createStepError}
+                                ?? {createSubmitError || createStepError}
                             </div>
                         )}
                         <div style={{ display: 'flex', gap: '12px' }}>
                             {createFormStep > 1 && (
-                                <button type="button" onClick={() => { setCreateFormStep(createFormStep - 1); setCreateStepError(''); setCreateSubmitError(''); }} style={{...s.secondaryBtn, flex: 1}}>─+? Back</button>
+                                <button type="button" onClick={() => { setCreateFormStep(createFormStep - 1); setCreateStepError(''); setCreateSubmitError(''); }} style={{...s.secondaryBtn, flex: 1}}>-+? Back</button>
                             )}
                             {createFormStep < 3 && (
                                 <button type="button" onClick={() => {
-                                    // ─"?─"? Validate current step before advancing ─"?─"?─"?─"?─"?─"?─"?─"?─"?─"?
+                                    // -"?-"? Validate current step before advancing -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?
                                     let err = '';
                                     if (createFormStep === 1) {
                                         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -6224,7 +6224,7 @@ const resetCalendarForm = () => {
                                     if (err) { setCreateStepError(err); return; }
                                     setCreateStepError('');
                                     setCreateFormStep(createFormStep + 1);
-                                }} style={{...s.primaryBtn, flex: 1}}>Next ─+'</button>
+                                }} style={{...s.primaryBtn, flex: 1}}>Next -+'</button>
                             )}
                             {createFormStep === 3 && (
                                 <button
@@ -6255,11 +6255,11 @@ const resetCalendarForm = () => {
                 </form>
             </Modal>
 
-            {/* ─"?─"? Email Verification Modal (shown after account creation) ─"?─"? */}
+            {/* -"?-"? Email Verification Modal (shown after account creation) -"?-"? */}
 <Modal isOpen={createVerifyStep} onClose={() => { setCreateVerifyStep(false); setIsCreateModalOpen(false); }} title="Verify Email Address" backdrop="clear">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ textAlign: 'center', padding: '8px 0' }}>
-                        <div style={{ fontSize: 48, marginBottom: 12 }}>📧</div>
+                        <div style={{ fontSize: 48, marginBottom: 12 }}>??</div>
                         <p style={{ color: colors.text, fontWeight: 700, fontSize: 15, margin: '0 0 8px' }}>
                             Verification Code Sent
                         </p>
@@ -6272,7 +6272,7 @@ const resetCalendarForm = () => {
 
                     {createVerifyError && (
                         <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '10px 14px', color: '#fca5a5', fontSize: '13px', fontWeight: '600' }}>
-                            ⚠️ {createVerifyError}
+                            ?? {createVerifyError}
                         </div>
                     )}
 
@@ -6340,7 +6340,7 @@ const resetCalendarForm = () => {
                             style={{ ...s.secondaryBtn, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: createVerifyResending || createVerifyCooldown > 0 ? 0.6 : 1, cursor: createVerifyResending || createVerifyCooldown > 0 ? 'not-allowed' : 'pointer' }}
                         >
                             {createVerifyResending ? (
-                                <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Resending…</>
+                                <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Resending�</>
                             ) : createVerifyCooldown > 0 ? (
                                 `Resend code in ${createVerifyCooldown}s`
                             ) : (
@@ -6420,7 +6420,7 @@ const resetCalendarForm = () => {
                 </div>
             </Modal>
 
-            {/* ─?─?─?─?─?─?─?─?─?─?─? ENTERPRISE ASSIGN INSTRUCTOR MODAL ─?─?─?─?─?─?─?─?─?─?─? */}
+            {/* -?-?-?-?-?-?-?-?-?-?-? ENTERPRISE ASSIGN INSTRUCTOR MODAL -?-?-?-?-?-?-?-?-?-?-? */}
             <Modal isOpen={isAssignInstructorModalOpen} onClose={() => { setIsAssignInstructorModalOpen(false); setSelectedInstructorObj(null); setInstructorSearchQuery(''); setAssignInstructorIdInput(''); }} title="Assign Instructor to Course">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>
@@ -6471,7 +6471,7 @@ const resetCalendarForm = () => {
                                         </div>
                                         <div>
                                             <div style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>{user.fullName}</div>
-                                            <div style={{ fontSize: '12px', color: colors.textMuted }}>{user.accountEmail} ── <span style={{ color: '#2563eb', fontWeight: '500' }}>{user.specialization || user.role || 'Instructor'}</span></div>
+                                            <div style={{ fontSize: '12px', color: colors.textMuted }}>{user.accountEmail} -- <span style={{ color: '#2563eb', fontWeight: '500' }}>{user.specialization || user.role || 'Instructor'}</span></div>
                                         </div>
                                     </div>
                                 ))}
@@ -6564,7 +6564,7 @@ const resetCalendarForm = () => {
                 </div>
             </Modal>
 
-            {/* ─?─?─?─?─?─?─?─?─?─?─? ENTERPRISE MANAGE ENROLLED STUDENTS MODAL ─?─?─?─?─?─?─?─?─?─?─? */}
+            {/* -?-?-?-?-?-?-?-?-?-?-? ENTERPRISE MANAGE ENROLLED STUDENTS MODAL -?-?-?-?-?-?-?-?-?-?-? */}
             <Modal isOpen={isManageStudentsModalOpen} onClose={() => { setIsManageStudentsModalOpen(false); setActiveCourseId(null); setManagedStudents([]); setEnrollStudentId(''); setSelectedStudentsToEnroll([]); setBulkStudentEmails(''); }} title="Manage Course Enrollments & Access">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -6717,7 +6717,7 @@ const resetCalendarForm = () => {
                                                 <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
                                                     <button onClick={() => handleRevokeAccess(enr._id)} title="Revoke Access" style={{ padding: '4px 8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: '#ef4444' }}> <Ban size={16} style={{ marginRight: '6px', color: '#ef4444' }} />  Revoke</button>
                                                     <button onClick={() => handleResetProgress(enr._id)} title="Reset Progress" style={{ padding: '4px 8px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: colors.text }}> <Eraser size={16} style={{ marginRight: '6px' }} />  Reset</button>
-                                                    <button onClick={() => handleResendWelcomeEmail(enr._id)} title="Resend Email" style={{ padding: '4px 8px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: '#2563eb' }}> <Mail size={16} style={{ marginRight: '6px' }} /> ─,? Email</button>
+                                                    <button onClick={() => handleResendWelcomeEmail(enr._id)} title="Resend Email" style={{ padding: '4px 8px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: '#2563eb' }}> <Mail size={16} style={{ marginRight: '6px' }} /> -,? Email</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -6738,7 +6738,7 @@ const resetCalendarForm = () => {
                 </div>
             </Modal>
 
-            {/* ─?─?─?─?─?─?─?─?─?─?─? EXPORT CUSTOMIZER MODAL ─?─?─?─?─?─?─?─?─?─?─? */}
+            {/* -?-?-?-?-?-?-?-?-?-?-? EXPORT CUSTOMIZER MODAL -?-?-?-?-?-?-?-?-?-?-? */}
             <Modal isOpen={isExportCustomizerOpen} onClose={() => setIsExportCustomizerOpen(false)} title="Customize Course Export">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>Select the data columns and date range you want to include in your export file.</p>
@@ -6777,7 +6777,7 @@ const resetCalendarForm = () => {
                 </div>
             </Modal>
 
-            {/* ─?─?─?─?─?─?─?─?─?─?─? SMART IMPORT WIZARD MODAL ─?─?─?─?─?─?─?─?─?─?─? */}
+            {/* -?-?-?-?-?-?-?-?-?-?-? SMART IMPORT WIZARD MODAL -?-?-?-?-?-?-?-?-?-?-? */}
             <Modal isOpen={isSmartImportWizardOpen} onClose={() => { setIsSmartImportWizardOpen(false); setWizardSelectedFile(null); setWizardHeaders([]); setWizardParsedRows([]); setIsWizardMappingStep(false); }} title="Smart Course Import Wizard" maxWidth="720px">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>Import course content and curricula from multiple platform formats. Select a file type, upload your file, and preview field mappings.</p>
@@ -6865,9 +6865,9 @@ const resetCalendarForm = () => {
                             <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '10px', padding: '12px 16px', marginTop: '6px' }}>
                                 <h5 style={{ margin: '0 0 6px 0', fontSize: '12px', fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase' }}>Live Row 1 Preview</h5>
                                 <div style={{ fontSize: '13px', display: 'grid', gap: '4px' }}>
-                                    <div><strong>Title:</strong> {wizardParsedRows[0]?.[wizardColumnMapping.courseTitle] || '─"'}</div>
-                                    <div><strong>Category:</strong> {wizardParsedRows[0]?.[wizardColumnMapping.technicalCategory] || '─"'}</div>
-                                    <div><strong>Price:</strong> {wizardParsedRows[0]?.[wizardColumnMapping.price] ? `$${wizardParsedRows[0]?.[wizardColumnMapping.price]}` : '─"'}</div>
+                                    <div><strong>Title:</strong> {wizardParsedRows[0]?.[wizardColumnMapping.courseTitle] || '-"'}</div>
+                                    <div><strong>Category:</strong> {wizardParsedRows[0]?.[wizardColumnMapping.technicalCategory] || '-"'}</div>
+                                    <div><strong>Price:</strong> {wizardParsedRows[0]?.[wizardColumnMapping.price] ? `$${wizardParsedRows[0]?.[wizardColumnMapping.price]}` : '-"'}</div>
                                 </div>
                             </div>
                         </div>
@@ -6914,7 +6914,7 @@ const resetCalendarForm = () => {
                 </div>
             </Modal>
 
-            {/* ─?─?─?─?─?─?─?─?─?─?─? AI COURSE GENERATOR MODAL ─?─?─?─?─?─?─?─?─?─?─? */}
+            {/* -?-?-?-?-?-?-?-?-?-?-? AI COURSE GENERATOR MODAL -?-?-?-?-?-?-?-?-?-?-? */}
             <Modal isOpen={isAiCourseGenModalOpen} onClose={() => setIsAiCourseGenModalOpen(false)} title="Generate Course with AI">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>Describe your course topic, target audience, and key learning outcomes. AI will automatically generate the full syllabus, module breakdown, and lesson outlines.</p>
@@ -6961,7 +6961,7 @@ const resetCalendarForm = () => {
                 </div>
             </Modal>
 
-            {/* ─"?─"? Course Analytics Modal ─"?─"? */}
+            {/* -"?-"? Course Analytics Modal -"?-"? */}
             <Modal isOpen={isCourseAnalyticsModalOpen} onClose={() => { setIsCourseAnalyticsModalOpen(false); setActiveCourseId(null); }} title="Course Analytics Overview">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>
@@ -7014,7 +7014,7 @@ const resetCalendarForm = () => {
                 </div>
             </Modal>
 
-            {/* ─"?─"? Course Reviews Modal ─"?─"? */}
+            {/* -"?-"? Course Reviews Modal -"?-"? */}
             <Modal isOpen={isCourseReviewsModalOpen} onClose={() => { setIsCourseReviewsModalOpen(false); setActiveCourseId(null); }} title="Course Reviews & Feedback">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>
@@ -7116,7 +7116,7 @@ const resetCalendarForm = () => {
                 </form>
             </Modal>
 
-            {/* ─"?─"? Fixed-position course action menu (renders above all overflow contexts) ─"?─"? */}
+            {/* -"?-"? Fixed-position course action menu (renders above all overflow contexts) -"?-"? */}
             {courseMenuOpenId && (() => {
                 const course = allCourses.find(c => c._id === courseMenuOpenId);
                 if (!course) return null;

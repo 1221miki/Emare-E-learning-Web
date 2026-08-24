@@ -351,10 +351,16 @@ export const learningProgressService = {
     getCourseProgress: (courseId) => API.get(`/learning-progress/course/${courseId}`),
     getResumeProgress: () => API.get('/learning-progress/resume'),
     // Returns { quizRequired, quizPassed, assignmentRequired, assignmentSubmitted, canComplete }
-    getLessonRequirementsStatus: (courseId, lessonId) => API.get(`/learning-progress/course/${courseId}/lesson/${lessonId}/requirements`),
+    getLessonRequirementsStatus: (courseId, lessonId, params) => API.get(`/learning-progress/course/${courseId}/lesson/${lessonId}/requirements`, { params }),
     saveLessonProgress: (courseId, lessonId, payload) => API.post(`/learning-progress/course/${courseId}/lesson/${lessonId}/progress`, payload),
     markDocumentViewed: (courseId, lessonId) => API.post(`/learning-progress/course/${courseId}/lesson/${lessonId}/document`, {}),
     trackResourceDownload: (courseId, lessonId, payload) => API.post(`/learning-progress/course/${courseId}/lesson/${lessonId}/resource`, payload)
+};
+
+// ── In-Video Quiz Checkpoint API Calls ────────────────────────────────────────
+export const inVideoQuizService = {
+    getLessonCheckpoints: (courseId, lessonId) => API.get(`/in-video-quiz/${courseId}/${lessonId}`),
+    submitCheckpointAttempt: (courseId, lessonId, payload) => API.post(`/in-video-quiz/${courseId}/${lessonId}/submit`, payload)
 };
 
 // ── AI Tutor API Calls ─────────────────────────────────────

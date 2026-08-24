@@ -3,6 +3,7 @@ const Enrollment = require('../models/Enrollment');
 const LearningProgress = require('../models/LearningProgress');
 const GradeBook = require('../models/GradeBook');
 const Submission = require('../models/Submission');
+const InVideoQuizAttempt = require('../models/InVideoQuizAttempt');
 
 const getCourseProgress = async (req, res, next) => {
     try {
@@ -56,7 +57,7 @@ const getResumeProgress = async (req, res, next) => {
 // Returns:
 //   { quizRequired, quizPassed, assignmentRequired, assignmentSubmitted, canComplete }
 // ─────────────────────────────────────────────────────────────────────────────
-const checkLessonRequirements = async (studentId, lessonData) => {
+const checkLessonRequirements = async (studentId, lessonData, watchInfo = {}) => {
     const quizRequired        = lessonData.quizRequired        === true;
     const assignmentRequired  = lessonData.assignmentRequired  === true;
     const linkedQuizId        = lessonData.linkedQuizId;
@@ -64,6 +65,22 @@ const checkLessonRequirements = async (studentId, lessonData) => {
 
     let quizPassed           = false;
     let assignmentSubmitted  = false;
+
+    // ── In-video checkpoint gate ─────────────────────────────────────────────
+    // Every embedded quiz checkpoint in the lesson video must be passed before
+    // the lesson can be marked complete.
+    const checkpoints = lessonData.quizCheckpoints || [];
+    let checkpointsPassed = checkpoints.length === 0;
+    if (checkpoints.length > 0) {
+        const passedSet = new Set(
+            (await InVideoQuizAttempt.find({
+                studentRef: studentId,
+                lessonId: lessonData._id,
+                passed: true
+            }).distinct('checkpointId'))
+        );
+        checkpointsPassed = checkpoints.every(cp => passedSet.has(cp.checkpointId));
+    }
 
     // ── Quiz gate ────────────────────────────────────────────────────────────
     if (quizRequired && linkedQuizId) {
@@ -98,13 +115,33 @@ const checkLessonRequirements = async (studentId, lessonData) => {
         assignmentSubmitted = true;
     }
 
-    const canComplete = quizPassed && assignmentSubmitted;
+    // ── Video watch-through gate ─────────────────────────────────────────────
+    // When the player reports a real duration (HTML5 video mode), the student
+    // must have actually PLAYED at least 85% of the video before completion.
+    // Watch time accumulates from playback ticks, so seeking ahead doesn't help.
+    const videoDurationSeconds = Number(watchInfo.videoDurationSeconds) || 0;
+    const watchedSeconds       = Number(watchInfo.watchedSeconds) || 0;
+    const videoWatchRequired   = videoDurationSeconds > 30; // iframe-only lessons have no duration → skip
+    const videoWatchedPercent  = videoDurationSeconds > 0
+        ? Math.min(100, Math.round((watchedSeconds / videoDurationSeconds) * 100))
+        : (videoWatchRequired ? 0 : 100);
+    const videoWatched         = !videoWatchRequired || watchedSeconds >= videoDurationSeconds * 0.85;
+
+    const canComplete = quizPassed && assignmentSubmitted && checkpointsPassed && videoWatched;
 
     return {
         quizRequired,
         quizPassed,
         assignmentRequired,
         assignmentSubmitted,
+        checkpointsRequired: checkpoints.length > 0,
+        checkpointsPassed,
+        checkpointsTotal: checkpoints.length,
+        videoWatchRequired,
+        videoWatched,
+        videoWatchedPercent,
+        watchedSeconds,
+        videoDurationSeconds,
         canComplete,
         linkedQuizId:       linkedQuizId       ? linkedQuizId.toString()       : null,
         linkedAssignmentId: linkedAssignmentId ? linkedAssignmentId.toString() : null
@@ -139,7 +176,20 @@ const getLessonRequirementsStatus = async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Lesson not found.' });
         }
 
-        const result = await checkLessonRequirements(req.user.id, lessonFound);
+        // Include persisted watch-through data so the client can display it,
+        // merged with the player's LIVE values when provided via query params
+        // (duration is known to the client before any heartbeat has persisted).
+        const progressDoc = await LearningProgress.findOne(
+            { studentRef: req.user.id, courseRef: courseId, 'progressItems.lessonId': lessonId },
+            { progressItems: { $elemMatch: { lessonId } } }
+        ).lean();
+        const storedItem = progressDoc?.progressItems?.[0];
+        const watchInfo = {
+            watchedSeconds: Math.max(Number(req.query.watchedSeconds) || 0, Number(storedItem?.watchedSeconds) || 0),
+            videoDurationSeconds: Math.max(Number(req.query.durationSeconds) || 0, Number(storedItem?.videoDurationSeconds) || 0)
+        };
+
+        const result = await checkLessonRequirements(req.user.id, lessonFound, watchInfo);
 
         return res.status(200).json({ success: true, data: result });
     } catch (err) {
@@ -159,7 +209,15 @@ const getLessonRequirementsStatus = async (req, res, next) => {
 const saveLessonProgress = async (req, res, next) => {
     try {
         const { courseId, lessonId } = req.params;
-        const { currentTime = 0, completed = false, documentRead = false, resourceDownloads = 0, lessonTitle = '' } = req.body;
+        const {
+            currentTime = 0,
+            completed = false,
+            documentRead = false,
+            resourceDownloads = 0,
+            lessonTitle = '',
+            watchedSeconds = 0,
+            videoDurationSeconds = 0
+        } = req.body;
 
         const course = await Course.findById(courseId).lean();
         if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
@@ -185,9 +243,17 @@ const saveLessonProgress = async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Lesson not found.' });
         }
 
-        // ── BACKEND GATE: enforce quiz + assignment requirements ─────────────
+        // Load existing progress first so watch data can be merged across sessions
+        let progress = await LearningProgress.findOne({ studentRef: req.user.id, courseRef: courseId });
+        const prevItem = progress?.progressItems?.find(item => item.lessonId.toString() === lessonId);
+        const watchInfo = {
+            watchedSeconds: Math.max(Number(watchedSeconds) || 0, Number(prevItem?.watchedSeconds) || 0),
+            videoDurationSeconds: Math.max(Number(videoDurationSeconds) || 0, Number(prevItem?.videoDurationSeconds) || 0)
+        };
+
+        // ── BACKEND GATE: enforce quiz + assignment + checkpoint + watch requirements ──
         if (completed) {
-            const reqStatus = await checkLessonRequirements(req.user.id, lessonFound);
+            const reqStatus = await checkLessonRequirements(req.user.id, lessonFound, watchInfo);
             if (!reqStatus.canComplete) {
                 return res.status(422).json({
                     success: false,
@@ -199,7 +265,6 @@ const saveLessonProgress = async (req, res, next) => {
         }
 
         const totalLessons = course.curriculumTree?.reduce((sum, chapter) => sum + (chapter.lessons?.length || 0), 0) || 0;
-        let progress = await LearningProgress.findOne({ studentRef: req.user.id, courseRef: courseId });
         if (!progress) {
             progress = await LearningProgress.create({
                 studentRef: req.user.id,
@@ -217,6 +282,8 @@ const saveLessonProgress = async (req, res, next) => {
         if (itemIndex >= 0) {
             const existingItem = progress.progressItems[itemIndex];
             existingItem.lastWatchedPosition = Math.max(existingItem.lastWatchedPosition || 0, currentTime);
+            existingItem.watchedSeconds = Math.max(existingItem.watchedSeconds || 0, watchInfo.watchedSeconds);
+            existingItem.videoDurationSeconds = Math.max(existingItem.videoDurationSeconds || 0, watchInfo.videoDurationSeconds);
             existingItem.completed = completed || existingItem.completed;
             existingItem.documentRead = documentRead || existingItem.documentRead;
             existingItem.resourceDownloads = Math.max(existingItem.resourceDownloads || 0, resourceDownloads || 0);
@@ -229,6 +296,8 @@ const saveLessonProgress = async (req, res, next) => {
                 lessonIndex: lessonIndices.lessonIndex,
                 lessonTitle: lessonIndices.lessonTitle || lessonTitle,
                 lastWatchedPosition: currentTime,
+                watchedSeconds: watchInfo.watchedSeconds,
+                videoDurationSeconds: watchInfo.videoDurationSeconds,
                 completed,
                 completedAt: completed ? new Date() : undefined,
                 documentRead,
@@ -288,5 +357,6 @@ module.exports = {
     getLessonRequirementsStatus,
     saveLessonProgress,
     markDocumentViewed,
-    trackResourceDownload
+    trackResourceDownload,
+    checkLessonRequirements
 };

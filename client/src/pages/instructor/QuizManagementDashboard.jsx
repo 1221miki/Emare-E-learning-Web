@@ -1126,7 +1126,7 @@ export default function QuizManagementDashboard() {
                                                     name="correctAnswerIndex"
                                                     checked={questionForm.correctAnswer === oIdx}
                                                     onChange={() => setQuestionForm({ ...questionForm, correctAnswer: oIdx })}
-                                                    style={{ width: '18px', height: '18px', accentColor: '#22c55e', cursor: 'pointer' }}
+                                                    style={{ width: '18px', height: '18px', accentColor: '#3b82f6', cursor: 'pointer' }}
                                                 />
                                                 <span style={{ fontWeight: 800, color: colors.text, width: '20px' }}>{String.fromCharCode(65 + oIdx)}.</span>
                                                 <input 

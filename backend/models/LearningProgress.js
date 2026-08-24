@@ -22,6 +22,17 @@ const ResourceProgressSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    // Actual seconds of video played (accumulated from playback ticks — immune
+    // to seeking). Used to require full watch-through before lesson completion.
+    watchedSeconds: {
+        type: Number,
+        default: 0
+    },
+    // Total duration of the lesson video as reported by the player
+    videoDurationSeconds: {
+        type: Number,
+        default: 0
+    },
     completed: {
         type: Boolean,
         default: false

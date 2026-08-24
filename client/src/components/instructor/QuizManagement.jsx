@@ -579,7 +579,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
                                                                 name="qCorrectAnswer"
                                                                 checked={questionForm.correctAnswerIndex === oIdx}
                                                                 onChange={() => setQuestionForm({ ...questionForm, correctAnswerIndex: oIdx })}
-                                                                style={{ accentColor: '#22c55e', width: '16px', height: '16px', cursor: 'pointer' }}
+                                                                style={{ accentColor: '#3b82f6', width: '16px', height: '16px', cursor: 'pointer' }}
                                                             />
                                                             <span style={{ color: colors.text, fontWeight: 700, width: '20px' }}>{String.fromCharCode(65 + oIdx)}.</span>
                                                             <input
@@ -603,11 +603,11 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
                                                     <label style={{ ...s.label, marginBottom: '8px', display: 'block' }}>Correct Answer</label>
                                                     <div style={{ display: 'flex', gap: '16px' }}>
                                                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: colors.text, fontWeight: 600 }}>
-                                                            <input type="radio" name="tfAnswer" checked={questionForm.correctAnswerIndex === 0} onChange={() => setQuestionForm({ ...questionForm, correctAnswerIndex: 0 })} style={{ accentColor: '#22c55e' }} />
+                                                            <input type="radio" name="tfAnswer" checked={questionForm.correctAnswerIndex === 0} onChange={() => setQuestionForm({ ...questionForm, correctAnswerIndex: 0 })} style={{ accentColor: '#3b82f6' }} />
                                                             True
                                                         </label>
                                                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: colors.text, fontWeight: 600 }}>
-                                                            <input type="radio" name="tfAnswer" checked={questionForm.correctAnswerIndex === 1} onChange={() => setQuestionForm({ ...questionForm, correctAnswerIndex: 1 })} style={{ accentColor: '#22c55e' }} />
+                                                            <input type="radio" name="tfAnswer" checked={questionForm.correctAnswerIndex === 1} onChange={() => setQuestionForm({ ...questionForm, correctAnswerIndex: 1 })} style={{ accentColor: '#3b82f6' }} />
                                                             False
                                                         </label>
                                                     </div>
