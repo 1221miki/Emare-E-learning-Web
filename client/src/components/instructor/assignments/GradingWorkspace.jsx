@@ -11,7 +11,7 @@ function FilePreview({ file }) {
     const isPDF   = file.mimeType === 'application/pdf';
     return (
         <div style={{ ...card, padding: '12px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <FileText size={18} color={C.blue} aria-hidden="true" />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -121,7 +121,7 @@ export default function GradingWorkspace({ submission, assignment, onGraded, onB
                 <div>
                     {/* Student info */}
                     <div style={{ ...card, padding: '18px 20px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                        <div style={{ width: '46px', height: '46px', borderRadius: '50%', background: 'rgba(59,130,246,0.18)', border: '2px solid rgba(59,130,246,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.blue, fontWeight: '800', fontSize: '18px', flexShrink: 0 }}>
+                        <div style={{ width: '46px', height: '46px', borderRadius: '50%', background: 'rgba(34,197,94,0.18)', border: '2px solid rgba(34,197,94,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.blue, fontWeight: '800', fontSize: '18px', flexShrink: 0 }}>
                             {(student.fullName || 'U').charAt(0).toUpperCase()}
                         </div>
                         <div>

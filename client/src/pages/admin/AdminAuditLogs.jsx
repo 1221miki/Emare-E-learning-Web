@@ -14,29 +14,29 @@ import {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const CATEGORIES = [
-    { key: '', label: 'All Categories', icon: Activity, color: '#8b5cf6' },
+    { key: '', label: 'All Categories', icon: Activity, color: '#22c55e' },
     { key: 'Enrollment & Financial', label: 'Enrollment & Financial', icon: DollarSign, color: '#10b981' },
-    { key: 'Course Approvals & Content', label: 'Course Approvals & Content', icon: BookOpen, color: '#3b82f6' },
+    { key: 'Course Approvals & Content', label: 'Course Approvals & Content', icon: BookOpen, color: '#22c55e' },
     { key: 'User Security & Activity', label: 'User Security & Activity', icon: Shield, color: '#f59e0b' },
     { key: 'System & Diagnostics', label: 'System & Diagnostics', icon: Cpu, color: '#ec4899' },
 ];
 
 const SEVERITY = [
     { key: '', label: 'All Severity' },
-    { key: 'info', label: 'Info', color: '#3b82f6' },
+    { key: 'info', label: 'Info', color: '#22c55e' },
     { key: 'warning', label: 'Warning', color: '#f59e0b' },
     { key: 'critical', label: 'Critical', color: '#ef4444' },
 ];
 
 const SEV_META = {
-    info:     { icon: Info,          color: '#3b82f6', bg: 'rgba(59,130,246,0.12)'  },
+    info:     { icon: Info,          color: '#22c55e', bg: 'rgba(34,197,94,0.12)'  },
     warning:  { icon: AlertTriangle, color: '#f59e0b', bg: 'rgba(245,158,11,0.12)'  },
     critical: { icon: AlertOctagon,  color: '#ef4444', bg: 'rgba(239,68,68,0.12)'   },
 };
 
 const CAT_META = {
     'Enrollment & Financial':       { icon: DollarSign, color: '#10b981' },
-    'Course Approvals & Content':   { icon: BookOpen,   color: '#3b82f6' },
+    'Course Approvals & Content':   { icon: BookOpen,   color: '#22c55e' },
     'User Security & Activity':     { icon: Shield,     color: '#f59e0b' },
     'System & Diagnostics':         { icon: Cpu,        color: '#ec4899' },
 };
@@ -182,8 +182,8 @@ export default function AdminAuditLogs() {
 
     // ── Stat cards data ────────────────────────────────────────────────────
     const statCards = [
-        { label: 'Total Logs',      value: pagination.total || logs.length, icon: Activity,      color: '#8b5cf6' },
-        { label: 'Last 24h Events', value: stats?.last24h ?? '—',           icon: Clock,         color: '#3b82f6' },
+        { label: 'Total Logs',      value: pagination.total || logs.length, icon: Activity,      color: '#22c55e' },
+        { label: 'Last 24h Events', value: stats?.last24h ?? '—',           icon: Clock,         color: '#22c55e' },
         { label: 'Warnings',        value: stats?.warnings ?? '—',          icon: AlertTriangle, color: '#f59e0b' },
         { label: 'Critical Events', value: stats?.critical ?? '—',          icon: AlertOctagon,  color: '#ef4444' },
     ];
@@ -201,8 +201,8 @@ export default function AdminAuditLogs() {
                 {/* ── Header ──────────────────────────────────────────────────── */}
             <div style={{
                 background: dark
-                    ? 'linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(59,130,246,0.1) 100%)'
-                    : 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(59,130,246,0.05) 100%)',
+                    ? 'linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(34,197,94,0.1) 100%)'
+                    : 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(34,197,94,0.05) 100%)',
                 borderBottom: `1px solid ${border}`,
                 padding: '32px 32px 28px',
                 position: 'sticky', top: 0, zIndex: 20,
@@ -213,7 +213,7 @@ export default function AdminAuditLogs() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                             <div style={{
                                 width: 48, height: 48, borderRadius: 14,
-                                background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)',
+                                background: 'linear-gradient(135deg, #22c55e, #22c55e)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 boxShadow: '0 4px 20px rgba(139,92,246,0.35)'
                             }}>
@@ -239,7 +239,7 @@ export default function AdminAuditLogs() {
                             <button onClick={exportCSV} style={{
                                 display: 'flex', alignItems: 'center', gap: 6,
                                 padding: '9px 18px', borderRadius: 10, border: 'none',
-                                background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)',
+                                background: 'linear-gradient(135deg, #22c55e, #22c55e)',
                                 color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700,
                                 boxShadow: '0 4px 12px rgba(139,92,246,0.3)'
                             }}>
@@ -343,7 +343,7 @@ export default function AdminAuditLogs() {
                         <div style={{ display: 'flex', gap: 8, paddingBottom: 0 }}>
                             <button onClick={applyFilters} style={{
                                 padding: '9px 16px', borderRadius: 10, border: 'none',
-                                background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)',
+                                background: 'linear-gradient(135deg, #22c55e, #22c55e)',
                                 color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap'
                             }}>Apply</button>
                             <button onClick={resetFilters} style={{
@@ -443,7 +443,7 @@ export default function AdminAuditLogs() {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                         <div style={{
                                             width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                                            background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)',
+                                            background: 'linear-gradient(135deg, #22c55e, #22c55e)',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: 13, fontWeight: 800, color: '#fff'
                                         }}>
@@ -575,8 +575,8 @@ export default function AdminAuditLogs() {
                                     <button key={p} onClick={() => setPage(p)}
                                         style={{
                                             width: 36, height: 36, borderRadius: 10,
-                                            border: `1px solid ${page === p ? '#8b5cf6' : border}`,
-                                            background: page === p ? 'linear-gradient(135deg,#8b5cf6,#3b82f6)' : 'transparent',
+                                            border: `1px solid ${page === p ? '#22c55e' : border}`,
+                                            background: page === p ? 'linear-gradient(135deg,#22c55e,#22c55e)' : 'transparent',
                                             color: page === p ? '#fff' : colors.text,
                                             cursor: 'pointer', fontSize: 13, fontWeight: 700
                                         }}>{p}

@@ -145,7 +145,7 @@ export default function LoginPage() {
         ...styles.page,
         background: isDark
             ? 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)'
-            : 'linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%)',
+            : 'linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%)',
         color: colors.text
     };
 
@@ -388,7 +388,7 @@ export default function LoginPage() {
                                 <button 
                                     type="button" 
                                     onClick={() => { setForgotStep(1); setForgotEmail(''); setForgotSuccess(''); }} 
-                                    style={{ ...styles.link, color: colors.text, background: 'rgba(59,130,246,0.12)', border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', marginBottom: '12px' }}
+                                    style={{ ...styles.link, color: colors.text, background: 'rgba(34,197,94,0.12)', border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', marginBottom: '12px' }}
                                 >
                                     Try Another Email
                                 </button>
@@ -413,7 +413,7 @@ const styles = {
     backButton: { position: 'absolute', top: '24px', left: '24px', display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', textDecoration: 'none', fontSize: '14px', fontWeight: '600', transition: 'color 0.2s', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' },
     card: { background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '48px 40px', width: '100%', maxWidth: '420px', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' },
     header: { textAlign: 'center', marginBottom: '32px' },
-    logo: { width: '60px', height: '60px', borderRadius: '16px', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: '900', color: '#fff', marginBottom: '16px' },
+    logo: { width: '60px', height: '60px', borderRadius: '16px', background: 'linear-gradient(135deg, #16a34a, #15803d)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: '900', color: '#fff', marginBottom: '16px' },
     title: { color: '#fff', fontSize: '26px', fontWeight: '800', margin: '0 0 6px' },
     subtitle: { color: '#94a3b8', fontSize: '14px', margin: 0 },
     errorBox: { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', padding: '12px 16px', borderRadius: '10px', fontSize: '14px', marginBottom: '20px' },
@@ -424,9 +424,9 @@ const styles = {
     input: { background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: '#fff', fontSize: '15px', padding: '12px 16px', outline: 'none', transition: 'border-color 0.2s' },
     passwordWrapper: { position: 'relative', display: 'flex', alignItems: 'center', width: '100%' },
     eyeIcon: { position: 'absolute', right: '12px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0', fontSize: '16px' },
-    btn: { marginTop: '8px', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: '#fff', border: 'none', borderRadius: '10px', padding: '14px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s', boxShadow: '0 4px 15px rgba(79,70,229,0.4)' },
+    btn: { marginTop: '8px', background: 'linear-gradient(135deg, #16a34a, #15803d)', color: '#fff', border: 'none', borderRadius: '10px', padding: '14px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s', boxShadow: '0 4px 15px rgba(22,163,74,0.4)' },
     footerText: { textAlign: 'center', color: '#64748b', fontSize: '14px', marginTop: '24px' },
-    link: { color: '#60a5fa', textDecoration: 'none', fontWeight: '600' },
+    link: { color: '#4ade80', textDecoration: 'none', fontWeight: '600' },
     socialContainer: { textAlign: 'center', marginTop: '24px' },
     socialText: { color: '#94a3b8', fontSize: '13px', marginBottom: '12px' },
     socialButtons: { display: 'flex', justifyContent: 'center', gap: '14px' },

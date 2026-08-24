@@ -32,7 +32,7 @@ export default function ProfessionalCourseCard({ enrollment, course }) {
 
     // UI Configuration
     const getCategoryColor = (cat) => {
-        if (cat.includes('Web') || cat.includes('MERN')) return '#3b82f6';
+        if (cat.includes('Web') || cat.includes('MERN')) return '#22c55e';
         if (cat.includes('Data') || cat.includes('AI') || cat.includes('Python')) return '#10b981';
         if (cat.includes('Design') || cat.includes('UI')) return '#ec4899';
         if (cat.includes('Cyber') || cat.includes('Security')) return '#ef4444';

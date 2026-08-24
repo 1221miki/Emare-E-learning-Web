@@ -67,7 +67,7 @@ export default function GuestModal({ isOpen, onClose, action = 'access this feat
 
                 <p style={{ ...s.footer, color: colors.textMuted }}>
                     Already have an account? <span
-                        style={{ color: '#3b82f6', cursor: 'pointer', fontWeight: '600' }}
+                        style={{ color: '#22c55e', cursor: 'pointer', fontWeight: '600' }}
                         onClick={() => { onClose(); navigate('/login'); }}>
                         Sign In
                     </span>
@@ -114,7 +114,7 @@ const s = {
     },
     perkItem: {
         display: 'flex', alignItems: 'center', gap: '8px',
-        background: 'rgba(59,130,246,0.05)',
+        background: 'rgba(34,197,94,0.05)',
         border: '1px solid',
         borderRadius: '10px', padding: '10px 12px'
     },
@@ -122,11 +122,11 @@ const s = {
     btnRow: { display: 'flex', gap: '12px', marginBottom: '16px' },
     registerBtn: {
         flex: 1,
-        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+        background: 'linear-gradient(135deg, #22c55e, #22c55e)',
         color: '#fff', border: 'none',
         borderRadius: '12px', padding: '14px 20px',
         fontWeight: '800', fontSize: '15px', cursor: 'pointer',
-        boxShadow: '0 8px 20px rgba(59,130,246,0.3)'
+        boxShadow: '0 8px 20px rgba(34,197,94,0.3)'
     },
     loginBtn: {
         flex: 1,

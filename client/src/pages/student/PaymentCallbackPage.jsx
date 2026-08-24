@@ -90,8 +90,8 @@ export default function PaymentCallbackPage() {
             justifyContent: 'center',
             minHeight: '100vh',
             background: theme === 'dark'
-                ? 'radial-gradient(ellipse at 30% 20%, rgba(59,130,246,0.15) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(139,92,246,0.1) 0%, transparent 50%), #0f172a'
-                : 'radial-gradient(ellipse at 30% 20%, rgba(59,130,246,0.08) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(139,92,246,0.05) 0%, transparent 50%), #f1f5f9',
+                ? 'radial-gradient(ellipse at 30% 20%, rgba(34,197,94,0.15) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(139,92,246,0.1) 0%, transparent 50%), #0f172a'
+                : 'radial-gradient(ellipse at 30% 20%, rgba(34,197,94,0.08) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(139,92,246,0.05) 0%, transparent 50%), #f1f5f9',
             fontFamily: "'Outfit', 'Inter', sans-serif",
             padding: '20px'
         }}>
@@ -115,7 +115,7 @@ export default function PaymentCallbackPage() {
                     position: 'absolute',
                     top: 0, left: 0, right: 0,
                     height: '4px',
-                    background: 'linear-gradient(90deg, #3b82f6, #8b5cf6, #10b981)',
+                    background: 'linear-gradient(90deg, #22c55e, #22c55e, #10b981)',
                     borderRadius: '28px 28px 0 0'
                 }} />
 
@@ -129,10 +129,10 @@ export default function PaymentCallbackPage() {
                 }}>
                     <div style={{
                         width: '44px', height: '44px', borderRadius: '14px',
-                        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                        background: 'linear-gradient(135deg, #22c55e, #22c55e)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontWeight: '900', color: '#fff', fontSize: '22px',
-                        boxShadow: '0 4px 16px rgba(59,130,246,0.3)'
+                        boxShadow: '0 4px 16px rgba(34,197,94,0.3)'
                     }}>E</div>
                     <span style={{
                         fontWeight: '800', fontSize: '22px',
@@ -151,8 +151,8 @@ export default function PaymentCallbackPage() {
                         }}>
                             <div style={{
                                 width: '80px', height: '80px',
-                                border: '4px solid rgba(59,130,246,0.15)',
-                                borderTop: '4px solid #3b82f6',
+                                border: '4px solid rgba(34,197,94,0.15)',
+                                borderTop: '4px solid #22c55e',
                                 borderRadius: '50%',
                                 animation: 'chapaCallbackSpin 0.8s linear infinite'
                             }} />
@@ -189,7 +189,7 @@ export default function PaymentCallbackPage() {
                             <div style={{
                                 width: `${Math.min(progress, 100)}%`,
                                 height: '100%',
-                                background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)',
+                                background: 'linear-gradient(90deg, #22c55e, #22c55e)',
                                 borderRadius: '100px',
                                 transition: 'width 0.3s ease'
                             }} />
@@ -350,7 +350,7 @@ export default function PaymentCallbackPage() {
                             <button
                                 onClick={() => { setStatus('verifying'); setProgress(0); window.location.reload(); }}
                                 style={{
-                                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
                                     color: '#fff',
                                     border: 'none',
                                     borderRadius: '14px',
@@ -358,7 +358,7 @@ export default function PaymentCallbackPage() {
                                     fontWeight: '700',
                                     fontSize: '15px',
                                     cursor: 'pointer',
-                                    boxShadow: '0 8px 24px rgba(59,130,246,0.25)',
+                                    boxShadow: '0 8px 24px rgba(34,197,94,0.25)',
                                     transition: 'all 0.2s'
                                 }}
                             >

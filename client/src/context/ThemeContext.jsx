@@ -9,14 +9,15 @@ const ThemeContext = createContext();
  * Every page consumes these via useTheme().colors, so refining values here
  * restyles the entire platform without touching page markup.
  *
- * Brand identity: trustworthy indigo/blue primary + violet accent,
- * neutral slate surfaces, semantic green/amber/red used sparingly.
+ * Brand identity: professional green primary (30%),
+ * white/clean surfaces (50%), near-black text & borders (10%),
+ * semantic amber/red/blue used sparingly (10%).
  */
 
 // Shared (theme-independent) brand values
 const BRAND = {
-    accent: '#7c3aed',          // violet — secondary brand color
-    gradient: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+    accent: '#166534',          // deep green — secondary brand color
+    gradient: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
     warning: '#f59e0b',
     danger: '#ef4444'
 };
@@ -36,9 +37,9 @@ const DARK = {
     textBright: '#f4f7fc',
 
     // Interactive
-    primary: '#3b82f6',         // lighter in dark mode for contrast on dark surfaces
-    primaryHover: '#60a5fa',
-    primarySoft: 'rgba(59,130,246,0.14)',
+    primary: '#22c55e',         // lighter green in dark mode for contrast on dark surfaces
+    primaryHover: '#4ade80',
+    primarySoft: 'rgba(34,197,94,0.14)',
     accent: BRAND.accent,
     success: '#34d399',
     warning: BRAND.warning,
@@ -67,9 +68,9 @@ const LIGHT = {
     textBright: '#0c1526',
 
     // Interactive
-    primary: '#1d4ed8',         // deep blue — 7.6:1 on white
-    primaryHover: '#1e40af',
-    primarySoft: 'rgba(29,78,216,0.08)',
+    primary: '#15803d',         // deep green — 4.8:1 on white
+    primaryHover: '#166534',
+    primarySoft: 'rgba(21,128,61,0.08)',
     accent: BRAND.accent,
     success: '#047857',
     warning: '#b45309',         // darkened amber for AA text contrast

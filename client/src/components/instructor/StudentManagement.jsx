@@ -47,7 +47,7 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
             boxSizing: 'border-box',
         },
         primaryBtn: {
-            background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+            background: 'linear-gradient(135deg, #16a34a, #15803d)',
             color: '#fff',
             border: 'none',
             borderRadius: '10px',
@@ -62,8 +62,8 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
         },
         ghostBtn: {
             background: theme === 'dark' ? 'rgba(255,255,255,0.06)' : '#f0f4ff',
-            border: theme === 'dark' ? `2px solid ${effectiveColors.border}` : '2px solid #c7d2fe',
-            color: theme === 'dark' ? effectiveColors.text : '#4f46e5',
+            border: theme === 'dark' ? `2px solid ${effectiveColors.border}` : '2px solid #d1fae5',
+            color: theme === 'dark' ? effectiveColors.text : '#16a34a',
             borderRadius: '10px',
             padding: '10px 16px',
             fontWeight: '600',
@@ -249,7 +249,7 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
                     <div>
                         <h2 style={{ color: '#f8fafc', fontSize: '24px', fontWeight: '800', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Users size={22} color="#3b82f6" aria-hidden="true" />
+                            <Users size={22} color="#22c55e" aria-hidden="true" />
                             Student Management
                         </h2>
                         <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>

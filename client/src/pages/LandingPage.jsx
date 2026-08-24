@@ -297,8 +297,8 @@ export default function LandingPage() {
     ];
 
     const categories = [
-        { name: 'Programming', icon: '▧', color: '#3b82f6' },
-        { name: 'Networking', icon: '', color: '#8b5cf6' },
+        { name: 'Programming', icon: '▧', color: '#22c55e' },
+        { name: 'Networking', icon: '', color: '#22c55e' },
         { name: 'AI', icon: '⊡', color: '#10b981' },
         { name: 'Cybersecurity', icon: '▣', color: '#f59e0b' },
         { name: 'Web Development', icon: '◉', color: '#06b6d4' },
@@ -424,7 +424,7 @@ export default function LandingPage() {
         heroOverlay: {
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(100deg, rgba(4,8,32,0.45) 0%, rgba(10,16,60,0.22) 45%, rgba(30,20,90,0.05) 100%)',
+            background: 'linear-gradient(100deg, rgba(6,20,14,0.45) 0%, rgba(10,28,20,0.22) 45%, rgba(20,40,28,0.05) 100%)',
             zIndex: 1,
             pointerEvents: 'none'
         },
@@ -435,13 +435,13 @@ export default function LandingPage() {
         // Hero copy always sits on the photo → fixed white for guaranteed AA contrast
         heroBadge: { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 16px', borderRadius: '999px', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)', color: '#ffffff', fontSize: '13px', fontWeight: '700', letterSpacing: '0.04em', marginBottom: '22px' },
         heroTitle: { fontSize: 'clamp(38px, 5vw, 60px)', fontWeight: '900', lineHeight: 1.08, margin: '0 0 16px', letterSpacing: '-2px', color: '#ffffff', textShadow: '0 2px 24px rgba(2,6,23,0.45)' },
-        heroSubtitleAnimated: { fontSize: '30px', fontWeight: '700', lineHeight: 1.22, margin: '0 0 36px', maxWidth: '600px', color: '#a5b4fc', minHeight: '50px', textShadow: '0 2px 18px rgba(2,6,23,0.5)' },
+        heroSubtitleAnimated: { fontSize: '30px', fontWeight: '700', lineHeight: 1.22, margin: '0 0 36px', maxWidth: '600px', color: '#86efac', minHeight: '50px', textShadow: '0 2px 18px rgba(2,6,23,0.5)' },
         heroSubtitle: { fontSize: '18px', color: 'rgba(255,255,255,0.88)', lineHeight: 1.7, margin: '0 0 30px', maxWidth: '600px' },
         searchForm: { display: 'flex', flexWrap: 'wrap', gap: '10px', maxWidth: '600px', margin: '0 0 30px', background: colors.bgCard, borderRadius: '14px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: colors.shadow },
         searchInput: { flex: '1 1 260px', background: 'transparent', border: 'none', color: colors.text, padding: '18px 24px', fontSize: '15px', outline: 'none', minWidth: '180px' },
         searchBtn: { background: colors.gradient, color: '#fff', border: 'none', padding: '16px 28px', fontWeight: '700', cursor: 'pointer', fontSize: '15px', flex: '0 0 auto' },
         heroActions: { display: 'flex', gap: '14px', justifyContent: 'flex-start', flexWrap: 'wrap' },
-        primaryBtn: { background: colors.gradient, color: '#ffffff', border: 'none', padding: '15px 34px', borderRadius: '12px', fontSize: '15px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 10px 26px -6px rgba(79,70,229,0.55)', transition: 'transform 0.15s ease, box-shadow 0.15s ease' },
+        primaryBtn: { background: colors.gradient, color: '#ffffff', border: 'none', padding: '15px 34px', borderRadius: '12px', fontSize: '15px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 10px 26px -6px rgba(22,163,74,0.55)', transition: 'transform 0.15s ease, box-shadow 0.15s ease' },
         secondaryBtn: { background: 'rgba(255,255,255,0.10)', color: '#ffffff', border: '1px solid rgba(255,255,255,0.35)', backdropFilter: 'blur(6px)', padding: '15px 34px', borderRadius: '12px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', transition: 'background 0.15s ease' },
         heroGlow1: { position: 'absolute', width: '600px', height: '600px', background: colors.primary, filter: 'blur(150px)', opacity: 0, top: '-200px', left: '-100px', borderRadius: '50%', pointerEvents: 'none' },
         heroGlow2: { position: 'absolute', width: '500px', height: '500px', background: colors.accent, filter: 'blur(150px)', opacity: 0, bottom: '-100px', right: '-100px', borderRadius: '50%', pointerEvents: 'none' },
@@ -497,7 +497,7 @@ export default function LandingPage() {
         contactRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
         contactInput: { width: '100%', background: colors.bgCard, border: `1px solid ${colors.border}`, color: colors.text, padding: '14px 18px', borderRadius: '12px', fontSize: '15px', outline: 'none', boxSizing: 'border-box' },
         contactTextarea: { width: '100%', background: colors.bgCard, border: `1px solid ${colors.border}`, color: colors.text, padding: '14px 18px', borderRadius: '12px', fontSize: '15px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', minHeight: '140px', fontFamily: 'inherit' },
-        contactSubmitBtn: { alignSelf: 'flex-start', background: colors.gradient, color: '#ffffff', border: 'none', borderRadius: '12px', padding: '14px 40px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', marginTop: '4px', boxShadow: '0 12px 28px -6px rgba(79,70,229,0.5)' },
+        contactSubmitBtn: { alignSelf: 'flex-start', background: colors.gradient, color: '#ffffff', border: 'none', borderRadius: '12px', padding: '14px 40px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', marginTop: '4px', boxShadow: '0 12px 28px -6px rgba(22,163,74,0.5)' },
         contactSuccess: { background: `${colors.success}14`, color: colors.success, padding: '14px 18px', borderRadius: '12px', border: `1px solid ${colors.success}45`, fontSize: '14px', marginTop: '16px' },
         contactImageWrap: { position: 'relative', borderRadius: '24px', overflow: 'hidden', minHeight: '420px' },
         contactImage: { width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius: '24px', minHeight: '420px' },
@@ -636,9 +636,9 @@ export default function LandingPage() {
                 <div style={{ textAlign: 'center', marginBottom: '16px' }}>
                     <span style={{
                         display: 'inline-block',
-                        background: 'rgba(96,165,250,0.14)',
-                        color: '#93c5fd',
-                        border: '1px solid rgba(96,165,250,0.35)',
+                        background: 'rgba(74,222,128,0.14)',
+                        color: '#86efac',
+                        border: '1px solid rgba(74,222,128,0.35)',
                         borderRadius: '999px',
                         padding: '6px 18px',
                         fontSize: '12px',
@@ -716,7 +716,7 @@ export default function LandingPage() {
                                 cursor: 'default'
                             }}
                             onMouseEnter={e => {
-                                e.currentTarget.style.borderColor = 'rgba(96,165,250,0.5)';
+                                e.currentTarget.style.borderColor = 'rgba(74,222,128,0.5)';
                                 e.currentTarget.style.transform = 'translateY(-4px)';
                             }}
                             onMouseLeave={e => {
@@ -729,8 +729,8 @@ export default function LandingPage() {
                                 width: '52px',
                                 height: '52px',
                                 borderRadius: '14px',
-                                background: `linear-gradient(135deg, rgba(37,99,235,0.18), rgba(124,58,237,0.18))`,
-                                border: '1px solid rgba(96,165,250,0.3)',
+                                background: `linear-gradient(135deg, rgba(22,163,74,0.18), rgba(21,128,61,0.18))`,
+                                border: '1px solid rgba(74,222,128,0.3)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -1003,8 +1003,8 @@ export default function LandingPage() {
             <section className="emare-subscribe" style={{
                 padding: '72px 5%',
                 background: theme === 'dark'
-                    ? 'linear-gradient(135deg, rgba(37,99,235,0.15) 0%, rgba(124,58,237,0.15) 100%)'
-                    : 'linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%)',
+                    ? 'linear-gradient(135deg, rgba(22,163,74,0.15) 0%, rgba(21,128,61,0.15) 100%)'
+                    : 'linear-gradient(135deg, #f0fdf4 0%, #f5f3ff 100%)',
                 borderTop: `1px solid ${colors.border}`,
                 borderBottom: `1px solid ${colors.border}`,
                 textAlign: 'center',
@@ -1012,8 +1012,8 @@ export default function LandingPage() {
                 overflow: 'hidden'
             }}>
                 {/* Decorative blobs */}
-                <div style={{ position: 'absolute', top: '-60px', left: '-60px', width: '240px', height: '240px', background: 'radial-gradient(circle, rgba(99,102,241,0.12), transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
-                <div style={{ position: 'absolute', bottom: '-60px', right: '-60px', width: '240px', height: '240px', background: 'radial-gradient(circle, rgba(59,130,246,0.12), transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', top: '-60px', left: '-60px', width: '240px', height: '240px', background: 'radial-gradient(circle, rgba(34,197,94,0.12), transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', bottom: '-60px', right: '-60px', width: '240px', height: '240px', background: 'radial-gradient(circle, rgba(34,197,94,0.12), transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
 
                 <div style={{ position: 'relative', maxWidth: '600px', margin: '0 auto' }}>
 
@@ -1043,7 +1043,7 @@ export default function LandingPage() {
                     {/* ── PHASE: email_check ── anonymous cross-browser verification */}
                     {subPhase === 'email_check' && (
                         <>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: theme === 'dark' ? 'rgba(99,102,241,0.2)' : '#e0e7ff', color: theme === 'dark' ? '#a5b4fc' : '#4338ca', borderRadius: '100px', padding: '6px 16px', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '20px' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: theme === 'dark' ? 'rgba(34,197,94,0.2)' : '#dcfce7', color: theme === 'dark' ? '#86efac' : '#15803d', borderRadius: '100px', padding: '6px 16px', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '20px' }}>
                                 🎁 Limited Time Offer
                             </div>
                             <h3 style={{ color: colors.text, fontSize: '26px', fontWeight: '900', margin: '0 0 10px', lineHeight: 1.25 }}>
@@ -1080,7 +1080,7 @@ export default function LandingPage() {
                                         disabled={checkLoading}
                                         style={{
                                             flex: '0 0 auto',
-                                            background: checkLoading ? colors.textMuted : 'linear-gradient(135deg, #3b82f6, #7c3aed)',
+                                            background: checkLoading ? colors.textMuted : 'linear-gradient(135deg, #22c55e, #15803d)',
                                             color: '#fff', border: 'none', borderRadius: '10px',
                                             padding: '13px 24px', fontSize: '14px', fontWeight: '700',
                                             cursor: checkLoading ? 'not-allowed' : 'pointer',
@@ -1106,7 +1106,7 @@ export default function LandingPage() {
                     {/* ── PHASE: form ── full subscription form */}
                     {subPhase === 'form' && (
                         <>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: theme === 'dark' ? 'rgba(99,102,241,0.2)' : '#e0e7ff', color: theme === 'dark' ? '#a5b4fc' : '#4338ca', borderRadius: '100px', padding: '6px 16px', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '20px' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: theme === 'dark' ? 'rgba(34,197,94,0.2)' : '#dcfce7', color: theme === 'dark' ? '#86efac' : '#15803d', borderRadius: '100px', padding: '6px 16px', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '20px' }}>
                                 🎁 Limited Time Offer
                             </div>
                             <h3 style={{ color: colors.text, fontSize: '28px', fontWeight: '900', margin: '0 0 12px', lineHeight: 1.25 }}>
@@ -1143,7 +1143,7 @@ export default function LandingPage() {
                                         disabled={subLoading}
                                         style={{
                                             flex: '0 0 auto',
-                                            background: subLoading ? colors.textMuted : 'linear-gradient(135deg, #3b82f6, #7c3aed)',
+                                            background: subLoading ? colors.textMuted : 'linear-gradient(135deg, #22c55e, #15803d)',
                                             color: '#fff', border: 'none', borderRadius: '10px',
                                             padding: '14px 28px', fontSize: '14px', fontWeight: '700',
                                             cursor: subLoading ? 'not-allowed' : 'pointer',
@@ -1196,7 +1196,7 @@ export default function LandingPage() {
             <section id="contact" style={p.contactSection}>
                 <style>{`
                     .contact-field::placeholder { color: #94a3b8; }
-                    .contact-field:focus { box-shadow: 0 0 0 3px rgba(59,130,246,0.35); border-color: ${colors.primary} !important; }
+                    .contact-field:focus { box-shadow: 0 0 0 3px rgba(34,197,94,0.35); border-color: ${colors.primary} !important; }
                     .contact-submit:hover { filter: brightness(1.1); }
                     @media (max-width: 860px) {
                         .contact-split { grid-template-columns: 1fr; }

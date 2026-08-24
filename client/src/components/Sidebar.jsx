@@ -162,7 +162,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                         ...styles.navItem,
                         color: isActive ? colors.primary : colors.textMuted,
                         background: isActive 
-                            ? (theme === 'dark' ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)') 
+                            ? (theme === 'dark' ? 'rgba(34,197,94,0.15)' : 'rgba(34,197,94,0.1)') 
                             : (theme === 'dark' ? 'rgba(30,41,59,0.2)' : 'rgba(241,245,249,0.5)'),
                         fontWeight: isActive ? '600' : '500',
                         border: `1px solid ${colors.border}`,
@@ -330,7 +330,7 @@ const styles = {
     logoBox: { display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 },
     logo: {
         width: '40px', height: '40px', borderRadius: '10px',
-        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+        background: 'linear-gradient(135deg, #22c55e, #22c55e)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontWeight: '900', color: '#fff', fontSize: '18px'
     },
@@ -402,7 +402,7 @@ const styles = {
     },
     userAvatar: {
         width: '36px', height: '36px', borderRadius: '50%',
-        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+        background: 'linear-gradient(135deg, #22c55e, #22c55e)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: '#fff', fontWeight: '800', fontSize: '15px', flexShrink: 0
     },

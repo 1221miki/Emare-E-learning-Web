@@ -7,7 +7,7 @@ import { assignmentService } from '../../../services/api';
 import { card, ghostBtn, primaryBtn, successBtn, dangerBtn, SUB_STATUS, C } from './assignmentStyles';
 
 function Avatar({ student }) {
-    if (student?.avatarUrl) return <img src={student.avatarUrl} alt={student.fullName} style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(59,130,246,0.3)' }} />;
+    if (student?.avatarUrl) return <img src={student.avatarUrl} alt={student.fullName} style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(34,197,94,0.3)' }} />;
     const colors = [C.blue, C.purple, C.green, C.orange, C.pink, C.cyan];
     const c = colors[((student?.fullName || 'U').charCodeAt(0)) % colors.length];
     return (
@@ -151,7 +151,7 @@ export default function SubmissionReviewer({ assignment, allSubmissions, onGrade
                                     const isBusy = updating === sub._id;
                                     return (
                                         <tr key={sub._id} style={{ borderBottom: '1px solid rgba(51,65,85,0.2)', transition: 'background 0.12s' }}
-                                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(59,130,246,0.04)'}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(34,197,94,0.04)'}
                                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                         >
                                             <td style={{ padding: '14px 16px' }}>
@@ -168,7 +168,7 @@ export default function SubmissionReviewer({ assignment, allSubmissions, onGrade
                                                 {fileCount > 0 ? (
                                                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                                                         {(sub.files || []).slice(0, 2).map((f, i) => (
-                                                            <a key={i} href={f.url} target="_blank" rel="noreferrer" style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', color: C.blue, borderRadius: '6px', padding: '3px 8px', fontSize: '11px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }} aria-label={`Download ${f.filename}`}>
+                                                            <a key={i} href={f.url} target="_blank" rel="noreferrer" style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: C.blue, borderRadius: '6px', padding: '3px 8px', fontSize: '11px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }} aria-label={`Download ${f.filename}`}>
                                                                 <Download size={11} aria-hidden="true" /> {f.filename?.slice(0, 12) || 'File'}
                                                             </a>
                                                         ))}

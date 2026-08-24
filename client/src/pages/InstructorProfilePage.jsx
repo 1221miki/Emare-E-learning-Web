@@ -36,7 +36,7 @@ export default function InstructorProfilePage() {
         page: { minHeight: '100vh', background: colors.bg, fontFamily: "'Outfit', 'Inter', sans-serif" },
         container: { maxWidth: '1100px', margin: '0 auto', padding: '60px 24px' },
         card: { background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '20px', padding: '48px', marginBottom: '40px', display: 'flex', gap: '48px', alignItems: 'flex-start' },
-        avatar: { width: '140px', height: '140px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '56px', fontWeight: '900', color: '#fff', flexShrink: 0 },
+        avatar: { width: '140px', height: '140px', borderRadius: '50%', background: 'linear-gradient(135deg, #22c55e, #22c55e)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '56px', fontWeight: '900', color: '#fff', flexShrink: 0 },
         name: { fontSize: '32px', fontWeight: '900', margin: '0 0 6px', color: colors.text },
         title: { color: colors.textMuted, fontSize: '16px', margin: '0 0 20px' },
         statsRow: { display: 'flex', gap: '32px', marginBottom: '24px' },
@@ -68,7 +68,7 @@ export default function InstructorProfilePage() {
             <div style={{ ...s.container, textAlign: 'center' }}>
                 <div style={{ fontSize: '48px', marginBottom: '16px' }}>◉</div>
                 <h2 style={{ color: colors.text }}>Instructor not found</h2>
-                <button onClick={() => navigate('/courses')} style={{ background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', marginTop: '16px' }}>
+                <button onClick={() => navigate('/courses')} style={{ background: 'linear-gradient(135deg,#22c55e,#22c55e)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', marginTop: '16px' }}>
                     Browse Courses
                 </button>
             </div>
@@ -184,7 +184,7 @@ export default function InstructorProfilePage() {
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <span style={s.coursePrice}>{course.price === 0 ? '🆓 Free' : `${course.price} ETB`}</span>
                                         <button
-                                            style={{ background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: '#fff', border: 'none', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                                            style={{ background: 'linear-gradient(135deg,#22c55e,#22c55e)', color: '#fff', border: 'none', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
                                             onClick={e => { e.stopPropagation(); navigate(`/courses/${course._id}`); }}
                                         >
                                             View Course

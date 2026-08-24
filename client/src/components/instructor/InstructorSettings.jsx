@@ -10,14 +10,14 @@ import { useAuth } from '../../context/AuthContext';
 import { userService, uploadService } from '../../services/api';
 
 // ── Reusable Toggle switch ───────────────────────────────────────
-function Toggle({ checked, onChange, color = '#3b82f6', ariaLabel = '' }) {
+function Toggle({ checked, onChange, color = '#22c55e', ariaLabel = '' }) {
     return (
         <button
             role="switch"
             aria-checked={checked}
             aria-label={ariaLabel}
             onClick={() => onChange(!checked)}
-            style={{ width: '44px', height: '24px', borderRadius: '34px', background: checked ? color : '#e0e7ff', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.25s', flexShrink: 0, padding: 0 }}
+            style={{ width: '44px', height: '24px', borderRadius: '34px', background: checked ? color : '#dcfce7', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.25s', flexShrink: 0, padding: 0 }}
         >
             <span style={{ position: 'absolute', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', top: '3px', left: checked ? '23px' : '3px', transition: 'left 0.25s', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }} />
         </button>
@@ -37,9 +37,9 @@ function Field({ label, children, span }) {
 // ── Skill tag ────────────────────────────────────────────────────
 function Tag({ label, onRemove }) {
     return (
-        <span style={{ background: '#dbeafe', border: '2px solid #60a5fa', color: '#1e40af', borderRadius: '20px', padding: '4px 10px', fontSize: '12px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+        <span style={{ background: '#dcfce7', border: '2px solid #4ade80', color: '#166534', borderRadius: '20px', padding: '4px 10px', fontSize: '12px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
             {label}
-            {onRemove && <button onClick={onRemove} style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }} aria-label={`Remove ${label}`}><X size={11} /></button>}
+            {onRemove && <button onClick={onRemove} style={{ background: 'none', border: 'none', color: '#16a34a', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }} aria-label={`Remove ${label}`}><X size={11} /></button>}
         </span>
     );
 }
@@ -141,7 +141,7 @@ function ProfileTab({ user, onSaved, updateUser }) {
         } finally { setSaving(false); }
     };
 
-    const avatarColors = ['#3b82f6','#8b5cf6','#10b981'];
+    const avatarColors = ['#22c55e','#22c55e','#10b981'];
     const avatarColor  = avatarColors[(form.fullName.charCodeAt(0) || 0) % avatarColors.length];
 
     return (
@@ -154,14 +154,14 @@ function ProfileTab({ user, onSaved, updateUser }) {
                         {/* Avatar */}
                         <div style={{ position: 'relative', flexShrink: 0 }}>
                             {avatar
-                                ? <img src={avatar} alt="Profile" style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #60a5fa' }} />
+                                ? <img src={avatar} alt="Profile" style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #4ade80' }} />
                                 : <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: `${avatarColor}22`, border: `3px solid ${avatarColor}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: avatarColor, fontSize: '36px', fontWeight: '800' }}>
                                     {(form.fullName || 'I').charAt(0).toUpperCase()}
                                   </div>
                             }
                             <button
                                 onClick={() => fileRef.current?.click()}
-                                style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', background: '#dbeafe', border: '2px solid #60a5fa', color: '#1e40af', borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', background: '#dcfce7', border: '2px solid #4ade80', color: '#166534', borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}
                                 aria-label="Edit profile photo"
                             >
                                 {uploading ? '…' : <><Camera size={11} /> Edit Photo</>}
@@ -207,9 +207,9 @@ function ProfileTab({ user, onSaved, updateUser }) {
                             <button onClick={() => { const s = prompt('Add specialization:'); if (s?.trim()) setSpecs(prev => [...prev, s.trim()]); }} style={{ ...T.ghostBtn, padding: '5px 10px', fontSize: '11px' }}><Plus size={12} /> Add</button>
                         </div>
                         {specs.map((sp, i) => (
-                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #e0e7ff' }}>
+                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #dcfce7' }}>
                                 <span style={{ color: '#1e293b', fontSize: '13px' }}>{sp}</span>
-                                <button onClick={() => setSpecs(prev => prev.filter((_, j) => j !== i))} style={{ background: 'transparent', border: 'none', color: '#4f46e5', cursor: 'pointer' }} aria-label={`Edit ${sp}`}><Edit3 size={13} /></button>
+                                <button onClick={() => setSpecs(prev => prev.filter((_, j) => j !== i))} style={{ background: 'transparent', border: 'none', color: '#16a34a', cursor: 'pointer' }} aria-label={`Edit ${sp}`}><Edit3 size={13} /></button>
                             </div>
                         ))}
                     </div>
@@ -232,9 +232,9 @@ function ProfileTab({ user, onSaved, updateUser }) {
                         </Field>
                         <Field label="Communication Tools" span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <input type="checkbox" defaultChecked style={{ accentColor: '#3b82f6', width: '15px', height: '15px' }} id="enable-msg" />
+                                <input type="checkbox" defaultChecked style={{ accentColor: '#22c55e', width: '15px', height: '15px' }} id="enable-msg" />
                                 <label htmlFor="enable-msg" style={{ color: '#64748b', fontSize: '13px', cursor: 'pointer' }}>Enable internal messaging</label>
-                                <Toggle checked={true} onChange={() => {}} color="#3b82f6" ariaLabel="Toggle internal messaging" />
+                                <Toggle checked={true} onChange={() => {}} color="#22c55e" ariaLabel="Toggle internal messaging" />
                             </div>
                         </Field>
                     </div>
@@ -273,12 +273,12 @@ function ProfileTab({ user, onSaved, updateUser }) {
                         </button>
                         <input ref={cvRef} type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }} onChange={handleCvUpload} />
                         {cvName && (
-                            <div style={{ background: '#f0f4ff', border: '2px solid #c7d2fe', borderRadius: '8px', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ background: '#f0f4ff', border: '2px solid #d1fae5', borderRadius: '8px', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <FileText size={13} color="#4f46e5" />
-                                    <span style={{ color: '#4f46e5', fontSize: '12px' }}>{cvName}</span>
+                                    <FileText size={13} color="#16a34a" />
+                                    <span style={{ color: '#16a34a', fontSize: '12px' }}>{cvName}</span>
                                 </div>
-                                <button onClick={() => setCvName('')} style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer' }} aria-label="Remove CV"><X size={13} /></button>
+                                <button onClick={() => setCvName('')} style={{ background: 'none', border: 'none', color: '#16a34a', cursor: 'pointer' }} aria-label="Remove CV"><X size={13} /></button>
                             </div>
                         )}
                     </div>
@@ -286,7 +286,7 @@ function ProfileTab({ user, onSaved, updateUser }) {
 
                 {/* Notification Settings */}
                 <div style={{ ...T.card, padding: '18px 20px' }}>
-                    <h3 style={T.sectionHead}><Bell size={15} color="#3b82f6" /> Notification Settings</h3>
+                    <h3 style={T.sectionHead}><Bell size={15} color="#22c55e" /> Notification Settings</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '0', alignItems: 'center' }}>
                         <div style={{ color: '#64748b', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', paddingBottom: '8px' }}>Notification</div>
                         <div style={{ color: '#64748b', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', paddingBottom: '8px', textAlign: 'center', minWidth: '48px' }}>Email</div>
@@ -303,12 +303,12 @@ function ProfileTab({ user, onSaved, updateUser }) {
                 </div>
 
                 {/* Upgrade card */}
-                <div style={{ background: 'linear-gradient(135deg, #dbeafe, #e9d5ff)', border: '2px solid #c7d2fe', borderRadius: '16px', padding: '18px 20px' }}>
+                <div style={{ background: 'linear-gradient(135deg, #dcfce7, #e9d5ff)', border: '2px solid #d1fae5', borderRadius: '16px', padding: '18px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                         <Zap size={16} color="#f59e0b" />
-                        <span style={{ color: '#1e40af', fontSize: '14px', fontWeight: '800' }}>Unlock Premium Features</span>
+                        <span style={{ color: '#166534', fontSize: '14px', fontWeight: '800' }}>Unlock Premium Features</span>
                     </div>
-                    <p style={{ color: '#4f46e5', fontSize: '12px', margin: '0 0 12px', lineHeight: 1.6 }}>
+                    <p style={{ color: '#16a34a', fontSize: '12px', margin: '0 0 12px', lineHeight: 1.6 }}>
                         Includes:<br />
                         • Advanced AI tools<br />
                         • More communication channels<br />
@@ -327,13 +327,13 @@ function NotifRow({ label, emailDefault, appDefault }) {
     const [email, setEmail] = useState(emailDefault);
     const [app, setApp]     = useState(appDefault);
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #e0e7ff' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #dcfce7' }}>
             <span style={{ color: '#1e293b', fontSize: '13px' }}>{label}</span>
             <div style={{ display: 'flex', justifyContent: 'center', minWidth: '48px' }}>
-                <Toggle checked={email} onChange={setEmail} color="#3b82f6" ariaLabel={`Email: ${label}`} />
+                <Toggle checked={email} onChange={setEmail} color="#22c55e" ariaLabel={`Email: ${label}`} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', minWidth: '48px' }}>
-                <Toggle checked={app} onChange={setApp} color="#8b5cf6" ariaLabel={`In-app: ${label}`} />
+                <Toggle checked={app} onChange={setApp} color="#22c55e" ariaLabel={`In-app: ${label}`} />
             </div>
         </div>
     );
@@ -419,7 +419,7 @@ function SecurityTab({ user }) {
                     { device: 'Chrome on macOS', location: 'Addis Ababa, Ethiopia', current: true, time: 'Active now' },
                     { device: 'Safari on iPhone', location: 'Addis Ababa, Ethiopia', current: false, time: '2 days ago' },
                 ].map((sess, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #e0e7ff' }}>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #dcfce7' }}>
                         <div>
                             <div style={{ color: '#1e293b', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 {sess.device}
@@ -491,7 +491,7 @@ function PreferencesTab({ user }) {
                     <Field label="Theme">
                         <div style={{ display: 'flex', gap: '8px' }}>
                             {['dark', 'light', 'system'].map(t => (
-                                <button key={t} onClick={() => set('theme', t)} style={{ flex: 1, padding: '9px', borderRadius: '10px', border: `2px solid ${prefs.theme === t ? '#60a5fa' : '#c7d2fe'}`, background: prefs.theme === t ? '#dbeafe' : '#f0f4ff', color: prefs.theme === t ? '#1e40af' : '#4f46e5', fontSize: '12px', fontWeight: '700', cursor: 'pointer', textTransform: 'capitalize' }}>
+                                <button key={t} onClick={() => set('theme', t)} style={{ flex: 1, padding: '9px', borderRadius: '10px', border: `2px solid ${prefs.theme === t ? '#4ade80' : '#d1fae5'}`, background: prefs.theme === t ? '#dcfce7' : '#f0f4ff', color: prefs.theme === t ? '#166534' : '#16a34a', fontSize: '12px', fontWeight: '700', cursor: 'pointer', textTransform: 'capitalize' }}>
                                     {t}
                                 </button>
                             ))}
@@ -512,12 +512,12 @@ function PreferencesTab({ user }) {
                         { key: 'compactMode',          label: 'Compact sidebar mode',           sub: 'Show icons only in the sidebar' },
                         { key: 'showStudentProgress',  label: 'Show student progress on overview', sub: 'Display real-time learner progress on the dashboard' },
                     ].map(pref => (
-                        <div key={pref.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f0f4ff', borderRadius: '10px', border: '2px solid #c7d2fe' }}>
+                        <div key={pref.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f0f4ff', borderRadius: '10px', border: '2px solid #d1fae5' }}>
                             <div>
                                 <div style={{ color: '#1e293b', fontSize: '13px', fontWeight: '600' }}>{pref.label}</div>
                                 <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>{pref.sub}</div>
                             </div>
-                            <Toggle checked={prefs[pref.key]} onChange={v => set(pref.key, v)} color="#3b82f6" ariaLabel={pref.label} />
+                            <Toggle checked={prefs[pref.key]} onChange={v => set(pref.key, v)} color="#22c55e" ariaLabel={pref.label} />
                         </div>
                     ))}
                 </div>
@@ -527,7 +527,7 @@ function PreferencesTab({ user }) {
                 <Field label="Default Grading Method">
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {[['numeric', 'Numeric (0–100)'], ['letter', 'Letter Grade (A–F)'], ['pass_fail', 'Pass / Fail']].map(([val, lbl]) => (
-                            <button key={val} onClick={() => set('gradingMethod', val)} style={{ padding: '9px 16px', borderRadius: '10px', border: `2px solid ${prefs.gradingMethod === val ? '#60a5fa' : '#c7d2fe'}`, background: prefs.gradingMethod === val ? '#dbeafe' : '#f0f4ff', color: prefs.gradingMethod === val ? '#1e40af' : '#4f46e5', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                            <button key={val} onClick={() => set('gradingMethod', val)} style={{ padding: '9px 16px', borderRadius: '10px', border: `2px solid ${prefs.gradingMethod === val ? '#4ade80' : '#d1fae5'}`, background: prefs.gradingMethod === val ? '#dcfce7' : '#f0f4ff', color: prefs.gradingMethod === val ? '#166534' : '#16a34a', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
                                 {lbl}
                             </button>
                         ))}
@@ -603,11 +603,11 @@ function NotificationsTab() {
 function NotifRow3({ label, defaults }) {
     const [vals, setVals] = useState(defaults);
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #e0e7ff' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #dcfce7' }}>
             <span style={{ color: '#1e293b', fontSize: '13px' }}>{label}</span>
             {vals.map((v, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'center', minWidth: '52px' }}>
-                    <Toggle checked={v} onChange={nv => setVals(vs => vs.map((x, j) => j === i ? nv : x))} color={['#3b82f6','#8b5cf6','#10b981'][i]} ariaLabel={`${['Email','In-App','SMS'][i]}: ${label}`} />
+                    <Toggle checked={v} onChange={nv => setVals(vs => vs.map((x, j) => j === i ? nv : x))} color={['#22c55e','#22c55e','#10b981'][i]} ariaLabel={`${['Email','In-App','SMS'][i]}: ${label}`} />
                 </div>
             ))}
         </div>
@@ -620,8 +620,8 @@ function NotifRow3({ label, defaults }) {
 function SubscriptionTab() {
     const plans = [
         { id: 'free', name: 'Free', price: '0', period: '/mo', features: ['5 courses', '100 students', 'Basic analytics', 'Community support'], color: '#64748b' },
-        { id: 'pro', name: 'Pro', price: '29', period: '/mo', features: ['Unlimited courses', '10,000 students', 'Advanced analytics', 'Priority support', 'Custom branding', 'AI tools'], color: '#3b82f6', popular: true },
-        { id: 'enterprise', name: 'Enterprise', price: '99', period: '/mo', features: ['Everything in Pro', 'White-label platform', 'Dedicated account manager', 'SLA guarantee', 'Custom integrations'], color: '#8b5cf6' },
+        { id: 'pro', name: 'Pro', price: '29', period: '/mo', features: ['Unlimited courses', '10,000 students', 'Advanced analytics', 'Priority support', 'Custom branding', 'AI tools'], color: '#22c55e', popular: true },
+        { id: 'enterprise', name: 'Enterprise', price: '99', period: '/mo', features: ['Everything in Pro', 'White-label platform', 'Dedicated account manager', 'SLA guarantee', 'Custom integrations'], color: '#22c55e' },
     ];
 
     return (
@@ -643,7 +643,7 @@ function SubscriptionTab() {
                                 </div>
                             ))}
                         </div>
-                        <button style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `1px solid ${plan.color}40`, background: plan.popular ? `linear-gradient(135deg,#2563eb,#7c3aed)` : 'transparent', color: plan.popular ? '#fff' : plan.color, fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>
+                        <button style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `1px solid ${plan.color}40`, background: plan.popular ? `linear-gradient(135deg,#16a34a,#15803d)` : 'transparent', color: plan.popular ? '#fff' : plan.color, fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>
                             {plan.id === 'free' ? 'Current Plan' : 'Upgrade'}
                         </button>
                     </div>
@@ -686,7 +686,7 @@ export default function InstructorSettings({ user }) {
         input:  { background: colors.bgInput, border: `2px solid ${colors.border}`, color: colors.text, padding: '10px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' },
         select: { background: colors.bgInput, border: `2px solid ${colors.border}`, color: colors.text, padding: '10px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', cursor: 'pointer', width: '100%', boxSizing: 'border-box' },
         lbl:    { color: colors.textMuted, fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' },
-        primaryBtn: { background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 24px', fontWeight: '700', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '7px' },
+        primaryBtn: { background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 24px', fontWeight: '700', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '7px' },
         ghostBtn:   { background: colors.bgInput, border: `2px solid ${colors.border}`, color: colors.primary, borderRadius: '10px', padding: '11px 20px', fontWeight: '600', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '7px' },
         dangerBtn:  { background: theme === 'dark' ? 'rgba(239,68,68,0.15)' : '#fee2e2', border: `2px solid ${theme === 'dark' ? 'rgba(239,68,68,0.3)' : '#fecaca'}`, color: '#ef4444', borderRadius: '10px', padding: '10px 18px', fontWeight: '600', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '7px' },
         sectionHead: { color: colors.text, fontSize: '15px', fontWeight: '700', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' },

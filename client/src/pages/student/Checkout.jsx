@@ -168,7 +168,7 @@ export default function Checkout() {
                                 'Automatic verification & enrollment'
                             ].map((step, i) => (
                                 <div key={step} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                                    <div style={{ width: '24px', minWidth: '24px', height: '24px', borderRadius: '8px', background: '#4338ca', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: '700', fontSize: '12px' }}>{i + 1}</div>
+                                    <div style={{ width: '24px', minWidth: '24px', height: '24px', borderRadius: '8px', background: '#15803d', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: '700', fontSize: '12px' }}>{i + 1}</div>
                                     <p style={{ margin: 0, color: colors.textMuted, fontSize: '13px', paddingTop: '2px' }}>{step}</p>
                                 </div>
                             ))}
@@ -209,7 +209,7 @@ export default function Checkout() {
                                     {originalPrice === 0 ? 'Free' : `${originalPrice} ETB`}
                                 </p>
                             </div>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '999px', background: theme === 'dark' ? 'rgba(67,56,202,0.2)' : '#eef2ff', color: '#4338ca', fontWeight: '700', fontSize: '13px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '999px', background: theme === 'dark' ? 'rgba(67,56,202,0.2)' : '#f0fdf4', color: '#15803d', fontWeight: '700', fontSize: '13px' }}>
                                 Chapa Checkout
                             </span>
                         </div>
@@ -289,7 +289,7 @@ export default function Checkout() {
                                                 border: 'none',
                                                 background: couponLoading || !couponInput.trim()
                                                     ? colors.textMuted
-                                                    : 'linear-gradient(135deg, #4338ca, #6d28d9)',
+                                                    : 'linear-gradient(135deg, #15803d, #166534)',
                                                 color: '#fff',
                                                 cursor: couponLoading || !couponInput.trim() ? 'not-allowed' : 'pointer',
                                                 whiteSpace: 'nowrap',
@@ -337,7 +337,7 @@ export default function Checkout() {
                             {couponApplied && (
                                 <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${colors.border}`, paddingTop: '10px', marginTop: '4px', fontSize: '16px', fontWeight: 'bold' }}>
                                     <span>Final price</span>
-                                    <strong style={{ color: '#4338ca' }}>{finalPrice <= 0 ? 'Free' : `${finalPrice.toFixed(2)} ETB`}</strong>
+                                    <strong style={{ color: '#15803d' }}>{finalPrice <= 0 ? 'Free' : `${finalPrice.toFixed(2)} ETB`}</strong>
                                 </div>
                             )}
                         </div>
@@ -360,7 +360,7 @@ export default function Checkout() {
                                 border: 'none',
                                 fontSize: '15px',
                                 fontWeight: '800',
-                                background: payLoading ? colors.textMuted : 'linear-gradient(135deg, #4338ca, #6d28d9)',
+                                background: payLoading ? colors.textMuted : 'linear-gradient(135deg, #15803d, #166534)',
                                 color: '#fff',
                                 cursor: payLoading ? 'not-allowed' : 'pointer',
                                 boxShadow: payLoading ? 'none' : '0 8px 24px rgba(67,56,202,0.25)',

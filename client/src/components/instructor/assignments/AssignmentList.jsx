@@ -40,7 +40,7 @@ function ActionMenu({ assignment, onViewSubmissions, onEdit, onDuplicate, onDele
                         {items.map((item, i) => (
                             <button key={i} onClick={item.action}
                                 style={{ width: '100%', background: 'transparent', border: 'none', color: item.danger ? '#f87171' : '#e2e8f0', padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left', transition: 'background 0.12s' }}
-                                onMouseEnter={e => e.currentTarget.style.background = item.danger ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.1)'}
+                                onMouseEnter={e => e.currentTarget.style.background = item.danger ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.1)'}
                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                             >
                                 <span style={{ color: item.color }}>{item.icon}</span>{item.label}
@@ -185,12 +185,12 @@ export default function AssignmentList({ assignments, allSubmissions, courses, s
                                 return (
                                     <tr key={asgn._id}
                                         style={{ borderBottom: '1px solid rgba(51,65,85,0.22)', transition: 'background 0.12s' }}
-                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(59,130,246,0.04)'}
+                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(34,197,94,0.04)'}
                                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                     >
                                         <td style={{ padding: '14px 18px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                                     <ClipboardList size={16} color={C.blue} aria-hidden="true" />
                                                 </div>
                                                 <div>
@@ -223,7 +223,7 @@ export default function AssignmentList({ assignments, allSubmissions, courses, s
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                 <button
                                                     onClick={() => onViewSubmissions(asgn)}
-                                                    style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', color: C.blue, borderRadius: '8px', padding: '5px 10px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                                    style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: C.blue, borderRadius: '8px', padding: '5px 10px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '5px' }}
                                                     aria-label={`View ${subs.length} submissions`}
                                                 >
                                                     <Users size={12} aria-hidden="true" /> {subs.length}

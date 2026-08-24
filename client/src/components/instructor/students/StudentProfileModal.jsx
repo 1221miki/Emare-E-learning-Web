@@ -7,7 +7,7 @@ import {
 import { useTheme } from '../../../context/ThemeContext';
 
 // ── Mini progress bar ────────────────────────────────────────
-function Bar({ value, color = '#3b82f6', height = 6, borderColor = '#e0e7ff' }) {
+function Bar({ value, color = '#22c55e', height = 6, borderColor = '#dcfce7' }) {
     return (
         <div style={{ height, borderRadius: '99px', background: borderColor, overflow: 'hidden', flex: 1 }}>
             <div style={{ height: '100%', width: `${Math.min(value, 100)}%`, background: `linear-gradient(90deg, ${color}80, ${color})`, borderRadius: '99px', transition: 'width 0.7s ease' }} />
@@ -26,7 +26,7 @@ function SectionTitle({ icon, label, colors }) {
 }
 
 // ── Stat chip ────────────────────────────────────────────────
-function Chip({ icon, label, value, color = '#3b82f6', textColor = '#64748b' }) {
+function Chip({ icon, label, value, color = '#22c55e', textColor = '#64748b' }) {
     return (
         <div style={{ background: `${color}0d`, border: `1px solid ${color}22`, borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '0' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: textColor }}>
@@ -39,7 +39,7 @@ function Chip({ icon, label, value, color = '#3b82f6', textColor = '#64748b' }) 
 }
 
 // ── Activity timeline entry ──────────────────────────────────
-function TimelineItem({ icon, text, time, color = '#3b82f6', textColor = '#1e293b', timeColor = '#64748b' }) {
+function TimelineItem({ icon, text, time, color = '#22c55e', textColor = '#1e293b', timeColor = '#64748b' }) {
     return (
         <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: `${color}15`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
@@ -152,21 +152,21 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                             {/* Quick stats */}
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
-                                <Chip icon={<TrendingUp />}     label="Progress"    value={`${student.progress}%`}        color="#3b82f6" />
+                                <Chip icon={<TrendingUp />}     label="Progress"    value={`${student.progress}%`}        color="#22c55e" />
                                 <Chip icon={<Clock />}          label="Watch Time"  value={student.watchTime || '—'}       color="#10b981" />
                                 <Chip icon={<Star />}           label="Avg Score"   value={avgScore ? `${avgScore}%` : '—'} color="#f59e0b" />
-                                <Chip icon={<ClipboardList />}  label="Submissions" value={student.submissionsCount ?? 0}  color="#8b5cf6" />
+                                <Chip icon={<ClipboardList />}  label="Submissions" value={student.submissionsCount ?? 0}  color="#22c55e" />
                             </div>
 
                             {/* Progress section */}
                             <div>
                                 <SectionTitle icon={<BookOpen />} label="Learning Progress" />
-                                <div style={{ background: '#f0f4ff', borderRadius: '12px', padding: '18px', border: '2px solid #c7d2fe' }}>
+                                <div style={{ background: '#f0f4ff', borderRadius: '12px', padding: '18px', border: '2px solid #d1fae5' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                         <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '600' }}>{student.course}</span>
                                         <span style={{ color: student.progress >= 80 ? '#10b981' : '#f59e0b', fontSize: '13px', fontWeight: '800' }}>{student.progress}% Completed</span>
                                     </div>
-                                    <Bar value={student.progress} color={student.progress >= 80 ? '#10b981' : student.progress >= 40 ? '#3b82f6' : '#f59e0b'} height={8} />
+                                    <Bar value={student.progress} color={student.progress >= 80 ? '#10b981' : student.progress >= 40 ? '#22c55e' : '#f59e0b'} height={8} />
                                     <div style={{ display: 'flex', gap: '20px', marginTop: '12px', flexWrap: 'wrap' }}>
                                         {[
                                             { label: 'Completed', value: `${Math.round(student.progress / 10)} lessons` },
@@ -199,7 +199,7 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                             {/* Actions */}
                             <button
                                 onClick={onMessage}
-                                style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', width: '100%' }}
+                                style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', width: '100%' }}
                                 aria-label={`Send message to ${student.name}`}
                             >
                                 <MessageSquare size={17} aria-hidden="true" />
@@ -217,7 +217,7 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginBottom: '16px' }}>
                                     <Chip icon={<Star />}           label="Avg Score"     value={avgScore ? `${avgScore}%` : '—'}   color="#f59e0b" />
                                     <Chip icon={<TrendingUp />}     label="Best Score"    value={bestScore ? `${bestScore}%` : '—'} color="#10b981" />
-                                    <Chip icon={<ClipboardList />}  label="Attempts"      value={quizGrades.length}                  color="#3b82f6" />
+                                    <Chip icon={<ClipboardList />}  label="Attempts"      value={quizGrades.length}                  color="#22c55e" />
                                     <Chip icon={<X />}              label="Failed"        value={failedAttempts}                     color="#ef4444" />
                                 </div>
                                 {avgScore !== null && (
@@ -237,7 +237,7 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
                                     <Chip icon={<CheckCircle />}    label="Completed"  value={quizGrades.filter(g => g.numericalScoreEarned >= 60).length}  color="#10b981" />
                                     <Chip icon={<Clock />}          label="Pending"    value={assignments.length - quizGrades.length > 0 ? assignments.length - quizGrades.length : 0}  color="#f59e0b" />
-                                    <Chip icon={<Award />}          label="Avg Grade"  value={avgScore ? `${avgScore}%` : '—'} color="#8b5cf6" />
+                                    <Chip icon={<Award />}          label="Avg Grade"  value={avgScore ? `${avgScore}%` : '—'} color="#22c55e" />
                                 </div>
                             </div>
 
@@ -245,9 +245,9 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                             <div>
                                 <SectionTitle icon={<TrendingUp />} label="Course Progress Breakdown" />
                                 {[
-                                    { label: 'Video Lessons Watched',  value: student.progress, color: '#3b82f6' },
+                                    { label: 'Video Lessons Watched',  value: student.progress, color: '#22c55e' },
                                     { label: 'Assignments Completed',  value: quizGrades.length > 0 ? Math.round((quizGrades.filter(g => g.numericalScoreEarned >= 60).length / quizGrades.length) * 100) : 0, color: '#10b981' },
-                                    { label: 'Quizzes Passed',         value: quizGrades.length > 0 ? Math.round(((quizGrades.length - failedAttempts) / quizGrades.length) * 100) : 0, color: '#8b5cf6' },
+                                    { label: 'Quizzes Passed',         value: quizGrades.length > 0 ? Math.round(((quizGrades.length - failedAttempts) / quizGrades.length) * 100) : 0, color: '#22c55e' },
                                 ].map((item, i) => (
                                     <div key={i} style={{ marginBottom: '14px' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -280,7 +280,7 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                                         icon={<PlayCircle />}
                                         text="Last seen in course"
                                         time={new Date(student.lastActivity).toLocaleString()}
-                                        color="#3b82f6"
+                                        color="#22c55e"
                                     />
                                 )}
                                 {student.enrollmentDate && (
@@ -288,7 +288,7 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                                         icon={<BookOpen />}
                                         text={`Enrolled in ${student.course}`}
                                         time={new Date(student.enrollmentDate).toLocaleString()}
-                                        color="#8b5cf6"
+                                        color="#22c55e"
                                     />
                                 )}
                                 {quizGrades.length === 0 && !student.lastActivity && (
@@ -299,16 +299,16 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                             </div>
 
                             {/* Engagement summary */}
-                            <div style={{ marginTop: '24px', borderTop: '2px solid #e0e7ff', paddingTop: '20px' }}>
+                            <div style={{ marginTop: '24px', borderTop: '2px solid #dcfce7', paddingTop: '20px' }}>
                                 <SectionTitle icon={<Activity aria-hidden="true" />} label="Engagement Summary" />
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                    <div style={{ background: '#f0f4ff', borderRadius: '12px', padding: '16px', border: '2px solid #c7d2fe' }}>
+                                    <div style={{ background: '#f0f4ff', borderRadius: '12px', padding: '16px', border: '2px solid #d1fae5' }}>
                                         <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '6px' }}>Total Watch Time</div>
                                         <div style={{ color: '#1e293b', fontSize: '20px', fontWeight: '800' }}>{student.watchTime || '—'}</div>
                                     </div>
-                                    <div style={{ background: '#f0f4ff', borderRadius: '12px', padding: '16px', border: '2px solid #c7d2fe' }}>
+                                    <div style={{ background: '#f0f4ff', borderRadius: '12px', padding: '16px', border: '2px solid #d1fae5' }}>
                                         <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '6px' }}>Overall Progress</div>
-                                        <div style={{ color: '#3b82f6', fontSize: '20px', fontWeight: '800' }}>{student.progress}%</div>
+                                        <div style={{ color: '#22c55e', fontSize: '20px', fontWeight: '800' }}>{student.progress}%</div>
                                     </div>
                                 </div>
                             </div>

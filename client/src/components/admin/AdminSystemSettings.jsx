@@ -82,8 +82,8 @@ export default function AdminSystemSettings({
 
     // Interactive Security & Roles States
     const [rolesList, setRolesList] = useState([
-        { id: 'role-1', name: 'Super Admin', desc: 'Full unrestricted access across all LMS modules and system settings.', usersCount: 2, status: 'Active', systemRole: true, badgeBg: '#eff6ff', badgeColor: '#2563eb' },
-        { id: 'role-2', name: 'LMS Admin', desc: 'Manage users, courses, moderation, and institutional reports.', usersCount: 5, status: 'Active', systemRole: false, badgeBg: '#f5f3ff', badgeColor: '#8b5cf6' },
+        { id: 'role-1', name: 'Super Admin', desc: 'Full unrestricted access across all LMS modules and system settings.', usersCount: 2, status: 'Active', systemRole: true, badgeBg: '#f0fdf4', badgeColor: '#16a34a' },
+        { id: 'role-2', name: 'LMS Admin', desc: 'Manage users, courses, moderation, and institutional reports.', usersCount: 5, status: 'Active', systemRole: false, badgeBg: '#f5f3ff', badgeColor: '#22c55e' },
         { id: 'role-3', name: 'Instructor', desc: 'Create courses, publish quizzes, grade assignments, and interact with students.', usersCount: 38, status: 'Active', systemRole: true, badgeBg: '#f0fdf4', badgeColor: '#10b981' },
         { id: 'role-4', name: 'Student', desc: 'Enroll in courses, view video lectures, take quizzes, and earn certificates.', usersCount: 1420, status: 'Active', systemRole: true, badgeBg: '#fffbeb', badgeColor: '#f59e0b' },
         { id: 'role-5', name: 'Guest / Visitor', desc: 'Public course catalog browsing and platform exploration preview.', usersCount: 0, status: 'Inactive', systemRole: false, badgeBg: '#f8fafc', badgeColor: '#64748b' }
@@ -212,7 +212,7 @@ export default function AdminSystemSettings({
             status: 'Active',
             systemRole: false,
             badgeBg: '#f5f3ff',
-            badgeColor: '#8b5cf6'
+            badgeColor: '#22c55e'
         };
         setRolesList(prev => [...prev, newRole]);
         setPermissionMatrix(prev => ({
@@ -326,9 +326,9 @@ export default function AdminSystemSettings({
     const borderCol = colors.border || (isDark ? '#334155' : '#e2e8f0');
     const textCol = colors.text || (isDark ? '#f8fafc' : '#0f172a');
     const textMuted = colors.textMuted || (isDark ? '#94a3b8' : '#64748b');
-    const primaryCol = colors.primary || '#2563eb';
+    const primaryCol = colors.primary || '#16a34a';
     const primaryBg = `${primaryCol}12`;
-    const accentCol = colors.accent || '#8b5cf6';
+    const accentCol = colors.accent || '#22c55e';
     const successCol = colors.success || '#10b981';
     const dangerCol = colors.danger || '#ef4444';
     const warningCol = '#f59e0b';

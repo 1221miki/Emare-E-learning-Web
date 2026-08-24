@@ -155,7 +155,7 @@ Start learning now! 🚀`
                 <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0 }}>Coupon Management</h1>
                 <div>
                     <button onClick={() => navigate('/admin/dashboard')} style={{ marginRight: 12, padding: '10px 16px', borderRadius: 8, background: colors.bgCard, border: `1px solid ${colors.border}` }}>← Back to Admin</button>
-                    <button onClick={() => setShowCreate(true)} style={{ background: '#4338ca', color: '#fff', padding: '10px 16px', borderRadius: 8, fontWeight: 700, border: 'none', cursor: 'pointer' }}>+ Create Coupon</button>
+                    <button onClick={() => setShowCreate(true)} style={{ background: '#15803d', color: '#fff', padding: '10px 16px', borderRadius: 8, fontWeight: 700, border: 'none', cursor: 'pointer' }}>+ Create Coupon</button>
                 </div>
             </div>
 
@@ -316,7 +316,7 @@ Start learning now! 🚀`
                                                 <button 
                                                     onClick={() => copyToClipboard(c.code)}
                                                     title="Copy coupon code"
-                                                    style={{ padding: '6px 10px', borderRadius: 6, background: '#dbeafe', border: '1px solid #93c5fd', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#1e40af' }}
+                                                    style={{ padding: '6px 10px', borderRadius: 6, background: '#dcfce7', border: '1px solid #86efac', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#166534' }}
                                                 >📋 Copy</button>
                                                 <button 
                                                     onClick={() => setShowShare(c)}
@@ -416,7 +416,7 @@ Start learning now! 🚀`
                                     onClick={() => copyToClipboard(text)}
                                     style={{ 
                                         width: '100%', padding: '8px 12px', borderRadius: 6, 
-                                        background: '#3b82f6', color: '#fff', border: 'none',
+                                        background: '#22c55e', color: '#fff', border: 'none',
                                         cursor: 'pointer', fontWeight: 600, fontSize: 12
                                     }}
                                 >

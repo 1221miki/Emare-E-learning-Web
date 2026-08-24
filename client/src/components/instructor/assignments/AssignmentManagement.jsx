@@ -169,7 +169,7 @@ export default function AssignmentManagement({ courses: propCourses = [] }) {
 
             {/* ── Sub-nav tabs (not shown on create/grading) ── */}
             {view !== 'create' && view !== 'grading' && (
-                <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '2px solid #e0e7ff', paddingBottom: '0' }}>
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '2px solid #dcfce7', paddingBottom: '0' }}>
                     {navItems.map(n => (
                         <button
                             key={n.key}
@@ -199,7 +199,7 @@ export default function AssignmentManagement({ courses: propCourses = [] }) {
                         <select
                             value={selectedCourse?._id || ''}
                             onChange={e => setCourse(courses.find(c => c._id === e.target.value))}
-                            style={{ background: '#f8fafc', border: '2px solid #e0e7ff', color: '#1e293b', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', outline: 'none', cursor: 'pointer', maxWidth: '220px' }}
+                            style={{ background: '#f8fafc', border: '2px solid #dcfce7', color: '#1e293b', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', outline: 'none', cursor: 'pointer', maxWidth: '220px' }}
                             aria-label="Select course"
                         >
                             {courses.map(c => <option key={c._id} value={c._id}>{c.courseTitle}</option>)}

@@ -72,7 +72,7 @@ export default function MockCheckoutPage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '28px' }}>
                     <div style={{
                         width: '40px', height: '40px', borderRadius: '12px',
-                        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                        background: 'linear-gradient(135deg, #22c55e, #22c55e)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontWeight: '900', color: '#fff', fontSize: '20px'
                     }}>E</div>
@@ -171,8 +171,8 @@ export default function MockCheckoutPage() {
                             Your transaction has been verified successfully.<br/>Redirecting you back to your dashboard...
                         </p>
                         <div style={{
-                            width: '28px', height: '28px', border: '3px solid rgba(59,130,246,0.25)',
-                            borderTop: '3px solid #3b82f6', borderRadius: '50%',
+                            width: '28px', height: '28px', border: '3px solid rgba(34,197,94,0.25)',
+                            borderTop: '3px solid #22c55e', borderRadius: '50%',
                             animation: 'mockSpin 1s linear infinite', margin: '0 auto'
                         }} />
                     </div>
@@ -189,7 +189,7 @@ export default function MockCheckoutPage() {
                             <button
                                 onClick={() => setStatus('pending')}
                                 style={{
-                                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
                                     color: '#fff',
                                     border: 'none',
                                     borderRadius: '14px',

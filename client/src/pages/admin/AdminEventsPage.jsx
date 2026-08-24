@@ -123,7 +123,7 @@ function useToasts() {
 const TOAST_STYLE = {
     success: { border: 'border-emerald-400/40', icon: <CheckCircle2 className="h-4 w-4 text-emerald-400" /> },
     error: { border: 'border-red-400/40', icon: <XCircle className="h-4 w-4 text-red-400" /> },
-    info: { border: 'border-blue-400/40', icon: <ShieldCheck className="h-4 w-4 text-blue-400" /> },
+    info: { border: 'border-green-500/40', icon: <ShieldCheck className="h-4 w-4 text-green-500" /> },
 };
 
 const TABS = [
@@ -836,7 +836,7 @@ export default function AdminEventsPage() {
             label: 'Pending Approvals',
             value: stats?.pending ?? 0,
             icon: ShieldAlert,
-            accent: 'text-blue-400',
+            accent: 'text-green-500',
             badge: stats?.pending || 0,
         },
         {
@@ -860,11 +860,11 @@ export default function AdminEventsPage() {
     return (
         <div className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(135deg,#0B0C10_0%,#14141F_45%,#1F1F2E_100%)] text-white">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] bg-[size:26px_26px]" />
-            <div className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[720px] -translate-x-1/2 rounded-full bg-blue-500/10 blur-[120px]" />
+            <div className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[720px] -translate-x-1/2 rounded-full bg-green-600/10 blur-[120px]" />
             <Navbar />
 
             <main className="relative z-10 mx-auto max-w-7xl px-4 pt-24 sm:px-6 sm:pt-28">
-                <Link to="/admin/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-gray-300 transition hover:text-blue-400">
+                <Link to="/admin/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-gray-300 transition hover:text-green-500">
                     <ArrowLeft className="h-4 w-4" /> Admin Dashboard
                 </Link>
 
@@ -875,20 +875,20 @@ export default function AdminEventsPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         {pendingCount > 0 && (
-                            <span className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-400/10 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-blue-300">
-                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-400 text-[11px] font-black text-black">{pendingCount}</span>
+                            <span className="inline-flex items-center gap-2 rounded-full border border-green-500/40 bg-green-500/10 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-green-300">
+                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-[11px] font-black text-black">{pendingCount}</span>
                                 Need Review
                             </span>
                         )}
                         <button
                             onClick={() => { setCreateForm(EMPTY_CREATE_FORM); setCreateOpen(true); }}
-                            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-400 to-violet-500 px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-black shadow-[0_0_18px_rgba(96,165,250,0.3)] transition hover:brightness-110"
+                            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-black shadow-[0_0_18px_rgba(74,222,128,0.3)] transition hover:brightness-110"
                         >
                             <Plus className="h-4 w-4" /> Create Event
                         </button>
                         <button
                             onClick={() => { loadEvents(); loadStats(); }}
-                            className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-2 text-sm font-bold text-gray-200 transition hover:border-blue-400/50 hover:text-blue-300"
+                            className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-2 text-sm font-bold text-gray-200 transition hover:border-green-500/50 hover:text-green-300"
                         >
                             <RefreshCw className="h-4 w-4" /> Refresh
                         </button>
@@ -906,12 +906,12 @@ export default function AdminEventsPage() {
                                         {statsLoading ? '—' : m.value}
                                     </p>
                                 </div>
-                                <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-400/10 text-blue-400">
+                                <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-green-600/20 bg-green-500/10 text-green-500">
                                     <m.icon className="h-5 w-5" />
                                 </span>
                             </div>
                             {m.badge !== null && (
-                                <span className="absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full bg-blue-400 text-[11px] font-black text-black">
+                                <span className="absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-[11px] font-black text-black">
                                     {m.badge}
                                 </span>
                             )}
@@ -928,8 +928,8 @@ export default function AdminEventsPage() {
                                 onClick={() => setActiveTab(t.key)}
                                 className={`rounded-full px-4 py-2 text-xs font-extrabold uppercase tracking-wider transition ${
                                     activeTab === t.key
-                                        ? 'bg-gradient-to-r from-blue-400 to-violet-500 text-black shadow-[0_0_18px_rgba(96,165,250,0.35)]'
-                                        : 'border border-white/10 text-gray-300 hover:border-blue-400/40 hover:text-blue-300'
+                                        ? 'bg-gradient-to-r from-green-500 to-green-600 text-black shadow-[0_0_18px_rgba(74,222,128,0.35)]'
+                                        : 'border border-white/10 text-gray-300 hover:border-green-500/40 hover:text-green-300'
                                 }`}
                             >
                                 {t.label}
@@ -941,7 +941,7 @@ export default function AdminEventsPage() {
                         <select
                             value={categoryFilter}
                             onChange={(e) => setCategoryFilter(e.target.value)}
-                            className="rounded-full border border-white/10 bg-[#12131A] px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-300 transition hover:border-blue-400/40"
+                            className="rounded-full border border-white/10 bg-[#12131A] px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-300 transition hover:border-green-500/40"
                         >
                             <option value="all" className="bg-[#12131A]">All Categories</option>
                             {EVENT_CATEGORIES.map((cat) => (
@@ -951,7 +951,7 @@ export default function AdminEventsPage() {
                         <select
                             value={visibilityFilter}
                             onChange={(e) => setVisibilityFilter(e.target.value)}
-                            className="rounded-full border border-white/10 bg-[#12131A] px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-300 transition hover:border-blue-400/40"
+                            className="rounded-full border border-white/10 bg-[#12131A] px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-300 transition hover:border-green-500/40"
                         >
                             <option value="all" className="bg-[#12131A]">All Visibility</option>
                             <option value="public" className="bg-[#12131A]">Public</option>
@@ -964,7 +964,7 @@ export default function AdminEventsPage() {
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder="Search event title or instructor…"
-                            className="w-full rounded-2xl border border-white/10 bg-[#12131A] py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/20 focus:outline-none"
+                            className="w-full rounded-2xl border border-white/10 bg-[#12131A] py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 transition focus:border-green-500/60 focus:ring-2 focus:ring-green-500/20 focus:outline-none"
                         />
                     </div>
                 </section>
@@ -989,7 +989,7 @@ export default function AdminEventsPage() {
                                 {loading ? (
                                     <tr>
                                         <td colSpan={8} className="px-5 py-16 text-center">
-                                            <Loader2 className="mx-auto h-6 w-6 animate-spin text-blue-400" />
+                                            <Loader2 className="mx-auto h-6 w-6 animate-spin text-green-500" />
                                             <p className="mt-3 text-xs text-gray-400">Loading events…</p>
                                         </td>
                                     </tr>
@@ -1001,7 +1001,7 @@ export default function AdminEventsPage() {
                                             <p className="mt-1 text-xs text-gray-400">Please try again.</p>
                                             <button
                                                 onClick={() => { loadEvents(); loadStats(); }}
-                                                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/10 px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider text-gray-200 transition hover:border-blue-400/50 hover:text-blue-300"
+                                                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/10 px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider text-gray-200 transition hover:border-green-500/50 hover:text-green-300"
                                             >
                                                 <RefreshCw className="h-3.5 w-3.5" /> Retry
                                             </button>
@@ -1015,7 +1015,7 @@ export default function AdminEventsPage() {
                                             <p className="mt-1 text-sm text-gray-400">Create your first event to see it here.</p>
                                             <button
                                                 onClick={() => { setCreateForm(EMPTY_CREATE_FORM); setCreateOpen(true); }}
-                                                className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-400 to-violet-500 px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider text-black shadow-[0_0_18px_rgba(96,165,250,0.3)] transition hover:brightness-110"
+                                                className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider text-black shadow-[0_0_18px_rgba(74,222,128,0.3)] transition hover:brightness-110"
                                             >
                                                 <Plus className="h-4 w-4" /> Create Event
                                             </button>
@@ -1041,11 +1041,11 @@ export default function AdminEventsPage() {
                                                         <div className="min-w-0">
                                                             <p className="max-w-[240px] truncate font-bold text-white">{event.title}</p>
                                                             <span className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-300">
-                                                                {event.eventType === 'Online' ? <Video className="h-3 w-3 text-blue-400" /> : <MapPin className="h-3 w-3 text-blue-400" />}
+                                                                {event.eventType === 'Online' ? <Video className="h-3 w-3 text-green-500" /> : <MapPin className="h-3 w-3 text-green-500" />}
                                                                 {event.eventType}
                                                             </span>
                                                             <p className="mt-1 flex items-center gap-1 text-xs text-gray-400">
-                                                                <Users className="h-3 w-3 text-blue-400" />
+                                                                <Users className="h-3 w-3 text-green-500" />
                                                                 {event.submittedBy?.fullName || 'Platform Admin'}
                                                             </p>
                                                         </div>
@@ -1055,8 +1055,8 @@ export default function AdminEventsPage() {
                                                     <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-gray-200">{event.category || 'Masterclass'}</span>
                                                 </td>
                                                 <td className="px-5 py-4">
-                                                    <p className="flex items-center gap-2 text-gray-200"><Calendar className="h-3.5 w-3.5 text-blue-400" /> {fmtDate(event.startDate)}</p>
-                                                    <p className="mt-1 flex items-center gap-2 text-xs text-gray-400"><Clock className="h-3.5 w-3.5 text-blue-400" /> {event.timeLabel || `${event.startTime} – ${event.endTime}`}</p>
+                                                    <p className="flex items-center gap-2 text-gray-200"><Calendar className="h-3.5 w-3.5 text-green-500" /> {fmtDate(event.startDate)}</p>
+                                                    <p className="mt-1 flex items-center gap-2 text-xs text-gray-400"><Clock className="h-3.5 w-3.5 text-green-500" /> {event.timeLabel || `${event.startTime} – ${event.endTime}`}</p>
                                                 </td>
                                                 <td className="px-5 py-4">
                                                     {event.eventType === 'Physical' ? (
@@ -1086,7 +1086,7 @@ export default function AdminEventsPage() {
                                                 <td className="px-5 py-4">
                                                     <p className="text-gray-200">{registered}<span className="text-gray-500"> / {total}</span></p>
                                                     <div className="mt-1.5 h-1.5 w-24 overflow-hidden rounded-full bg-white/10">
-                                                        <div className={`h-full rounded-full ${fill >= 100 ? 'bg-red-400' : 'bg-gradient-to-r from-blue-400 to-violet-500'}`} style={{ width: `${fill}%` }} />
+                                                        <div className={`h-full rounded-full ${fill >= 100 ? 'bg-red-400' : 'bg-gradient-to-r from-green-500 to-green-600'}`} style={{ width: `${fill}%` }} />
                                                     </div>
                                                 </td>
                                                 <td className="px-5 py-4">
@@ -1112,7 +1112,7 @@ export default function AdminEventsPage() {
                                                         <button
                                                             onClick={() => openInspect(event)}
                                                             title="View event"
-                                                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-gray-300 transition hover:border-blue-400/50 hover:text-blue-300"
+                                                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-gray-300 transition hover:border-green-500/50 hover:text-green-300"
                                                         >
                                                             <Eye className="h-4 w-4" />
                                                         </button>
@@ -1149,7 +1149,7 @@ export default function AdminEventsPage() {
                                                         <button
                                                             onClick={() => openEdit(event)}
                                                             title="Edit details"
-                                                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-gray-300 transition hover:border-blue-400/50 hover:text-blue-300"
+                                                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-gray-300 transition hover:border-green-500/50 hover:text-green-300"
                                                         >
                                                             <Pencil className="h-4 w-4" />
                                                         </button>
@@ -1179,7 +1179,7 @@ export default function AdminEventsPage() {
             {drawerOpen && inspected && (
                 <div className="fixed inset-0 z-[60]">
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
-                    <div className="absolute inset-y-0 right-0 flex w-full max-w-5xl flex-col overflow-hidden border-l border-blue-500/20 bg-[#10111A] shadow-2xl">
+                    <div className="absolute inset-y-0 right-0 flex w-full max-w-5xl flex-col overflow-hidden border-l border-green-600/20 bg-[#10111A] shadow-2xl">
                         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
                             <div className="flex items-center gap-3">
                                 <h2 className="text-lg font-black">Inspect &amp; Validate</h2>
@@ -1196,12 +1196,12 @@ export default function AdminEventsPage() {
                         <div className="grid flex-1 gap-0 overflow-y-auto lg:grid-cols-2">
                             {/* Left — public preview */}
                             <div className="border-b border-white/10 p-6 lg:border-b-0 lg:border-r">
-                                <p className="mb-4 text-xs font-extrabold uppercase tracking-[0.25em] text-blue-400">Public Preview</p>
-                                <div className="relative overflow-hidden rounded-3xl border border-blue-500/20">
+                                <p className="mb-4 text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">Public Preview</p>
+                                <div className="relative overflow-hidden rounded-3xl border border-green-600/20">
                                     <img src={inspected.image || '/images/education-hero.jpg'} alt="" className="h-44 w-full object-cover" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                                     <div className="absolute bottom-4 left-4 right-4">
-                                        <span className="inline-flex rounded-full bg-blue-400 px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-black">Upcoming Event</span>
+                                        <span className="inline-flex rounded-full bg-green-500 px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-black">Upcoming Event</span>
                                         <h3 className="mt-2 text-xl font-black leading-tight">{inspected.title}</h3>
                                         <p className="mt-1 text-xs text-gray-300">{inspected.tagline}</p>
                                     </div>
@@ -1209,20 +1209,20 @@ export default function AdminEventsPage() {
 
                                 <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
                                     <div className="rounded-2xl border border-white/10 bg-[#171823] p-3">
-                                        <Calendar className="h-4 w-4 text-blue-400" />
+                                        <Calendar className="h-4 w-4 text-green-500" />
                                         <p className="mt-2 text-gray-300">{fmtDate(inspected.startDate)}</p>
                                     </div>
                                     <div className="rounded-2xl border border-white/10 bg-[#171823] p-3">
-                                        <Clock className="h-4 w-4 text-blue-400" />
+                                        <Clock className="h-4 w-4 text-green-500" />
                                         <p className="mt-2 text-gray-300">{inspected.timeLabel || `${inspected.startTime} – ${inspected.endTime}`}</p>
                                     </div>
                                     <div className="rounded-2xl border border-white/10 bg-[#171823] p-3">
-                                        <MapPin className="h-4 w-4 text-blue-400" />
+                                        <MapPin className="h-4 w-4 text-green-500" />
                                         <p className="mt-2 truncate text-gray-300">{inspected.venue || 'Online Live Stream'}</p>
                                     </div>
                                 </div>
 
-                                <p className="mt-5 text-xs font-extrabold uppercase tracking-[0.25em] text-blue-400">About</p>
+                                <p className="mt-5 text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">About</p>
                                 <div className="mt-2 space-y-3 text-sm leading-relaxed text-[#9CA3AF]">
                                     {(inspected.description && inspected.description.length ? inspected.description : ['No description provided.']).map((p, i) => (
                                         <p key={i}>{p}</p>
@@ -1233,26 +1233,26 @@ export default function AdminEventsPage() {
                                     <div className="mt-5 flex items-center gap-3 rounded-2xl border border-white/10 bg-[#171823] p-4">
                                         <img src={inspected.speaker.avatar || inspected.image} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
                                         <div>
-                                            <p className="flex items-center gap-1.5 text-sm font-bold text-white"><BadgeCheck className="h-4 w-4 text-blue-400" /> {inspected.speaker.name}</p>
-                                            <p className="text-xs text-blue-300">{inspected.speaker.role}</p>
+                                            <p className="flex items-center gap-1.5 text-sm font-bold text-white"><BadgeCheck className="h-4 w-4 text-green-500" /> {inspected.speaker.name}</p>
+                                            <p className="text-xs text-green-300">{inspected.speaker.role}</p>
                                         </div>
                                     </div>
                                 )}
 
                                 <div className="mt-5 rounded-2xl border border-white/10 bg-[#171823] p-4 text-sm">
                                     <div className="flex items-center justify-between">
-                                        <span className="flex items-center gap-2 text-gray-200"><Users className="h-4 w-4 text-blue-400" /> Seats</span>
+                                        <span className="flex items-center gap-2 text-gray-200"><Users className="h-4 w-4 text-green-500" /> Seats</span>
                                         <span className="font-bold text-white">{inspected.registeredCount || 0}<span className="text-gray-500"> / {inspected.totalSlots}</span></span>
                                     </div>
                                     <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
-                                        <div className="h-full rounded-full bg-gradient-to-r from-blue-400 to-violet-500" style={{ width: `${inspected.totalSlots ? Math.min(100, Math.round(((inspected.registeredCount || 0) / inspected.totalSlots) * 100)) : 0}%` }} />
+                                        <div className="h-full rounded-full bg-gradient-to-r from-green-500 to-green-600" style={{ width: `${inspected.totalSlots ? Math.min(100, Math.round(((inspected.registeredCount || 0) / inspected.totalSlots) * 100)) : 0}%` }} />
                                     </div>
                                 </div>
                             </div>
 
                             {/* Right — validation checklist */}
                             <div className="p-6">
-                                <p className="mb-4 text-xs font-extrabold uppercase tracking-[0.25em] text-blue-400">Validation Checklist</p>
+                                <p className="mb-4 text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">Validation Checklist</p>
 
                                 <div className={`mb-4 flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-bold ${checks.passed ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300' : 'border-red-400/40 bg-red-400/10 text-red-300'}`}>
                                     {checks.passed ? <ShieldCheck className="h-5 w-5" /> : <ShieldAlert className="h-5 w-5" />}
@@ -1279,9 +1279,9 @@ export default function AdminEventsPage() {
                                 </ul>
 
                                 {inspected.status === 'REJECTED' && inspected.reviewNote && (
-                                    <div className="mt-4 rounded-2xl border border-blue-400/30 bg-blue-400/10 p-4">
-                                        <p className="text-xs font-extrabold uppercase tracking-widest text-blue-300">Previous Feedback Sent to Instructor</p>
-                                        <p className="mt-1.5 text-sm text-blue-100/80">{inspected.reviewNote}</p>
+                                    <div className="mt-4 rounded-2xl border border-green-500/30 bg-green-500/10 p-4">
+                                        <p className="text-xs font-extrabold uppercase tracking-widest text-green-300">Previous Feedback Sent to Instructor</p>
+                                        <p className="mt-1.5 text-sm text-green-100/80">{inspected.reviewNote}</p>
                                     </div>
                                 )}
 
@@ -1315,7 +1315,7 @@ export default function AdminEventsPage() {
                                     </button>
                                     <button
                                         onClick={() => { setDrawerOpen(false); openEdit(inspected); }}
-                                        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-violet-500 py-3.5 text-sm font-extrabold uppercase tracking-wide text-white transition hover:brightness-110"
+                                        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-green-600 to-green-600 py-3.5 text-sm font-extrabold uppercase tracking-wide text-white transition hover:brightness-110"
                                     >
                                         <Pencil className="h-4 w-4" /> Edit Event Details Directly
                                     </button>
@@ -1330,11 +1330,11 @@ export default function AdminEventsPage() {
             {createOpen && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={resetCreateForm} />
-                    <div className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-blue-500/25 bg-[#12131A] shadow-[0_24px_80px_rgba(2,6,23,0.6)]">
+                    <div className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-green-600/25 bg-[#12131A] shadow-[0_24px_80px_rgba(2,6,23,0.6)]">
                         {/* Dark header */}
                         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#12131A] px-6 py-4">
                             <div className="flex items-center gap-3">
-                                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-400/10 text-blue-400">
+                                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-500/10 text-green-500">
                                     <Plus className="h-5 w-5" />
                                 </span>
                                 <h2 className="text-base font-black text-white">Create New Event</h2>
@@ -1355,7 +1355,7 @@ export default function AdminEventsPage() {
 
                     {/* ── BASIC INFORMATION ── */}
                     <div>
-                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#60a5fa', marginBottom: 12 }}>Basic Information</div>
+                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#4ade80', marginBottom: 12 }}>Basic Information</div>
                         <div style={{ display: 'grid', gap: 12 }}>
                             <div>
                                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Event Title *</label>
@@ -1407,7 +1407,7 @@ export default function AdminEventsPage() {
 
                     {/* ── SCHEDULE ── */}
                     <div>
-                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#60a5fa', marginBottom: 12 }}>Schedule</div>
+                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#4ade80', marginBottom: 12 }}>Schedule</div>
                         <div style={{ display: 'grid', gap: 12 }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                 <div>
@@ -1440,14 +1440,14 @@ export default function AdminEventsPage() {
 
                     {/* ── LOCATION ── */}
                     <div>
-                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#60a5fa', marginBottom: 12 }}>Location</div>
+                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#4ade80', marginBottom: 12 }}>Location</div>
                         <div style={{ display: 'grid', gap: 12 }}>
                             <div style={{ display: 'flex', gap: 8 }}>
                                 {['Online', 'Physical', 'Hybrid'].map((t) => (
                                     <button
                                         key={t} type="button"
                                         onClick={() => setCreateForm({ ...createForm, eventType: t })}
-                                        style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: `1px solid ${createForm.eventType === t ? '#3b82f6' : 'rgba(255,255,255,0.12)'}`, background: createForm.eventType === t ? '#3b82f6' : 'transparent', color: createForm.eventType === t ? '#fff' : '#9ca3af', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s' }}
+                                        style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: `1px solid ${createForm.eventType === t ? '#22c55e' : 'rgba(255,255,255,0.12)'}`, background: createForm.eventType === t ? '#22c55e' : 'transparent', color: createForm.eventType === t ? '#fff' : '#9ca3af', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s' }}
                                     >{t}</button>
                                 ))}
                             </div>
@@ -1465,7 +1465,7 @@ export default function AdminEventsPage() {
                     {/* ── VIRTUAL MEETING & LIVE STREAM SETTINGS ── */}
                     {createForm.eventType !== 'Physical' && (
                         <div>
-                            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#60a5fa', marginBottom: 12 }}>Virtual Meeting &amp; Live Stream Settings</div>
+                            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#4ade80', marginBottom: 12 }}>Virtual Meeting &amp; Live Stream Settings</div>
                             <div style={{ display: 'grid', gap: 12 }}>
 
                                 {/* Platform */}
@@ -1542,7 +1542,7 @@ export default function AdminEventsPage() {
                                                 type="button"
                                                 onClick={handleGenerateMeetingLink}
                                                 disabled={meetingGenerating}
-                                                style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 8, padding: '0 16px', height: 42, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: meetingGenerating ? 'not-allowed' : 'pointer', opacity: meetingGenerating ? 0.7 : 1 }}
+                                                style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, background: '#15803d', color: '#fff', border: 'none', borderRadius: 8, padding: '0 16px', height: 42, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: meetingGenerating ? 'not-allowed' : 'pointer', opacity: meetingGenerating ? 0.7 : 1 }}
                                             >
                                                 {meetingGenerating
                                                     ? <><Loader2 size={15} className="animate-spin" /> Generating meeting…</>
@@ -1639,7 +1639,7 @@ export default function AdminEventsPage() {
 
                     {/* ── VISIBILITY ── */}
                     <div>
-                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#60a5fa', marginBottom: 12 }}>Visibility</div>
+                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#4ade80', marginBottom: 12 }}>Visibility</div>
                         <div style={{ display: 'flex', gap: 8 }}>
                             {[['internal', '#64748b'], ['public', '#10b981']].map(([v, color]) => (
                                 <button
@@ -1663,7 +1663,7 @@ export default function AdminEventsPage() {
                         <>
                             <div style={{ height: 1, background: 'rgba(255,255,255,0.08)' }} />
                             <div>
-                                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#60a5fa', marginBottom: 12 }}>Public Event Options</div>
+                                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#4ade80', marginBottom: 12 }}>Public Event Options</div>
                                 <div style={{ display: 'grid', gap: 12 }}>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                         <div>
@@ -1726,12 +1726,12 @@ export default function AdminEventsPage() {
                         const now = new Date();
                         const pStatus = createForm.eventStatus === 'CANCELLED' ? 'cancelled'
                             : (!pStart ? 'upcoming' : (pEnd && now > pEnd ? 'completed' : (now >= pStart ? 'live' : 'upcoming')));
-                        const statusColors = { upcoming: { label: 'Upcoming', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' }, live: { label: 'Ongoing', color: '#10b981', bg: 'rgba(16,185,129,0.12)' }, completed: { label: 'Completed', color: '#64748b', bg: 'rgba(100,116,139,0.14)' }, cancelled: { label: 'Cancelled', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' } };
+                        const statusColors = { upcoming: { label: 'Upcoming', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' }, live: { label: 'Ongoing', color: '#10b981', bg: 'rgba(16,185,129,0.12)' }, completed: { label: 'Completed', color: '#64748b', bg: 'rgba(100,116,139,0.14)' }, cancelled: { label: 'Cancelled', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' } };
                         const sc = statusColors[pStatus] || statusColors.upcoming;
                         const pType = createForm.eventType || 'Online';
                         return (
                             <div>
-                                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#60a5fa', marginBottom: 12 }}>Live Preview</div>
+                                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#4ade80', marginBottom: 12 }}>Live Preview</div>
                                 <div style={{ padding: 14, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 8 }}>
                                         <strong style={{ fontSize: 15, lineHeight: 1.3, color: '#fff' }}>{createForm.title.trim() || 'Untitled event'}</strong>
@@ -1753,7 +1753,7 @@ export default function AdminEventsPage() {
                         <button
                             type="submit"
                             disabled={createSaving}
-                            style={{ padding: '12px 28px', borderRadius: 10, background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: '#fff', fontWeight: 800, border: 'none', cursor: createSaving ? 'not-allowed' : 'pointer', opacity: createSaving ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14 }}
+                            style={{ padding: '12px 28px', borderRadius: 10, background: 'linear-gradient(135deg, #16a34a, #15803d)', color: '#fff', fontWeight: 800, border: 'none', cursor: createSaving ? 'not-allowed' : 'pointer', opacity: createSaving ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14 }}
                         >
                             {createSaving
                                 ? (createForm.eventType !== 'Physical' && createForm.meetingPlatform === 'googleMeet' && !createForm.streamUrl
@@ -1776,7 +1776,7 @@ export default function AdminEventsPage() {
 
                 <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setEditOpen(false)} />
-                    <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-blue-500/25 bg-[#12131A] p-6 shadow-[0_0_60px_rgba(37,99,235,0.18)] sm:p-8">
+                    <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-green-600/25 bg-[#12131A] p-6 shadow-[0_0_60px_rgba(22,163,74,0.18)] sm:p-8">
                         <div className="flex items-center justify-between">
                             <h2 className="text-lg font-black">Edit Event Details</h2>
                             <button onClick={() => setEditOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-gray-300 transition hover:text-white">
@@ -1857,7 +1857,7 @@ export default function AdminEventsPage() {
                                     type="checkbox"
                                     checked={editForm.isFeatured}
                                     onChange={(e) => setEditForm({ ...editForm, isFeatured: e.target.checked })}
-                                    className="h-4 w-4 rounded border-white/20 bg-[#1A1B23] accent-blue-500"
+                                    className="h-4 w-4 rounded border-white/20 bg-[#1A1B23] accent-green-600"
                                 />
                                 Featured event (highlighted on the events page)
                             </label>
@@ -1870,7 +1870,7 @@ export default function AdminEventsPage() {
                             <button
                                 onClick={handleSaveEdit}
                                 disabled={editSaving}
-                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-violet-500 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-white transition hover:brightness-110 disabled:opacity-60"
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-green-600 to-green-600 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-white transition hover:brightness-110 disabled:opacity-60"
                             >
                                 {editSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
                                 Save Changes
@@ -1891,7 +1891,7 @@ export default function AdminEventsPage() {
                         onChange={(e) => setCancelReason(e.target.value)}
                         placeholder="Cancellation reason (optional)"
                         rows={3}
-                        className="w-full rounded-xl border border-white/10 bg-[#1A1B23] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 focus:outline-none"
+                        className="w-full rounded-xl border border-white/10 bg-[#1A1B23] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
                     />
                     <div className="mt-5 flex flex-wrap gap-3">
                         <button onClick={confirmCancel} className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-red-400 to-red-500 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-white transition hover:brightness-110">
@@ -1935,4 +1935,4 @@ export default function AdminEventsPage() {
 }
 
 const inputCls =
-    'w-full rounded-xl border border-slate-600/40 bg-[#151a2c] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 focus:outline-none';
+    'w-full rounded-xl border border-slate-600/40 bg-[#151a2c] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none';

@@ -8,19 +8,20 @@ module.exports = {
       // and inline token styles stay visually identical.
       colors: {
         brand: {
-          primary: '#2563eb',
-          'primary-dark': '#1d4ed8',
-          accent: '#7c3aed',
-          success: '#059669',
+          primary: '#15803d',
+          'primary-dark': '#166534',
+          'primary-light': '#22c55e',
+          accent: '#16a34a',
+          success: '#15803d',
           warning: '#f59e0b',
           danger: '#ef4444'
         },
         surface: {
-          DEFAULT: '#f5f7fb',
+          DEFAULT: '#f6f8f7',
           card: '#ffffff',
-          border: '#e3e8f0',
-          ink: '#16213a',
-          muted: '#5a6580'
+          border: '#e2e8e5',
+          ink: '#14201a',
+          muted: '#57655d'
         }
       },
       fontFamily: {

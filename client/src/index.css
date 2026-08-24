@@ -8,18 +8,128 @@
 
 :root {
   /* Design tokens mirrored as CSS variables (kept in sync by ThemeProvider).
-     Defaults here match the light theme so first paint is correct. */
-  --emare-bg: #f5f7fb;
+     Defaults here match the light theme so first paint is correct.
+     Palette ratio: 30% green / 50% white surfaces / 10% dark text / 10% semantic. */
+  --emare-bg: #f6f8f7;
   --emare-bg-card: #ffffff;
-  --emare-border: #e3e8f0;
-  --emare-text: #16213a;
-  --emare-text-muted: #5a6580;
-  --emare-primary: #1d4ed8;
-  --emare-accent: #7c3aed;
-  --emare-gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  --emare-border: #e2e8e5;
+  --emare-text: #14201a;
+  --emare-text-muted: #57655d;
+  --emare-primary: #15803d;
+  --emare-accent: #166534;
+  --emare-gradient: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
   --emare-shadow: 0 1px 2px rgba(16,24,40,0.05), 0 10px 30px -8px rgba(16,24,40,0.16);
   --emare-radius-md: 12px;
+
+  /* Semantic supporting colors (10%) */
+  --emare-success: #15803d;
+  --emare-warning: #b45309;
+  --emare-danger: #dc2626;
+  --emare-info: #0369a1;
 }
+
+/* ════════════════════════════════════════════════════════════════
+   Global Design System — reusable primitives.
+   Pages using inline styles stay untouched; these classes standardize
+   any element that opts in (and future pages by default).
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.emare-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.2;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease,
+    box-shadow .15s ease, transform .1s ease, filter .15s ease;
+}
+.emare-btn:active { transform: translateY(1px); }
+.emare-btn:focus-visible { outline: 2px solid var(--emare-primary); outline-offset: 2px; }
+.emare-btn:disabled,
+.emare-btn[aria-disabled='true'] {
+  background: #e5e7eb !important;
+  color: #9ca3af !important;
+  border-color: #e5e7eb !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.emare-btn-primary { background: var(--emare-primary); color: #fff; }
+.emare-btn-primary:hover:not(:disabled) { background: var(--emare-accent); }
+
+.emare-btn-secondary { background: #fff; color: var(--emare-primary); border-color: var(--emare-primary); }
+.emare-btn-secondary:hover:not(:disabled) { background: rgba(21,128,61,0.08); }
+
+.emare-btn-ghost { background: transparent; color: var(--emare-text); border-color: var(--emare-border); }
+.emare-btn-ghost:hover:not(:disabled) { background: rgba(21,128,61,0.08); color: var(--emare-primary); }
+
+.emare-btn-danger { background: var(--emare-danger); color: #fff; }
+.emare-btn-danger:hover:not(:disabled) { background: #b91c1c; }
+
+.emare-btn-warning { background: var(--emare-warning); color: #fff; }
+.emare-btn-warning:hover:not(:disabled) { background: #92400e; }
+
+/* ── Inputs ──────────────────────────────────────────────────── */
+.emare-input,
+.emare-select,
+.emare-textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--emare-border);
+  background: var(--emare-bg-card);
+  color: var(--emare-text);
+  font-size: 14px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.emare-textarea { min-height: 120px; resize: vertical; }
+.emare-input:focus,
+.emare-select:focus,
+.emare-textarea:focus {
+  outline: none;
+  border-color: var(--emare-primary);
+  box-shadow: 0 0 0 3px rgba(21,128,61,0.18);
+}
+.emare-input::placeholder,
+.emare-textarea::placeholder { color: var(--emare-text-muted); }
+
+/* ── Cards ───────────────────────────────────────────────────── */
+.emare-card {
+  background: var(--emare-bg-card);
+  border: 1px solid var(--emare-border);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(16,24,40,0.06);
+}
+
+/* ── Links ───────────────────────────────────────────────────── */
+.emare-link { color: var(--emare-primary); text-decoration: none; font-weight: 600; }
+.emare-link:hover { color: var(--emare-accent); text-decoration: underline; }
+
+/* ── Tables ──────────────────────────────────────────────────── */
+.emare-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.emare-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-weight: 700;
+  color: var(--emare-text-muted);
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: .04em;
+  border-bottom: 2px solid var(--emare-border);
+  background: rgba(21,128,61,0.04);
+}
+.emare-table td { padding: 12px 16px; border-bottom: 1px solid var(--emare-border); color: var(--emare-text); }
+.emare-table tbody tr:hover td { background: rgba(21,128,61,0.04); }
 
 html {
   overflow-x: hidden;

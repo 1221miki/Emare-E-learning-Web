@@ -25,7 +25,7 @@ export default function HelpPage() {
         faqItem: { borderBottom: '1px solid rgba(51,65,85,0.5)', paddingBottom: '24px' },
         faqQ: { color: colors.text, fontSize: '16px', fontWeight: '700', margin: '0 0 12px' },
         faqA: { color: colors.textMuted, fontSize: '14px', lineHeight: 1.6, margin: 0 },
-        contactBtn: { display: 'inline-block', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: '#fff', padding: '12px 24px', borderRadius: '8px', textDecoration: 'none', fontWeight: '700', fontSize: '14px' },
+        contactBtn: { display: 'inline-block', background: 'linear-gradient(135deg, #16a34a, #15803d)', color: '#fff', padding: '12px 24px', borderRadius: '8px', textDecoration: 'none', fontWeight: '700', fontSize: '14px' },
         footer: { padding: '24px', textAlign: 'center', borderTop: '1px solid rgba(30,41,59,0.4)', color: '#475569', fontSize: '13px' }
     };
 

@@ -131,7 +131,7 @@ export default function AssignmentBuilder() {
                         {form.attachmentPreview && <div style={{ color: colors.textMuted, marginTop: 8 }}>{form.attachmentPreview}</div>}
                     </div>
                     <div style={{ display: 'flex', gap: 10 }}>
-                        <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,#2563eb,#7c3aed)', color: '#fff', padding: '10px 14px', borderRadius: 8, border: 'none' }}>{submitting ? 'Creating...' : 'Create Assignment'}</button>
+                        <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)', color: '#fff', padding: '10px 14px', borderRadius: 8, border: 'none' }}>{submitting ? 'Creating...' : 'Create Assignment'}</button>
                         <button type="button" onClick={() => navigate('/instructor/dashboard')} style={{ background: 'transparent', border: '1px solid rgba(149,157,165,0.12)', color: colors.text, padding: '10px 14px', borderRadius: 8 }}>Cancel</button>
                     </div>
                     {msg && <div style={{ color: '#fff' }}>{msg}</div>}

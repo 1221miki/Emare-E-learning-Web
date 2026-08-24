@@ -7,18 +7,18 @@ import { BookOpen, Wifi, Cpu, Shield, Globe, Smartphone, BarChart3, Palette, Bri
 import { categoryMatchesCourse } from '../utils/categoryMatching';
 
 const FALLBACK_CATEGORIES = [
-    { _id: 'prog', name: 'Programming', color: '#3b82f6' },
+    { _id: 'prog', name: 'Programming', color: '#22c55e' },
     { _id: 'web', name: 'Web Development', color: '#06b6d4' },
     { _id: 'ai', name: 'Artificial Intelligence', color: '#10b981' },
     { _id: 'sec', name: 'Cybersecurity', color: '#f59e0b' },
     { _id: 'data', name: 'Data Science', color: '#14b8a6' },
     { _id: 'mob', name: 'Mobile Development', color: '#ec4899' },
     { _id: 'cloud', name: 'Cloud Computing', color: '#64748b' },
-    { _id: 'devops', name: 'DevOps & CI/CD', color: '#6366f1' },
+    { _id: 'devops', name: 'DevOps & CI/CD', color: '#22c55e' },
     { _id: 'design', name: 'Graphic Design', color: '#a855f7' },
     { _id: 'biz', name: 'Business & Management', color: '#84cc16' },
     { _id: 'db', name: 'Databases', color: '#f97316' },
-    { _id: 'net', name: 'Networking', color: '#8b5cf6' }
+    { _id: 'net', name: 'Networking', color: '#22c55e' }
 ];
 
 const CATEGORY_META = {
@@ -37,7 +37,7 @@ const CATEGORY_META = {
     'Web Coding': { icon: Globe, description: 'Build frontend and backend web experiences.' },
     Business: { icon: Briefcase, description: 'Leadership, strategy, and business growth.' }
 };
-const CAT_COLORS = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#06b6d4','#ec4899','#14b8a6','#a855f7','#84cc16','#64748b','#f97316','#6366f1'];
+const CAT_COLORS = ['#22c55e','#22c55e','#10b981','#f59e0b','#06b6d4','#ec4899','#14b8a6','#a855f7','#84cc16','#64748b','#f97316','#22c55e'];
 
 export default function CategoriesPage() {
     const { colors, theme } = useTheme();

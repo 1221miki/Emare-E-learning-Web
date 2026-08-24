@@ -49,13 +49,13 @@ export default function LeaderboardPage() {
                                 <div key={student._id} style={{
                                     display: 'flex', alignItems: 'center', padding: '20px', gap: '20px',
                                     borderBottom: idx !== leaders.length - 1 ? `1px solid ${colors.border}` : 'none',
-                                    background: user?.id === student._id ? (colors.bg === colors.bg ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.05)') : 'transparent'
+                                    background: user?.id === student._id ? (colors.bg === colors.bg ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.05)') : 'transparent'
                                 }}>
                                     <div style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '16px', ...getRankStyle(idx) }}>
                                         #{idx + 1}
                                     </div>
                                     
-                                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', fontWeight: '800' }}>
+                                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #22c55e, #22c55e)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', fontWeight: '800' }}>
                                         {student.fullName[0].toUpperCase()}
                                     </div>
 

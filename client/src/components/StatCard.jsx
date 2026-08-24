@@ -9,7 +9,7 @@ import React from 'react';
  * @param {string} color - Accent color for the top border and value text
  * @param {string} icon - Optional emoji/icon to display
  */
-export default function StatCard({ label, value, color = '#3b82f6', icon }) {
+export default function StatCard({ label, value, color = '#22c55e', icon }) {
     return (
         <div style={{ ...styles.card, borderTop: `3px solid ${color}` }}>
             {icon && <span style={styles.icon}>{icon}</span>}

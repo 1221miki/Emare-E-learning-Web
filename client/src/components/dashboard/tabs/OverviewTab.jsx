@@ -65,8 +65,8 @@ export default function OverviewTab(dash) {
     const fmtTime = (d) => d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
     const kpis = [
-        { label: 'In Progress Courses', value: activeCourses.length, icon: <GraduationCap size={20} aria-hidden="true" />, chip: 'bg-blue-600/10 text-blue-600 dark:text-blue-400' },
-        { label: 'Assignments Due', value: upcomingAssignmentsCount, icon: <ClipboardCheck size={20} aria-hidden="true" />, chip: 'bg-purple-600/10 text-purple-600 dark:text-purple-400' },
+        { label: 'In Progress Courses', value: activeCourses.length, icon: <GraduationCap size={20} aria-hidden="true" />, chip: 'bg-green-600/10 text-green-600 dark:text-green-500' },
+        { label: 'Assignments Due', value: upcomingAssignmentsCount, icon: <ClipboardCheck size={20} aria-hidden="true" />, chip: 'bg-green-700/10 text-green-700 dark:text-green-500' },
         { label: 'Quiz Average', value: `${quizAverage}%`, icon: <BarChart3 size={20} aria-hidden="true" />, chip: 'bg-emerald-600/10 text-emerald-600 dark:text-emerald-400' },
         { label: 'XP Earned', value: xpPoints, icon: <Zap size={20} aria-hidden="true" />, chip: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' }
     ];
@@ -102,7 +102,7 @@ export default function OverviewTab(dash) {
                 {/* Main column */}
                 <div className="col-span-12 space-y-6 lg:col-span-8">
                     {/* Welcome hero */}
-                    <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 p-5 text-white shadow-sm">
+                    <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-green-600 via-green-700 to-green-700 p-5 text-white shadow-sm">
                         <div className="flex flex-wrap items-start justify-between gap-4">
                             <div className="min-w-0">
                                 <h2 className="text-xl font-extrabold tracking-tight sm:text-2xl">{getGreeting()}, {user?.fullName?.split(' ')[0]}!</h2>
@@ -131,7 +131,7 @@ export default function OverviewTab(dash) {
                     <div className={card}>
                         <div className="mb-4 flex items-center justify-between gap-3">
                             <h3 className="text-sm font-bold text-slate-900 dark:text-white">Active Courses</h3>
-                            <button onClick={() => navigate('/courses')} className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                            <button onClick={() => navigate('/courses')} className="inline-flex items-center gap-1 text-xs font-bold text-green-600 dark:text-green-500 hover:underline">
                                 Browse All <ArrowRight size={14} aria-hidden="true" />
                             </button>
                         </div>
@@ -143,17 +143,17 @@ export default function OverviewTab(dash) {
                                     const pct = enroll.completionPercentage || 0;
                                     return (
                                         <div key={enroll._id || cid} className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-4">
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">{c.technicalCategory || 'Course'}</span>
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-green-600 dark:text-green-500">{c.technicalCategory || 'Course'}</span>
                                             <h4 className="mt-1 truncate text-sm font-bold text-slate-900 dark:text-white">{c.courseTitle}</h4>
                                             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{c.estimatedDurationHours || 0}h · {pct}% done</p>
                                             <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-                                                <div className="h-full rounded-full bg-blue-600 dark:bg-blue-500" style={{ width: `${pct}%` }} />
+                                                <div className="h-full rounded-full bg-green-600 dark:bg-green-600" style={{ width: `${pct}%` }} />
                                             </div>
                                             <button
                                                 onClick={() => enroll.tuitionClearanceFlag ? navigate(`/student/learn/${cid}`) : setActiveTab('payments')}
                                                 className={`mt-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold ${
                                                     enroll.tuitionClearanceFlag
-                                                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                                        ? 'bg-green-600 text-white hover:bg-green-700'
                                                         : 'border border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400'
                                                 }`}
                                             >
@@ -168,7 +168,7 @@ export default function OverviewTab(dash) {
                                 <Lightbulb size={28} className="text-slate-400" aria-hidden="true" />
                                 <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">You're not learning anything yet</p>
                                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Explore our catalog and enroll in your first course.</p>
-                                <button onClick={() => navigate('/courses')} className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">Explore Courses</button>
+                                <button onClick={() => navigate('/courses')} className="mt-4 rounded-lg bg-green-600 px-4 py-2 text-xs font-bold text-white hover:bg-green-700">Explore Courses</button>
                             </div>
                         )}
                     </div>
@@ -180,10 +180,10 @@ export default function OverviewTab(dash) {
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 {recommendations.map(course => (
                                     <div key={course._id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-                                        <span className="rounded-full border border-blue-600/20 bg-blue-600/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">{course.technicalCategory || 'Development'}</span>
+                                        <span className="rounded-full border border-green-600/20 bg-green-600/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-green-600 dark:text-green-500">{course.technicalCategory || 'Development'}</span>
                                         <h4 className="mt-2 line-clamp-2 text-sm font-bold text-slate-900 dark:text-white">{course.courseTitle}</h4>
                                         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{course.level || 'Beginner'}</p>
-                                        <button onClick={() => navigate(`/courses/${course._id}`)} className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-blue-600 px-3 py-2 text-xs font-bold text-blue-600 transition-colors hover:bg-blue-600/10 dark:text-blue-400">
+                                        <button onClick={() => navigate(`/courses/${course._id}`)} className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-green-600 px-3 py-2 text-xs font-bold text-green-600 transition-colors hover:bg-green-600/10 dark:text-green-500">
                                             View Details <ArrowRight size={14} aria-hidden="true" />
                                         </button>
                                     </div>
@@ -194,7 +194,7 @@ export default function OverviewTab(dash) {
                                 <Lightbulb size={28} className="text-slate-400" aria-hidden="true" />
                                 <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No recommendations yet</p>
                                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Enrolling in courses helps us tailor suggestions for you.</p>
-                                <button onClick={() => navigate('/courses')} className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">Explore Courses</button>
+                                <button onClick={() => navigate('/courses')} className="mt-4 rounded-lg bg-green-600 px-4 py-2 text-xs font-bold text-white hover:bg-green-700">Explore Courses</button>
                             </div>
                         )}
                     </div>
@@ -205,7 +205,7 @@ export default function OverviewTab(dash) {
                     {/* Upcoming deadlines & schedule */}
                     <div className={card}>
                         <h3 className="mb-4 flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
-                            <CalendarDays size={16} className="text-blue-600 dark:text-blue-400" aria-hidden="true" /> Upcoming Deadlines &amp; Schedule
+                            <CalendarDays size={16} className="text-green-600 dark:text-green-500" aria-hidden="true" /> Upcoming Deadlines &amp; Schedule
                         </h3>
                         {scheduleItems.length > 0 ? (
                             <div className="space-y-3">
@@ -236,7 +236,7 @@ export default function OverviewTab(dash) {
                                 onClick={() => setNotificationTab('announcements')}
                                 className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-bold ${
                                     notificationTab === 'announcements'
-                                        ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                                        ? 'border-green-600 text-green-600 dark:border-green-500 dark:text-green-500'
                                         : 'border-transparent text-slate-500 dark:text-slate-400'
                                 }`}
                                 aria-label="Bulletins"
@@ -247,7 +247,7 @@ export default function OverviewTab(dash) {
                                 onClick={() => setNotificationTab('notifications')}
                                 className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-bold ${
                                     notificationTab === 'notifications'
-                                        ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                                        ? 'border-green-600 text-green-600 dark:border-green-500 dark:text-green-500'
                                         : 'border-transparent text-slate-500 dark:text-slate-400'
                                 }`}
                                 aria-label="Alerts"
@@ -262,7 +262,7 @@ export default function OverviewTab(dash) {
                                         <div className="flex items-start justify-between gap-2">
                                             <strong className="text-[13px] font-bold text-slate-900 dark:text-white">{item.title}</strong>
                                             {item._id && !item.isRead && (
-                                                <button onClick={() => handleMarkNotificationAsRead(item._id)} className="inline-flex shrink-0 items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                                                <button onClick={() => handleMarkNotificationAsRead(item._id)} className="inline-flex shrink-0 items-center gap-1 text-[10px] font-bold text-green-600 dark:text-green-500">
                                                     <CheckCircle2 size={12} aria-hidden="true" /> Read
                                                 </button>
                                             )}

@@ -21,7 +21,7 @@ export default function AboutPage() {
         wrapper: { maxWidth: '1200px', margin: '0 auto', padding: '100px 5%' },
         hero: { display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '40px', alignItems: 'center' },
         left: { display: 'flex', flexDirection: 'column', gap: '28px' },
-        badge: { display: 'inline-block', padding: '8px 22px', background: 'rgba(59,130,246,0.12)', color: '#60a5fa', borderRadius: '999px', fontWeight: '700', fontSize: '13px', letterSpacing: '0.12em', textTransform: 'uppercase', border: '1px solid rgba(59,130,246,0.24)' },
+        badge: { display: 'inline-block', padding: '8px 22px', background: 'rgba(34,197,94,0.12)', color: '#4ade80', borderRadius: '999px', fontWeight: '700', fontSize: '13px', letterSpacing: '0.12em', textTransform: 'uppercase', border: '1px solid rgba(34,197,94,0.24)' },
         title: { fontSize: '54px', fontWeight: '900', lineHeight: '1.03', margin: '0', color: colors.text, maxWidth: '700px' },
         description: { fontSize: '17px', lineHeight: '1.9', color: colors.textMuted, maxWidth: '760px' },
         card: { background: 'transparent', border: 'none', borderRadius: '28px', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', minHeight: '420px' },

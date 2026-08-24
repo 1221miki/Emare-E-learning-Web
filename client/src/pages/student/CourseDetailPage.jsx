@@ -118,7 +118,7 @@ export default function CourseDetailPage() {
                     </button>
                     <div style={{ display: 'flex', maxWidth: '1200px', margin: '0 auto', gap: '40px', flexWrap: 'wrap' }}>
                         <div style={{ flex: '1 1 600px' }}>
-                            <div style={{ color: '#3b82f6', fontWeight: '800', textTransform: 'uppercase', fontSize: '13px', marginBottom: '12px', letterSpacing: '1px' }}>
+                            <div style={{ color: '#22c55e', fontWeight: '800', textTransform: 'uppercase', fontSize: '13px', marginBottom: '12px', letterSpacing: '1px' }}>
                             {course.technicalCategory} &gt; {course.level || 'Beginner'}
                         </div>
                         <h1 style={{ fontSize: '40px', fontWeight: '900', margin: '0 0 16px', lineHeight: 1.2 }}>{course.courseTitle}</h1>
@@ -146,7 +146,7 @@ export default function CourseDetailPage() {
                                 <div style={{ fontSize: '12px', color: colors.textMuted }}>Created by</div>
                                 <Link
                                     to={`/instructors/${course.creatorRef?._id}`}
-                                    style={{ fontSize: '15px', fontWeight: '600', color: '#60a5fa', textDecoration: 'none' }}
+                                    style={{ fontSize: '15px', fontWeight: '600', color: '#4ade80', textDecoration: 'none' }}
                                 >
                                     {course.creatorRef?.fullName} ↗
                                 </Link>
@@ -163,7 +163,7 @@ export default function CourseDetailPage() {
                         {!isAuthenticated && (
                             <p style={{ color: colors.textMuted, fontSize: '12px', margin: '0 0 16px', lineHeight: 1.5 }}>▣ Login required to enroll and access full content.</p>
                         )}
-                        <button onClick={handleEnroll} disabled={enrolling} style={{ width: '100%', padding: '16px', background: isEnrolled ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: enrolling ? 'wait' : 'pointer', marginBottom: '12px', transition: 'transform 0.1s', boxShadow: isEnrolled ? '0 8px 20px rgba(16,185,129,0.3)' : '0 8px 20px rgba(59,130,246,0.3)', opacity: enrolling ? 0.7 : 1 }}>
+                        <button onClick={handleEnroll} disabled={enrolling} style={{ width: '100%', padding: '16px', background: isEnrolled ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #22c55e, #22c55e)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', cursor: enrolling ? 'wait' : 'pointer', marginBottom: '12px', transition: 'transform 0.1s', boxShadow: isEnrolled ? '0 8px 20px rgba(16,185,129,0.3)' : '0 8px 20px rgba(34,197,94,0.3)', opacity: enrolling ? 0.7 : 1 }}>
                             {!isAuthenticated ? '▣ Login to Enroll' : isEnrolled ? ' Already Enrolled' : enrolling ? '⏳ Processing...' : '▶ Enroll Now'}
                         </button>
                         {isEnrolled && (
@@ -285,7 +285,7 @@ export default function CourseDetailPage() {
                                     {showReviewForm ? 'Cancel' : 'Write a Review'}
                                 </button>
                             ) : (
-                                <button style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}
+                                <button style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#4ade80', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}
                                     onClick={() => setGuestModal({ open: true, action: 'write a review for this course' })}>
                                     ▣ Login to Review
                                 </button>
@@ -315,7 +315,7 @@ export default function CourseDetailPage() {
                                 {reviews.map(review => (
                                     <div key={review._id} style={{ borderBottom: `1px solid ${colors.border}`, paddingBottom: '20px' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#3b82f6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#22c55e', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
                                                 {review.studentRef?.avatarUrl ? (
                                                     <img src={review.studentRef.avatarUrl} alt={review.studentRef.fullName} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
                                                 ) : (

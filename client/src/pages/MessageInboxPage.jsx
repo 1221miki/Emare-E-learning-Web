@@ -113,7 +113,7 @@ export default function MessageInboxPage() {
                                 return (
                                     <div key={convo._id} onClick={() => loadMessages(convo)} style={{ padding: '20px 24px', borderBottom: `1px solid ${colors.border}`, background: isActive ? colors.bgInput : 'transparent', cursor: 'pointer', transition: 'background 0.2s' }}>
                                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                                            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: '800', flexShrink: 0 }}>
+                                            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #22c55e, #22c55e)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: '800', flexShrink: 0 }}>
                                                 {getConvoTitle(convo)?.[0]}
                                             </div>
                                             <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -139,7 +139,7 @@ export default function MessageInboxPage() {
                         <>
                             {/* Chat Header */}
                             <div style={{ padding: '24px', borderBottom: `1px solid ${colors.border}`, background: colors.bgCard, display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '800' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #22c55e, #22c55e)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '800' }}>
                                     {getConvoTitle(activeConvo)?.[0]}
                                 </div>
                                 <div>

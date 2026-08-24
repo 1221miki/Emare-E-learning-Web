@@ -28,7 +28,7 @@ export function getLiveStatus(event, now = Date.now()) {
 }
 
 export const LIVE_STATUS_META = {
-    upcoming: { label: 'Upcoming', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+    upcoming: { label: 'Upcoming', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
     live: { label: 'Live', color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
     completed: { label: 'Completed', color: '#64748b', bg: 'rgba(100,116,139,0.14)' },
     cancelled: { label: 'Cancelled', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },

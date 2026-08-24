@@ -52,18 +52,18 @@ export default function CourseSelector({ courses = [], selectedCourse, onSelect,
                         </option>
                     ))}
                 </select>
-                <ChevronDown size={15} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4f46e5', pointerEvents: 'none' }} aria-hidden="true" />
+                <ChevronDown size={15} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#16a34a', pointerEvents: 'none' }} aria-hidden="true" />
             </div>
 
             {/* Course meta pills */}
             {selectedCourse && (
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ background: '#dbeafe', color: '#1e40af', border: '2px solid #60a5fa', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}
+                    <span style={{ background: '#dcfce7', color: '#166534', border: '2px solid #4ade80', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}
                         >
                         <Users size={12} aria-hidden="true" /> {selectedCourse.totalEnrollments ?? 0} enrolled
                     </span>
                     {selectedCourse.level && (
-                        <span style={{ background: '#f3e8ff', color: '#6d28d9', border: '2px solid #d8b4fe', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: '600' }}>
+                        <span style={{ background: '#f3e8ff', color: '#166534', border: '2px solid #d8b4fe', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: '600' }}>
                             {selectedCourse.level}
                         </span>
                     )}

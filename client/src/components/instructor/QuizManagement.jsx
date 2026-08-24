@@ -190,21 +190,21 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
         }),
         questionCard: {
             background: '#f0f4ff', borderRadius: '12px', padding: '16px',
-            border: '2px solid #c7d2fe', marginBottom: '12px'
+            border: '2px solid #d1fae5', marginBottom: '12px'
         },
         typeBadge: (type) => ({
             padding: '2px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: '800',
             textTransform: 'uppercase', letterSpacing: '0.05em',
-            background: type === 'mcq' ? '#dbeafe' : type === 'tf' ? '#f3e8ff' : '#fce7f3',
-            color: type === 'mcq' ? '#1e40af' : type === 'tf' ? '#6d28d9' : '#be185d'
+            background: type === 'mcq' ? '#dcfce7' : type === 'tf' ? '#f3e8ff' : '#fce7f3',
+            color: type === 'mcq' ? '#166534' : type === 'tf' ? '#166534' : '#be185d'
         }),
         correctOption: {
             background: '#d1fae5', border: '2px solid #6ee7b7',
             borderRadius: '8px', padding: '6px 12px', fontSize: '12px', color: '#065f46', fontWeight: '600'
         },
         normalOption: {
-            background: '#f0f4ff', border: '2px solid #c7d2fe',
-            borderRadius: '8px', padding: '6px 12px', fontSize: '12px', color: '#4f46e5'
+            background: '#f0f4ff', border: '2px solid #d1fae5',
+            borderRadius: '8px', padding: '6px 12px', fontSize: '12px', color: '#16a34a'
         }
     };
 
@@ -257,7 +257,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px', marginBottom: '24px' }}>
                 <div style={s.panelCard}>
                     <span style={{ fontSize: '11px', color: colors.textMuted, fontWeight: 600, textTransform: 'uppercase' }}>Total Quizzes</span>
-                    <div style={{ fontSize: '28px', fontWeight: 800, color: '#3b82f6', marginTop: '4px' }}>{quizzes.length}</div>
+                    <div style={{ fontSize: '28px', fontWeight: 800, color: '#22c55e', marginTop: '4px' }}>{quizzes.length}</div>
                 </div>
                 <div style={s.panelCard}>
                     <span style={{ fontSize: '11px', color: colors.textMuted, fontWeight: 600, textTransform: 'uppercase' }}>Active</span>
@@ -265,7 +265,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
                 </div>
                 <div style={s.panelCard}>
                     <span style={{ fontSize: '11px', color: colors.textMuted, fontWeight: 600, textTransform: 'uppercase' }}>Total Questions</span>
-                    <div style={{ fontSize: '28px', fontWeight: 800, color: '#8b5cf6', marginTop: '4px' }}>{quizzes.reduce((sum, q) => sum + (q.questionArray?.length || 0), 0)}</div>
+                    <div style={{ fontSize: '28px', fontWeight: 800, color: '#22c55e', marginTop: '4px' }}>{quizzes.reduce((sum, q) => sum + (q.questionArray?.length || 0), 0)}</div>
                 </div>
             </div>
 
@@ -302,7 +302,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
                                         </div>
                                     </td>
                                     <td style={s.td}>
-                                        <span style={{ fontWeight: 700, color: '#8b5cf6' }}>{quiz.questionArray?.length || 0}</span>
+                                        <span style={{ fontWeight: 700, color: '#22c55e' }}>{quiz.questionArray?.length || 0}</span>
                                         <span style={{ color: colors.textMuted, fontSize: '12px' }}> questions</span>
                                     </td>
                                     <td style={s.td}>
@@ -445,7 +445,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
                             </div>
 
                             {/* Divider */}
-                            <div style={{ borderTop: '2px solid #e0e7ff', margin: '0 0 20px', paddingTop: '20px' }}>
+                            <div style={{ borderTop: '2px solid #dcfce7', margin: '0 0 20px', paddingTop: '20px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                     <div>
                                         <h4 style={{ margin: 0, color: colors.text, fontSize: '16px', fontWeight: 700 }}>
@@ -467,7 +467,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
 
                                 {/* Questions List */}
                                 {qForm.questionArray.length === 0 && !showQuestionForm && (
-                                    <div style={{ padding: '40px 20px', textAlign: 'center', border: '2px dashed #c7d2fe', borderRadius: '12px' }}>
+                                    <div style={{ padding: '40px 20px', textAlign: 'center', border: '2px dashed #d1fae5', borderRadius: '12px' }}>
                                         <FileQuestion size={36} style={{ color: colors.textMuted, marginBottom: '10px' }} />
                                         <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>No questions yet. Add your first question above.</p>
                                     </div>
@@ -477,7 +477,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
                                     <div key={idx} style={qs.questionCard}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '10px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-                                                <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '12px', flexShrink: 0 }}>
+                                                <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #22c55e, #22c55e)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '12px', flexShrink: 0 }}>
                                                     {idx + 1}
                                                 </span>
                                                 <span style={qs.typeBadge(q.type)}>
@@ -510,7 +510,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
                                         )}
                                         {q.type === 'short' && q.correctAnswers?.length > 0 && (
                                             <div style={{ paddingLeft: '38px', fontSize: '12px', color: colors.textMuted }}>
-                                                Expected: <strong style={{ color: '#3b82f6' }}>{q.correctAnswers.join(', ')}</strong>
+                                                Expected: <strong style={{ color: '#22c55e' }}>{q.correctAnswers.join(', ')}</strong>
                                             </div>
                                         )}
                                     </div>
@@ -518,8 +518,8 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
 
                                 {/* Add/Edit Question Form */}
                                 {showQuestionForm && (
-                                    <div style={{ background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '14px', padding: '20px', marginTop: '16px' }}>
-                                        <h4 style={{ margin: '0 0 16px', color: '#818cf8', fontSize: '14px', fontWeight: 700 }}>
+                                    <div style={{ background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '14px', padding: '20px', marginTop: '16px' }}>
+                                        <h4 style={{ margin: '0 0 16px', color: '#4ade80', fontSize: '14px', fontWeight: 700 }}>
                                             {editingQuestionIdx !== null ? '️ Edit Question' : '+ New Question'}
                                         </h4>
 
@@ -579,7 +579,7 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
                                                                 name="qCorrectAnswer"
                                                                 checked={questionForm.correctAnswerIndex === oIdx}
                                                                 onChange={() => setQuestionForm({ ...questionForm, correctAnswerIndex: oIdx })}
-                                                                style={{ accentColor: '#3b82f6', width: '16px', height: '16px', cursor: 'pointer' }}
+                                                                style={{ accentColor: '#22c55e', width: '16px', height: '16px', cursor: 'pointer' }}
                                                             />
                                                             <span style={{ color: colors.text, fontWeight: 700, width: '20px' }}>{String.fromCharCode(65 + oIdx)}.</span>
                                                             <input
@@ -603,11 +603,11 @@ export default function QuizManagement({ courses = [], colors = {}, s = {} }) {
                                                     <label style={{ ...s.label, marginBottom: '8px', display: 'block' }}>Correct Answer</label>
                                                     <div style={{ display: 'flex', gap: '16px' }}>
                                                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: colors.text, fontWeight: 600 }}>
-                                                            <input type="radio" name="tfAnswer" checked={questionForm.correctAnswerIndex === 0} onChange={() => setQuestionForm({ ...questionForm, correctAnswerIndex: 0 })} style={{ accentColor: '#3b82f6' }} />
+                                                            <input type="radio" name="tfAnswer" checked={questionForm.correctAnswerIndex === 0} onChange={() => setQuestionForm({ ...questionForm, correctAnswerIndex: 0 })} style={{ accentColor: '#22c55e' }} />
                                                             True
                                                         </label>
                                                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: colors.text, fontWeight: 600 }}>
-                                                            <input type="radio" name="tfAnswer" checked={questionForm.correctAnswerIndex === 1} onChange={() => setQuestionForm({ ...questionForm, correctAnswerIndex: 1 })} style={{ accentColor: '#3b82f6' }} />
+                                                            <input type="radio" name="tfAnswer" checked={questionForm.correctAnswerIndex === 1} onChange={() => setQuestionForm({ ...questionForm, correctAnswerIndex: 1 })} style={{ accentColor: '#22c55e' }} />
                                                             False
                                                         </label>
                                                     </div>

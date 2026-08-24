@@ -44,7 +44,7 @@ export default function StudentStatisticsCards({ analytics = {} }) {
     const cards = [
         {
             icon: <Users />,
-            color: '#3b82f6',
+            color: '#22c55e',
             label: 'Total Students',
             value: analytics.total?.toLocaleString() ?? '0',
             sub: `${analytics.active ?? 0} currently active`,
@@ -59,7 +59,7 @@ export default function StudentStatisticsCards({ analytics = {} }) {
         },
         {
             icon: <CheckCircle />,
-            color: '#6366f1',
+            color: '#22c55e',
             label: 'Completion Rate',
             value: `${analytics.completionRate ?? 0}%`,
             sub: `${analytics.completed ?? 0} completed · Avg ${analytics.avgProgress ?? 0}% progress`,

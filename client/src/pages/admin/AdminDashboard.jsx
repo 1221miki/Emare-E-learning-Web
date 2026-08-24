@@ -146,11 +146,11 @@ const formatDateShort = (dateStr) => {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 const statusChip = (live) => ({
-    upcoming: { label: 'Upcoming', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+    upcoming: { label: 'Upcoming', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
     live: { label: 'Ongoing', color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
     completed: { label: 'Completed', color: '#64748b', bg: 'rgba(100,116,139,0.14)' },
     cancelled: { label: 'Cancelled', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
-}[live] || { label: 'Upcoming', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' });
+}[live] || { label: 'Upcoming', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' });
 
 const copyToClipboard = async (text) => {
     try {
@@ -455,7 +455,7 @@ export default function AdminDashboard() {
     const [isAuditLoading, setIsAuditLoading] = useState(false);
     const [calendarEvents, setCalendarEvents] = useState([]);
     const [publicEvents, setPublicEvents] = useState([]);
-    const [calendarForm, setCalendarForm] = useState({ title: '', category: 'academic', description: '', startDate: '', endDate: '', location: '', isAllDay: false, color: '#2563eb', eventType: 'Hybrid', streamUrl: '', bannerImage: '', galleryImages: '', enableRegistration: true, capacity: '', price: 'FREE', instructor: '', eventStatus: 'SCHEDULED', eventCategory: 'Masterclass', visibility: 'internal', startTime: '10:00', endTime: '11:00', meetingProvider: 'googleMeet', meetingPlatform: 'googleMeet', meetingInvitees: '', meetingPassword: '' });
+    const [calendarForm, setCalendarForm] = useState({ title: '', category: 'academic', description: '', startDate: '', endDate: '', location: '', isAllDay: false, color: '#16a34a', eventType: 'Hybrid', streamUrl: '', bannerImage: '', galleryImages: '', enableRegistration: true, capacity: '', price: 'FREE', instructor: '', eventStatus: 'SCHEDULED', eventCategory: 'Masterclass', visibility: 'internal', startTime: '10:00', endTime: '11:00', meetingProvider: 'googleMeet', meetingPlatform: 'googleMeet', meetingInvitees: '', meetingPassword: '' });
     const [eventSearch, setEventSearch] = useState('');
     const [eventStatusFilter, setEventStatusFilter] = useState('all');
     const [eventCategoryFilter, setEventCategoryFilter] = useState('all');
@@ -1728,7 +1728,7 @@ const handleConnectGoogleMeet = async () => {
     };
 
 const resetCalendarForm = () => {
-        setCalendarForm({ title: '', category: 'academic', description: '', startDate: '', endDate: '', location: '', isAllDay: false, color: '#2563eb', eventType: 'Hybrid', streamUrl: '', bannerImage: '', galleryImages: '', enableRegistration: true, capacity: '', price: 'FREE', instructor: '', eventStatus: 'SCHEDULED', eventCategory: 'Masterclass', visibility: 'internal', startTime: '10:00', endTime: '11:00', meetingProvider: 'googleMeet', meetingPlatform: 'googleMeet', meetingInvitees: '', meetingId: '', meetingPassword: '' });
+        setCalendarForm({ title: '', category: 'academic', description: '', startDate: '', endDate: '', location: '', isAllDay: false, color: '#16a34a', eventType: 'Hybrid', streamUrl: '', bannerImage: '', galleryImages: '', enableRegistration: true, capacity: '', price: 'FREE', instructor: '', eventStatus: 'SCHEDULED', eventCategory: 'Masterclass', visibility: 'internal', startTime: '10:00', endTime: '11:00', meetingProvider: 'googleMeet', meetingPlatform: 'googleMeet', meetingInvitees: '', meetingId: '', meetingPassword: '' });
         setCalendarEditingId(null);
         setFormError('');
         setFormErrors({});
@@ -1890,7 +1890,7 @@ const resetCalendarForm = () => {
             meetingPassword: calendarForm.meetingPassword || '',
             isAllDay: Boolean(calendarForm.isAllDay),
             image: calendarForm.bannerImage || '',
-            color: calendarForm.color || '#2563eb',
+            color: calendarForm.color || '#16a34a',
             status: calendarForm.eventStatus === 'CANCELLED' ? 'CANCELLED' : 'SCHEDULED'
         };
     };
@@ -1969,7 +1969,7 @@ const resetCalendarForm = () => {
             endTime: toTimePart(event.endDate),
             location: isPublic ? (event.venue || '') : (event.location || ''),
             isAllDay: Boolean(event.isAllDay),
-            color: event.color || '#2563eb',
+            color: event.color || '#16a34a',
             eventType: event.eventType || 'Hybrid',
             streamUrl: event.meetingUrl || event.streamUrl || '',
             bannerImage: event.image || '',
@@ -2422,8 +2422,8 @@ const resetCalendarForm = () => {
 
     const renderSecurity = () => {
         const coreRoles = [
-            { icon: ShieldCheck, color: '#3b82f6', bg: 'rgba(59,130,246,0.15)', name: 'Super Admin', desc: 'Full system access', users: users.filter(u => u.assignedRole === 'Admin').length || 3, perms: '32', scope: 'System Wide', isCore: true },
-            { icon: Users, color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)', name: 'Instructor', desc: 'Manage courses & content', users: users.filter(u => u.assignedRole === 'Instructor').length || 126, perms: '18', scope: 'Courses', isCore: true },
+            { icon: ShieldCheck, color: '#22c55e', bg: 'rgba(34,197,94,0.15)', name: 'Super Admin', desc: 'Full system access', users: users.filter(u => u.assignedRole === 'Admin').length || 3, perms: '32', scope: 'System Wide', isCore: true },
+            { icon: Users, color: '#22c55e', bg: 'rgba(139,92,246,0.15)', name: 'Instructor', desc: 'Manage courses & content', users: users.filter(u => u.assignedRole === 'Instructor').length || 126, perms: '18', scope: 'Courses', isCore: true },
             { icon: GraduationCap, color: '#10b981', bg: 'rgba(16,185,129,0.15)', name: 'Student', desc: 'Access learning materials', users: users.filter(u => u.assignedRole === 'Student').length || 1045, perms: '8', scope: 'Enrolled Courses', isCore: true },
         ];
         const allRolesList = [...coreRoles, ...customRoles];
@@ -2487,7 +2487,7 @@ const resetCalendarForm = () => {
                     <button onClick={handleExportSystemReport} disabled={isExportingReport} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '0 16px', color: '#cbd5e1', fontSize: '13px', fontWeight: '500', cursor: 'pointer', opacity: isExportingReport ? 0.7 : 1 }}>
                         <Download size={16} /> {isExportingReport ? 'Exporting...' : 'Export Report'}
                     </button>
-                    <button onClick={() => setIsAddRoleModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#3b82f6', border: 'none', borderRadius: '8px', padding: '0 16px', color: colors.text, fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 0 15px rgba(59, 130, 246, 0.4)' }}>
+                    <button onClick={() => setIsAddRoleModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#22c55e', border: 'none', borderRadius: '8px', padding: '0 16px', color: colors.text, fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 0 15px rgba(59, 130, 246, 0.4)' }}>
                         <PlusCircle size={16} /> Add Role
                     </button>
                 </div>
@@ -2497,7 +2497,7 @@ const resetCalendarForm = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '16px', marginBottom: '24px' }}>
                 {/* 1. Total Users */}
                 <div style={{ background: colors.bgCard, borderRadius: '12px', padding: '16px', border: `1px solid ${colors.border}`, display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6', flexShrink: 0 }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22c55e', flexShrink: 0 }}>
                         <Users size={20} />
                     </div>
                     <div>
@@ -2525,7 +2525,7 @@ const resetCalendarForm = () => {
                 </div>
                 {/* 3. Failed Logins */}
                 <div style={{ background: colors.bgCard, borderRadius: '12px', padding: '16px', border: `1px solid ${colors.border}`, display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(139, 92, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b5cf6', flexShrink: 0 }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(139, 92, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22c55e', flexShrink: 0 }}>
                         <Lock size={20} />
                     </div>
                     <div>
@@ -2607,7 +2607,7 @@ const resetCalendarForm = () => {
                                             <div>
                                                 <div style={{ color: colors.text, fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                     {role.name}
-                                                    {!role.isCore && <span style={{ fontSize: '10px', background: 'rgba(59,130,246,0.15)', color: '#3b82f6', padding: '2px 6px', borderRadius: '4px' }}>Custom</span>}
+                                                    {!role.isCore && <span style={{ fontSize: '10px', background: 'rgba(34,197,94,0.15)', color: '#22c55e', padding: '2px 6px', borderRadius: '4px' }}>Custom</span>}
                                                 </div>
                                                 <div style={{ color: colors.textMuted, fontSize: '12px' }}>{role.desc}</div>
                                             </div>
@@ -2643,7 +2643,7 @@ const resetCalendarForm = () => {
                         </table>
                     </div>
                     <div style={{ padding: '16px', borderTop: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'center', marginTop: 'auto' }}>
-                        <button onClick={() => setIsManagePermissionsModalOpen(true)} style={{ background: 'transparent', border: '1px solid #3b82f6', color: '#3b82f6', borderRadius: '8px', padding: '8px 24px', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', transition: '0.2s', ':hover': { background: 'rgba(59,130,246,0.1)' } }}>
+                        <button onClick={() => setIsManagePermissionsModalOpen(true)} style={{ background: 'transparent', border: '1px solid #22c55e', color: '#22c55e', borderRadius: '8px', padding: '8px 24px', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', transition: '0.2s', ':hover': { background: 'rgba(34,197,94,0.1)' } }}>
                             <Settings size={14} /> Manage Roles & Permissions
                         </button>
                     </div>
@@ -2653,7 +2653,7 @@ const resetCalendarForm = () => {
                 <div style={{ background: colors.bgCard, borderRadius: '12px', border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ padding: '20px 24px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h3 style={{ fontSize: '16px', fontWeight: '600', color: colors.text, margin: 0 }}>Recent Security Events</h3>
-                        <button onClick={() => setActiveTab('audit')} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}>View All Logs -+'</button>
+                        <button onClick={() => setActiveTab('audit')} style={{ background: 'none', border: 'none', color: '#22c55e', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}>View All Logs -+'</button>
                     </div>
                     <div style={{ padding: '0', overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
@@ -2671,9 +2671,9 @@ const resetCalendarForm = () => {
                                 {[
                                     { icon: ShieldCheck, color: '#10b981', name: 'Successful Login', user: 'admin@emare.com', ip: '127.0.0.1', loc: 'Localhost', time: '2 min ago', status: 'Success', sColor: '#10b981', sBg: 'rgba(16,185,129,0.1)' },
                                     { icon: AlertTriangle, color: '#ef4444', name: 'Failed Login Attempt', user: 'unknown@example.com', ip: '102.185.23.45', loc: 'Nairobi, KE', time: '6 min ago', status: 'Failed', sColor: '#ef4444', sBg: 'rgba(239,68,68,0.1)' },
-                                    { icon: UserPlus, color: '#3b82f6', name: 'User Created', user: 'admin@emare.com', ip: '127.0.0.1', loc: 'Localhost', time: '15 min ago', status: 'Success', sColor: '#10b981', sBg: 'rgba(16,185,129,0.1)' },
+                                    { icon: UserPlus, color: '#22c55e', name: 'User Created', user: 'admin@emare.com', ip: '127.0.0.1', loc: 'Localhost', time: '15 min ago', status: 'Success', sColor: '#10b981', sBg: 'rgba(16,185,129,0.1)' },
                                     { icon: KeyRound, color: '#f59e0b', name: 'Role Updated', user: 'admin@emare.com', ip: '127.0.0.1', loc: 'Localhost', time: '32 min ago', status: 'Success', sColor: '#10b981', sBg: 'rgba(16,185,129,0.1)' },
-                                    { icon: Lock, color: '#8b5cf6', name: 'Password Changed', user: 'instructor@emare.com', ip: '197.234.12.10', loc: 'Addis Ababa, ET', time: '1 hr ago', status: 'Success', sColor: '#10b981', sBg: 'rgba(16,185,129,0.1)' },
+                                    { icon: Lock, color: '#22c55e', name: 'Password Changed', user: 'instructor@emare.com', ip: '197.234.12.10', loc: 'Addis Ababa, ET', time: '1 hr ago', status: 'Success', sColor: '#10b981', sBg: 'rgba(16,185,129,0.1)' },
                                     { icon: ShieldAlert, color: '#ef4444', name: 'Failed Login Attempt', user: 'hacker@malicious.com', ip: '185.220.101.2', loc: 'Moscow, RU', time: '2 hr ago', status: 'Blocked', sColor: '#ef4444', sBg: 'rgba(239,68,68,0.1)' }
                                 ].map((log, idx) => (
                                     <tr key={idx} style={{ borderBottom: idx < 5 ? '1px solid #334155' : 'none' }}>
@@ -2709,15 +2709,15 @@ const resetCalendarForm = () => {
                                 <AreaChart data={mockLoginActivity} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                                     <defs>
                                         <linearGradient id="colorLogins" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4}/>
+                                            <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
                                     <XAxis dataKey="date" stroke="#64748b" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                                     <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                                     <Tooltip contentStyle={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '8px', color: colors.text }} />
-                                    <Area type="monotone" dataKey="logins" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorLogins)" />
+                                    <Area type="monotone" dataKey="logins" stroke="#22c55e" strokeWidth={3} fillOpacity={1} fill="url(#colorLogins)" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
@@ -2747,7 +2747,7 @@ const resetCalendarForm = () => {
                 <div style={{ background: colors.bgCard, borderRadius: '12px', border: `1px solid ${colors.border}`, padding: '24px', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                         <h3 style={{ fontSize: '16px', fontWeight: '600', color: colors.text, margin: 0 }}>Security Status</h3>
-                        <button onClick={() => setActiveTab('audit')} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}>View Full Report -+'</button>
+                        <button onClick={() => setActiveTab('audit')} style={{ background: 'none', border: 'none', color: '#22c55e', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}>View Full Report -+'</button>
                     </div>
                     <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flex: 1 }}>
                         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -2798,12 +2798,12 @@ const resetCalendarForm = () => {
                 <div style={{ padding: '24px', minWidth: '450px' }}>
                     <div style={{ marginBottom: '20px' }}>
                         <label style={{ display: 'block', color: colors.textMuted, fontSize: '13px', fontWeight: '500', marginBottom: '8px' }}>Role Name <span style={{ color: '#ef4444' }}>*</span></label>
-                        <input type="text" value={newRoleForm.name} onChange={e => setNewRoleForm({...newRoleForm, name: e.target.value})} placeholder="e.g. Guest Instructor" style={{ width: '100%', background: colors.bgCard, border: `1px solid ${colors.border}`, padding: '12px 16px', borderRadius: '8px', color: colors.text, fontSize: '14px', outline: 'none', transition: '0.2s', ':focus': { borderColor: '#3b82f6' } }} />
+                        <input type="text" value={newRoleForm.name} onChange={e => setNewRoleForm({...newRoleForm, name: e.target.value})} placeholder="e.g. Guest Instructor" style={{ width: '100%', background: colors.bgCard, border: `1px solid ${colors.border}`, padding: '12px 16px', borderRadius: '8px', color: colors.text, fontSize: '14px', outline: 'none', transition: '0.2s', ':focus': { borderColor: '#22c55e' } }} />
                     </div>
                     
                     <div style={{ marginBottom: '20px' }}>
                         <label style={{ display: 'block', color: colors.textMuted, fontSize: '13px', fontWeight: '500', marginBottom: '8px' }}>Description</label>
-                        <textarea value={newRoleForm.description} onChange={e => setNewRoleForm({...newRoleForm, description: e.target.value})} placeholder="Briefly describe the purpose of this role..." rows="3" style={{ width: '100%', background: colors.bgCard, border: `1px solid ${colors.border}`, padding: '12px 16px', borderRadius: '8px', color: colors.text, fontSize: '14px', outline: 'none', resize: 'none', transition: '0.2s', ':focus': { borderColor: '#3b82f6' } }} />
+                        <textarea value={newRoleForm.description} onChange={e => setNewRoleForm({...newRoleForm, description: e.target.value})} placeholder="Briefly describe the purpose of this role..." rows="3" style={{ width: '100%', background: colors.bgCard, border: `1px solid ${colors.border}`, padding: '12px 16px', borderRadius: '8px', color: colors.text, fontSize: '14px', outline: 'none', resize: 'none', transition: '0.2s', ':focus': { borderColor: '#22c55e' } }} />
                     </div>
                     
                     <div style={{ marginBottom: '24px' }}>
@@ -2819,7 +2819,7 @@ const resetCalendarForm = () => {
                     <div style={{ marginBottom: '24px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                             <label style={{ color: colors.textMuted, fontSize: '13px', fontWeight: '500' }}>Assigned Permissions</label>
-                            <span style={{ fontSize: '12px', color: '#3b82f6', background: 'rgba(59,130,246,0.1)', padding: '2px 8px', borderRadius: '12px', fontWeight: '600' }}>{newRoleForm.selectedPerms.length} Selected</span>
+                            <span style={{ fontSize: '12px', color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '2px 8px', borderRadius: '12px', fontWeight: '600' }}>{newRoleForm.selectedPerms.length} Selected</span>
                         </div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                             {availablePerms.map(perm => {
@@ -2847,7 +2847,7 @@ const resetCalendarForm = () => {
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '16px', borderTop: `1px solid ${colors.border}` }}>
                         <button onClick={() => setIsAddRoleModalOpen(false)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: '#cbd5e1', padding: '10px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', transition: '0.2s', ':hover': { background: colors.bgCard } }}>Cancel</button>
-                        <button onClick={handleSaveNewRole} disabled={isCreatingRole} style={{ background: '#3b82f6', border: 'none', color: colors.text, padding: '10px 24px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: isCreatingRole ? 'not-allowed' : 'pointer', opacity: isCreatingRole ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}>
+                        <button onClick={handleSaveNewRole} disabled={isCreatingRole} style={{ background: '#22c55e', border: 'none', color: colors.text, padding: '10px 24px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: isCreatingRole ? 'not-allowed' : 'pointer', opacity: isCreatingRole ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(34,197,94,0.3)' }}>
                             {isCreatingRole ? 'Creating...' : <><PlusCircle size={16} /> Create Role</>}
                         </button>
                     </div>
@@ -2874,13 +2874,13 @@ const resetCalendarForm = () => {
                                     <tr key={row.id} style={{ borderBottom: `1px solid ${colors.border}` }}>
                                         <td style={{ padding: '16px', color: '#e2e8f0' }}>{row.label}</td>
                                         <td style={{ padding: '16px', textAlign: 'center' }}>
-                                            <input type="checkbox" checked={row.a} onChange={(e) => handlePermissionToggle(i, 'a', e.target.checked)} style={{ accentColor: '#3b82f6', cursor: 'pointer', width: '16px', height: '16px' }} />
+                                            <input type="checkbox" checked={row.a} onChange={(e) => handlePermissionToggle(i, 'a', e.target.checked)} style={{ accentColor: '#22c55e', cursor: 'pointer', width: '16px', height: '16px' }} />
                                         </td>
                                         <td style={{ padding: '16px', textAlign: 'center' }}>
-                                            <input type="checkbox" checked={row.i} onChange={(e) => handlePermissionToggle(i, 'i', e.target.checked)} style={{ accentColor: '#3b82f6', cursor: 'pointer', width: '16px', height: '16px' }} />
+                                            <input type="checkbox" checked={row.i} onChange={(e) => handlePermissionToggle(i, 'i', e.target.checked)} style={{ accentColor: '#22c55e', cursor: 'pointer', width: '16px', height: '16px' }} />
                                         </td>
                                         <td style={{ padding: '16px', textAlign: 'center' }}>
-                                            <input type="checkbox" checked={row.s} onChange={(e) => handlePermissionToggle(i, 's', e.target.checked)} style={{ accentColor: '#3b82f6', cursor: 'pointer', width: '16px', height: '16px' }} />
+                                            <input type="checkbox" checked={row.s} onChange={(e) => handlePermissionToggle(i, 's', e.target.checked)} style={{ accentColor: '#22c55e', cursor: 'pointer', width: '16px', height: '16px' }} />
                                         </td>
                                     </tr>
                                 ))}
@@ -2889,7 +2889,7 @@ const resetCalendarForm = () => {
                     </div>
                     
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
-                        <button onClick={handleSavePermissions} disabled={isSavingPermissions} style={{ background: '#3b82f6', border: 'none', color: colors.text, padding: '10px 24px', borderRadius: '8px', fontWeight: '600', cursor: isSavingPermissions ? 'not-allowed' : 'pointer', opacity: isSavingPermissions ? 0.7 : 1 }}>
+                        <button onClick={handleSavePermissions} disabled={isSavingPermissions} style={{ background: '#22c55e', border: 'none', color: colors.text, padding: '10px 24px', borderRadius: '8px', fontWeight: '600', cursor: isSavingPermissions ? 'not-allowed' : 'pointer', opacity: isSavingPermissions ? 0.7 : 1 }}>
                             {isSavingPermissions ? 'Saving...' : 'Apply Changes'}
                         </button>
                     </div>
@@ -3085,9 +3085,9 @@ const resetCalendarForm = () => {
 
     const renderCourses = () => {
         const screenshotData = [
-            { id: 'COURSE-001', title: 'Web Development Fundamentals', instructor: 'Daniel Berhe', img: 'https://i.pravatar.cc/150?u=daniel', category: 'Programming', catColor: '#10b981', catBg: 'rgba(16,185,129,0.15)', students: 245, status: 'Published', statusColor: '#10b981', statusBg: 'rgba(16,185,129,0.15)', date: 'May 20, 2024', iconBg: '#1e3a8a', icon: <Monitor size={20} color="#60a5fa" /> },
-            { id: 'COURSE-002', title: 'Introduction to Artificial Intelligence', instructor: 'Selam M.', img: 'https://i.pravatar.cc/150?u=selam', category: 'AI & ML', catColor: '#3b82f6', catBg: 'rgba(59,130,246,0.15)', students: 198, status: 'Published', statusColor: '#10b981', statusBg: 'rgba(16,185,129,0.15)', date: 'May 18, 2024', iconBg: '#1e1b4b', icon: <CheckCircle2 size={20} color="#818cf8" /> },
-            { id: 'COURSE-003', title: 'Database Management Systems', instructor: 'Yonas A.', img: 'https://i.pravatar.cc/150?u=yonas', category: 'Database', catColor: '#8b5cf6', catBg: 'rgba(139,92,246,0.15)', students: 176, status: 'Published', statusColor: '#10b981', statusBg: 'rgba(16,185,129,0.15)', date: 'May 15, 2024', iconBg: '#2e1065', icon: <Database size={20} color="#a78bfa" /> },
+            { id: 'COURSE-001', title: 'Web Development Fundamentals', instructor: 'Daniel Berhe', img: 'https://i.pravatar.cc/150?u=daniel', category: 'Programming', catColor: '#10b981', catBg: 'rgba(16,185,129,0.15)', students: 245, status: 'Published', statusColor: '#10b981', statusBg: 'rgba(16,185,129,0.15)', date: 'May 20, 2024', iconBg: '#14532d', icon: <Monitor size={20} color="#4ade80" /> },
+            { id: 'COURSE-002', title: 'Introduction to Artificial Intelligence', instructor: 'Selam M.', img: 'https://i.pravatar.cc/150?u=selam', category: 'AI & ML', catColor: '#22c55e', catBg: 'rgba(34,197,94,0.15)', students: 198, status: 'Published', statusColor: '#10b981', statusBg: 'rgba(16,185,129,0.15)', date: 'May 18, 2024', iconBg: '#1e1b4b', icon: <CheckCircle2 size={20} color="#4ade80" /> },
+            { id: 'COURSE-003', title: 'Database Management Systems', instructor: 'Yonas A.', img: 'https://i.pravatar.cc/150?u=yonas', category: 'Database', catColor: '#22c55e', catBg: 'rgba(139,92,246,0.15)', students: 176, status: 'Published', statusColor: '#10b981', statusBg: 'rgba(16,185,129,0.15)', date: 'May 15, 2024', iconBg: '#2e1065', icon: <Database size={20} color="#4ade80" /> },
             { id: 'COURSE-004', title: 'UI/UX Design Principles', instructor: 'Meseret T.', img: 'https://i.pravatar.cc/150?u=meseret', category: 'Design', catColor: '#f59e0b', catBg: 'rgba(245,158,11,0.15)', students: 134, status: 'Draft', statusColor: '#f59e0b', statusBg: 'rgba(245,158,11,0.15)', date: 'May 10, 2024', iconBg: '#4c1d95', icon: <Palette size={20} color="#c084fc" /> },
             { id: 'COURSE-005', title: 'Cybersecurity Essentials', instructor: 'Mekdes G.', img: 'https://i.pravatar.cc/150?u=mekdes', category: 'Security', catColor: '#ef4444', catBg: 'rgba(239,68,68,0.15)', students: 95, status: 'Draft', statusColor: '#f59e0b', statusBg: 'rgba(245,158,11,0.15)', date: 'May 8, 2024', iconBg: '#022c22', icon: <Shield size={20} color="#34d399" /> },
         ];
@@ -3123,7 +3123,7 @@ const resetCalendarForm = () => {
             'Published': { color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
             'Active': { color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
             'Draft': { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-            'Pending Review': { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+            'Pending Review': { color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
             'Archived': { color: colors.textMuted, bg: 'rgba(100,116,139,0.12)' },
         };
 
@@ -3136,19 +3136,19 @@ const resetCalendarForm = () => {
                 instructor: c.creatorRef?.fullName || c.assignedInstructorRef?.fullName || 'Unassigned',
                 img: c.creatorRef?.avatarUrl || `https://i.pravatar.cc/150?u=${c._id}`,
                 category: c.technicalCategory || 'General',
-                catColor: '#3b82f6', catBg: 'rgba(59,130,246,0.12)',
+                catColor: '#22c55e', catBg: 'rgba(34,197,94,0.12)',
                 students: c.totalEnrollments || 0,
                 status: st,
                 statusColor: sc.color,
                 statusBg: sc.bg,
                 date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '-"',
-                iconBg: '#1e3a8a', icon: <BookOpen size={20} color="#60a5fa" />,
+                iconBg: '#14532d', icon: <BookOpen size={20} color="#4ade80" />,
                 _id: c._id, isFeatured: c.isFeatured, raw: c
             };
         }) : screenshotData;
 
         const statCards = [
-            { label: 'Total Courses', value: totalCourses, trend: '+8 this month', iconBg: 'rgba(59,130,246,0.1)', iconColor: '#3b82f6', icon: <BookOpen size={26} /> },
+            { label: 'Total Courses', value: totalCourses, trend: '+8 this month', iconBg: 'rgba(34,197,94,0.1)', iconColor: '#22c55e', icon: <BookOpen size={26} /> },
             { label: 'Published Courses', value: publishedCourses, trend: '+6 this month', iconBg: 'rgba(16,185,129,0.1)', iconColor: '#10b981', icon: <GraduationCap size={26} /> },
             { label: 'Draft Courses', value: draftCourses, trend: '+1 this month', iconBg: 'rgba(245,158,11,0.1)', iconColor: '#f59e0b', icon: <FilePen size={26} /> },
             { label: 'Total Enrollments', value: totalEnrollments.toLocaleString(), trend: '+156 this month', iconBg: 'rgba(168,85,247,0.1)', iconColor: '#a855f7', icon: <Users size={26} /> },
@@ -3162,12 +3162,12 @@ const resetCalendarForm = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
                         <div>
                             <h2 style={{ fontSize: '28px', fontWeight: '700', color: colors.text, margin: '0 0 8px 0' }}>Course Management</h2>
-                            <p style={{ fontSize: '14px', color: colors.textMuted, margin: 0 }}>Dashboard &gt; <span style={{ color: '#3b82f6', fontWeight: '500' }}>Course Management</span></p>
+                            <p style={{ fontSize: '14px', color: colors.textMuted, margin: 0 }}>Dashboard &gt; <span style={{ color: '#22c55e', fontWeight: '500' }}>Course Management</span></p>
                         </div>
                         {selectedCourses.length > 0 ? (
                             /* Contextual Multi-Select Bulk Actions Bar */
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '6px 14px', borderRadius: '12px', animation: 'fadeIn 0.2s' }}>
-                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#1d4ed8', paddingRight: '8px', borderRight: '1px solid #bfdbfe' }}>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '6px 14px', borderRadius: '12px', animation: 'fadeIn 0.2s' }}>
+                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#15803d', paddingRight: '8px', borderRight: '1px solid #bbf7d0' }}>
                                     {selectedCourses.length} Selected
                                 </span>
                                 <button onClick={handleBulkPublish} title="Publish Selected" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#10b981', color: colors.text, border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
@@ -3206,13 +3206,13 @@ const resetCalendarForm = () => {
                                 <div style={{ position: 'relative', display: 'flex' }}>
                                     <button
                                         onClick={() => setActiveTab('course_builder')}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#2563eb', border: 'none', borderTopLeftRadius: '10px', borderBottomLeftRadius: '10px', padding: '0 18px', height: '40px', color: colors.text, fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 15px rgba(37,99,235,0.3)' }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#16a34a', border: 'none', borderTopLeftRadius: '10px', borderBottomLeftRadius: '10px', padding: '0 18px', height: '40px', color: colors.text, fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 15px rgba(22,163,74,0.3)' }}
                                     >
                                         <PlusCircle size={16} /> Add New Course
                                     </button>
                                     <button
                                         onClick={() => setIsAddCourseDropdownOpen(!isAddCourseDropdownOpen)}
-                                        style={{ background: '#1d4ed8', border: 'none', borderLeft: '1px solid rgba(255,255,255,0.2)', borderTopRightRadius: '10px', borderBottomRightRadius: '10px', padding: '0 10px', height: '40px', color: colors.text, cursor: 'pointer' }}
+                                        style={{ background: '#15803d', border: 'none', borderLeft: '1px solid rgba(255,255,255,0.2)', borderTopRightRadius: '10px', borderBottomRightRadius: '10px', padding: '0 10px', height: '40px', color: colors.text, cursor: 'pointer' }}
                                     >
                                         <ChevronDown size={16} />
                                     </button>
@@ -3226,7 +3226,7 @@ const resetCalendarForm = () => {
                                                 onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
                                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                             >
-                                                <PlusCircle size={15} color="#2563eb" /> Create Blank Course
+                                                <PlusCircle size={15} color="#16a34a" /> Create Blank Course
                                             </button>
                                             <button
                                                 onClick={() => { setIsAddCourseDropdownOpen(false); setIsAiCourseGenModalOpen(true); }}
@@ -3234,7 +3234,7 @@ const resetCalendarForm = () => {
                                                 onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
                                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                             >
-                                                <Bot size={15} color="#8b5cf6" /> Generate with AI  <Wand2 size={16} style={{ marginRight: '6px' }} /> 
+                                                <Bot size={15} color="#22c55e" /> Generate with AI  <Wand2 size={16} style={{ marginRight: '6px' }} /> 
                                             </button>
                                             <button
                                                 onClick={() => { setIsAddCourseDropdownOpen(false); alert('Course Layout Templates loaded.'); }}
@@ -3336,7 +3336,7 @@ const resetCalendarForm = () => {
                                             </td>
                                             <td style={{ padding: '16px 24px' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #bfdbfe' }}>
+                                                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#f0fdf4', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #bbf7d0' }}>
                                                         <User size={16} />
                                                     </div>
                                                     <span style={{ fontSize: '14px', color: '#374151', fontWeight: '500', whiteSpace: 'nowrap' }}>{course.instructor}</span>
@@ -3387,7 +3387,7 @@ const resetCalendarForm = () => {
                             <div style={{ display: 'flex', gap: '6px' }}>
                                 <button style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.textMuted, cursor: 'pointer' }}><ChevronLeft size={16} /></button>
                                 {[1, 2, 3].map(n => (
-                                    <button key={n} style={{ background: n === 1 ? '#2563eb' : '#fff', border: n === 1 ? 'none' : '1px solid #e2e8f0', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: n === 1 ? '#fff' : '#475569', fontWeight: n === 1 ? '700' : '500', fontSize: '14px', cursor: 'pointer', boxShadow: n === 1 ? '0 2px 8px rgba(37,99,235,0.3)' : 'none' }}>{n}</button>
+                                    <button key={n} style={{ background: n === 1 ? '#16a34a' : '#fff', border: n === 1 ? 'none' : '1px solid #e2e8f0', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: n === 1 ? '#fff' : '#475569', fontWeight: n === 1 ? '700' : '500', fontSize: '14px', cursor: 'pointer', boxShadow: n === 1 ? '0 2px 8px rgba(22,163,74,0.3)' : 'none' }}>{n}</button>
                                 ))}
                                 <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', color: colors.textMuted, fontSize: '18px', fontWeight: '700' }}>...</span>
                                 <button style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text, fontWeight: '500', fontSize: '14px', cursor: 'pointer' }}>12</button>
@@ -3428,9 +3428,9 @@ const resetCalendarForm = () => {
 
     const renderContent = () => {
         const contentTypeConfig = {
-            'Video Lecture': { icon: <Video size={16} style={{ marginRight: '6px' }} />, color: '#3b82f6', bg: '#eff6ff' },
+            'Video Lecture': { icon: <Video size={16} style={{ marginRight: '6px' }} />, color: '#22c55e', bg: '#f0fdf4' },
             'PDF':           { icon: <FileText size={16} style={{ marginRight: '6px' }} />, color: '#ef4444', bg: '#fef2f2' },
-            'Quiz':          { icon: <HelpCircle size={16} style={{ marginRight: '6px' }} />, color: '#8b5cf6', bg: '#f5f3ff' },
+            'Quiz':          { icon: <HelpCircle size={16} style={{ marginRight: '6px' }} />, color: '#22c55e', bg: '#f5f3ff' },
             'Assignment':    { icon: <Clipboard size={16} style={{ marginRight: '6px' }} />, color: '#f59e0b', bg: '#fffbeb' },
             'Exam':          { icon: <Pin size={16} style={{ marginRight: '6px' }} />, color: '#0891b2', bg: '#ecfeff' },
             'Audio':         { icon: <Headphones size={16} style={{ marginRight: '6px' }} />, color: '#10b981', bg: '#f0fdf4' },
@@ -3489,7 +3489,7 @@ const resetCalendarForm = () => {
         };
 
         const statsData = [
-            { label: 'Total Content',    value: moderationItems.length, icon: <Folder size={16} style={{ marginRight: '6px' }} />, color: '#3b82f6', bg: '#eff6ff' },
+            { label: 'Total Content',    value: moderationItems.length, icon: <Folder size={16} style={{ marginRight: '6px' }} />, color: '#22c55e', bg: '#f0fdf4' },
             { label: 'Pending Review',   value: moderationItems.filter(i => i.status === 'Pending').length, icon: '-3', color: '#f59e0b', bg: '#fffbeb' },
             { label: 'Approved',         value: moderationItems.filter(i => i.status === 'Approved').length, icon: <CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} />, color: '#10b981', bg: '#f0fdf4' },
             { label: 'Rejected',         value: moderationItems.filter(i => i.status === 'Rejected').length, icon: <XCircle size={16} style={{ marginRight: '6px', color: '#ef4444' }} />, color: '#ef4444', bg: '#fef2f2' },
@@ -3515,7 +3515,7 @@ const resetCalendarForm = () => {
                              <RefreshCw size={16} style={{ marginRight: '6px' }} />  Refresh
                         </button>
                         <button onClick={() => { const csv = ['Title,Course,Instructor,Type,Status,Reports,Date'].concat(filteredItems.map(i => `"${i.title}","${i.course}","${i.instructor}","${i.type}","${i.status}",${i.reports},"${i.date}"`)).join('\n'); const blob = new Blob([csv], { type: 'text/csv' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'moderation_report.csv'; link.click(); showNotification('Export downloaded.'); }}
-                            style={{ ...inputStyle, background: '#2563eb', color: colors.text, border: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            style={{ ...inputStyle, background: '#16a34a', color: colors.text, border: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
                              <Upload size={16} style={{ marginRight: '6px' }} />  Export Report
                         </button>
                     </div>
@@ -3543,8 +3543,8 @@ const resetCalendarForm = () => {
 
                         {/* Bulk Action Toolbar */}
                         {selectedModerationItems.length > 0 && (
-                            <div style={{ padding: '10px 20px', background: '#eff6ff', borderBottom: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                <span style={{ fontWeight: '700', fontSize: '13px', color: '#2563eb' }}>{selectedModerationItems.length} selected</span>
+                            <div style={{ padding: '10px 20px', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: '700', fontSize: '13px', color: '#16a34a' }}>{selectedModerationItems.length} selected</span>
                                 <button onClick={() => handleBulkModAction('approve')} style={{ ...inputStyle, background: '#10b981', color: colors.text, border: 'none', padding: '6px 14px' }}> <CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} />  Approve</button>
                                 <button onClick={() => handleBulkModAction('reject')}  style={{ ...inputStyle, background: '#ef4444', color: colors.text, border: 'none', padding: '6px 14px' }}> <XCircle size={16} style={{ marginRight: '6px', color: '#ef4444' }} />  Reject</button>
                                 <button onClick={() => handleBulkModAction('archive')} style={{ ...inputStyle, background: '#64748b', color: colors.text, border: 'none', padding: '6px 14px' }}> <Package size={16} style={{ marginRight: '6px' }} />  Archive</button>
@@ -3604,7 +3604,7 @@ const resetCalendarForm = () => {
                                         const statConf = statusConfig[item.status] || { color: colors.textMuted, bg: '#f8fafc', icon: '--' };
                                         const isSelected = selectedModerationItems.includes(item.id);
                                         return (
-                                            <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', background: isSelected ? '#eff6ff' : 'transparent', transition: 'background 0.15s' }}
+                                            <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', background: isSelected ? '#f0fdf4' : 'transparent', transition: 'background 0.15s' }}
                                                 onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#fafafa'; }}
                                                 onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}>
                                                 <td style={{ padding: '14px 16px' }}><input type="checkbox" checked={isSelected} onChange={() => setSelectedModerationItems(prev => isSelected ? prev.filter(id => id !== item.id) : [...prev, item.id])} /></td>
@@ -3639,7 +3639,7 @@ const resetCalendarForm = () => {
                                                 </td>
                                                 <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                                                     <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                                                        <button title="Review" onClick={() => { setReviewItem(item); setIsReviewDrawerOpen(true); }} style={{ padding: '5px 9px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', cursor: 'pointer', fontSize: '0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}> <Eye size={16} /> </button>
+                                                        <button title="Review" onClick={() => { setReviewItem(item); setIsReviewDrawerOpen(true); }} style={{ padding: '5px 9px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', cursor: 'pointer', fontSize: '0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}> <Eye size={16} /> </button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -3660,7 +3660,7 @@ const resetCalendarForm = () => {
                             <div style={{ display: 'flex', gap: '6px' }}>
                                 <button disabled={moderationCurrentPage === 1} onClick={() => setModerationCurrentPage(p => p - 1)} style={{ ...inputStyle, padding: '6px 12px', opacity: moderationCurrentPage === 1 ? 0.4 : 1 }}>-+? Prev</button>
                                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
-                                    <button key={n} onClick={() => setModerationCurrentPage(n)} style={{ ...inputStyle, padding: '6px 12px', background: n === moderationCurrentPage ? '#2563eb' : '#fff', color: n === moderationCurrentPage ? '#fff' : '#334155', fontWeight: n === moderationCurrentPage ? '700' : '500', border: n === moderationCurrentPage ? 'none' : '1px solid #e2e8f0' }}>{n}</button>
+                                    <button key={n} onClick={() => setModerationCurrentPage(n)} style={{ ...inputStyle, padding: '6px 12px', background: n === moderationCurrentPage ? '#16a34a' : '#fff', color: n === moderationCurrentPage ? '#fff' : '#334155', fontWeight: n === moderationCurrentPage ? '700' : '500', border: n === moderationCurrentPage ? 'none' : '1px solid #e2e8f0' }}>{n}</button>
                                 ))}
                                 <button disabled={moderationCurrentPage === totalPages} onClick={() => setModerationCurrentPage(p => p + 1)} style={{ ...inputStyle, padding: '6px 12px', opacity: moderationCurrentPage === totalPages ? 0.4 : 1 }}>Next -+'</button>
                             </div>
@@ -3728,7 +3728,7 @@ const resetCalendarForm = () => {
                                         ].map(({ key, label }) => (
                                             <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13px', color: colors.text }}>
                                                 <input type="checkbox" checked={checklistData[key]} onChange={e => setChecklistData(prev => ({ ...prev, [key]: e.target.checked }))}
-                                                    style={{ width: '16px', height: '16px', accentColor: '#2563eb', cursor: 'pointer' }} />
+                                                    style={{ width: '16px', height: '16px', accentColor: '#16a34a', cursor: 'pointer' }} />
                                                 <span style={{ textDecoration: checklistData[key] ? 'none' : 'line-through', color: checklistData[key] ? '#334155' : '#94a3b8' }}>{label}</span>
                                                 {checklistData[key] ? <span style={{ marginLeft: 'auto', color: '#10b981', fontSize: '12px' }}> <Check size={16} style={{ marginRight: '6px' }} />  Pass</span> : <span style={{ marginLeft: 'auto', color: '#ef4444', fontSize: '12px' }}> <AlertTriangle size={16} style={{ marginRight: '6px', color: '#f59e0b' }} />  Fail</span>}
                                             </label>
@@ -3799,14 +3799,14 @@ const resetCalendarForm = () => {
         const statusBadges = {
             'Active':    { icon: <CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} />, color: '#10b981', bg: '#f0fdf4' },
             'Draft':     { icon: <FilePen size={16} style={{ marginRight: '6px' }} />, color: '#f59e0b', bg: '#fffbeb' },
-            'Scheduled': { icon: <Calendar size={16} style={{ marginRight: '6px' }} />, color: '#3b82f6', bg: '#eff6ff' },
-            'Completed': { icon: <GraduationCap size={16} style={{ marginRight: '6px' }} />, color: '#8b5cf6', bg: '#f5f3ff' },
+            'Scheduled': { icon: <Calendar size={16} style={{ marginRight: '6px' }} />, color: '#22c55e', bg: '#f0fdf4' },
+            'Completed': { icon: <GraduationCap size={16} style={{ marginRight: '6px' }} />, color: '#22c55e', bg: '#f5f3ff' },
             'Expired':   { icon: <XCircle size={16} style={{ marginRight: '6px', color: '#ef4444' }} />, color: '#ef4444', bg: '#fef2f2' },
             'Revoked':   { icon: <Ban size={16} style={{ marginRight: '6px', color: '#ef4444' }} />, color: colors.textMuted, bg: '#f8fafc' },
         };
         const typeBadges = {
-            'Quiz':       { icon: <HelpCircle size={16} style={{ marginRight: '6px' }} />, color: '#3b82f6', bg: '#eff6ff' },
-            'Exam':       { icon: <FilePen size={16} style={{ marginRight: '6px' }} />, color: '#8b5cf6', bg: '#f5f3ff' },
+            'Quiz':       { icon: <HelpCircle size={16} style={{ marginRight: '6px' }} />, color: '#22c55e', bg: '#f0fdf4' },
+            'Exam':       { icon: <FilePen size={16} style={{ marginRight: '6px' }} />, color: '#22c55e', bg: '#f5f3ff' },
             'Assignment': { icon: <Clipboard size={16} style={{ marginRight: '6px' }} />, color: '#f59e0b', bg: '#fffbeb' },
         };
 
@@ -3877,10 +3877,10 @@ const resetCalendarForm = () => {
         };
 
         const statsData = [
-            { label: 'Total Assessments',  value: assessmentsList.length, icon: <FilePen size={20} color="#3b82f6" />, color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)' },
+            { label: 'Total Assessments',  value: assessmentsList.length, icon: <FilePen size={20} color="#22c55e" />, color: '#22c55e', bg: 'rgba(59, 130, 246, 0.12)' },
             { label: 'Active Assessments', value: assessmentsList.filter(a => a.status === 'Active').length, icon: <CheckCircle2 size={20} color="#10b981" />, color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
             { label: 'Pending / Draft',    value: assessmentsList.filter(a => a.status === 'Draft' || a.status === 'Scheduled').length, icon: <Clock size={20} color="#f59e0b" />, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' },
-            { label: 'Total Attempts',     value: assessmentsList.reduce((acc, a) => acc + a.attempts, 0), icon: <BarChart3 size={20} color="#8b5cf6" />, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' },
+            { label: 'Total Attempts',     value: assessmentsList.reduce((acc, a) => acc + a.attempts, 0), icon: <BarChart3 size={20} color="#22c55e" />, color: '#22c55e', bg: 'rgba(139, 92, 246, 0.12)' },
             { label: 'Average Score',      value: `${(assessmentsList.filter(a => a.avgScore > 0).reduce((acc, a) => acc + a.avgScore, 0) / (assessmentsList.filter(a => a.avgScore > 0).length || 1)).toFixed(1)}%`, icon: <TrendingUp size={20} color="#0891b2" />, color: '#0891b2', bg: 'rgba(8, 145, 178, 0.12)' },
             { label: 'Certificates Issued', value: certificateRecords.length, icon: <Medal size={20} color="#ec4899" />, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.12)' },
         ];
@@ -3895,12 +3895,12 @@ const resetCalendarForm = () => {
                     <div>
                         <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Dashboard -+' Assessment & Certificate</div>
                         <h2 style={{ fontSize: '24px', fontWeight: '800', color: colors.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Medal size={22} color="#3b82f6" /> Assessment & Certificate Control Center
+                            <Medal size={22} color="#22c55e" /> Assessment & Certificate Control Center
                         </h2>
                         <p style={{ fontSize: '13px', color: colors.textMuted, margin: '4px 0 0' }}>Configure, oversee, auto-grade, and manage assessments, quizzes, gradebooks, and digital certificates across the LMS.</p>
                     </div>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        <button onClick={() => setIsCreateAsmOpen(true)} style={{ ...inp, background: '#2563eb', color: '#ffffff', border: 'none', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button onClick={() => setIsCreateAsmOpen(true)} style={{ ...inp, background: '#16a34a', color: '#ffffff', border: 'none', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <Plus size={16} /> Create Assessment
                         </button>
                         <button onClick={() => handleOpenTemplateModal()} style={{ ...inp, background: colors.bgCard, color: colors.text, display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -3939,8 +3939,8 @@ const resetCalendarForm = () => {
                                 padding: '10px 18px',
                                 border: 'none',
                                 background: 'transparent',
-                                borderBottom: asmTabSubView === t.key ? '3px solid #2563eb' : '3px solid transparent',
-                                color: asmTabSubView === t.key ? '#3b82f6' : colors.textMuted,
+                                borderBottom: asmTabSubView === t.key ? '3px solid #16a34a' : '3px solid transparent',
+                                color: asmTabSubView === t.key ? '#22c55e' : colors.textMuted,
                                 fontWeight: asmTabSubView === t.key ? '700' : '500',
                                 fontSize: '13px',
                                 cursor: 'pointer',
@@ -3961,8 +3961,8 @@ const resetCalendarForm = () => {
 
                         {/* Bulk Action Toolbar */}
                         {selectedAsmRows.length > 0 && (
-                            <div style={{ padding: '10px 20px', background: '#eff6ff', borderBottom: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                <span style={{ fontWeight: '700', fontSize: '13px', color: '#2563eb' }}>{selectedAsmRows.length} selected</span>
+                            <div style={{ padding: '10px 20px', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: '700', fontSize: '13px', color: '#16a34a' }}>{selectedAsmRows.length} selected</span>
                                 <button onClick={() => handleBulkAsmAction('publish')}   style={{ ...inp, background: '#10b981', color: colors.text, border: 'none', padding: '6px 14px' }}> <CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} />  Publish</button>
                                 <button onClick={() => handleBulkAsmAction('unpublish')} style={{ ...inp, background: 'rgba(245,158,11,0.15)', color: '#b45309', border: '1px solid rgba(245,158,11,0.35)', padding: '6px 14px' }}> <FilePen size={16} style={{ marginRight: '6px' }} />  Set to Draft</button>
                                 <button onClick={() => handleBulkAsmAction('delete')}    style={{ ...inp, background: '#dc2626', color: colors.text, border: 'none', padding: '6px 14px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> -,? Delete</button>
@@ -4038,7 +4038,7 @@ const resetCalendarForm = () => {
                                                 </td>
                                                 <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '600', color: colors.text }}>{asm.totalQuestions}</td>
                                                 <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '600', color: '#10b981' }}>{asm.passingScore}%</td>
-                                                <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '600', color: '#3b82f6' }}>{asm.attempts}</td>
+                                                <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '600', color: '#22c55e' }}>{asm.attempts}</td>
                                                 <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '700', color: asm.avgScore >= 75 ? '#10b981' : asm.avgScore > 0 ? '#f59e0b' : colors.textMuted }}>{asm.avgScore ? `${asm.avgScore}%` : '-"'}</td>
                                                 <td style={{ padding: '14px 16px' }}>
                                                     <span style={{ background: sb.bg, color: sb.color, padding: '4px 10px', borderRadius: '20px', fontWeight: '600', fontSize: '12px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>{sb.icon} {asm.status}</span>
@@ -4050,7 +4050,7 @@ const resetCalendarForm = () => {
                                                         ) : (
                                                             <button title="Unpublish" onClick={() => handleAsmAction('unpublish', asm)} style={{ padding: '6px 8px', background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '6px', cursor: 'pointer', color: '#f59e0b', display: 'flex', alignItems: 'center' }}> <Pause size={14} /> </button>
                                                         )}
-                                                        <button title="Duplicate" onClick={() => handleAsmAction('duplicate', asm)} style={{ padding: '6px 8px', background: 'rgba(139, 92, 246, 0.12)', border: '1px solid rgba(139, 92, 246, 0.3)', borderRadius: '6px', cursor: 'pointer', color: '#8b5cf6', display: 'flex', alignItems: 'center' }}> <Copy size={14} /> </button>
+                                                        <button title="Duplicate" onClick={() => handleAsmAction('duplicate', asm)} style={{ padding: '6px 8px', background: 'rgba(139, 92, 246, 0.12)', border: '1px solid rgba(139, 92, 246, 0.3)', borderRadius: '6px', cursor: 'pointer', color: '#22c55e', display: 'flex', alignItems: 'center' }}> <Copy size={14} /> </button>
                                                         <button title="Delete" onClick={() => { if (window.confirm(`Delete "${asm.name}"?`)) handleAsmAction('delete', asm); }} style={{ padding: '6px 8px', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center' }}> <Trash2 size={14} /> </button>
                                                     </div>
                                                 </td>
@@ -4069,7 +4069,7 @@ const resetCalendarForm = () => {
                             <div style={{ display: 'flex', gap: '6px' }}>
                                 <button disabled={asmCurrentPage === 1} onClick={() => setAsmCurrentPage(p => p - 1)} style={{ ...inp, padding: '6px 12px', opacity: asmCurrentPage === 1 ? 0.4 : 1 }}>-+? Prev</button>
                                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
-                                    <button key={n} onClick={() => setAsmCurrentPage(n)} style={{ ...inp, padding: '6px 12px', background: n === asmCurrentPage ? '#2563eb' : '#fff', color: n === asmCurrentPage ? '#fff' : '#334155', fontWeight: n === asmCurrentPage ? '700' : '500', border: n === asmCurrentPage ? 'none' : '1px solid #e2e8f0' }}>{n}</button>
+                                    <button key={n} onClick={() => setAsmCurrentPage(n)} style={{ ...inp, padding: '6px 12px', background: n === asmCurrentPage ? '#16a34a' : '#fff', color: n === asmCurrentPage ? '#fff' : '#334155', fontWeight: n === asmCurrentPage ? '700' : '500', border: n === asmCurrentPage ? 'none' : '1px solid #e2e8f0' }}>{n}</button>
                                 ))}
                                 <button disabled={asmCurrentPage === totalPages} onClick={() => setAsmCurrentPage(p => p + 1)} style={{ ...inp, padding: '6px 12px', opacity: asmCurrentPage === totalPages ? 0.4 : 1 }}>Next -+'</button>
                             </div>
@@ -4099,10 +4099,10 @@ const resetCalendarForm = () => {
                                         <td style={{ padding: '12px 16px', color: colors.textMuted, fontSize: '12px', fontWeight: '600' }}>{g.id}</td>
                                         <td style={{ padding: '12px 16px', fontWeight: '600', color: colors.text }}>{g.student}</td>
                                         <td style={{ padding: '12px 16px', color: colors.text }}>{g.course}</td>
-                                        <td style={{ padding: '12px 16px', color: '#2563eb' }}>{g.assessment}</td>
+                                        <td style={{ padding: '12px 16px', color: '#16a34a' }}>{g.assessment}</td>
                                         <td style={{ padding: '12px 16px', fontWeight: '700', color: g.score >= 80 ? '#10b981' : '#f59e0b' }}>{g.score}%</td>
                                         <td style={{ padding: '12px 16px' }}>
-                                            <span style={{ background: '#f5f3ff', color: '#8b5cf6', padding: '3px 10px', borderRadius: '12px', fontWeight: '700', fontSize: '12px' }}>{g.grade}</span>
+                                            <span style={{ background: '#f5f3ff', color: '#22c55e', padding: '3px 10px', borderRadius: '12px', fontWeight: '700', fontSize: '12px' }}>{g.grade}</span>
                                         </td>
                                         <td style={{ padding: '12px 16px' }}>
                                             <span style={{ background: g.status === 'Approved' ? '#f0fdf4' : '#fffbeb', color: g.status === 'Approved' ? '#10b981' : '#f59e0b', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700' }}>{g.status} {g.override ? '(Override)' : ''}</span>
@@ -4144,7 +4144,7 @@ const resetCalendarForm = () => {
                                                 <option key={course._id} value={course._id} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{course.courseTitle}</option>
                                             ))}
                                         </select>
-                                        <button type="submit" disabled={isCertificateActionLoading} style={{ ...inp, background: '#2563eb', color: colors.text, border: 'none', fontWeight: '700' }}> <Zap size={16} style={{ marginRight: '6px' }} />  Issue Certificate</button>
+                                        <button type="submit" disabled={isCertificateActionLoading} style={{ ...inp, background: '#16a34a', color: colors.text, border: 'none', fontWeight: '700' }}> <Zap size={16} style={{ marginRight: '6px' }} />  Issue Certificate</button>
                                     </form>
                                 </div>
                             </div>
@@ -4155,7 +4155,7 @@ const resetCalendarForm = () => {
                                             <div>
                                                 <div style={{ fontWeight: '700', color: colors.text, fontSize: '15px' }}> <Medal size={16} style={{ marginRight: '6px' }} />  {certificate.studentRef?.fullName || 'Student'}</div>
                                                 <div style={{ color: colors.textMuted, fontSize: '13px', marginTop: '2px' }}>Course: <strong>{certificate.courseRef?.courseTitle || 'Course'}</strong></div>
-                                                <div style={{ color: '#2563eb', fontSize: '12px', marginTop: '4px', fontFamily: 'monospace', fontWeight: '700' }}>{certificate.certificateNumber}</div>
+                                                <div style={{ color: '#16a34a', fontSize: '12px', marginTop: '4px', fontFamily: 'monospace', fontWeight: '700' }}>{certificate.certificateNumber}</div>
                                             </div>
                                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                                 <span style={{ ...s.badge, background: certificate.status === 'Revoked' ? `${colors.danger}15` : certificate.status === 'Reissued' ? `${colors.warning}15` : `${colors.success}15`, color: certificate.status === 'Revoked' ? colors.danger : certificate.status === 'Reissued' ? colors.warning : colors.success }}>{certificate.status || 'Issued'}</span>
@@ -4196,11 +4196,11 @@ const resetCalendarForm = () => {
                                     {(() => {
                                         const sel = certificateTemplates.find((t) => t.id === activeTemplateId) || certificateTemplates[0] || { name: 'Standard Template', layoutStyle: 'Classic', signature: 'Registrar', colorScheme: 'Blue' };
                                         return (
-                                            <div style={{ padding: '20px', borderRadius: '12px', background: colors.bgCard, border: '2px double #2563eb', textAlign: 'center' }}>
-                                                <div style={{ fontSize: '11px', color: '#2563eb', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px' }}>EMARE ACADEMIC INSTITUTE</div>
+                                            <div style={{ padding: '20px', borderRadius: '12px', background: colors.bgCard, border: '2px double #16a34a', textAlign: 'center' }}>
+                                                <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px' }}>EMARE ACADEMIC INSTITUTE</div>
                                                 <h3 style={{ margin: '8px 0', color: colors.text, fontSize: '18px' }}>Certificate of Completion</h3>
                                                 <p style={{ fontSize: '12px', color: colors.textMuted, margin: 0 }}>This is to certify that student completed course requirements under</p>
-                                                <div style={{ fontSize: '14px', fontWeight: '800', color: '#2563eb', margin: '6px 0' }}>{sel.name}</div>
+                                                <div style={{ fontSize: '14px', fontWeight: '800', color: '#16a34a', margin: '6px 0' }}>{sel.name}</div>
                                                 <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: colors.textMuted, borderTop: `1px solid ${colors.border}`, paddingTop: '10px' }}>
                                                     <span>Verified via QR Code</span>
                                                     <span>Signature: {sel.signature}</span>
@@ -4224,8 +4224,8 @@ const resetCalendarForm = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                                 {[
                                     { label: 'Overall Pass Rate', value: `${avgPassRate}%`, color: '#10b981', bg: '#f0fdf4', desc: 'Average pass rate across all exams' },
-                                    { label: 'Total Exam Attempts', value: totalAtt, color: '#3b82f6', bg: '#eff6ff', desc: 'Student attempt submissions' },
-                                    { label: 'Auto-Graded Ratio', value: '92%', color: '#8b5cf6', bg: '#f5f3ff', desc: 'Quizzes auto-graded by system' },
+                                    { label: 'Total Exam Attempts', value: totalAtt, color: '#22c55e', bg: '#f0fdf4', desc: 'Student attempt submissions' },
+                                    { label: 'Auto-Graded Ratio', value: '92%', color: '#22c55e', bg: '#f5f3ff', desc: 'Quizzes auto-graded by system' },
                                     { label: 'Active Certificates', value: certificateRecords.length, color: '#ec4899', bg: '#fdf2f8', desc: 'Issued digital certificates' },
                                 ].map(c => (
                                     <div key={c.label} style={{ background: c.bg, border: `1px solid ${c.color}22`, borderRadius: '14px', padding: '20px' }}>
@@ -4250,7 +4250,7 @@ const resetCalendarForm = () => {
                                                     <div style={{ height: '100%', background: a.avgScore >= 75 ? '#10b981' : '#f59e0b', width: `${a.avgScore || 20}%` }} />
                                                 </div>
                                             </div>
-                                            <span style={{ fontSize: '13px', fontWeight: '700', color: '#2563eb', minWidth: '45px', textAlign: 'right' }}>{a.avgScore ? `${a.avgScore}%` : 'N/A'}</span>
+                                            <span style={{ fontSize: '13px', fontWeight: '700', color: '#16a34a', minWidth: '45px', textAlign: 'right' }}>{a.avgScore ? `${a.avgScore}%` : 'N/A'}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -4310,7 +4310,7 @@ const resetCalendarForm = () => {
                                 </div>
                                 <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '10px' }}>
                                     <button onClick={() => setIsCreateAsmOpen(false)} style={{ ...inp, padding: '10px 20px', fontWeight: '600' }}>Cancel</button>
-                                    <button onClick={handleCreateAsm} style={{ ...inp, background: '#2563eb', color: colors.text, border: 'none', padding: '10px 24px', fontWeight: '700', boxShadow: '0 2px 10px rgba(37,99,235,0.3)' }}>Create Assessment</button>
+                                    <button onClick={handleCreateAsm} style={{ ...inp, background: '#16a34a', color: colors.text, border: 'none', padding: '10px 24px', fontWeight: '700', boxShadow: '0 2px 10px rgba(22,163,74,0.3)' }}>Create Assessment</button>
                                 </div>
                             </div>
                         </div>
@@ -4469,15 +4469,15 @@ const resetCalendarForm = () => {
         const formatConfig = {
             'PDF':   { icon: <Book size={16} style={{ marginRight: '6px' }} />, color: '#ef4444', bg: '#fef2f2' },
             'Excel': { icon: <BookOpen size={16} style={{ marginRight: '6px' }} />, color: '#22c55e', bg: '#f0fdf4' },
-            'CSV':   { icon: <BarChart3 size={16} style={{ marginRight: '6px' }} />, color: '#3b82f6', bg: '#eff6ff' },
-            'Word':  { icon: <Book size={16} style={{ marginRight: '6px' }} />, color: '#2563eb', bg: '#eff6ff' },
+            'CSV':   { icon: <BarChart3 size={16} style={{ marginRight: '6px' }} />, color: '#22c55e', bg: '#f0fdf4' },
+            'Word':  { icon: <Book size={16} style={{ marginRight: '6px' }} />, color: '#16a34a', bg: '#f0fdf4' },
             'JSON':  { icon: <FileText size={16} style={{ marginRight: '6px' }} />, color: '#f59e0b', bg: '#fffbeb' },
-            'XML':   { icon: <ScrollText size={16} style={{ marginRight: '6px' }} />, color: '#8b5cf6', bg: '#f5f3ff' },
+            'XML':   { icon: <ScrollText size={16} style={{ marginRight: '6px' }} />, color: '#22c55e', bg: '#f5f3ff' },
         };
         const statusConf = {
             'Completed':  { icon: <CheckCircle2 size={16} style={{ marginRight: '6px', color: colors.success }} />, color: '#10b981', bg: '#f0fdf4' },
             'Processing': { icon: '-3', color: '#f59e0b', bg: '#fffbeb' },
-            'Scheduled':  { icon: <Calendar size={16} style={{ marginRight: '6px' }} />, color: '#3b82f6', bg: '#eff6ff' },
+            'Scheduled':  { icon: <Calendar size={16} style={{ marginRight: '6px' }} />, color: '#22c55e', bg: '#f0fdf4' },
             'Failed':     { icon: <XCircle size={16} style={{ marginRight: '6px', color: '#ef4444' }} />, color: '#ef4444', bg: '#fef2f2' },
             'Cancelled':  { icon: <Ban size={16} style={{ marginRight: '6px', color: '#ef4444' }} />, color: colors.textMuted, bg: '#f1f5f9' },
         };
@@ -4547,9 +4547,9 @@ const resetCalendarForm = () => {
         };
 
         const statsData = [
-            { label: 'Total Reports',         value: generatedReports.length, icon: <BarChart3 size={16} style={{ marginRight: '6px' }} />, color: '#3b82f6', bg: '#eff6ff' },
+            { label: 'Total Reports',         value: generatedReports.length, icon: <BarChart3 size={16} style={{ marginRight: '6px' }} />, color: '#22c55e', bg: '#f0fdf4' },
             { label: 'Generated Today',       value: generatedReports.filter(r => r.date === new Date().toISOString().split('T')[0]).length, icon: <FileText size={16} style={{ marginRight: '6px' }} />, color: '#10b981', bg: '#f0fdf4' },
-            { label: 'Scheduled Reports',     value: scheduledReports.length, icon: <Calendar size={16} style={{ marginRight: '6px' }} />, color: '#8b5cf6', bg: '#f5f3ff' },
+            { label: 'Scheduled Reports',     value: scheduledReports.length, icon: <Calendar size={16} style={{ marginRight: '6px' }} />, color: '#22c55e', bg: '#f5f3ff' },
             { label: 'Exported Files',        value: generatedReports.filter(r => r.status === 'Completed').length, icon: <Upload size={16} style={{ marginRight: '6px' }} />, color: '#f59e0b', bg: '#fffbeb' },
             { label: 'Active Templates',      value: reportCategories.length, icon: <Folder size={16} style={{ marginRight: '6px' }} />, color: '#0891b2', bg: '#ecfeff' },
             { label: 'Storage Used',          value: `${(generatedReports.reduce((acc, r) => acc + parseFloat(r.size), 0)).toFixed(1)} MB`, icon: <Save size={16} style={{ marginRight: '6px' }} />, color: colors.textMuted, bg: '#f8fafc' },
@@ -4568,7 +4568,7 @@ const resetCalendarForm = () => {
                         <p style={{ fontSize: '13px', color: colors.textMuted, margin: '4px 0 0' }}>Generate, schedule, analyze, and export institutional performance reports across all LMS modules.</p>
                     </div>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        <button onClick={() => setIsGenReportOpen(true)} style={{ ...inp, background: '#2563eb', color: colors.text, border: 'none', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}> <Plus size={16} style={{ marginRight: '6px' }} />  Generate Report</button>
+                        <button onClick={() => setIsGenReportOpen(true)} style={{ ...inp, background: '#16a34a', color: colors.text, border: 'none', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}> <Plus size={16} style={{ marginRight: '6px' }} />  Generate Report</button>
                         <button onClick={() => { const csv = ['Name,Category,Generated By,Date,Format,Size,Status,Downloads'].concat(filtered.map(r => `"${r.name}","${r.category}","${r.generatedBy}","${r.date}","${r.format}","${r.size}","${r.status}",${r.downloads}`)).join('\n'); const blob = new Blob([csv], { type: 'text/csv' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'all_reports_export.csv'; link.click(); showNotification('Report index exported.'); }}
                             style={{ ...inp, background: colors.bgCard, display: 'flex', alignItems: 'center', gap: '6px' }}> <Upload size={16} style={{ marginRight: '6px' }} />  Export Data</button>
                         <button onClick={() => { const res = [...generatedReports]; setGeneratedReports([]); setTimeout(() => setGeneratedReports(res), 100); showNotification('Reports refreshed.'); }}
@@ -4610,7 +4610,7 @@ const resetCalendarForm = () => {
                 <div style={{ display: 'flex', gap: '0', borderBottom: '2px solid #e2e8f0', marginBottom: '20px' }}>
                     {[{ key: 'all', label: <><Clipboard size={16} style={{ marginRight: '6px' }} />  All Reports</> }].map(t => (
                         <button key={t.key} onClick={() => setRptSubView(t.key)}
-                            style={{ padding: '10px 20px', border: 'none', background: 'transparent', borderBottom: rptSubView === t.key ? '3px solid #2563eb' : '3px solid transparent', color: rptSubView === t.key ? '#2563eb' : colors.textMuted, fontWeight: rptSubView === t.key ? '700' : '500', fontSize: '13px', cursor: 'pointer', marginBottom: '-2px' }}>
+                            style={{ padding: '10px 20px', border: 'none', background: 'transparent', borderBottom: rptSubView === t.key ? '3px solid #16a34a' : '3px solid transparent', color: rptSubView === t.key ? '#16a34a' : colors.textMuted, fontWeight: rptSubView === t.key ? '700' : '500', fontSize: '13px', cursor: 'pointer', marginBottom: '-2px' }}>
                             {t.label}
                         </button>
                     ))}
@@ -4622,8 +4622,8 @@ const resetCalendarForm = () => {
 
                         {/* Bulk Toolbar */}
                         {selectedReportRows.length > 0 && (
-                            <div style={{ padding: '10px 20px', background: '#eff6ff', borderBottom: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                <span style={{ fontWeight: '700', fontSize: '13px', color: '#2563eb' }}>{selectedReportRows.length} selected</span>
+                            <div style={{ padding: '10px 20px', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: '700', fontSize: '13px', color: '#16a34a' }}>{selectedReportRows.length} selected</span>
                                 <button onClick={() => handleBulkRptAction('download')} style={{ ...inp, background: '#10b981', color: colors.text, border: 'none', padding: '6px 14px' }}> <Download size={16} style={{ marginRight: '6px' }} />  Download</button>
                                 <button onClick={() => handleBulkRptAction('archive')}  style={{ ...inp, background: '#64748b', color: colors.text, border: 'none', padding: '6px 14px' }}> <Package size={16} style={{ marginRight: '6px' }} />  Archive</button>
                                 <button onClick={() => handleBulkRptAction('delete')}   style={{ ...inp, background: '#dc2626', color: colors.text, border: 'none', padding: '6px 14px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> -,? Delete</button>
@@ -4679,7 +4679,7 @@ const resetCalendarForm = () => {
                                         const sc = statusConf[rpt.status]  || { icon: '--', color: colors.textMuted, bg: '#f8fafc' };
                                         const isSel = selectedReportRows.includes(rpt.id);
                                         return (
-                                            <tr key={rpt.id} style={{ borderBottom: '1px solid #f1f5f9', background: isSel ? '#eff6ff' : 'transparent', transition: 'background 0.15s' }}
+                                            <tr key={rpt.id} style={{ borderBottom: '1px solid #f1f5f9', background: isSel ? '#f0fdf4' : 'transparent', transition: 'background 0.15s' }}
                                                 onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = '#fafafa'; }}
                                                 onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = 'transparent'; }}>
                                                 <td style={{ padding: '14px 16px' }}><input type="checkbox" checked={isSel} onChange={() => setSelectedReportRows(prev => isSel ? prev.filter(id => id !== rpt.id) : [...prev, rpt.id])} /></td>
@@ -4699,12 +4699,12 @@ const resetCalendarForm = () => {
                                                 <td style={{ padding: '14px 16px' }}>
                                                     <span style={{ background: sc.bg, color: sc.color, padding: '4px 10px', borderRadius: '20px', fontWeight: '600', fontSize: '12px', whiteSpace: 'nowrap' }}>{sc.icon} {rpt.status}</span>
                                                 </td>
-                                                <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '600', color: '#2563eb' }}>{rpt.downloads}</td>
+                                                <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '600', color: '#16a34a' }}>{rpt.downloads}</td>
                                                 <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                                                     <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
                                                         <button title="Download" onClick={() => handleDownloadReport(rpt)} style={{ padding: '5px 9px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }} disabled={rpt.status !== 'Completed'}> <Download size={16} style={{ marginRight: '6px' }} /> </button>
                                                         <button title="Duplicate" onClick={() => { const dup = { ...rpt, id: `RPT-${String(generatedReports.length + 1).padStart(3, '0')}`, name: `${rpt.name} (Copy)`, date: new Date().toISOString().split('T')[0], downloads: 0 }; setGeneratedReports(prev => [dup, ...prev]); showNotification(`Duplicated: ${rpt.name}`); }} style={{ padding: '5px 9px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}> <Clipboard size={16} style={{ marginRight: '6px' }} /> </button>
-                                                        <button title="Share" onClick={() => { navigator.clipboard?.writeText(`Report: ${rpt.name} | ID: ${rpt.id}`); showNotification('Report link copied to clipboard.'); }} style={{ padding: '5px 9px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}> <Link size={16} style={{ marginRight: '6px' }} /> </button>
+                                                        <button title="Share" onClick={() => { navigator.clipboard?.writeText(`Report: ${rpt.name} | ID: ${rpt.id}`); showNotification('Report link copied to clipboard.'); }} style={{ padding: '5px 9px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}> <Link size={16} style={{ marginRight: '6px' }} /> </button>
                                                         <button title="Delete" onClick={() => { if (window.confirm(`Delete "${rpt.name}"?`)) { setGeneratedReports(prev => prev.filter(r => r.id !== rpt.id)); showNotification(`Deleted: ${rpt.name}`); }}} style={{ padding: '5px 9px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', color: '#dc2626', fontSize: '13px' }}> <Trash2 size={16} style={{ marginRight: '6px' }} /> -,?</button>
                                                     </div>
                                                 </td>
@@ -4726,7 +4726,7 @@ const resetCalendarForm = () => {
                             <div style={{ display: 'flex', gap: '6px' }}>
                                 <button disabled={rptCurrentPage === 1} onClick={() => setRptCurrentPage(p => p - 1)} style={{ ...inp, padding: '6px 12px', opacity: rptCurrentPage === 1 ? 0.4 : 1 }}>-+? Prev</button>
                                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
-                                    <button key={n} onClick={() => setRptCurrentPage(n)} style={{ ...inp, padding: '6px 12px', background: n === rptCurrentPage ? '#2563eb' : '#fff', color: n === rptCurrentPage ? '#fff' : '#334155', fontWeight: n === rptCurrentPage ? '700' : '500', border: n === rptCurrentPage ? 'none' : '1px solid #e2e8f0' }}>{n}</button>
+                                    <button key={n} onClick={() => setRptCurrentPage(n)} style={{ ...inp, padding: '6px 12px', background: n === rptCurrentPage ? '#16a34a' : '#fff', color: n === rptCurrentPage ? '#fff' : '#334155', fontWeight: n === rptCurrentPage ? '700' : '500', border: n === rptCurrentPage ? 'none' : '1px solid #e2e8f0' }}>{n}</button>
                                 ))}
                                 <button disabled={rptCurrentPage === totalPages} onClick={() => setRptCurrentPage(p => p + 1)} style={{ ...inp, padding: '6px 12px', opacity: rptCurrentPage === totalPages ? 0.4 : 1 }}>Next -+'</button>
                             </div>
@@ -4800,8 +4800,8 @@ const resetCalendarForm = () => {
                                             { key: 'schedule', label: <><Calendar size={16} style={{ marginRight: '6px' }} />  Schedule Automatic</>, desc: 'Recurring generation' },
                                         ].map(opt => (
                                             <div key={opt.key} onClick={() => setGenReportForm(p => ({ ...p, delivery: opt.key }))}
-                                                style={{ padding: '12px', border: genReportForm.delivery === opt.key ? '2px solid #2563eb' : '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', background: genReportForm.delivery === opt.key ? '#eff6ff' : '#fff', transition: 'all 0.15s' }}>
-                                                <div style={{ fontSize: '13px', fontWeight: '700', color: genReportForm.delivery === opt.key ? '#2563eb' : '#334155' }}>{opt.label}</div>
+                                                style={{ padding: '12px', border: genReportForm.delivery === opt.key ? '2px solid #16a34a' : '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', background: genReportForm.delivery === opt.key ? '#f0fdf4' : '#fff', transition: 'all 0.15s' }}>
+                                                <div style={{ fontSize: '13px', fontWeight: '700', color: genReportForm.delivery === opt.key ? '#16a34a' : '#334155' }}>{opt.label}</div>
                                                 <div style={{ fontSize: '11px', color: colors.textMuted, marginTop: '2px' }}>{opt.desc}</div>
                                             </div>
                                         ))}
@@ -4811,7 +4811,7 @@ const resetCalendarForm = () => {
                                 {/* Generate Button */}
                                 <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '6px' }}>
                                     <button onClick={() => setIsGenReportOpen(false)} style={{ ...inp, padding: '10px 20px', fontWeight: '600' }}>Cancel</button>
-                                    <button onClick={handleGenReport} style={{ ...inp, background: '#2563eb', color: colors.text, border: 'none', padding: '10px 24px', fontWeight: '700', boxShadow: '0 2px 10px rgba(37,99,235,0.3)' }}>
+                                    <button onClick={handleGenReport} style={{ ...inp, background: '#16a34a', color: colors.text, border: 'none', padding: '10px 24px', fontWeight: '700', boxShadow: '0 2px 10px rgba(22,163,74,0.3)' }}>
                                         {genReportForm.delivery === 'schedule' ? <><Calendar size={16} style={{ marginRight: '6px' }} />  Schedule Report</> : <><Rocket size={16} style={{ marginRight: '6px' }} />  Generate Report</>}
                                     </button>
                                 </div>
@@ -5025,7 +5025,7 @@ const resetCalendarForm = () => {
             {/* -"?-"? Statistics row -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"? */}
             <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', marginBottom: 20 }}>
                 {statCard('Total Events', stats.total, colors.text)}
-                {statCard('Upcoming', stats.upcoming, '#3b82f6')}
+                {statCard('Upcoming', stats.upcoming, '#22c55e')}
                 {statCard('Ongoing', stats.ongoing, '#10b981')}
                 {statCard('Completed', stats.completed, '#64748b')}
             </div>
@@ -5334,8 +5334,8 @@ const resetCalendarForm = () => {
                                                 onClick={handleGeneratePlatformMeeting}
                                                 disabled={isGeneratingMeeting}
                                                 onMouseEnter={(e) => { e.currentTarget.style.background = '#7e22ce'; }}
-                                                onMouseLeave={(e) => { e.currentTarget.style.background = '#7c3aed'; }}
-                                                style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 8, padding: '0 16px', height: 42, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: isGeneratingMeeting ? 'not-allowed' : 'pointer', opacity: isGeneratingMeeting ? 0.7 : 1 }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.background = '#15803d'; }}
+                                                style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, background: '#15803d', color: '#fff', border: 'none', borderRadius: 8, padding: '0 16px', height: 42, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: isGeneratingMeeting ? 'not-allowed' : 'pointer', opacity: isGeneratingMeeting ? 0.7 : 1 }}
                                             >
                                                 {isGeneratingMeeting
                                                     ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Generating...</>
@@ -5378,9 +5378,9 @@ const resetCalendarForm = () => {
                                 {/* Google Meet connection status — Google only, never shown for other platforms */}
                                 {calendarForm.meetingPlatform === 'googleMeet' && (
                                     googleConfigured && !googleMeetConnected ? (
-                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', padding: '10px 12px', borderRadius: 10, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.3)' }}>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#3b82f6' }}>
-                                                <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#3b82f6', boxShadow: '0 0 8px rgba(59,130,246,0.6)' }} />
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', padding: '10px 12px', borderRadius: 10, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)' }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#22c55e' }}>
+                                                <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px rgba(34,197,94,0.6)' }} />
                                                 Google Meet Not Connected
                                             </span>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -6462,7 +6462,7 @@ const resetCalendarForm = () => {
                                         onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                     >
-                                        <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: '#eff6ff', color: '#2563eb', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                        <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: '#f0fdf4', color: '#16a34a', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                                             {user.avatarUrl ? (
                                                 <img src={user.avatarUrl} alt={user.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                             ) : (
@@ -6471,7 +6471,7 @@ const resetCalendarForm = () => {
                                         </div>
                                         <div>
                                             <div style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>{user.fullName}</div>
-                                            <div style={{ fontSize: '12px', color: colors.textMuted }}>{user.accountEmail} -- <span style={{ color: '#2563eb', fontWeight: '500' }}>{user.specialization || user.role || 'Instructor'}</span></div>
+                                            <div style={{ fontSize: '12px', color: colors.textMuted }}>{user.accountEmail} -- <span style={{ color: '#16a34a', fontWeight: '500' }}>{user.specialization || user.role || 'Instructor'}</span></div>
                                         </div>
                                     </div>
                                 ))}
@@ -6485,7 +6485,7 @@ const resetCalendarForm = () => {
                     {/* Rich Instructor Preview Card */}
                     {selectedInstructorObj && (
                         <div style={{ padding: '16px', borderRadius: '12px', background: colors.bg, border: `1px solid ${colors.border}`, display: 'flex', gap: '14px', alignItems: 'center' }}>
-                            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#dbeafe', color: '#1d4ed8', fontWeight: '800', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #3b82f6', flexShrink: 0, overflow: 'hidden' }}>
+                            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#dcfce7', color: '#15803d', fontWeight: '800', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #22c55e', flexShrink: 0, overflow: 'hidden' }}>
                                 {selectedInstructorObj.avatarUrl ? (
                                     <img src={selectedInstructorObj.avatarUrl} alt={selectedInstructorObj.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 ) : (
@@ -6534,7 +6534,7 @@ const resetCalendarForm = () => {
 
                     {/* Automated Notification Checkbox */}
                     <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: colors.text, cursor: 'pointer', marginTop: '4px' }}>
-                        <input type="checkbox" checked={notifyInstructor} onChange={e => setNotifyInstructor(e.target.checked)} style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} />
+                        <input type="checkbox" checked={notifyInstructor} onChange={e => setNotifyInstructor(e.target.checked)} style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#16a34a' }} />
                         <span>Send automated email & in-app notification alert to instructor</span>
                     </label>
 
@@ -6556,7 +6556,7 @@ const resetCalendarForm = () => {
                                     alert(err.response?.data?.message || 'Failed to assign instructor.');
                                 }
                             }}
-                            style={{ background: '#2563eb', border: 'none', color: colors.text, padding: '9px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(37,99,235,0.25)' }}
+                            style={{ background: '#16a34a', border: 'none', color: colors.text, padding: '9px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(22,163,74,0.25)' }}
                         >
                             Assign Instructor
                         </button>
@@ -6571,7 +6571,7 @@ const resetCalendarForm = () => {
                         <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>
                             Course: <strong style={{ color: colors.text }}>{allCourses.find(c => c._id === activeCourseId)?.courseTitle || activeCourseId}</strong>
                         </p>
-                        <span style={{ fontSize: '12px', background: '#eff6ff', color: '#2563eb', padding: '3px 10px', borderRadius: '12px', fontWeight: '600' }}>
+                        <span style={{ fontSize: '12px', background: '#f0fdf4', color: '#16a34a', padding: '3px 10px', borderRadius: '12px', fontWeight: '600' }}>
                             {managedStudents.length} Active Student(s)
                         </span>
                     </div>
@@ -6614,7 +6614,7 @@ const resetCalendarForm = () => {
                             <button
                                 key={t.key}
                                 onClick={() => setEnrollmentTab(t.key)}
-                                style={{ padding: '8px 4px', border: 'none', background: 'transparent', borderBottom: enrollmentTab === t.key ? '2px solid #2563eb' : '2px solid transparent', color: enrollmentTab === t.key ? '#2563eb' : colors.textMuted, fontWeight: enrollmentTab === t.key ? '700' : '500', fontSize: '13px', cursor: 'pointer' }}
+                                style={{ padding: '8px 4px', border: 'none', background: 'transparent', borderBottom: enrollmentTab === t.key ? '2px solid #16a34a' : '2px solid transparent', color: enrollmentTab === t.key ? '#16a34a' : colors.textMuted, fontWeight: enrollmentTab === t.key ? '700' : '500', fontSize: '13px', cursor: 'pointer' }}
                             >
                                 {t.label}
                             </button>
@@ -6665,7 +6665,7 @@ const resetCalendarForm = () => {
                                     showNotification(`Batch enrolled ${count} students into ${cohortTag}`);
                                     setBulkStudentEmails('');
                                 }}
-                                style={{ background: '#2563eb', border: 'none', color: colors.text, padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', alignSelf: 'flex-end' }}
+                                style={{ background: '#16a34a', border: 'none', color: colors.text, padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', alignSelf: 'flex-end' }}
                             >
                                 Batch Enroll Emails
                             </button>
@@ -6683,7 +6683,7 @@ const resetCalendarForm = () => {
                     {/* Auto-Loaded Student Enrollment Table */}
                     <div style={{ border: `1px solid ${colors.border}`, borderRadius: '8px', overflow: 'hidden', maxHeight: '280px', overflowY: 'auto' }}>
                         {managedStudentsLoading ? (
-                            <div style={{ padding: '32px', textAlign: 'center', color: '#3b82f6', fontSize: '14px', fontWeight: '500' }}>
+                            <div style={{ padding: '32px', textAlign: 'center', color: '#22c55e', fontSize: '14px', fontWeight: '500' }}>
                                 Loading enrolled student roster...
                             </div>
                         ) : managedStudents.length > 0 ? (
@@ -6717,7 +6717,7 @@ const resetCalendarForm = () => {
                                                 <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
                                                     <button onClick={() => handleRevokeAccess(enr._id)} title="Revoke Access" style={{ padding: '4px 8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: '#ef4444' }}> <Ban size={16} style={{ marginRight: '6px', color: '#ef4444' }} />  Revoke</button>
                                                     <button onClick={() => handleResetProgress(enr._id)} title="Reset Progress" style={{ padding: '4px 8px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: colors.text }}> <Eraser size={16} style={{ marginRight: '6px' }} />  Reset</button>
-                                                    <button onClick={() => handleResendWelcomeEmail(enr._id)} title="Resend Email" style={{ padding: '4px 8px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: '#2563eb' }}> <Mail size={16} style={{ marginRight: '6px' }} /> -,? Email</button>
+                                                    <button onClick={() => handleResendWelcomeEmail(enr._id)} title="Resend Email" style={{ padding: '4px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', color: '#16a34a' }}> <Mail size={16} style={{ marginRight: '6px' }} /> -,? Email</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -6752,7 +6752,7 @@ const resetCalendarForm = () => {
                                         type="checkbox"
                                         checked={exportFields[field]}
                                         onChange={e => setExportFields({ ...exportFields, [field]: e.target.checked })}
-                                        style={{ accentColor: '#2563eb', width: '16px', height: '16px', cursor: 'pointer' }}
+                                        style={{ accentColor: '#16a34a', width: '16px', height: '16px', cursor: 'pointer' }}
                                     />
                                     <span style={{ textTransform: 'capitalize' }}>{field}</span>
                                 </label>
@@ -6772,7 +6772,7 @@ const resetCalendarForm = () => {
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
                         <button onClick={() => setIsExportCustomizerOpen(false)} style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, color: colors.text, padding: '9px 18px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
-                        <button onClick={() => { handleExportCSV(); setIsExportCustomizerOpen(false); }} style={{ background: '#2563eb', border: 'none', color: colors.text, padding: '9px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Download Customized CSV</button>
+                        <button onClick={() => { handleExportCSV(); setIsExportCustomizerOpen(false); }} style={{ background: '#16a34a', border: 'none', color: colors.text, padding: '9px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Download Customized CSV</button>
                     </div>
                 </div>
             </Modal>
@@ -6787,7 +6787,7 @@ const resetCalendarForm = () => {
                             <button
                                 key={fmt}
                                 onClick={() => setSmartImportFormat(fmt)}
-                                style={{ padding: '8px 12px', border: 'none', background: 'transparent', borderBottom: smartImportFormat === fmt ? '2px solid #2563eb' : '2px solid transparent', color: smartImportFormat === fmt ? '#2563eb' : colors.textMuted, fontWeight: smartImportFormat === fmt ? '700' : '500', fontSize: '13px', cursor: 'pointer' }}
+                                style={{ padding: '8px 12px', border: 'none', background: 'transparent', borderBottom: smartImportFormat === fmt ? '2px solid #16a34a' : '2px solid transparent', color: smartImportFormat === fmt ? '#16a34a' : colors.textMuted, fontWeight: smartImportFormat === fmt ? '700' : '500', fontSize: '13px', cursor: 'pointer' }}
                             >
                                 {fmt}
                             </button>
@@ -6798,7 +6798,7 @@ const resetCalendarForm = () => {
                         /* Step 1: Upload Dropzone */
                         <div
                             style={{ border: '2px dashed #cbd5e1', borderRadius: '12px', padding: '38px', textAlign: 'center', background: colors.bg, cursor: 'pointer', transition: 'all 0.2s' }}
-                            onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.background = '#eff6ff'; }}
+                            onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = '#16a34a'; e.currentTarget.style.background = '#f0fdf4'; }}
                             onDragLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; }}
                             onClick={() => document.getElementById('wizard-file-selector')?.click()}
                             onDrop={async e => {
@@ -6834,7 +6834,7 @@ const resetCalendarForm = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', animation: 'fadeIn 0.2s' }}>
                             <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '10px 14px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span style={{ fontSize: '13px', color: '#166534', fontWeight: '600' }}> <Check size={16} style={{ marginRight: '6px' }} />  File parsed successfully: {wizardParsedRows.length} rows found</span>
-                                <button onClick={() => { setIsWizardMappingStep(false); setWizardSelectedFile(null); }} style={{ background: 'transparent', border: 'none', color: '#2563eb', fontSize: '12px', fontWeight: '600', cursor: 'pointer', textDecoration: 'underline' }}>Re-upload</button>
+                                <button onClick={() => { setIsWizardMappingStep(false); setWizardSelectedFile(null); }} style={{ background: 'transparent', border: 'none', color: '#16a34a', fontSize: '12px', fontWeight: '600', cursor: 'pointer', textDecoration: 'underline' }}>Re-upload</button>
                             </div>
 
                             <h4 style={{ fontSize: '14px', fontWeight: '700', color: colors.text, margin: '8px 0 0 0' }}>Map File Columns to Course Fields</h4>
@@ -6906,7 +6906,7 @@ const resetCalendarForm = () => {
                                 }
                             }}
                             disabled={!isWizardMappingStep}
-                            style={{ background: '#2563eb', border: 'none', color: colors.text, padding: '9px 22px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', opacity: isWizardMappingStep ? 1 : 0.5, boxShadow: isWizardMappingStep ? '0 2px 8px rgba(37,99,235,0.25)' : 'none' }}
+                            style={{ background: '#16a34a', border: 'none', color: colors.text, padding: '9px 22px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', opacity: isWizardMappingStep ? 1 : 0.5, boxShadow: isWizardMappingStep ? '0 2px 8px rgba(22,163,74,0.25)' : 'none' }}
                         >
                             Process & Import
                         </button>
@@ -6953,7 +6953,7 @@ const resetCalendarForm = () => {
                                     }
                                 }, 1500);
                             }}
-                            style={{ background: '#8b5cf6', border: 'none', color: colors.text, padding: '9px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 10px rgba(139,92,246,0.3)', display: 'flex', alignItems: 'center', gap: '8px' }}
+                            style={{ background: '#22c55e', border: 'none', color: colors.text, padding: '9px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 10px rgba(139,92,246,0.3)', display: 'flex', alignItems: 'center', gap: '8px' }}
                         >
                             {isGeneratingAiCourse ? 'Generating Syllabus...' : <><Sparkles size={16} style={{ marginRight: '6px' }} />  Generate Syllabus & Outline</>}
                         </button>
@@ -6978,8 +6978,8 @@ const resetCalendarForm = () => {
                                         <div style={{ fontSize: '24px', fontWeight: '700', color: '#10b981' }}>{enrolled}</div>
                                         <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '500' }}>Total Enrolled</div>
                                     </div>
-                                    <div style={{ padding: '16px', border: `1px solid ${colors.border}`, borderRadius: '8px', textAlign: 'center', background: '#eff6ff' }}>
-                                        <div style={{ fontSize: '24px', fontWeight: '700', color: '#3b82f6' }}>{course?.modules?.length || course?.curriculum?.length || 0}</div>
+                                    <div style={{ padding: '16px', border: `1px solid ${colors.border}`, borderRadius: '8px', textAlign: 'center', background: '#f0fdf4' }}>
+                                        <div style={{ fontSize: '24px', fontWeight: '700', color: '#22c55e' }}>{course?.modules?.length || course?.curriculum?.length || 0}</div>
                                         <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '500' }}>Modules</div>
                                     </div>
                                     <div style={{ padding: '16px', border: `1px solid ${colors.border}`, borderRadius: '8px', textAlign: 'center', background: status === 'Published' ? '#f0fdf4' : '#fefce8' }}>

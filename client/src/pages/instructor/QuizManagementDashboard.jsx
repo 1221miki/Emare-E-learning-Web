@@ -410,13 +410,13 @@ export default function QuizManagementDashboard() {
         tabsRow: { display: 'flex', gap: '8px', flexWrap: 'wrap', background: colors.bgCard, padding: '8px', borderRadius: '16px', border: `1px solid ${colors.border}`, marginBottom: '24px' },
         tabBtn: (active) => ({
             padding: '10px 20px', borderRadius: '12px', cursor: 'pointer', fontWeight: 600, fontSize: '14px', border: 'none',
-            background: active ? 'linear-gradient(135deg,#3b82f6,#8b5cf6)' : 'transparent',
+            background: active ? 'linear-gradient(135deg,#22c55e,#22c55e)' : 'transparent',
             color: active ? '#fff' : colors.textMuted, transition: 'all 0.2s'
         }),
         gridStats: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '18px', marginBottom: '28px' },
         statCard: { background: colors.bgCard, borderRadius: '18px', padding: '20px', border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '16px' },
         statIcon: (bg, col) => ({ width: '50px', height: '50px', borderRadius: '14px', background: bg, color: col, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }),
-        btnPrimary: { padding: '12px 20px', borderRadius: '12px', background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '14px' },
+        btnPrimary: { padding: '12px 20px', borderRadius: '12px', background: 'linear-gradient(135deg,#22c55e,#22c55e)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '14px' },
         btnSecondary: { padding: '12px 20px', borderRadius: '12px', background: colors.bgInput || colors.bg, color: colors.text, border: `1px solid ${colors.border}`, cursor: 'pointer', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '14px' },
         input: { width: '100%', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${colors.border}`, background: colors.bgInput || colors.bg, color: colors.text, fontSize: '14px', outline: 'none' },
         badge: (status) => ({
@@ -479,7 +479,7 @@ export default function QuizManagementDashboard() {
                         {/* KPI Summary Cards */}
                         <div style={s.gridStats}>
                             <div style={s.statCard}>
-                                <div style={s.statIcon('rgba(59,130,246,0.15)', '#3b82f6')}><HelpCircle size={24} /></div>
+                                <div style={s.statIcon('rgba(34,197,94,0.15)', '#22c55e')}><HelpCircle size={24} /></div>
                                 <div>
                                     <div style={{ fontSize: '24px', fontWeight: 800, color: colors.text }}>{totalQuizzes}</div>
                                     <div style={{ fontSize: '13px', color: colors.textMuted, fontWeight: 600 }}>Total Quizzes</div>
@@ -500,7 +500,7 @@ export default function QuizManagementDashboard() {
                                 </div>
                             </div>
                             <div style={s.statCard}>
-                                <div style={s.statIcon('rgba(139,92,246,0.15)', '#8b5cf6')}><Layers size={24} /></div>
+                                <div style={s.statIcon('rgba(139,92,246,0.15)', '#22c55e')}><Layers size={24} /></div>
                                 <div>
                                     <div style={{ fontSize: '24px', fontWeight: 800, color: colors.text }}>{totalQuestions}</div>
                                     <div style={{ fontSize: '13px', color: colors.textMuted, fontWeight: 600 }}>Total Questions</div>
@@ -609,7 +609,7 @@ export default function QuizManagementDashboard() {
                                                             </button>
                                                             <button 
                                                                 title="Edit Quiz Details" 
-                                                                style={{ ...s.btnSecondary, padding: '8px 10px', color: '#3b82f6' }}
+                                                                style={{ ...s.btnSecondary, padding: '8px 10px', color: '#22c55e' }}
                                                                 onClick={() => handleEditQuiz(quiz)}
                                                             >
                                                                 <Edit3 size={16} />
@@ -636,7 +636,7 @@ export default function QuizManagementDashboard() {
                 {/* ── 2. QUESTION BUILDER TAB ────────────────────────────── */}
                 {activeTab === 'builder' && selectedQuiz && (
                     <div>
-                        <div style={{ ...s.card, marginBottom: '24px', background: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08))' }}>
+                        <div style={{ ...s.card, marginBottom: '24px', background: 'linear-gradient(135deg, rgba(34,197,94,0.08), rgba(139,92,246,0.08))' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
                                 <div>
                                     <span style={{ fontSize: '12px', textTransform: 'uppercase', tracking: '1px', fontWeight: 800, color: colors.primary }}>Question Builder</span>
@@ -693,7 +693,7 @@ export default function QuizManagementDashboard() {
                                                         {idx + 1}
                                                     </span>
                                                     <div>
-                                                        <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', background: 'rgba(59,130,246,0.15)', color: '#3b82f6', marginRight: '8px' }}>
+                                                        <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', background: 'rgba(34,197,94,0.15)', color: '#22c55e', marginRight: '8px' }}>
                                                             {q.type === 'mcq' ? 'Multiple Choice' : q.type === 'tf' ? 'True / False' : 'Short Answer'}
                                                         </span>
                                                         <span style={{ fontSize: '12px', color: colors.textMuted, fontWeight: 600 }}>{q.marks} Marks</span>
@@ -722,7 +722,7 @@ export default function QuizManagementDashboard() {
                                                             setQuestionForm({ ...q });
                                                             setShowQuestionModal(true);
                                                         }}
-                                                        style={{ ...s.btnSecondary, padding: '6px 12px', fontSize: '12px', color: '#3b82f6' }}
+                                                        style={{ ...s.btnSecondary, padding: '6px 12px', fontSize: '12px', color: '#22c55e' }}
                                                     >
                                                         <Edit3 size={14} /> Edit
                                                     </button>
@@ -933,7 +933,7 @@ export default function QuizManagementDashboard() {
                                     {[
                                         { label: '0-50%', pct: 15, color: '#ef4444' },
                                         { label: '50-70%', pct: 25, color: '#eab308' },
-                                        { label: '70-85%', pct: 40, color: '#3b82f6' },
+                                        { label: '70-85%', pct: 40, color: '#22c55e' },
                                         { label: '85-100%', pct: 20, color: '#22c55e' }
                                     ].map((bar, i) => (
                                         <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
@@ -1126,7 +1126,7 @@ export default function QuizManagementDashboard() {
                                                     name="correctAnswerIndex"
                                                     checked={questionForm.correctAnswer === oIdx}
                                                     onChange={() => setQuestionForm({ ...questionForm, correctAnswer: oIdx })}
-                                                    style={{ width: '18px', height: '18px', accentColor: '#3b82f6', cursor: 'pointer' }}
+                                                    style={{ width: '18px', height: '18px', accentColor: '#22c55e', cursor: 'pointer' }}
                                                 />
                                                 <span style={{ fontWeight: 800, color: colors.text, width: '20px' }}>{String.fromCharCode(65 + oIdx)}.</span>
                                                 <input 

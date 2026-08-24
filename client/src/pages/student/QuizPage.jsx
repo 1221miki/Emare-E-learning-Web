@@ -12,13 +12,13 @@ export default function QuizPage() {
         centerContainer: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: colors.bg, fontFamily: "'Segoe UI', sans-serif" },
         resultCard: { background: colors.bgCard, padding: '48px', borderRadius: '24px', border: '1px solid #334155', textAlign: 'center', maxWidth: '400px', width: '100%' },
         badge: { display:'inline-block', borderRadius:'8px', fontWeight:'700' },
-        primaryBtn: { background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', width:'100%' },
+        primaryBtn: { background: 'linear-gradient(135deg, #22c55e, #22c55e)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', width:'100%' },
         
         page: { minHeight: '100vh', background: colors.bg, fontFamily: "'Segoe UI', sans-serif", paddingBottom: '80px' },
         header: { background: colors.bgCard, borderBottom: '1px solid #334155', padding: '24px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10 },
         title: { color: colors.text, fontSize: '24px', fontWeight: '800', margin: '0 0 4px' },
         subtitle: { color: colors.textMuted, fontSize: '14px', margin: 0 },
-        timer: { background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa', padding: '8px 16px', borderRadius: '12px', fontSize: '20px', fontWeight: '800', fontFamily: 'monospace' },
+        timer: { background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#4ade80', padding: '8px 16px', borderRadius: '12px', fontSize: '20px', fontWeight: '800', fontFamily: 'monospace' },
         timerWarning: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', padding: '8px 16px', borderRadius: '12px', fontSize: '20px', fontWeight: '800', fontFamily: 'monospace', animation: 'pulse 1s infinite' },
         
         main: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px' },
@@ -27,9 +27,9 @@ export default function QuizPage() {
         qNum: { background: 'rgba(255,255,255,0.1)', color: colors.textMuted, padding: '2px 8px', borderRadius: '6px', fontSize: '14px', flexShrink: 0 },
         optionsList: { display: 'flex', flexDirection: 'column', gap: '12px' },
         option: { display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '16px', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s' },
-        optionSelected: { background: 'rgba(59,130,246,0.1)', border: '1px solid #3b82f6' },
+        optionSelected: { background: 'rgba(34,197,94,0.1)', border: '1px solid #22c55e' },
         radio: { width: '20px', height: '20px', borderRadius: '50%', border: '2px solid #64748b', flexShrink: 0 },
-        radioSelected: { width: '20px', height: '20px', borderRadius: '50%', border: '6px solid #3b82f6', background: '#fff', flexShrink: 0 },
+        radioSelected: { width: '20px', height: '20px', borderRadius: '50%', border: '6px solid #22c55e', background: '#fff', flexShrink: 0 },
         
         footer: { display: 'flex', justifyContent: 'flex-end', marginTop: '40px' },
         submitBtn: { background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px 48px', fontSize: '18px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 10px 25px rgba(16,185,129,0.3)' }
@@ -178,7 +178,7 @@ export default function QuizPage() {
                                             style={{
                                                 ...styles.option,
                                                 borderColor: isSelected ? colors.primary : colors.border,
-                                                background: isSelected ? (theme === 'dark' ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.08)') : 'transparent'
+                                                background: isSelected ? (theme === 'dark' ? 'rgba(34,197,94,0.15)' : 'rgba(34,197,94,0.08)') : 'transparent'
                                             }}
                                         >
                                             <div style={isSelected ? styles.radioSelected : styles.radio}></div>

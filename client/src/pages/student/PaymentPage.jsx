@@ -59,7 +59,7 @@ export default function PaymentPage() {
         header: { marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
         greeting: { color: colors.text, fontSize: '32px', fontWeight: '800', margin: 0 },
         subGreeting: { color: colors.textMuted, fontSize: '15px', marginTop: '8px', maxWidth: '780px' },
-        feedbackBanner: { background: 'rgba(99,102,241,0.16)', color: '#c7d2fe', border: '1px solid rgba(129,140,248,0.3)', padding: '12px 16px', borderRadius: '12px', marginBottom: '20px' },
+        feedbackBanner: { background: 'rgba(34,197,94,0.16)', color: '#d1fae5', border: '1px solid rgba(129,140,248,0.3)', padding: '12px 16px', borderRadius: '12px', marginBottom: '20px' },
         topSection: { display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px', marginBottom: '24px' },
         gridSection: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' },
         card: { background: colors.bgCard, borderRadius: '22px', padding: '28px', border: `1px solid ${colors.border}`, boxShadow: `0 18px 45px ${theme === 'dark' ? 'rgba(15,23,42,0.18)' : 'rgba(0,0,0,0.06)'}` },
@@ -109,15 +109,15 @@ export default function PaymentPage() {
         previewBox: { width: '100%', padding: '20px', background: colors.bgInput, borderRadius: '18px', border: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' },
         previewMeta: { display: 'grid', gap: '6px', color: colors.text },
         removeButton: { background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, padding: '10px 16px', borderRadius: '12px', cursor: 'pointer' },
-        primaryBtn: { background: 'linear-gradient(135deg, #6366f1, #ec4899)', color: '#fff', border: 'none', borderRadius: '16px', padding: '14px 18px', fontWeight: '700', cursor: 'pointer', width: '100%' },
-        primaryBtnInline: { marginTop: '10px', background: 'linear-gradient(135deg, #6366f1, #ec4899)', color: '#fff', border: 'none', borderRadius: '12px', padding: '10px 14px', fontWeight: '700', cursor: 'pointer' },
+        primaryBtn: { background: 'linear-gradient(135deg, #22c55e, #ec4899)', color: '#fff', border: 'none', borderRadius: '16px', padding: '14px 18px', fontWeight: '700', cursor: 'pointer', width: '100%' },
+        primaryBtnInline: { marginTop: '10px', background: 'linear-gradient(135deg, #22c55e, #ec4899)', color: '#fff', border: 'none', borderRadius: '12px', padding: '10px 14px', fontWeight: '700', cursor: 'pointer' },
         timelineSection: { display: 'grid', gridTemplateColumns: '1.05fr 0.95fr', gap: '24px' },
         tableWrapper: { overflowX: 'auto' },
         historyTable: { width: '100%', borderCollapse: 'collapse', minWidth: '720px' },
         historyRow: { borderBottom: `1px solid ${colors.border}` },
         historyCell: { padding: '12px 8px', color: colors.text, fontSize: '14px' },
         historyTableTh: { textAlign: 'left', padding: '10px 8px', color: colors.textMuted, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.08em' },
-        receiptBtn: { border: '1px solid rgba(129,140,248,0.4)', background: 'rgba(99,102,241,0.12)', color: '#c7d2fe', padding: '8px 10px', borderRadius: '10px', cursor: 'pointer' },
+        receiptBtn: { border: '1px solid rgba(129,140,248,0.4)', background: 'rgba(34,197,94,0.12)', color: '#d1fae5', padding: '8px 10px', borderRadius: '10px', cursor: 'pointer' },
         label: { color: colors.text, fontWeight: '600', fontSize: '13px' },
         input: { background: colors.bgInput, border: `1px solid ${colors.border}`, borderRadius: '12px', color: colors.text, padding: '12px 14px', width: '100%' },
         statusPill: { padding: '6px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: '700' },
@@ -333,7 +333,7 @@ export default function PaymentPage() {
                   <div style="font-size:24px;font-weight:800;color:#111827;">Emare ICT Hub</div>
                   <div style="font-size:13px;color:#6b7280;">Student payment receipt</div>
                 </div>
-                <div style="padding:8px 12px;border-radius:999px;background:#f3f4f6;font-weight:700;color:#4f46e5;">Receipt</div>
+                <div style="padding:8px 12px;border-radius:999px;background:#f3f4f6;font-weight:700;color:#16a34a;">Receipt</div>
               </div>
               <h2 style="margin:0 0 8px;">${courseName}</h2>
               <p style="margin:0 0 12px;color:#4b5563;">Payment completed for ${studentName}</p>
@@ -369,7 +369,7 @@ export default function PaymentPage() {
             Completed: { text: '#10b981', bg: 'rgba(16,185,129,0.16)' },
             Pending: { text: '#f59e0b', bg: 'rgba(245,158,11,0.18)' },
             Failed: { text: '#ef4444', bg: 'rgba(239,68,68,0.16)' },
-            Refunded: { text: '#8b5cf6', bg: 'rgba(139,92,246,0.16)' },
+            Refunded: { text: '#22c55e', bg: 'rgba(139,92,246,0.16)' },
             Cleared: { text: '#10b981', bg: 'rgba(16,185,129,0.16)' },
             'Pending Verification': { text: '#f59e0b', bg: 'rgba(245,158,11,0.18)' },
             Unpaid: { text: '#f59e0b', bg: 'rgba(245,158,11,0.18)' }
@@ -448,8 +448,8 @@ export default function PaymentPage() {
                                     onClick={() => setSelectedMethod(method.id)}
                                     style={{
                                         ...styles.methodOption,
-                                        borderColor: selectedMethod === method.id ? '#7c3aed' : 'rgba(148,163,184,0.35)',
-                                        background: selectedMethod === method.id ? 'rgba(124,58,237,0.12)' : 'rgba(255,255,255,0.03)'
+                                        borderColor: selectedMethod === method.id ? '#15803d' : 'rgba(148,163,184,0.35)',
+                                        background: selectedMethod === method.id ? 'rgba(21,128,61,0.12)' : 'rgba(255,255,255,0.03)'
                                     }}
                                 >
                                     <div style={styles.methodIcon}>{method.icon}</div>

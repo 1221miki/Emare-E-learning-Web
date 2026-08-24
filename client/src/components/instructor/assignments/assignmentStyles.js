@@ -1,7 +1,7 @@
 // ── Shared dark-glass design tokens for Assignment Management ──
 export const C = {
-    blue:    '#3b82f6',
-    purple:  '#8b5cf6',
+    blue:    '#22c55e',
+    purple:  '#22c55e',
     green:   '#10b981',
     orange:  '#f59e0b',
     red:     '#ef4444',
@@ -46,7 +46,7 @@ export const select = {
 };
 
 export const primaryBtn = {
-    background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+    background: 'linear-gradient(135deg, #16a34a, #15803d)',
     color: '#fff',
     border: 'none',
     borderRadius: '10px',
@@ -127,12 +127,12 @@ export const sectionTitle = {
 export const STATUS_CONFIG = {
     Draft:      { bg: 'rgba(100,116,139,0.15)', color: '#94a3b8', border: 'rgba(100,116,139,0.3)' },
     Published:  { bg: 'rgba(16,185,129,0.12)',  color: '#34d399', border: 'rgba(16,185,129,0.3)' },
-    Closed:     { bg: 'rgba(99,102,241,0.12)',   color: '#818cf8', border: 'rgba(99,102,241,0.3)' },
+    Closed:     { bg: 'rgba(34,197,94,0.12)',   color: '#4ade80', border: 'rgba(34,197,94,0.3)' },
     Grading:    { bg: 'rgba(245,158,11,0.12)',   color: '#fbbf24', border: 'rgba(245,158,11,0.3)' },
 };
 
 export const SUB_STATUS = {
-    Submitted:  { bg: 'rgba(59,130,246,0.12)',  color: '#60a5fa', border: 'rgba(59,130,246,0.3)' },
+    Submitted:  { bg: 'rgba(34,197,94,0.12)',  color: '#4ade80', border: 'rgba(34,197,94,0.3)' },
     Graded:     { bg: 'rgba(16,185,129,0.12)',  color: '#34d399', border: 'rgba(16,185,129,0.3)' },
     Late:       { bg: 'rgba(239,68,68,0.12)',   color: '#f87171', border: 'rgba(239,68,68,0.3)' },
     Revision:   { bg: 'rgba(245,158,11,0.12)',  color: '#fbbf24', border: 'rgba(245,158,11,0.3)' },

@@ -21,7 +21,7 @@ export default function PaymentSuccess() {
             left: Math.random() * 100,
             delay: Math.random() * 3,
             duration: 2.5 + Math.random() * 2,
-            color: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'][Math.floor(Math.random() * 6)],
+            color: ['#22c55e', '#22c55e', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'][Math.floor(Math.random() * 6)],
             size: 6 + Math.random() * 10,
             rotation: Math.random() * 360,
         }));
@@ -47,8 +47,8 @@ export default function PaymentSuccess() {
         <div style={{
             minHeight: '100vh',
             background: dark
-                ? 'radial-gradient(ellipse at 20% 30%, rgba(16,185,129,0.12) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(59,130,246,0.1) 0%, transparent 50%), #0f172a'
-                : 'radial-gradient(ellipse at 20% 30%, rgba(16,185,129,0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(59,130,246,0.06) 0%, transparent 50%), #f0fdf4',
+                ? 'radial-gradient(ellipse at 20% 30%, rgba(16,185,129,0.12) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(34,197,94,0.1) 0%, transparent 50%), #0f172a'
+                : 'radial-gradient(ellipse at 20% 30%, rgba(16,185,129,0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(34,197,94,0.06) 0%, transparent 50%), #f0fdf4',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -92,7 +92,7 @@ export default function PaymentSuccess() {
                 {/* Top gradient bar */}
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, height: '5px',
-                    background: 'linear-gradient(90deg, #10b981, #3b82f6, #8b5cf6)',
+                    background: 'linear-gradient(90deg, #10b981, #22c55e, #22c55e)',
                     borderRadius: '32px 32px 0 0'
                 }} />
 

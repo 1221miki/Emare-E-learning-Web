@@ -260,11 +260,11 @@ export default function VerifyEmailPage() {
 }
 
 const styles = {
-    page: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#eef2ff 0%,#f8fafc 100%)', padding: '20px' },
+    page: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#f0fdf4 0%,#f8fafc 100%)', padding: '20px' },
     backButton: { position: 'absolute', top: '24px', left: '24px', display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#475569', textDecoration: 'none', fontSize: '14px', fontWeight: '600', padding: '10px 14px', background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' },
     card: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '24px', padding: '36px', width: '100%', maxWidth: '420px', boxShadow: '0 24px 60px rgba(15,23,42,0.08)' },
     header: { textAlign: 'center', marginBottom: '28px' },
-    logo: { width: '58px', height: '58px', borderRadius: '16px', background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#fff', fontWeight: '700', marginBottom: '16px' },
+    logo: { width: '58px', height: '58px', borderRadius: '16px', background: 'linear-gradient(135deg,#22c55e,#22c55e)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#fff', fontWeight: '700', marginBottom: '16px' },
     title: { color: '#0f172a', fontSize: '24px', fontWeight: '800', margin: 0 },
     subtitle: { color: '#64748b', fontSize: '14px', marginTop: '10px' },
     form: { display: 'grid', gap: '16px' },
@@ -273,13 +273,13 @@ const styles = {
     input: { background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#0f172a', fontSize: '15px', padding: '14px 16px', outline: 'none' },
     passwordWrapper: { position: 'relative', display: 'flex', alignItems: 'center' },
     eyeIcon: { position: 'absolute', right: '12px', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' },
-    btn: { width: '100%', border: 'none', borderRadius: '12px', padding: '14px', background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: '#fff', fontWeight: '700', cursor: 'pointer', transition: 'transform 0.15s ease, box-shadow 0.15s ease', boxShadow: '0 12px 28px rgba(59,130,246,0.35)' },
+    btn: { width: '100%', border: 'none', borderRadius: '12px', padding: '14px', background: 'linear-gradient(135deg,#22c55e,#22c55e)', color: '#fff', fontWeight: '700', cursor: 'pointer', transition: 'transform 0.15s ease, box-shadow 0.15s ease', boxShadow: '0 12px 28px rgba(34,197,94,0.35)' },
     errorBox: { background: '#fef2f2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '14px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' },
     successBox: { background: '#f0fdf4', border: '1px solid #86efac', color: '#166534', padding: '14px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' },
     resendContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginTop: '16px' },
-    expiryNotice: { background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', color: '#1d4ed8', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', textAlign: 'center' },
+    expiryNotice: { background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', color: '#15803d', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', textAlign: 'center' },
     resendText: { color: '#64748b', fontSize: '13px', margin: 0 },
-    resendBtn: { width: '100%', border: '1px solid #93c5fd', background: 'transparent', borderRadius: '12px', padding: '12px', color: '#2563eb', fontWeight: '700', cursor: 'pointer' },
+    resendBtn: { width: '100%', border: '1px solid #86efac', background: 'transparent', borderRadius: '12px', padding: '12px', color: '#16a34a', fontWeight: '700', cursor: 'pointer' },
     noteText: { color: '#64748b', textAlign: 'center', marginTop: '16px', fontSize: '13px' },
-    link: { color: '#2563eb', textDecoration: 'none', fontWeight: '600' }
+    link: { color: '#16a34a', textDecoration: 'none', fontWeight: '600' }
 };

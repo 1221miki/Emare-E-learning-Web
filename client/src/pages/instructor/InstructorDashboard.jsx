@@ -31,11 +31,11 @@ export default function InstructorDashboard() {
         page: { display: 'flex', minHeight: '100vh', fontFamily: "'Outfit', sans-serif", background: colors.bg },
         sidebar: { width: '260px', background: theme === 'dark' ? 'rgba(15,20,34,0.7)' : 'rgba(226,232,240,0.8)', backdropFilter: 'blur(12px)', borderRight: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', padding: '24px 16px', position: 'fixed', height: '100vh', zIndex: 10 },
         logoBox: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '36px', paddingLeft: '8px' },
-        logo: { width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#fff', fontSize: '18px' },
+        logo: { width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #16a34a, #15803d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#fff', fontSize: '18px' },
         logoText: { color: colors.text, fontWeight: '700', fontSize: '16px' },
         nav: { display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, overflowY: 'auto' },
         navItem: { textAlign: 'left', background: 'transparent', border: 'none', color: colors.textMuted, padding: '10px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', outline: 'none' },
-        catalogBtn: { background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#60a5fa', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+        catalogBtn: { background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', color: '#4ade80', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
         logoutBtn: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
 
         // Main
@@ -43,7 +43,7 @@ export default function InstructorDashboard() {
         header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '36px' },
         greeting: { color: colors.text, fontSize: '26px', fontWeight: '800', margin: 0 },
         subGreeting: { color: colors.textMuted, fontSize: '14px', margin: '4px 0 0' },
-        avatar: { width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '20px' },
+        avatar: { width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #22c55e, #22c55e)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '20px' },
         loadingBox: { color: colors.textMuted, fontSize: '16px', textAlign: 'center', padding: '100px 0' },
 
         // Tabs
@@ -89,11 +89,11 @@ export default function InstructorDashboard() {
         td: { padding: '14px 20px', color: colors.text, fontSize: '14px' },
 
         // Buttons
-        primaryBtn: { background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', transition: 'opacity 0.2s' },
-        actionBtn: { background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', color: '#60a5fa', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'background 0.2s' },
+        primaryBtn: { background: 'linear-gradient(135deg, #16a34a, #15803d)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', transition: 'opacity 0.2s' },
+        actionBtn: { background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'background 0.2s' },
         actionBtnAlt: { background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'background 0.2s' },
         dangerBtn: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px' },
-        textBtn: { background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: '600', fontSize: '13px', textDecoration: 'underline' },
+        textBtn: { background: 'transparent', border: 'none', color: '#22c55e', cursor: 'pointer', fontWeight: '600', fontSize: '13px', textDecoration: 'underline' },
 
         // Forms
         formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
@@ -978,10 +978,10 @@ export default function InstructorDashboard() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                     {[
-                        { label: 'Total Courses', value: counts.total, color: '#3b82f6' },
+                        { label: 'Total Courses', value: counts.total, color: '#22c55e' },
                         { label: 'Published', value: counts.published, color: '#10b981' },
                         { label: 'Draft', value: counts.draft, color: '#f59e0b' },
-                        { label: 'Pending Approval', value: counts.pending, color: '#6366f1' },
+                        { label: 'Pending Approval', value: counts.pending, color: '#22c55e' },
                         { label: 'Archived', value: counts.archived, color: '#64748b' }
                     ].map(stat => (
                         <div key={stat.label} style={{ ...s.panelCard, padding: '22px 24px', borderTop: `3px solid ${stat.color}` }}>
@@ -998,9 +998,9 @@ export default function InstructorDashboard() {
                             onClick={() => setCourseTab(tab.key)}
                             style={{
                                 ...s.actionBtnAlt,
-                                background: courseTab === tab.key ? 'rgba(59,130,246,0.18)' : 'transparent',
-                                borderColor: courseTab === tab.key ? '#3b82f6' : 'rgba(51,65,85,0.6)',
-                                color: courseTab === tab.key ? '#3b82f6' : colors.text
+                                background: courseTab === tab.key ? 'rgba(34,197,94,0.18)' : 'transparent',
+                                borderColor: courseTab === tab.key ? '#22c55e' : 'rgba(51,65,85,0.6)',
+                                color: courseTab === tab.key ? '#22c55e' : colors.text
                             }}
                         >
                             {tab.label} ({tab.count})
@@ -1060,7 +1060,7 @@ export default function InstructorDashboard() {
                                     <tr key={course._id} style={s.tr}>
                                         <td style={s.td}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: 'rgba(59,130,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700' }}>
+                                                <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700' }}>
                                                     {course.courseTitle?.charAt(0)?.toUpperCase()}
                                                 </div>
                                                 <div>
@@ -1075,7 +1075,7 @@ export default function InstructorDashboard() {
                                         <td style={s.td}>{course.price > 0 ? `${course.price} ETB` : 'Free'}</td>
                                         <td style={s.td}>{course.totalEnrollments || 0}</td>
                                         <td style={s.td}>{course.averageRating ? `${course.averageRating.toFixed(1)} ` : '—'}</td>
-                                        <td style={s.td}><span style={{ ...s.badge, background: statusLabel(course.publicationState) === 'Published' ? 'rgba(16,185,129,0.15)' : statusLabel(course.publicationState) === 'Draft' ? 'rgba(245,158,11,0.15)' : statusLabel(course.publicationState) === 'Pending Review' ? 'rgba(59,130,246,0.15)' : 'rgba(100,116,139,0.15)', color: statusLabel(course.publicationState) === 'Published' ? '#10b981' : statusLabel(course.publicationState) === 'Draft' ? '#f59e0b' : statusLabel(course.publicationState) === 'Pending Review' ? '#2563eb' : '#64748b' }}>{statusLabel(course.publicationState)}</span></td>
+                                        <td style={s.td}><span style={{ ...s.badge, background: statusLabel(course.publicationState) === 'Published' ? 'rgba(16,185,129,0.15)' : statusLabel(course.publicationState) === 'Draft' ? 'rgba(245,158,11,0.15)' : statusLabel(course.publicationState) === 'Pending Review' ? 'rgba(34,197,94,0.15)' : 'rgba(100,116,139,0.15)', color: statusLabel(course.publicationState) === 'Published' ? '#10b981' : statusLabel(course.publicationState) === 'Draft' ? '#f59e0b' : statusLabel(course.publicationState) === 'Pending Review' ? '#16a34a' : '#64748b' }}>{statusLabel(course.publicationState)}</span></td>
                                         <td style={s.td}>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                                 <button onClick={() => { setSelectedCourse(course); setIsEditCourseModal(true); }} style={s.actionBtnAlt}>Edit Info</button>
@@ -1140,8 +1140,8 @@ export default function InstructorDashboard() {
                 <div style={s.panelCard}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <CalendarDays size={18} color="#818cf8" aria-hidden="true" />
+                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <CalendarDays size={18} color="#4ade80" aria-hidden="true" />
                             </div>
                             <div>
                                 <h3 style={{ ...s.panelTitle, margin: 0 }}>Schedule Calendar</h3>
@@ -1168,11 +1168,11 @@ export default function InstructorDashboard() {
                                 const dayLabel = isToday ? 'Today' : isTomorrow ? 'Tomorrow' : sessionDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                                 const timeLabel = sessionDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                                 return (
-                                    <div key={session._id || idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 16px', background: 'rgba(9,13,22,0.45)', borderRadius: '12px', border: `1px solid ${isToday ? 'rgba(99,102,241,0.35)' : 'rgba(51,65,85,0.35)'}` }}>
+                                    <div key={session._id || idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 16px', background: 'rgba(9,13,22,0.45)', borderRadius: '12px', border: `1px solid ${isToday ? 'rgba(34,197,94,0.35)' : 'rgba(51,65,85,0.35)'}` }}>
                                         {/* Date block */}
-                                        <div style={{ textAlign: 'center', minWidth: '56px', padding: '8px', background: isToday ? 'rgba(99,102,241,0.15)' : 'rgba(30,41,59,0.5)', borderRadius: '10px', border: `1px solid ${isToday ? 'rgba(99,102,241,0.3)' : 'rgba(51,65,85,0.3)'}` }}>
-                                            <div style={{ color: isToday ? '#818cf8' : colors.textMuted, fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{dayLabel.split(' ')[0]}</div>
-                                            <div style={{ color: isToday ? '#818cf8' : colors.text, fontSize: '18px', fontWeight: '800', lineHeight: 1.2 }}>
+                                        <div style={{ textAlign: 'center', minWidth: '56px', padding: '8px', background: isToday ? 'rgba(34,197,94,0.15)' : 'rgba(30,41,59,0.5)', borderRadius: '10px', border: `1px solid ${isToday ? 'rgba(34,197,94,0.3)' : 'rgba(51,65,85,0.3)'}` }}>
+                                            <div style={{ color: isToday ? '#4ade80' : colors.textMuted, fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{dayLabel.split(' ')[0]}</div>
+                                            <div style={{ color: isToday ? '#4ade80' : colors.text, fontSize: '18px', fontWeight: '800', lineHeight: 1.2 }}>
                                                 {isToday || isTomorrow ? sessionDate.getDate() : dayLabel.split(' ').slice(-1)[0]}
                                             </div>
                                         </div>
@@ -1187,7 +1187,7 @@ export default function InstructorDashboard() {
                                                     <span style={{ color: colors.textMuted, fontSize: '12px' }}>{session.durationMinutes} min</span>
                                                 )}
                                                 {session.courseRef?.courseTitle && (
-                                                    <span style={{ color: '#818cf8', fontSize: '12px', fontWeight: '600' }}>{session.courseRef.courseTitle}</span>
+                                                    <span style={{ color: '#4ade80', fontSize: '12px', fontWeight: '600' }}>{session.courseRef.courseTitle}</span>
                                                 )}
                                             </div>
                                         </div>
@@ -1289,7 +1289,7 @@ export default function InstructorDashboard() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
                 <div style={s.panelCard} onClick={() => navigate('/messages')} role="button">
-                    <div style={{ marginBottom: '12px', color: '#60a5fa' }}><MessagesSquare size={32} /></div>
+                    <div style={{ marginBottom: '12px', color: '#4ade80' }}><MessagesSquare size={32} /></div>
                     <h3 style={{ color: colors.text, margin: '0 0 6px', fontSize: '16px', fontWeight: '700' }}>Direct Messages</h3>
                     <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Send private messages to enrolled students</p>
                 </div>
@@ -1342,8 +1342,8 @@ export default function InstructorDashboard() {
                             </div>
                             <p style={{ color: '#cbd5e1', fontSize: '14px', margin: '0 0 16px', lineHeight: '1.5' }}>{r.reviewText}</p>
                             {r.instructorReply ? (
-                                <div style={{ background: 'rgba(59,130,246,0.08)', padding: '12px 16px', borderRadius: '8px', borderLeft: '3px solid #3b82f6' }}>
-                                    <span style={{ color: '#60a5fa', fontSize: '12px', fontWeight: '700' }}>Your Reply:</span>
+                                <div style={{ background: 'rgba(34,197,94,0.08)', padding: '12px 16px', borderRadius: '8px', borderLeft: '3px solid #22c55e' }}>
+                                    <span style={{ color: '#4ade80', fontSize: '12px', fontWeight: '700' }}>Your Reply:</span>
                                     <p style={{ color: colors.textMuted, fontSize: '13px', margin: '4px 0 0' }}>{r.instructorReply}</p>
                                 </div>
                             ) : (
@@ -1367,8 +1367,8 @@ export default function InstructorDashboard() {
                 <p style={s.tabSubtitle}>Understand your reach, engagement, and revenue</p>
             </div>
             <div style={s.statsGrid}>
-                <div style={{ ...s.statCard, borderTop: '3px solid #3b82f6' }}>
-                    <span style={{ ...s.statValue, color: '#3b82f6' }}>{analytics.totalStudents || 0}</span>
+                <div style={{ ...s.statCard, borderTop: '3px solid #22c55e' }}>
+                    <span style={{ ...s.statValue, color: '#22c55e' }}>{analytics.totalStudents || 0}</span>
                     <span style={s.statLabel}>Total Enrollments</span>
                 </div>
                 <div style={{ ...s.statCard, borderTop: '3px solid #10b981' }}>
@@ -1394,7 +1394,7 @@ export default function InstructorDashboard() {
                             <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                 <span style={{ color: colors.textMuted, fontSize: '13px', minWidth: '160px' }}>{cat}</span>
                                 <div style={{ flex: 1, background: 'rgba(30,41,59,0.5)', borderRadius: '8px', height: '8px', overflow: 'hidden' }}>
-                                    <div style={{ height: '100%', background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', borderRadius: '8px', width: `${Math.min((count / (analytics.totalStudents || 1)) * 100, 100)}%` }} />
+                                    <div style={{ height: '100%', background: 'linear-gradient(90deg, #22c55e, #22c55e)', borderRadius: '8px', width: `${Math.min((count / (analytics.totalStudents || 1)) * 100, 100)}%` }} />
                                 </div>
                                 <span style={{ color: colors.text, fontSize: '14px', fontWeight: '700', minWidth: '30px', textAlign: 'right' }}>{count}</span>
                             </div>
@@ -1879,7 +1879,7 @@ export default function InstructorDashboard() {
                             {selectedSubmission?.submittedRepositoryURL && (
                                 <div style={{ marginBottom: '16px', padding: '12px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px' }}>
                                     <p style={{ margin: 0, fontSize: '12px', color: colors.textMuted }}>Submitted Link:</p>
-                                    <a href={selectedSubmission.submittedRepositoryURL} target="_blank" rel="noreferrer" style={{ color: '#60a5fa', fontSize: '13px' }}>{selectedSubmission.submittedRepositoryURL}</a>
+                                    <a href={selectedSubmission.submittedRepositoryURL} target="_blank" rel="noreferrer" style={{ color: '#4ade80', fontSize: '13px' }}>{selectedSubmission.submittedRepositoryURL}</a>
                                 </div>
                             )}
                             <form onSubmit={handleGradeSubmission} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -1939,7 +1939,7 @@ export default function InstructorDashboard() {
                                                 </div>
                                             ))}
                                             <div style={{ display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
-                                                <button type="button" onClick={() => addEditedOption(cpIdx, qIdx)} style={{ background: 'transparent', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: 0 }}>+ Add Option</button>
+                                                <button type="button" onClick={() => addEditedOption(cpIdx, qIdx)} style={{ background: 'transparent', border: 'none', color: '#4ade80', cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: 0 }}>+ Add Option</button>
                                                 <span style={{ fontSize: 10, color: colors.textMuted }}>◉ = correct answer</span>
                                             </div>
                                         </div>

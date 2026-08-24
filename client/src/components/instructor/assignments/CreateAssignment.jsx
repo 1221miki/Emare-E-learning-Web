@@ -198,7 +198,7 @@ export default function CreateAssignment({ courses, defaultCourse, onCreated, on
                                 onDragOver={e => { e.preventDefault(); setDragging(true); }}
                                 onDragLeave={() => setDragging(false)}
                                 onClick={() => fileRef.current?.click()}
-                                style={{ border: `2px dashed ${dragging ? C.blue : 'rgba(51,65,85,0.5)'}`, borderRadius: '12px', padding: '32px', textAlign: 'center', cursor: 'pointer', background: dragging ? 'rgba(59,130,246,0.06)' : 'rgba(9,13,22,0.4)', transition: 'all 0.2s' }}
+                                style={{ border: `2px dashed ${dragging ? C.blue : 'rgba(51,65,85,0.5)'}`, borderRadius: '12px', padding: '32px', textAlign: 'center', cursor: 'pointer', background: dragging ? 'rgba(34,197,94,0.06)' : 'rgba(9,13,22,0.4)', transition: 'all 0.2s' }}
                                 role="button"
                                 aria-label="Upload files — drag and drop or click to browse"
                             >
@@ -244,7 +244,7 @@ export default function CreateAssignment({ courses, defaultCourse, onCreated, on
                             <label style={lbl}>Grading Method</label>
                             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                                 {GRADING.map(g => (
-                                    <label key={g} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: form.gradingMethod === g ? 'rgba(59,130,246,0.12)' : 'rgba(9,13,22,0.5)', border: `1px solid ${form.gradingMethod === g ? 'rgba(59,130,246,0.4)' : 'rgba(51,65,85,0.4)'}`, borderRadius: '10px', padding: '10px 16px', color: form.gradingMethod === g ? C.blue : '#94a3b8', fontSize: '13px', fontWeight: '600', transition: 'all 0.15s' }}>
+                                    <label key={g} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: form.gradingMethod === g ? 'rgba(34,197,94,0.12)' : 'rgba(9,13,22,0.5)', border: `1px solid ${form.gradingMethod === g ? 'rgba(34,197,94,0.4)' : 'rgba(51,65,85,0.4)'}`, borderRadius: '10px', padding: '10px 16px', color: form.gradingMethod === g ? C.blue : '#94a3b8', fontSize: '13px', fontWeight: '600', transition: 'all 0.15s' }}>
                                         <input type="radio" name="gradingMethod" value={g} checked={form.gradingMethod === g} onChange={() => set('gradingMethod', g)} style={{ accentColor: C.blue }} />{g}
                                     </label>
                                 ))}
@@ -297,7 +297,7 @@ export default function CreateAssignment({ courses, defaultCourse, onCreated, on
                             <label style={lbl}>Student Access</label>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 {[['all', 'All Enrolled Students'], ['selected', 'Selected Students'], ['groups', 'Specific Course Groups']].map(([val, text]) => (
-                                    <label key={val} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: form.access === val ? 'rgba(59,130,246,0.08)' : 'rgba(9,13,22,0.4)', border: `1px solid ${form.access === val ? 'rgba(59,130,246,0.3)' : 'rgba(51,65,85,0.4)'}`, borderRadius: '10px', padding: '12px 16px', color: form.access === val ? C.blue : '#94a3b8', fontSize: '13px', fontWeight: '600' }}>
+                                    <label key={val} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: form.access === val ? 'rgba(34,197,94,0.08)' : 'rgba(9,13,22,0.4)', border: `1px solid ${form.access === val ? 'rgba(34,197,94,0.3)' : 'rgba(51,65,85,0.4)'}`, borderRadius: '10px', padding: '12px 16px', color: form.access === val ? C.blue : '#94a3b8', fontSize: '13px', fontWeight: '600' }}>
                                         <input type="radio" name="access" value={val} checked={form.access === val} onChange={() => set('access', val)} style={{ accentColor: C.blue }} />{text}
                                     </label>
                                 ))}

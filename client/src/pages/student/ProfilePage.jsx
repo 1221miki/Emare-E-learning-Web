@@ -67,7 +67,7 @@ export default function ProfilePage() {
                 <div style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '16px', padding: '32px', display: 'flex', gap: '24px', alignItems: 'center' }}>
                     <div 
                         style={{
-                            width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                            width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg, #22c55e, #22c55e)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '40px', fontWeight: '800', cursor: 'pointer', overflow: 'hidden', flexShrink: 0
                         }}
                         onClick={() => fileInputRef.current.click()}
@@ -102,7 +102,7 @@ export default function ProfilePage() {
                             {profile?.biography || user.biography || 'No biography added yet.'}
                         </p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                            <span style={{ background: 'rgba(59,130,246,0.15)', color: colors.primary, padding: '4px 10px', borderRadius: '99px', fontSize: '12px', fontWeight: '700' }}>
+                            <span style={{ background: 'rgba(34,197,94,0.15)', color: colors.primary, padding: '4px 10px', borderRadius: '99px', fontSize: '12px', fontWeight: '700' }}>
                                 Role: {user.assignedRole}
                             </span>
                             <span style={{ background: 'rgba(139,92,246,0.15)', color: colors.accent, padding: '4px 10px', borderRadius: '99px', fontSize: '12px', fontWeight: '700' }}>
@@ -166,7 +166,7 @@ export default function ProfilePage() {
                                     </a>
                                 )}
                                 {(profile?.socialMediaLinks?.linkedin || user.socialMediaLinks?.linkedin) && (
-                                    <a href={profile?.socialMediaLinks?.linkedin || user.socialMediaLinks?.linkedin} target="_blank" rel="noreferrer" style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', textDecoration: 'none' }}>
+                                    <a href={profile?.socialMediaLinks?.linkedin || user.socialMediaLinks?.linkedin} target="_blank" rel="noreferrer" style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', textDecoration: 'none' }}>
                                         ◈ LinkedIn
                                     </a>
                                 )}

@@ -13,7 +13,7 @@ const STATUS_META = {
     Pending: { color: WARN, label: 'Pending' },
     Failed: { color: DANGER, label: 'Failed' },
     Cancelled: { color: DANGER, label: 'Cancelled' },
-    Refunded: { color: '#8b5cf6', label: 'Refunded' }
+    Refunded: { color: '#22c55e', label: 'Refunded' }
 };
 
 const METHODS_KEY = 'emare_payment_methods';
@@ -37,7 +37,7 @@ function invoiceHtml(inv) {
     const when = inv?.date ? new Date(inv.date).toLocaleString() : '';
     return `<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${inv?.invoiceNumber || ''}</title>
 <style>body{font-family:Segoe UI,Arial,sans-serif;color:#0f172a;max-width:640px;margin:40px auto;padding:0 20px}
-h1{color:#2563eb}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0}
+h1{color:#16a34a}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0}
 .big{font-size:20px;font-weight:700;margin-top:16px}.muted{color:#64748b;font-size:12px}</style></head><body>
 <h1>EMARE ICT HUB — RECEIPT / INVOICE</h1>
 <div class="muted">This is a computer generated receipt. Please keep it for your records.</div>

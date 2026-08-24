@@ -66,7 +66,7 @@ export default function CourseDetails() {
                         <h1 style={{ fontSize: '36px', fontWeight: '800', marginBottom: '12px' }}>{course.courseTitle || course.title}</h1>
                         <p style={{ color: colors.textMuted, fontSize: '16px', marginBottom: '20px' }}>{course.subtitle || course.descriptionText?.slice(0, 180)}</p>
                         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '32px' }}>
-                            <span style={{ padding: '8px 14px', borderRadius: '999px', background: '#eef2ff', color: '#4338ca', fontWeight: '700' }}>{course.technicalCategory}</span>
+                            <span style={{ padding: '8px 14px', borderRadius: '999px', background: '#f0fdf4', color: '#15803d', fontWeight: '700' }}>{course.technicalCategory}</span>
                             <span style={{ padding: '8px 14px', borderRadius: '999px', background: '#d1fae5', color: '#15803d', fontWeight: '700' }}>{course.level}</span>
                             <span style={{ padding: '8px 14px', borderRadius: '999px', background: '#fef3c7', color: '#92400e', fontWeight: '700' }}>{course.language || 'English'}</span>
                         </div>
@@ -89,7 +89,7 @@ export default function CourseDetails() {
                                     padding: '18px',
                                     borderRadius: '16px',
                                     border: 'none',
-                                    background: isEnrolled ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #4338ca, #6d28d9)',
+                                    background: isEnrolled ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #15803d, #166534)',
                                     color: '#fff',
                                     fontWeight: '800',
                                     fontSize: '16px',
@@ -107,7 +107,7 @@ export default function CourseDetails() {
                             <li> Progress tracking and completion certificate</li>
                             <li> Secure checkout via Chapa</li>
                         </ul>
-                        <Link to="/courses" style={{ display: 'inline-block', marginTop: '24px', color: '#4338ca', fontWeight: '700', textDecoration: 'none' }}>Browse more courses</Link>
+                        <Link to="/courses" style={{ display: 'inline-block', marginTop: '24px', color: '#15803d', fontWeight: '700', textDecoration: 'none' }}>Browse more courses</Link>
                     </div>
                 </div>
             </div>

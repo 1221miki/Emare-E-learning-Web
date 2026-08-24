@@ -282,7 +282,7 @@ export default function DiscussionPage() {
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
                                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
                                                         {thread.isPinned && <span style={{ background: 'rgba(234,179,8,0.1)', color: '#eab308', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>◈ Pinned</span>}
-                                                        <span style={{ background: thread.isResolved ? 'rgba(34,197,94,0.12)' : 'rgba(59,130,246,0.12)', color: thread.isResolved ? '#16a34a' : colors.primary, padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>
+                                                        <span style={{ background: thread.isResolved ? 'rgba(34,197,94,0.12)' : 'rgba(34,197,94,0.12)', color: thread.isResolved ? '#16a34a' : colors.primary, padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>
                                                             {thread.isResolved ? 'Resolved' : 'Open'}
                                                         </span>
                                                         <span style={{ padding: '4px 8px', borderRadius: '4px', background: 'rgba(148,163,184,0.12)', color: colors.text, fontSize: '11px', fontWeight: '700' }}>{thread.category}</span>
@@ -296,7 +296,7 @@ export default function DiscussionPage() {
                                                 {thread.tags?.length > 0 && (
                                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
                                                         {thread.tags.map((tag, idx) => (
-                                                            <span key={idx} style={{ padding: '6px 10px', borderRadius: '999px', background: 'rgba(59,130,246,0.08)', color: colors.primary, fontSize: '12px', fontWeight: '700' }}>{tag}</span>
+                                                            <span key={idx} style={{ padding: '6px 10px', borderRadius: '999px', background: 'rgba(34,197,94,0.08)', color: colors.primary, fontSize: '12px', fontWeight: '700' }}>{tag}</span>
                                                         ))}
                                                     </div>
                                                 )}
@@ -329,7 +329,7 @@ export default function DiscussionPage() {
                                                     {thread.replies.map((reply, idx) => {
                                                         const isBest = bestReplyId && String(reply._id) === bestReplyId;
                                                         return (
-                                                            <div key={idx} style={{ display: 'flex', gap: '12px', padding: '14px', borderRadius: '12px', border: `1px solid ${isBest ? colors.primary : colors.border}`, background: isBest ? 'rgba(59,130,246,0.06)' : 'transparent' }}>
+                                                            <div key={idx} style={{ display: 'flex', gap: '12px', padding: '14px', borderRadius: '12px', border: `1px solid ${isBest ? colors.primary : colors.border}`, background: isBest ? 'rgba(34,197,94,0.06)' : 'transparent' }}>
                                                                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: reply.authorRef?.assignedRole === 'Instructor' ? colors.accent : colors.textMuted, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', flexShrink: 0 }}>
                                                                     {reply.authorRef?.avatarUrl ? (
                                                                         <img src={reply.authorRef.avatarUrl} alt={reply.authorRef.fullName} style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />

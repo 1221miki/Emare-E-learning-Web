@@ -112,9 +112,9 @@ export default function InstructorOverview({ user, analytics = {}, courses = [],
 
     const activityIcon = (type) => {
         const map = {
-            enrollment: { icon: <UserCheck size={16} />, color: colors.primary, bg: isDark ? 'rgba(59,130,246,0.15)' : 'rgba(37,99,235,0.1)' },
+            enrollment: { icon: <UserCheck size={16} />, color: colors.primary, bg: isDark ? 'rgba(34,197,94,0.15)' : 'rgba(22,163,74,0.1)' },
             review: { icon: <Star size={16} />, color: '#f59e0b', bg: isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.12)' },
-            assignment: { icon: <ClipboardList size={16} />, color: '#8b5cf6', bg: isDark ? 'rgba(139,92,246,0.15)' : 'rgba(124,58,237,0.1)' },
+            assignment: { icon: <ClipboardList size={16} />, color: '#22c55e', bg: isDark ? 'rgba(139,92,246,0.15)' : 'rgba(21,128,61,0.1)' },
             quiz: { icon: <FileQuestion size={16} />, color: '#10b981', bg: isDark ? 'rgba(16,185,129,0.15)' : 'rgba(5,150,105,0.1)' },
             lesson: { icon: <GraduationCap size={16} />, color: '#ec4899', bg: isDark ? 'rgba(236,72,153,0.15)' : 'rgba(219,39,119,0.1)' },
             payment: { icon: <Wallet size={16} />, color: '#06b6d4', bg: isDark ? 'rgba(6,182,212,0.15)' : 'rgba(8,145,178,0.1)' }
@@ -129,7 +129,7 @@ export default function InstructorOverview({ user, analytics = {}, courses = [],
             label: 'Total Courses',
             value: analytics.totalCourses || 0,
             icon: <BookOpen size={22} />,
-            gradient: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+            gradient: 'linear-gradient(135deg, #16a34a, #15803d)',
             hint: `${analytics.publishedCourses || 0} Published · ${analytics.draftCourses || 0} Draft · ${analytics.archivedCourses || 0} Archived`,
             onClick: onManageCourses
         },
@@ -146,7 +146,7 @@ export default function InstructorOverview({ user, analytics = {}, courses = [],
             label: 'Pending Reviews',
             value: analytics.pendingReviews ?? 0,
             icon: <MessageSquareReply size={22} />,
-            gradient: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+            gradient: 'linear-gradient(135deg, #22c55e, #ec4899)',
             hint: 'Awaiting your response',
             onClick: onManageReviews
         }
@@ -158,9 +158,9 @@ export default function InstructorOverview({ user, analytics = {}, courses = [],
             <div style={{
                 ...styles.welcomeCard,
                 background: isDark
-                    ? 'linear-gradient(120deg, rgba(37,99,235,0.16), rgba(124,58,237,0.14), rgba(16,185,129,0.10))'
-                    : 'linear-gradient(120deg, #eef2ff, #f5f3ff, #ecfdf5)',
-                border: `1px solid ${isDark ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.18)'}`
+                    ? 'linear-gradient(120deg, rgba(22,163,74,0.16), rgba(21,128,61,0.14), rgba(16,185,129,0.10))'
+                    : 'linear-gradient(120deg, #f0fdf4, #f5f3ff, #ecfdf5)',
+                border: `1px solid ${isDark ? 'rgba(34,197,94,0.25)' : 'rgba(34,197,94,0.18)'}`
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '24px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                     <div style={{ flex: '1 1 340px' }}>
@@ -283,7 +283,7 @@ export default function InstructorOverview({ user, analytics = {}, courses = [],
                                 <YAxis tick={axisTick} axisLine={false} tickLine={false} />
                                 <Tooltip contentStyle={chartTooltipStyle} cursor={{ fill: isDark ? 'rgba(148,163,184,0.06)' : 'rgba(100,116,139,0.06)' }} />
                                 <Legend wrapperStyle={{ fontSize: '12px', color: colors.textMuted }} />
-                                <Bar dataKey="enrollments" name="Enrollments" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={28} />
+                                <Bar dataKey="enrollments" name="Enrollments" fill="#22c55e" radius={[6, 6, 0, 0]} maxBarSize={28} />
                                 <Bar dataKey="completionRate" name="Completion %" fill="#10b981" radius={[6, 6, 0, 0]} maxBarSize={28} />
                             </BarChart>
                         </ResponsiveContainer>
@@ -391,7 +391,7 @@ const styles = {
     welcomeText: { fontSize: '14px', lineHeight: 1.7, margin: 0, maxWidth: '560px' },
     welcomeMini: { borderRadius: '16px', padding: '18px 20px', minWidth: '220px' },
     miniStat: { display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', padding: '8px 0' },
-    primaryBtn: { background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(37,99,235,0.3)', transition: 'opacity 0.2s, transform 0.2s' },
+    primaryBtn: { background: 'linear-gradient(135deg, #16a34a, #15803d)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(22,163,74,0.3)', transition: 'opacity 0.2s, transform 0.2s' },
     secondaryBtn: { borderRadius: '12px', padding: '12px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'opacity 0.2s, transform 0.2s' },
     statCard: { borderRadius: '18px', padding: '20px', transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 8px 30px rgba(15,23,42,0.06)' },
     statIcon: { width: '46px', height: '46px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' },

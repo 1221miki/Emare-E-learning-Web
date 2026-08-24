@@ -5,7 +5,7 @@ import Navbar from '../components/Navbar';
 import { useTheme } from '../context/ThemeContext';
 
 const STATUS_META = {
-    unread: { label: 'Submitted', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+    unread: { label: 'Submitted', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
     read: { label: 'Being Reviewed', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
     replied: { label: 'Replied', color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
     closed: { label: 'Closed', color: '#64748b', bg: 'rgba(100,116,139,0.14)' }

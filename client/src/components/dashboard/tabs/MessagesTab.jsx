@@ -7,16 +7,16 @@ const DANGER = '#ef4444';
 
 const TYPE_META = {
     assignment: { icon: <ClipboardCheck size={18} aria-hidden="true" />, color: WARN },
-    quiz: { icon: <FileQuestion size={18} aria-hidden="true" />, color: '#8b5cf6' },
+    quiz: { icon: <FileQuestion size={18} aria-hidden="true" />, color: '#22c55e' },
     grade: { icon: <Award size={18} aria-hidden="true" />, color: '#10b981' },
-    enrollment: { icon: <BookOpen size={18} aria-hidden="true" />, color: '#3b82f6' },
+    enrollment: { icon: <BookOpen size={18} aria-hidden="true" />, color: '#22c55e' },
     payment: { icon: <CreditCard size={18} aria-hidden="true" />, color: '#10b981' },
     certificate: { icon: <Award size={18} aria-hidden="true" />, color: '#f59e0b' },
     announcement: { icon: <Medal size={18} aria-hidden="true" />, color: '#ef4444' },
-    badge: { icon: <Medal size={18} aria-hidden="true" />, color: '#8b5cf6' },
+    badge: { icon: <Medal size={18} aria-hidden="true" />, color: '#22c55e' },
     review: { icon: <Star size={18} aria-hidden="true" />, color: '#f59e0b' },
     system: { icon: <Settings size={18} aria-hidden="true" />, color: '#64748b' },
-    default: { icon: <Bell size={20} aria-hidden="true" />, color: '#3b82f6' }
+    default: { icon: <Bell size={20} aria-hidden="true" />, color: '#22c55e' }
 };
 
 export default function MessagesTab(dash) {

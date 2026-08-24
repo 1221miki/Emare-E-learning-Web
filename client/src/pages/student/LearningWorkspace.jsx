@@ -167,7 +167,7 @@ function RequirementsBlocker({ reqStatus, courseId, lessonId, onDismiss, onJumpT
                             <button
                                 onClick={item.action}
                                 style={{
-                                    background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+                                    background: 'linear-gradient(135deg, #16a34a, #15803d)',
                                     color: '#fff', border: 'none', borderRadius: 8,
                                     padding: '7px 14px', fontWeight: 700, fontSize: 12,
                                     cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0
@@ -278,9 +278,9 @@ export default function LearningWorkspace() {
     const border   = isDark ? '#334155' : '#e2e8f0';
     const text     = isDark ? '#f1f5f9' : '#0f172a';
     const muted    = isDark ? '#94a3b8' : '#64748b';
-    const accent   = '#6366f1';
+    const accent   = '#22c55e';
     const green    = '#10b981';
-    const blue     = '#3b82f6';
+    const blue     = '#22c55e';
     const gold     = '#f59e0b';
 
     // ── Load course + backend progress ────────────────────────────────────────
@@ -719,7 +719,7 @@ export default function LearningWorkspace() {
                             <h3 style={{ color: isDark ? '#f1f5f9' : '#1a1a2e', margin: '0 0 6px', fontSize: 17, fontWeight: 800 }}>Your Certificate Awaits</h3>
                             <p style={{ color: muted, fontSize: 13, marginBottom: 16 }}>Generate your unique certificate for this course.</p>
                             {certError && <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 10 }}>⚠ {certError}</p>}
-                            <button onClick={handleGetCertificate} disabled={certLoading} style={{ background: certLoading ? muted : 'linear-gradient(135deg, #2563eb, #7c3aed)', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 32px', fontWeight: 700, fontSize: 15, cursor: certLoading ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                            <button onClick={handleGetCertificate} disabled={certLoading} style={{ background: certLoading ? muted : 'linear-gradient(135deg, #16a34a, #15803d)', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 32px', fontWeight: 700, fontSize: 15, cursor: certLoading ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                                 {certLoading ? <><span style={{ display: 'inline-block', width: 15, height: 15, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> Generating…</> : '🎓 Get My Certificate'}
                             </button>
                         </>
@@ -742,7 +742,7 @@ export default function LearningWorkspace() {
                 * { box-sizing: border-box; }
                 ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; }
                 ::-webkit-scrollbar-thumb { background: ${isDark ? '#334155' : '#cbd5e1'}; border-radius: 3px; }
-                .lesson-row:hover { background: ${isDark ? '#1e3a5f20' : '#eff6ff'} !important; }
+                .lesson-row:hover { background: ${isDark ? '#1e3a5f20' : '#f0fdf4'} !important; }
                 .tab-btn { border: none; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 6px; transition: all 0.15s; }
                 .action-link { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 10px; font-weight: 700; font-size: 13px; text-decoration: none; transition: transform 0.15s, opacity 0.15s; }
                 .action-link:hover { transform: translateY(-1px); opacity: 0.92; }
@@ -804,7 +804,7 @@ export default function LearningWorkspace() {
                                 </div>
                                 <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 20, maxWidth: 400, lineHeight: 1.6 }}>{videoError}</div>
                                 {!videoError.includes('YouTube') && !videoError.includes('format') && !videoError.includes('instructor') && (
-                                    <button onClick={() => navigate('/student/payments')} style={{ background: `linear-gradient(135deg, ${accent}, #7c3aed)`, color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>Proceed to Payment →</button>
+                                    <button onClick={() => navigate('/student/payments')} style={{ background: `linear-gradient(135deg, ${accent}, #15803d)`, color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>Proceed to Payment →</button>
                                 )}
                             </div>
                         ) : videoUrl ? (
@@ -816,7 +816,7 @@ export default function LearningWorkspace() {
                                         <div style={{ color: '#94a3b8', fontSize: 13, maxWidth: 380, lineHeight: 1.6 }}>
                                             The video file for this lesson is not responding. Try again, or come back later.
                                         </div>
-                                        <button onClick={() => { setPlaybackFailed(false); setPlaybackRetryKey(k => k + 1); }} style={{ background: `linear-gradient(135deg, ${accent}, #7c3aed)`, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 22px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                                        <button onClick={() => { setPlaybackFailed(false); setPlaybackRetryKey(k => k + 1); }} style={{ background: `linear-gradient(135deg, ${accent}, #15803d)`, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 22px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
                                             ↻ Retry
                                         </button>
                                     </div>
@@ -880,7 +880,7 @@ export default function LearningWorkspace() {
                                     <span style={{
                                         padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
                                         background: reqStatus?.assignmentSubmitted ? 'rgba(16,185,129,0.15)' : 'rgba(139,92,246,0.15)',
-                                        color: reqStatus?.assignmentSubmitted ? '#10b981' : '#a78bfa',
+                                        color: reqStatus?.assignmentSubmitted ? '#10b981' : '#4ade80',
                                         border: `1px solid ${reqStatus?.assignmentSubmitted ? 'rgba(16,185,129,0.35)' : 'rgba(139,92,246,0.35)'}`
                                     }}>
                                         {reqStatus?.assignmentSubmitted ? '✓ Assignment done' : '⚬ Assignment required'}
@@ -930,7 +930,7 @@ export default function LearningWorkspace() {
                                     {isFinalLesson ? 'Finish Course (complete lesson first)' : 'Next Lesson (complete lesson first)'}
                                 </div>
                             ) : (
-                                <button onClick={goNext} style={{ display: 'flex', alignItems: 'center', gap: 6, background: isFinalLesson ? `linear-gradient(135deg, ${gold}, #d97706)` : `linear-gradient(135deg, ${accent}, #7c3aed)`, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
+                                <button onClick={goNext} style={{ display: 'flex', alignItems: 'center', gap: 6, background: isFinalLesson ? `linear-gradient(135deg, ${gold}, #d97706)` : `linear-gradient(135deg, ${accent}, #15803d)`, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
                                     {isFinalLesson ? '🏆 Finish Course' : <>Next Lesson <IconPlay /></>}
                                 </button>
                             )}
@@ -974,7 +974,7 @@ export default function LearningWorkspace() {
                                             </a>
                                         )}
                                         {hasResource && (
-                                            <a href={getPdfUrl(activeLesson.resourceLink)} target="_blank" rel="noopener noreferrer" className="action-link" style={{ background: `linear-gradient(135deg, ${blue}, #6366f1)`, color: '#fff' }}>
+                                            <a href={getPdfUrl(activeLesson.resourceLink)} target="_blank" rel="noopener noreferrer" className="action-link" style={{ background: `linear-gradient(135deg, ${blue}, #22c55e)`, color: '#fff' }}>
                                                 <IconLink /> Open Resource ↗
                                             </a>
                                         )}
@@ -1007,7 +1007,7 @@ export default function LearningWorkspace() {
                                     <div style={{ padding: '14px 18px', borderRadius: 10, background: isDark ? '#1e293b' : '#f8fafc', border: `1px solid ${border}`, color: muted, fontSize: 13 }}>No PDF notes attached.</div>
                                 )}
                                 {hasResource && (
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderRadius: 10, background: isDark ? '#1e293b' : '#eff6ff', border: `1px solid ${isDark ? '#3b82f630' : '#bfdbfe'}` }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderRadius: 10, background: isDark ? '#1e293b' : '#f0fdf4', border: `1px solid ${isDark ? '#22c55e30' : '#bbf7d0'}` }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                             <div style={{ width: 40, height: 40, borderRadius: 8, background: `${blue}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: blue }}><IconLink /></div>
                                             <div>
@@ -1015,7 +1015,7 @@ export default function LearningWorkspace() {
                                                 <div style={{ fontSize: 12, color: muted, marginTop: 2 }}>Drive / External link</div>
                                             </div>
                                         </div>
-                                        <a href={getPdfUrl(activeLesson.resourceLink)} target="_blank" rel="noopener noreferrer" className="action-link" style={{ background: `linear-gradient(135deg, ${blue}, #6366f1)`, color: '#fff', fontSize: 12, padding: '8px 16px' }}>Open ↗</a>
+                                        <a href={getPdfUrl(activeLesson.resourceLink)} target="_blank" rel="noopener noreferrer" className="action-link" style={{ background: `linear-gradient(135deg, ${blue}, #22c55e)`, color: '#fff', fontSize: 12, padding: '8px 16px' }}>Open ↗</a>
                                     </div>
                                 )}
                             </div>
@@ -1089,7 +1089,7 @@ export default function LearningWorkspace() {
                                                         {lesson.isFreePreview && !locked && <span style={{ fontSize: 10, background: `${accent}20`, color: accent, borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>Free</span>}
                                                         {/* Requirement badges in sidebar */}
                                                         {!isDone && hasQuizReq && <span style={{ fontSize: 10, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>Quiz</span>}
-                                                        {!isDone && hasAsgReq && <span style={{ fontSize: 10, background: 'rgba(139,92,246,0.15)', color: '#a78bfa', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>Assignment</span>}
+                                                        {!isDone && hasAsgReq && <span style={{ fontSize: 10, background: 'rgba(139,92,246,0.15)', color: '#4ade80', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>Assignment</span>}
                                                     </div>
                                                 </div>
                                             </div>
@@ -1155,7 +1155,7 @@ export default function LearningWorkspace() {
                                     <span style={{ fontSize: 12, color: muted }}>
                                         {Object.keys(checkpointAnswers).length}/{activeCheckpoint.questions?.length || 0} answered · video paused
                                     </span>
-                                    <button onClick={submitCheckpoint} disabled={checkpointSubmitting} style={{ background: `linear-gradient(135deg, ${accent}, #7c3aed)`, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 30px', fontWeight: 800, fontSize: 14, cursor: checkpointSubmitting ? 'not-allowed' : 'pointer', opacity: checkpointSubmitting ? 0.7 : 1 }}>
+                                    <button onClick={submitCheckpoint} disabled={checkpointSubmitting} style={{ background: `linear-gradient(135deg, ${accent}, #15803d)`, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 30px', fontWeight: 800, fontSize: 14, cursor: checkpointSubmitting ? 'not-allowed' : 'pointer', opacity: checkpointSubmitting ? 0.7 : 1 }}>
                                         {checkpointSubmitting ? 'Submitting…' : 'Submit Answers'}
                                     </button>
                                 </div>
@@ -1200,7 +1200,7 @@ export default function LearningWorkspace() {
                                             ▶ Continue Watching
                                         </button>
                                     ) : (
-                                        <button onClick={() => { setCheckpointResult(null); setCheckpointAnswers({}); setCheckpointError(''); }} style={{ background: `linear-gradient(135deg, ${accent}, #7c3aed)`, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 32px', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+                                        <button onClick={() => { setCheckpointResult(null); setCheckpointAnswers({}); setCheckpointError(''); }} style={{ background: `linear-gradient(135deg, ${accent}, #15803d)`, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 32px', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
                                             ↻ Retake Quiz
                                         </button>
                                     )}

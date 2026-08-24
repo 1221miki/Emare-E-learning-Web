@@ -102,7 +102,7 @@ export default function AssignmentPage() {
                                             </div>
                                         </div>
                                         {sub ? (
-                                            <span style={{ background: sub.status === 'Graded' ? 'rgba(16,185,129,0.1)' : 'rgba(59,130,246,0.1)', color: sub.status === 'Graded' ? '#10b981' : colors.primary, padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: '700' }}>
+                                            <span style={{ background: sub.status === 'Graded' ? 'rgba(16,185,129,0.1)' : 'rgba(34,197,94,0.1)', color: sub.status === 'Graded' ? '#10b981' : colors.primary, padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: '700' }}>
                                                 {sub.status} {sub.grade !== null ? `(${sub.grade}/${a.maxScore})` : ''}
                                             </span>
                                         ) : isPastDue ? (

@@ -202,7 +202,7 @@ export default function VerifyCertificatePage() {
                             width: '100%', padding: '13px',
                             background: loading || !query.trim()
                                 ? colors.textMuted
-                                : 'linear-gradient(135deg, #2563eb, #7c3aed)',
+                                : 'linear-gradient(135deg, #16a34a, #15803d)',
                             color: '#fff', border: 'none', borderRadius: 10,
                             fontSize: 15, fontWeight: 700, cursor: loading || !query.trim() ? 'not-allowed' : 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,

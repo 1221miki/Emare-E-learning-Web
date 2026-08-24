@@ -11,7 +11,7 @@ function Toggle({ checked, onChange }) {
             onClick={() => onChange(!checked)}
             style={{
                 width: 44, height: 24, borderRadius: 999, cursor: 'pointer',
-                background: checked ? '#3b82f6' : '#cbd5e1',
+                background: checked ? '#22c55e' : '#cbd5e1',
                 position: 'relative', transition: 'background 0.25s',
                 flexShrink: 0
             }}
@@ -238,7 +238,7 @@ export default function InstructorSettings() {
         btn: (variant = 'primary') => ({
             padding: '11px 22px', borderRadius: 12, cursor: 'pointer',
             fontWeight: 700, fontSize: 14, transition: 'opacity 0.15s',
-            background: variant === 'primary' ? 'linear-gradient(135deg,#2563eb,#7c3aed)' : variant === 'danger' ? '#ef4444' : c.bg,
+            background: variant === 'primary' ? 'linear-gradient(135deg,#16a34a,#15803d)' : variant === 'danger' ? '#ef4444' : c.bg,
             color: variant === 'ghost' ? c.text : '#fff',
             border: variant === 'ghost' ? `1px solid ${c.border}` : 'none',
             opacity: saving ? 0.7 : 1,
@@ -275,7 +275,7 @@ export default function InstructorSettings() {
                     {tabs.map(t => (
                         <button key={t.key} onClick={() => setActive(t.key)} style={{
                             padding: '10px 20px', borderRadius: 12, cursor: 'pointer', fontWeight: 700, fontSize: 14, border: 'none',
-                            background: active === t.key ? 'linear-gradient(135deg,#2563eb,#7c3aed)' : 'transparent',
+                            background: active === t.key ? 'linear-gradient(135deg,#16a34a,#15803d)' : 'transparent',
                             color: active === t.key ? '#fff' : c.textMuted,
                             transition: 'all 0.2s'
                         }}>{t.label}</button>
@@ -288,10 +288,10 @@ export default function InstructorSettings() {
                         {/* Avatar + Core fields */}
                         <div style={{ ...s.card, display: 'grid', gridTemplateColumns: '180px 1fr', gap: 28 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-                                <div style={{ width: 140, height: 140, borderRadius: 20, overflow: 'hidden', border: `3px solid ${c.border}`, background: '#eef2ff' }}>
+                                <div style={{ width: 140, height: 140, borderRadius: 20, overflow: 'hidden', border: `3px solid ${c.border}`, background: '#f0fdf4' }}>
                                     {profile.avatarUrl
                                         ? <img src={profile.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, background: 'linear-gradient(135deg,#2563eb,#7c3aed)', color: '#fff' }}>
+                                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, background: 'linear-gradient(135deg,#16a34a,#15803d)', color: '#fff' }}>
                                             {(profile.fullName || 'I')[0].toUpperCase()}
                                         </div>
                                     }
@@ -477,8 +477,8 @@ export default function InstructorSettings() {
                                     <Toggle checked={security.is2FAEnabled} onChange={v => updateSecurity('is2FAEnabled', v)} />
                                 </div>
                                 {security.is2FAEnabled && (
-                                    <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: '#eff6ff', border: '1px solid #bfdbfe' }}>
-                                        <div style={{ fontSize: 13, color: '#1d4ed8', fontWeight: 600 }}> 2FA is active. Your account is protected.</div>
+                                    <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                                        <div style={{ fontSize: 13, color: '#15803d', fontWeight: 600 }}> 2FA is active. Your account is protected.</div>
                                         <button style={{ ...s.btn('ghost'), marginTop: 12, fontSize: 13, padding: '8px 16px' }}>Setup New App →</button>
                                     </div>
                                 )}
@@ -537,8 +537,8 @@ export default function InstructorSettings() {
                                         ].map(t => (
                                             <button key={t.val} onClick={() => switchTheme(t.val)} style={{
                                                 padding: '12px 24px', borderRadius: 14, cursor: 'pointer', fontWeight: 700, fontSize: 14,
-                                                border: `2px solid ${prefs.theme === t.val ? '#2563eb' : c.border}`,
-                                                background: prefs.theme === t.val ? 'linear-gradient(135deg,#2563eb,#7c3aed)' : c.bg,
+                                                border: `2px solid ${prefs.theme === t.val ? '#16a34a' : c.border}`,
+                                                background: prefs.theme === t.val ? 'linear-gradient(135deg,#16a34a,#15803d)' : c.bg,
                                                 color: prefs.theme === t.val ? '#fff' : c.text,
                                                 transform: prefs.theme === t.val ? 'scale(1.04)' : 'scale(1)',
                                                 transition: 'all 0.2s',
@@ -687,9 +687,9 @@ export default function InstructorSettings() {
                                 {['Real-time', 'Daily Digest', 'Weekly Summary', 'Never'].map(opt => (
                                     <button key={opt} onClick={() => updateNotif('summary', opt)} style={{
                                         padding: '10px 20px', borderRadius: 12, cursor: 'pointer', fontWeight: 700, fontSize: 13,
-                                        border: `2px solid ${notifs.summary === opt ? '#2563eb' : c.border}`,
-                                        background: notifs.summary === opt ? '#eff6ff' : c.bg,
-                                        color: notifs.summary === opt ? '#1d4ed8' : c.text,
+                                        border: `2px solid ${notifs.summary === opt ? '#16a34a' : c.border}`,
+                                        background: notifs.summary === opt ? '#f0fdf4' : c.bg,
+                                        color: notifs.summary === opt ? '#15803d' : c.text,
                                         transition: 'all 0.2s'
                                     }}>{opt}</button>
                                 ))}
@@ -708,12 +708,12 @@ export default function InstructorSettings() {
                 {active === 'subscription' && (
                     <div style={s.gap(24)}>
                         {/* Plan Card */}
-                        <div style={{ ...s.card, background: 'linear-gradient(135deg,#1e3a5f,#2563eb)', border: 'none' }}>
+                        <div style={{ ...s.card, background: 'linear-gradient(135deg,#1e3a5f,#16a34a)', border: 'none' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
                                 <div>
-                                    <div style={{ color: '#93c5fd', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>CURRENT PLAN</div>
+                                    <div style={{ color: '#86efac', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>CURRENT PLAN</div>
                                     <h2 style={{ color: '#fff', fontSize: 28, fontWeight: 900, margin: 0 }}> {subscription.plan}</h2>
-                                    <p style={{ color: '#bfdbfe', marginTop: 8, fontSize: 14 }}>Renews on {subscription.renewDate} · {subscription.billingMethod}</p>
+                                    <p style={{ color: '#bbf7d0', marginTop: 8, fontSize: 14 }}>Renews on {subscription.renewDate} · {subscription.billingMethod}</p>
                                 </div>
                                 <div style={{ background: '#22c55e', color: '#fff', fontWeight: 800, padding: '8px 22px', borderRadius: 999, fontSize: 14 }}>
                                      {subscription.status}

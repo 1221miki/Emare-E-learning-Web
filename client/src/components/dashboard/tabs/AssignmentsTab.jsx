@@ -47,7 +47,7 @@ export default function AssignmentsTab(dash) {
             {/* Assignments & Submissions header */}
             <div className="mb-6">
                 <h2 className="flex items-center gap-2 text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                    <ClipboardList size={20} className="text-blue-600 dark:text-blue-400" aria-hidden="true" /> Assignments &amp; Submissions
+                    <ClipboardList size={20} className="text-green-600 dark:text-green-500" aria-hidden="true" /> Assignments &amp; Submissions
                 </h2>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">View all your assignments from enrolled courses and submit your work</p>
             </div>
@@ -70,7 +70,7 @@ export default function AssignmentsTab(dash) {
                         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500 dark:text-slate-400">
                             Your enrolled courses do not currently have assignment tasks posted. Keep learning, and the system will notify you when new work is available.
                         </p>
-                        <button type="button" onClick={() => triggerAssistantPrompt('Generate a practice assignment')} className="mt-6 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700">
+                        <button type="button" onClick={() => triggerAssistantPrompt('Generate a practice assignment')} className="mt-6 rounded-lg bg-green-600 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-green-700">
                             Generate a practice assignment
                         </button>
                     </div>
@@ -116,17 +116,17 @@ export default function AssignmentsTab(dash) {
                                             placeholder="Describe your solution, paste GitHub links, or summarize your approach..."
                                             value={submittingAssignmentId === asgn._id ? assignmentSubmitText : ''}
                                             onChange={e => { setSubmittingAssignmentId(asgn._id); setAssignmentSubmitText(e.target.value); }}
-                                            className="mb-3 w-full resize-y rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900 outline-none transition-colors focus:border-blue-600 focus:ring-2 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                            className="mb-3 w-full resize-y rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900 outline-none transition-colors focus:border-green-600 focus:ring-2 focus:ring-green-600 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                                         />
                                         <div className="flex flex-wrap items-center gap-3">
-                                            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-blue-600 bg-blue-600/10 px-3.5 py-2 text-[13px] font-semibold text-blue-600 transition-colors hover:bg-blue-600/20 dark:text-blue-400">
+                                            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-green-600 bg-green-600/10 px-3.5 py-2 text-[13px] font-semibold text-green-600 transition-colors hover:bg-green-600/20 dark:text-green-500">
                                                 <Paperclip size={15} aria-hidden="true" /> {assignmentFile?.name || 'Attach File (PDF/ZIP/DOC)'}
                                                 <input type="file" className="hidden" onChange={e => setAssignmentFile(e.target.files[0])} />
                                             </label>
                                             <button
                                                 onClick={() => handleAssignmentSubmit(asgn._id, asgn.courseRef)}
                                                 disabled={submittingAssignmentId === asgn._id && !assignmentSubmitText}
-                                                className="rounded-lg bg-blue-600 px-5 py-2 text-[13px] font-bold text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+                                                className="rounded-lg bg-green-600 px-5 py-2 text-[13px] font-bold text-white transition-colors hover:bg-green-700 disabled:opacity-60"
                                             >
                                                 {submittingAssignmentId === asgn._id ? 'Submitting...' : 'Submit Assignment'}
                                             </button>
@@ -142,7 +142,7 @@ export default function AssignmentsTab(dash) {
                                                 <CheckCircle2 size={14} aria-hidden="true" /> Submitted on {new Date(mySubmission.createdAt || Date.now()).toLocaleDateString()}
                                             </span>
                                             <div className="flex flex-wrap items-center gap-4">
-                                                {mySubmission.grade && <span className="text-[13px] font-bold text-blue-600 dark:text-blue-400">Grade: {mySubmission.grade}/100</span>}
+                                                {mySubmission.grade && <span className="text-[13px] font-bold text-green-600 dark:text-green-500">Grade: {mySubmission.grade}/100</span>}
                                                 {mySubmission.feedback && <span className="text-xs text-slate-500 dark:text-slate-400">Feedback: {mySubmission.feedback}</span>}
                                             </div>
                                         </div>

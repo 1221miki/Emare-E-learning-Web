@@ -14,9 +14,9 @@ vi.mock('../context/ThemeContext', () => ({
     colors: {
       bg: '#ffffff',
       bgCard: '#f8fafc',
-      bgInput: '#eef2ff',
-      primary: '#2563eb',
-      accent: '#7c3aed',
+      bgInput: '#f0fdf4',
+      primary: '#16a34a',
+      accent: '#15803d',
       text: '#111827',
       textMuted: '#64748b',
       border: '#e2e8f0',

@@ -281,7 +281,7 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                                     {li + 1}. {lesson.lessonTitle}
                                 </div>
                                 {lesson.videoUrl && (
-                                    <div style={{ color: '#60a5fa', fontSize: 11, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <div style={{ color: '#4ade80', fontSize: 11, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         ▶ {lesson.videoUrl}
                                     </div>
                                 )}
@@ -303,7 +303,7 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                                     <span style={{
                                         padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700,
                                         background: lesson.assignmentRequired ? 'rgba(139,92,246,0.18)' : 'rgba(71,85,105,0.18)',
-                                        color: lesson.assignmentRequired ? '#a78bfa' : '#64748b',
+                                        color: lesson.assignmentRequired ? '#4ade80' : '#64748b',
                                         border: `1px solid ${lesson.assignmentRequired ? 'rgba(139,92,246,0.35)' : 'rgba(71,85,105,0.25)'}`
                                     }}>
                                         Assignment: {lesson.assignmentRequired ? 'ON' : 'OFF'}
@@ -311,8 +311,8 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                                     {(lesson.quizCheckpoints || []).length > 0 && (
                                         <span style={{
                                             padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700,
-                                            background: 'rgba(99,102,241,0.18)', color: '#a5b4fc',
-                                            border: '1px solid rgba(99,102,241,0.35)'
+                                            background: 'rgba(34,197,94,0.18)', color: '#86efac',
+                                            border: '1px solid rgba(34,197,94,0.35)'
                                         }}>
                                             ⏸ {lesson.quizCheckpoints.length} in-video quiz{(lesson.quizCheckpoints.length > 1) ? 'zes' : ''}
                                         </span>
@@ -338,7 +338,7 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
 
             {/* ── New lesson form (completely isolated to this chapter) ── */}
             <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 14, border: '1px dashed rgba(71,85,105,0.5)', padding: 16, display: 'grid', gap: 14 }}>
-                <p style={{ ...styles.label, margin: 0, fontSize: 12, color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <p style={{ ...styles.label, margin: 0, fontSize: 12, color: '#4ade80', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                     + New Lesson for this chapter
                 </p>
 
@@ -394,7 +394,7 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                             <select
                                 style={{
                                     ...styles.input,
-                                    color: draft.assignmentRequired ? '#a78bfa' : undefined,
+                                    color: draft.assignmentRequired ? '#4ade80' : undefined,
                                     borderColor: draft.assignmentRequired ? 'rgba(139,92,246,0.5)' : undefined
                                 }}
                                 value={draft.assignmentRequired}
@@ -456,8 +456,8 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                         readOnly={draft.videoProgress === 'uploading'}
                     />
                     {draft.videoProgress === 'uploading' && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, color: '#60a5fa', fontSize: 12, fontWeight: 600 }}>
-                            <span style={{ display: 'inline-block', width: 11, height: 11, border: '2px solid rgba(96,165,250,0.3)', borderTopColor: '#60a5fa', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, color: '#4ade80', fontSize: 12, fontWeight: 600 }}>
+                            <span style={{ display: 'inline-block', width: 11, height: 11, border: '2px solid rgba(74,222,128,0.3)', borderTopColor: '#4ade80', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
                             Uploading to Bunny Stream… (may take a few minutes for large files)
                         </div>
                     )}
@@ -496,7 +496,7 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                         </p>
                         <button type="button" onClick={addCheckpoint} style={{
                             display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.4)', color: '#a5b4fc',
+                            background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)', color: '#86efac',
                             borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer'
                         }}>
                             <Plus size={13} /> Add Checkpoint Quiz
@@ -557,7 +557,7 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                                         </div>
                                     ))}
                                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
-                                        <button type="button" onClick={() => addCheckpointOption(cpIdx, qIdx)} style={{ background: 'transparent', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: 0 }}>+ Add Option</button>
+                                        <button type="button" onClick={() => addCheckpointOption(cpIdx, qIdx)} style={{ background: 'transparent', border: 'none', color: '#4ade80', cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: 0 }}>+ Add Option</button>
                                         <span style={{ fontSize: 10, color: '#94a3b8' }}>◉ = correct answer</span>
                                     </div>
                                 </div>
@@ -603,9 +603,9 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                             padding: '10px 14px', borderRadius: 10, fontWeight: 600, fontSize: 13,
                             cursor: uploading ? 'not-allowed' : 'pointer',
                             opacity: uploading ? 0.6 : 1,
-                            background: draft.videoProgress === 'done' ? 'rgba(16,185,129,0.15)' : 'rgba(59,130,246,0.12)',
-                            color: draft.videoProgress === 'done' ? '#10b981' : '#60a5fa',
-                            border: `1px solid ${draft.videoProgress === 'done' ? 'rgba(16,185,129,0.3)' : 'rgba(59,130,246,0.3)'}`
+                            background: draft.videoProgress === 'done' ? 'rgba(16,185,129,0.15)' : 'rgba(34,197,94,0.12)',
+                            color: draft.videoProgress === 'done' ? '#10b981' : '#4ade80',
+                            border: `1px solid ${draft.videoProgress === 'done' ? 'rgba(16,185,129,0.3)' : 'rgba(34,197,94,0.3)'}`
                         }}
                     >
                         <Video size={14} />
@@ -1047,7 +1047,7 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
                                                     {l.notesPdfUrl ? '📄 PDF' : ''} &nbsp;
                                                     {l.isFreePreview ? '🆓' : '🔒'} &nbsp;
                                                     {l.quizRequired && <span style={{ color: '#f59e0b' }}>Quiz: ON</span>}
-                                                    {l.assignmentRequired && <span style={{ color: '#a78bfa' }}>Assignment: ON</span>}
+                                                    {l.assignmentRequired && <span style={{ color: '#4ade80' }}>Assignment: ON</span>}
                                                 </span>
                                             </div>
                                         ))}
@@ -1084,7 +1084,7 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
                 <div style={styles.stepper}>
                     {stepStatus.map((step, index) => (
                         <div key={step.title} style={styles.stepItem}>
-                            <div style={{ ...styles.stepCircle, background: index === activeStep ? 'linear-gradient(135deg,#2563eb,#7c3aed)' : index < activeStep ? '#10b981' : colors.bgCard, color: index <= activeStep ? '#fff' : colors.textMuted }}>
+                            <div style={{ ...styles.stepCircle, background: index === activeStep ? 'linear-gradient(135deg,#16a34a,#15803d)' : index < activeStep ? '#10b981' : colors.bgCard, color: index <= activeStep ? '#fff' : colors.textMuted }}>
                                 {index < activeStep ? <CheckCircle size={16} /> : index + 1}
                             </div>
                             <div>
@@ -1145,13 +1145,13 @@ const styles = {
     panel: { display: 'flex', flexDirection: 'column', gap: 18 },
     sectionTitle: { fontSize: 17, color: '#f1f5f9', margin: 0, fontWeight: 700 },
     sectionSubtitle: { color: '#94a3b8', fontSize: 13, margin: 0, lineHeight: 1.6 },
-    secondaryBtn: { background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.35)', color: '#bfdbfe', borderRadius: 12, padding: '11px 16px', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13 },
-    primaryBtn: { background: 'linear-gradient(135deg, #2563eb, #7c3aed)', border: 'none', borderRadius: 12, color: '#fff', padding: '11px 16px', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13 },
+    secondaryBtn: { background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.35)', color: '#bbf7d0', borderRadius: 12, padding: '11px 16px', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13 },
+    primaryBtn: { background: 'linear-gradient(135deg, #16a34a, #15803d)', border: 'none', borderRadius: 12, color: '#fff', padding: '11px 16px', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13 },
     emptyBox: { padding: 24, borderRadius: 16, background: 'rgba(15,23,42,0.65)', border: '1px dashed rgba(71,85,105,0.5)', color: '#94a3b8', lineHeight: 1.7 },
     chapterCard: { background: 'rgba(15,23,42,0.75)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: 18, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 },
     chapterHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
     lessonRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(71,85,105,0.3)' },
-    badge: { padding: '3px 10px', borderRadius: 999, background: 'rgba(37,99,235,0.15)', color: '#93c5fd', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' },
+    badge: { padding: '3px 10px', borderRadius: 999, background: 'rgba(22,163,74,0.15)', color: '#86efac', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' },
     reviewGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 },
     panelCard: { padding: 20, borderRadius: 18, border: '1px solid rgba(71,85,105,0.35)', background: 'rgba(15,23,42,0.75)' },
     summaryRow: { display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 10, color: '#e2e8f0', fontSize: 14 },
@@ -1159,11 +1159,11 @@ const styles = {
     lessonSummary: { display: 'flex', justifyContent: 'space-between', marginTop: 8, color: '#cbd5e1', fontSize: 13 },
     fileInput: { border: 'none', color: '#fff', marginTop: 8 },
     preview: { marginTop: 8, color: '#d1fae5', fontSize: 13, fontWeight: 600 },
-    textBtn: { border: 'none', background: 'transparent', color: '#60a5fa', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13 },
+    textBtn: { border: 'none', background: 'transparent', color: '#4ade80', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13 },
     card: { background: 'rgba(15,23,42,0.75)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: 18, padding: 20, display: 'flex', flexDirection: 'column', gap: 12 },
     cardHeader: { display: 'flex', alignItems: 'center', gap: 10, color: '#f1f5f9', fontWeight: 700 },
     cardTitle: { fontSize: 15 },
     cardDescription: { color: '#94a3b8', fontSize: 13, margin: 0 },
     emptyText: { color: '#94a3b8', fontSize: 14 },
-    uploadLabel: { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 14px', borderRadius: 12, background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', color: '#bfdbfe', cursor: 'pointer', fontSize: 13, fontWeight: 600 }
+    uploadLabel: { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 14px', borderRadius: 12, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#bbf7d0', cursor: 'pointer', fontSize: 13, fontWeight: 600 }
 };

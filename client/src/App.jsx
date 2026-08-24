@@ -31,7 +31,7 @@ class ChunkErrorBoundary extends React.Component {
                     <p style={{ color:'#94a3b8', marginBottom:20, textAlign:'center' }}>A network error occurred loading this page.</p>
                     <button
                         onClick={() => window.location.reload()}
-                        style={{ background:'#6366f1', color:'#fff', border:'none', borderRadius:10, padding:'12px 28px', fontSize:15, fontWeight:700, cursor:'pointer' }}
+                        style={{ background:'#22c55e', color:'#fff', border:'none', borderRadius:10, padding:'12px 28px', fontSize:15, fontWeight:700, cursor:'pointer' }}
                     >
                         Reload Page
                     </button>
@@ -181,7 +181,7 @@ function AppRoutes() {
                         <div style={{ fontSize: '64px', marginBottom: '20px' }}>🚫</div>
                         <h2 style={{ fontSize: '32px', margin: '0 0 12px' }}>403 — Access Denied</h2>
                         <p style={{ color: '#64748b', marginBottom: '24px' }}>You do not have permission to view this page.</p>
-                        <a href="/" style={{ background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: '#fff', padding: '12px 24px', borderRadius: '10px', textDecoration: 'none', fontWeight: '700' }}>Go Home</a>
+                        <a href="/" style={{ background: 'linear-gradient(135deg,#22c55e,#22c55e)', color: '#fff', padding: '12px 24px', borderRadius: '10px', textDecoration: 'none', fontWeight: '700' }}>Go Home</a>
                     </div>
                 } />
                 <Route path="*" element={
@@ -189,7 +189,7 @@ function AppRoutes() {
                         <div style={{ fontSize: '64px', marginBottom: '20px' }}>🔍</div>
                         <h2 style={{ fontSize: '32px', margin: '0 0 12px' }}>404 — Page Not Found</h2>
                         <p style={{ color: '#64748b', marginBottom: '24px' }}>The page you're looking for doesn't exist.</p>
-                        <a href="/" style={{ background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: '#fff', padding: '12px 24px', borderRadius: '10px', textDecoration: 'none', fontWeight: '700' }}>Go Home</a>
+                        <a href="/" style={{ background: 'linear-gradient(135deg,#22c55e,#22c55e)', color: '#fff', padding: '12px 24px', borderRadius: '10px', textDecoration: 'none', fontWeight: '700' }}>Go Home</a>
                     </div>
                 } />
             </Routes>

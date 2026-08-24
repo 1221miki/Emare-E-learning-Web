@@ -139,7 +139,7 @@ export default function SearchPage() {
         enrollBtn: { background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', border: 'none', padding: '7px 14px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '12px' },
 
         instrCard: { background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '14px', padding: '24px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', gap: '16px', alignItems: 'center' },
-        instrAvatar: { width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '22px', fontWeight: '800', flexShrink: 0 },
+        instrAvatar: { width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#22c55e)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '22px', fontWeight: '800', flexShrink: 0 },
         instrName: { fontSize: '16px', fontWeight: '700', color: colors.text, margin: '0 0 4px' },
         instrMeta: { fontSize: '13px', color: colors.textMuted },
 
@@ -150,7 +150,7 @@ export default function SearchPage() {
         clearBtn: { background: 'none', border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', padding: '8px 18px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }
     };
 
-    const catColors = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ec4899','#06b6d4'];
+    const catColors = ['#22c55e','#22c55e','#10b981','#f59e0b','#ec4899','#06b6d4'];
 
     return (
         <div style={s.page}>

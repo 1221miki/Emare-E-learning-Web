@@ -8,7 +8,7 @@ import { useTheme } from '../../../context/ThemeContext';
 // ── Status config ────────────────────────────────────────────
 const STATUS = {
     active:    { label: 'Active',    bg: 'rgba(16,185,129,0.12)',  color: '#10b981', border: 'rgba(16,185,129,0.3)',  Icon: Activity },
-    completed: { label: 'Completed', bg: 'rgba(99,102,241,0.12)',  color: '#818cf8', border: 'rgba(99,102,241,0.3)',  Icon: CheckCircle },
+    completed: { label: 'Completed', bg: 'rgba(34,197,94,0.12)',  color: '#4ade80', border: 'rgba(34,197,94,0.3)',  Icon: CheckCircle },
     inactive:  { label: 'Inactive',  bg: 'rgba(100,116,139,0.12)', color: '#94a3b8', border: 'rgba(100,116,139,0.3)', Icon: Clock },
     'at-risk': { label: 'At Risk',   bg: 'rgba(239,68,68,0.12)',   color: '#f87171', border: 'rgba(239,68,68,0.3)',   Icon: AlertTriangle },
 };
@@ -30,11 +30,11 @@ function Avatar({ student }) {
             <img
                 src={student.avatar}
                 alt={student.name}
-                style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #dbeafe' }}
+                style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #dcfce7' }}
             />
         );
     }
-    const colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'];
+    const colors = ['#22c55e', '#22c55e', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'];
     const color  = colors[(student.name.charCodeAt(0) || 0) % colors.length];
     return (
         <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: `${color}22`, border: `2px solid ${color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', color, fontWeight: '800', fontSize: '15px', flexShrink: 0 }}>
@@ -44,7 +44,7 @@ function Avatar({ student }) {
 }
 
 function ProgressBar({ value }) {
-    const color = value >= 80 ? '#10b981' : value >= 40 ? '#3b82f6' : value >= 10 ? '#f59e0b' : '#ef4444';
+    const color = value >= 80 ? '#10b981' : value >= 40 ? '#22c55e' : value >= 10 ? '#f59e0b' : '#ef4444';
     return (
         <div style={{ width: '100%', minWidth: '80px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
@@ -79,9 +79,9 @@ function ActionMenu({ student, onViewProfile, onMessage, onRemove }) {
                     {/* Dropdown */}
                     <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: colors.bgCard, backdropFilter: 'blur(16px)', border: `2px solid ${colors.border}`, borderRadius: '12px', minWidth: '190px', zIndex: 1000, padding: '6px', boxShadow: `0 10px 30px ${theme === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.12)'}` }}>
                         {[
-                            { label: 'View Profile',    icon: <Eye size={14} aria-hidden="true" />,           action: () => { onViewProfile(student); setOpen(false); }, color: '#60a5fa' },
+                            { label: 'View Profile',    icon: <Eye size={14} aria-hidden="true" />,           action: () => { onViewProfile(student); setOpen(false); }, color: '#4ade80' },
                             { label: 'Send Message',    icon: <MessageSquare size={14} aria-hidden="true" />,  action: () => { onMessage(student); setOpen(false); },      color: '#34d399' },
-                            { label: 'View Progress',   icon: <TrendingUp size={14} aria-hidden="true" />,     action: () => { onViewProfile(student); setOpen(false); }, color: '#a78bfa' },
+                            { label: 'View Progress',   icon: <TrendingUp size={14} aria-hidden="true" />,     action: () => { onViewProfile(student); setOpen(false); }, color: '#4ade80' },
                             { label: 'Remove Student',  icon: <Trash2 size={14} aria-hidden="true" />,         action: () => { onRemove(student); setOpen(false); },       color: '#f87171', danger: true },
                         ].map((item, i) => (
                             <button

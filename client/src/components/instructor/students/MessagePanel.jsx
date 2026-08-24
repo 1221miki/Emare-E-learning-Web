@@ -109,10 +109,10 @@ export default function MessagePanel({ student, course, onClose }) {
                             <div style={{ color: '#1e293b', fontSize: '16px', fontWeight: '700', marginBottom: '6px' }}>Message Sent!</div>
                             <div style={{ color: '#64748b', fontSize: '13px', marginBottom: '20px' }}>Your message was delivered to {student.name}.</div>
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                                <button onClick={() => setSent(false)} style={{ background: '#dbeafe', border: '2px solid #60a5fa', color: '#1e40af', borderRadius: '10px', padding: '10px 20px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>
+                                <button onClick={() => setSent(false)} style={{ background: '#dcfce7', border: '2px solid #4ade80', color: '#166534', borderRadius: '10px', padding: '10px 20px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>
                                     Send Another
                                 </button>
-                                <button onClick={onClose} style={{ background: '#f0f4ff', border: '2px solid #c7d2fe', color: '#4f46e5', borderRadius: '10px', padding: '10px 20px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>
+                                <button onClick={onClose} style={{ background: '#f0f4ff', border: '2px solid #d1fae5', color: '#16a34a', borderRadius: '10px', padding: '10px 20px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>
                                     Close
                                 </button>
                             </div>
@@ -125,7 +125,7 @@ export default function MessagePanel({ student, course, onClose }) {
                                 <input
                                     value={subject}
                                     onChange={e => setSubject(e.target.value)}
-                                    style={{ width: '100%', background: '#f8fafc', border: '2px solid #e0e7ff', color: '#1e293b', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                                    style={{ width: '100%', background: '#f8fafc', border: '2px solid #dcfce7', color: '#1e293b', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                                     placeholder="Message subject…"
                                     aria-label="Message subject"
                                 />
@@ -141,9 +141,9 @@ export default function MessagePanel({ student, course, onClose }) {
                                         <button
                                             key={i}
                                             onClick={() => setBody(msg)}
-                                            style={{ background: '#f0f4ff', border: '2px solid #c7d2fe', color: '#4f46e5', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer', transition: 'all 0.15s', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                                            onMouseEnter={e => { e.currentTarget.style.background = '#dbeafe'; e.currentTarget.style.color = '#1e40af'; }}
-                                            onMouseLeave={e => { e.currentTarget.style.background = '#f0f4ff'; e.currentTarget.style.color = '#4f46e5'; }}
+                                            style={{ background: '#f0f4ff', border: '2px solid #d1fae5', color: '#16a34a', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer', transition: 'all 0.15s', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                            onMouseEnter={e => { e.currentTarget.style.background = '#dcfce7'; e.currentTarget.style.color = '#166534'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.background = '#f0f4ff'; e.currentTarget.style.color = '#16a34a'; }}
                                             title={msg}
                                         >
                                             {msg.substring(0, 28)}…
@@ -161,7 +161,7 @@ export default function MessagePanel({ student, course, onClose }) {
                                     onChange={e => setBody(e.target.value)}
                                     rows={5}
                                     placeholder={tab === 'direct' ? `Write a personal message to ${student.name}…` : `Write an announcement for all students in ${course?.courseTitle || 'this course'}…`}
-                                    style={{ width: '100%', background: '#f8fafc', border: '2px solid #e0e7ff', color: '#1e293b', padding: '12px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6, boxSizing: 'border-box' }}
+                                    style={{ width: '100%', background: '#f8fafc', border: '2px solid #dcfce7', color: '#1e293b', padding: '12px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6, boxSizing: 'border-box' }}
                                     aria-label="Message body"
                                 />
                             </div>
@@ -185,7 +185,7 @@ export default function MessagePanel({ student, course, onClose }) {
                             <button
                                 onClick={handleSend}
                                 disabled={sending || !body.trim()}
-                                style={{ width: '100%', background: !body.trim() ? '#c7d2fe' : 'linear-gradient(135deg, #3b82f6, #2563eb)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: !body.trim() ? 'not-allowed' : 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'opacity 0.15s' }}
+                                style={{ width: '100%', background: !body.trim() ? '#d1fae5' : 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: !body.trim() ? 'not-allowed' : 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'opacity 0.15s' }}
                                 aria-label="Send message"
                             >
                                 <Send size={16} aria-hidden="true" />

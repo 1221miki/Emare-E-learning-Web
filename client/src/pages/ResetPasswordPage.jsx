@@ -211,7 +211,7 @@ export default function ResetPasswordPage() {
 
                 <p style={{ textAlign: 'center', fontSize: 13, color: '#666', margin: 0 }}>
                     Remember your password?{' '}
-                    <Link to="/login" style={{ color: '#6366f1', textDecoration: 'none', fontWeight: 600 }}>Sign in here</Link>
+                    <Link to="/login" style={{ color: '#22c55e', textDecoration: 'none', fontWeight: 600 }}>Sign in here</Link>
                 </p>
             </div>
         </div>
@@ -252,7 +252,7 @@ const s = {
         cursor: 'pointer', color: '#666', fontSize: 16
     },
     btn: {
-        padding: '12px 16px', backgroundColor: '#6366f1',
+        padding: '12px 16px', backgroundColor: '#22c55e',
         color: '#fff', border: 'none', borderRadius: 6,
         fontSize: 15, fontWeight: 600, cursor: 'pointer',
         transition: 'background 0.3s', marginTop: 10
