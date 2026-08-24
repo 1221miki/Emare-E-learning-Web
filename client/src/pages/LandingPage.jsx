@@ -563,7 +563,11 @@ export default function LandingPage() {
                         {!isAuthenticated ? (
                             <button onClick={() => navigate('/register')} style={p.secondaryBtn}>Start Learning for Free</button>
                         ) : (
-                            <button onClick={() => navigate('/student/dashboard')} style={p.secondaryBtn}>Go to My Dashboard</button>
+                            <button onClick={() => {
+                                if (user?.assignedRole === 'Admin') navigate('/admin/dashboard');
+                                else if (user?.assignedRole === 'Instructor') navigate('/instructor/dashboard');
+                                else navigate('/student/dashboard');
+                            }} style={p.secondaryBtn}>Go to My Dashboard</button>
                         )}
                     </div>
                 </div>
