@@ -306,8 +306,14 @@ export default function LearningWorkspace() {
         }
     };
 
-    // Does this lesson actually require anything?
-    const lessonHasRequirements = !!(activeLesson?.quizRequired || activeLesson?.assignmentRequired);
+    // Does this lesson actually require anything before it can be marked complete?
+    // Includes: linked quiz, linked assignment, in-video concept quizzes, video watch-through
+    const lessonHasCheckpoints = !!(activeLesson?.quizCheckpoints?.length > 0);
+    const lessonHasRequirements = !!(
+        activeLesson?.quizRequired ||
+        activeLesson?.assignmentRequired ||
+        lessonHasCheckpoints
+    );
 
     // ── Theme helpers ─────────────────────────────────────────────────────────
     const isDark   = theme === 'dark';
@@ -439,6 +445,11 @@ export default function LearningWorkspace() {
         const status = checkpointsData?.attemptStatus?.[cp.checkpointId];
         return !!status?.passed;
     }, [checkpointsData]);
+
+    // Client-side: are all concepts/checkpoints for this lesson passed?
+    // Used to disable "Mark as Complete" button before even hitting the server.
+    const allConceptsDone = !hasCheckpoints ||
+        (checkpointsData?.checkpoints || []).every(cp => isCheckpointPassed(cp));
 
     // Pause + open quiz modal when a checkpoint timestamp is reached.
     // Also accumulates REAL watched time (normal forward playback only —
@@ -633,13 +644,13 @@ export default function LearningWorkspace() {
     });
 
     const refreshReqStatus = useCallback(() => {
-        if (!activeLesson || !lessonHasRequirements) return;
+        if (!activeLesson) return;
         setReqLoading(true);
         learningProgressService.getLessonRequirementsStatus(courseId, activeLesson._id.toString(), liveWatchParams())
             .then(res => setReqStatus(res.data?.data || null))
             .catch(() => {})
             .finally(() => setReqLoading(false));
-    }, [activeLesson, lessonHasRequirements, courseId]);
+    }, [activeLesson, courseId]);
 
     // Jump back into the lesson video so students blocked at "Mark as Complete"
     // have a one-click path: resumes playback at the start of the earliest
@@ -963,10 +974,24 @@ export default function LearningWorkspace() {
                             <p style={{ margin: '6px 0 0', fontSize: 13, color: muted }}>{activeLesson.durationMinutes} min</p>
                         )}
 
-                        {/* ── Completion requirement indicator (shown when lesson has gates) ── */}
+                        {/* ── Completion requirement indicator ──────────────────── */}
                         {!isCurrentDone && lessonHasRequirements && (
                             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                                 <span style={{ fontSize: 11, color: muted, fontWeight: 600 }}>Required to complete:</span>
+                                {/* In-video concepts badge — shown whenever checkpoints exist */}
+                                {lessonHasCheckpoints && (
+                                    <span style={{
+                                        padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
+                                        background: allConceptsDone ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
+                                        color: allConceptsDone ? '#10b981' : '#f59e0b',
+                                        border: `1px solid ${allConceptsDone ? 'rgba(16,185,129,0.35)' : 'rgba(245,158,11,0.35)'}`
+                                    }}>
+                                        {allConceptsDone
+                                            ? `✓ All ${checkpointsData?.checkpoints?.length} concept${checkpointsData?.checkpoints?.length > 1 ? 's' : ''} done`
+                                            : `⚬ ${(checkpointsData?.checkpoints || []).filter(cp => isCheckpointPassed(cp)).length}/${checkpointsData?.checkpoints?.length || '?'} concepts done`
+                                        }
+                                    </span>
+                                )}
                                 {activeLesson.quizRequired && (
                                     <span style={{
                                         padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
@@ -1002,10 +1027,28 @@ export default function LearningWorkspace() {
 
                             {/* Mark Complete */}
                             {!isCurrentDone ? (
-                                <button onClick={handleMarkComplete} disabled={markingDone} style={{ display: 'flex', alignItems: 'center', gap: 6, background: `linear-gradient(135deg, ${green}, #059669)`, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', cursor: markingDone ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 13 }}>
+                                <button
+                                    onClick={handleMarkComplete}
+                                    disabled={markingDone || !allConceptsDone}
+                                    title={!allConceptsDone ? 'Complete all video concepts first' : 'Mark this lesson as complete'}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: 6,
+                                        background: !allConceptsDone
+                                            ? isDark ? '#334155' : '#e2e8f0'
+                                            : `linear-gradient(135deg, ${green}, #059669)`,
+                                        color: !allConceptsDone ? muted : '#fff',
+                                        border: !allConceptsDone ? `1.5px solid ${border}` : 'none',
+                                        borderRadius: 8, padding: '8px 18px',
+                                        cursor: (markingDone || !allConceptsDone) ? 'not-allowed' : 'pointer',
+                                        fontWeight: 700, fontSize: 13,
+                                        opacity: markingDone ? 0.7 : 1
+                                    }}
+                                >
                                     {markingDone
                                         ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> Checking…</>
-                                        : <><IconCheck /> Mark as Complete</>
+                                        : !allConceptsDone
+                                            ? <><IconLock /> Complete All Concepts First</>
+                                            : <><IconCheck /> Mark as Complete</>
                                     }
                                 </button>
                             ) : (
@@ -1014,7 +1057,7 @@ export default function LearningWorkspace() {
                                 </div>
                             )}
 
-                            {/* Refresh requirements button (visible when lesson has unfulfilled requirements) */}
+                            {/* Refresh requirements button */}
                             {!isCurrentDone && lessonHasRequirements && reqStatus && !reqStatus.canComplete && (
                                 <button onClick={refreshReqStatus} disabled={reqLoading} title="Refresh requirement status" style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'transparent', border: `1px solid ${border}`, color: muted, borderRadius: 8, padding: '8px 12px', cursor: reqLoading ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 12 }}>
                                     {reqLoading
