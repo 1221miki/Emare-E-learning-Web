@@ -12,7 +12,7 @@
  *    be satisfied before "Mark as Complete" is accepted (enforced on backend too)
  *  - After the final lesson → completion screen → certificate
  */
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { courseService, learningProgressService, certificateService, inVideoQuizService } from '../../services/api.jsx';
 import { getPdfUrl } from '../../services/api.jsx';
@@ -20,6 +20,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import AiAssistant from '../../components/AiAssistant';
 import { getLessonVideoUrl, getVideoEmbedUrl, getVideoRenderMode, getVideoErrorReason } from '../../utils/videoPlayer';
+import CheckpointTimeline from '../../components/student/CheckpointTimeline';
 
 // ── Inline icons ──────────────────────────────────────────────────────────────
 const IconPlay  = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>;
@@ -216,6 +217,7 @@ export default function LearningWorkspace() {
 
     // ── In-video quiz checkpoints ─────────────────────────────────────────────
     const videoRef                 = useRef(null);
+    const playerContainerRef       = useRef(null);   // fullscreen target for checkpoint player
     const playbackTimeRef          = useRef(0);
     const firedCheckpointsRef      = useRef(new Set());   // checkpointIds already popped this session
     const watchedSecondsRef        = useRef(0);           // real played seconds (seek-immune)
@@ -229,6 +231,10 @@ export default function LearningWorkspace() {
     const [checkpointError,        setCheckpointError]        = useState('');
     const [playbackFailed,         setPlaybackFailed]         = useState(false);
     const [playbackRetryKey,       setPlaybackRetryKey]       = useState(0);
+    // Checkpoint timeline UI state (custom progress bar shown when checkpoints exist)
+    const [videoDuration,          setVideoDuration]          = useState(0);
+    const [uiTime,                 setUiTime]                 = useState(0);
+    const [isPlaying,              setIsPlaying]              = useState(false);
 
     // Completion actions
     const [markingDone,     setMarkingDone]     = useState(false);
@@ -384,6 +390,9 @@ export default function LearningWorkspace() {
         lastHeartbeatRef.current = 0;
         autoAdvancingRef.current = false;
         setPlaybackFailed(false);
+        setVideoDuration(0);
+        setUiTime(0);
+        setIsPlaying(false);
 
         const raw = getLessonVideoUrl(activeLesson);
         if (!raw) { setVideoUrl(''); setVideoError('No video available for this lesson.'); return; }
@@ -498,6 +507,29 @@ export default function LearningWorkspace() {
     const allConceptsDone = !hasCheckpoints ||
         (checkpointsData?.checkpoints || []).every(cp => isCheckpointPassed(cp));
 
+    // Timeline order — always ascending by concept end time
+    const sortedCheckpoints = useMemo(() =>
+        [...(checkpointsData?.checkpoints || [])].sort((a, b) =>
+            (a.timestampSeconds ?? 0) - (b.timestampSeconds ?? 0)
+        ), [checkpointsData]);
+
+    // Clamp a seek target so the student can never jump past an unanswered
+    // checkpoint. Used by both the custom timeline and the native seeking guard.
+    const clampSeekTarget = useCallback((target) => {
+        if (!hasCheckpoints || activeCheckpoint) return target;
+        const pending = sortedCheckpoints.filter(cp => !isCheckpointPassed(cp));
+        if (pending.length === 0) return target;
+        const limit = Math.min(...pending.map(cp => cp.timestampSeconds)) - 0.2;
+        return Math.min(target, Math.max(limit, 0));
+    }, [hasCheckpoints, activeCheckpoint, sortedCheckpoints, isCheckpointPassed]);
+
+    const seekTo = useCallback((target) => {
+        if (!videoRef.current || !Number.isFinite(target)) return;
+        const clamped = Math.max(0, clampSeekTarget(target));
+        videoRef.current.currentTime = clamped;
+        setUiTime(clamped);
+    }, [clampSeekTarget]);
+
     // Pause + open quiz modal when a checkpoint timestamp is reached.
     // Also accumulates REAL watched time (normal forward playback only —
     // seeking ahead adds nothing) and heartbeats progress to the backend.
@@ -507,6 +539,7 @@ export default function LearningWorkspace() {
         if (dt > 0 && dt < 1.5) watchedSecondsRef.current += dt; // ignore seeks/repeats
         lastTickRef.current = t;
         playbackTimeRef.current = t;
+        setUiTime(t);
 
         // Persist watch progress every ~30s so completion survives reloads
         const now = Date.now();
@@ -538,14 +571,12 @@ export default function LearningWorkspace() {
         }
     };
 
-    // Block seeking past the next unanswered checkpoint
+    // Block seeking past the next unanswered checkpoint (native controls,
+    // keyboard shortcuts, devtools — everything funnels through the seeking event)
     const handleVideoSeeking = (e) => {
-        if (!hasCheckpoints || activeCheckpoint) return;
-        const pending = (checkpointsData.checkpoints || []).filter(cp => !isCheckpointPassed(cp));
-        if (pending.length === 0) return;
-        const limit = Math.min(...pending.map(cp => cp.timestampSeconds)) - 0.2;
-        if (e.target.currentTime > limit) {
-            e.target.currentTime = Math.min(playbackTimeRef.current, Math.max(limit, 0));
+        const clamped = clampSeekTarget(e.target.currentTime);
+        if (clamped < e.target.currentTime) {
+            e.target.currentTime = Math.min(playbackTimeRef.current, clamped);
         }
     };
 
@@ -917,7 +948,7 @@ export default function LearningWorkspace() {
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', minWidth: 0 }}>
 
                     {/* Video Player */}
-                    <div style={{ background: '#000', width: '100%', aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0 }}>
+                    <div ref={playerContainerRef} style={{ background: '#000', width: '100%', aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0 }}>
                         {videoLoading ? (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
                                 <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid #334155', borderTop: `3px solid ${accent}`, animation: 'spin 0.8s linear infinite' }} />
@@ -948,22 +979,92 @@ export default function LearningWorkspace() {
                                         </button>
                                     </div>
                                 ) : (
-                                    <video
-                                        key={`${videoUrl}#${playbackRetryKey}`}
-                                        ref={videoRef}
-                                        src={videoUrl}
-                                        controls
-                                        controlsList="nodownload noplaybackrate"
-                                                                        onTimeUpdate={handleVideoTimeUpdate}
-                                        onSeeking={hasCheckpoints ? handleVideoSeeking : undefined}
-                                        onError={() => hasCheckpoints && setPlaybackFailed(true)}
-                                        onEnded={handleVideoEnded}
-                                        onContextMenu={(e) => hasCheckpoints && e.preventDefault()}
-                                        preload="metadata"
-                                        playsInline
-                                        style={{ width: '100%', height: '100%', background: '#000' }}
-                                        title={activeLesson?.lessonTitle || 'Lesson video'}
-                                    />
+                                    <>
+                                        <video
+                                            key={`${videoUrl}#${playbackRetryKey}`}
+                                            ref={videoRef}
+                                            src={videoUrl}
+                                            controls={!hasCheckpoints}
+                                            controlsList="nodownload noplaybackrate"
+                                            onTimeUpdate={handleVideoTimeUpdate}
+                                            onSeeking={hasCheckpoints ? handleVideoSeeking : undefined}
+                                            onLoadedMetadata={(e) => { setVideoDuration(e.target.duration || 0); }}
+                                            onPlay={() => setIsPlaying(true)}
+                                            onPause={() => setIsPlaying(false)}
+                                            onError={() => hasCheckpoints && setPlaybackFailed(true)}
+                                            onEnded={handleVideoEnded}
+                                            onClick={hasCheckpoints ? () => {
+                                                const v = videoRef.current;
+                                                if (!v) return;
+                                                v.paused ? v.play().catch(() => {}) : v.pause();
+                                            } : undefined}
+                                            onContextMenu={(e) => hasCheckpoints && e.preventDefault()}
+                                            preload="metadata"
+                                            playsInline
+                                            style={{ width: '100%', height: '100%', background: '#000' }}
+                                            title={activeLesson?.lessonTitle || 'Lesson video'}
+                                        />
+
+                                        {/* ── Checkpoint timeline control bar ── */}
+                                        {hasCheckpoints && (
+                                            <div style={{
+                                                position: 'absolute', left: 0, right: 0, bottom: 0,
+                                                zIndex: 5, display: 'flex', alignItems: 'flex-end', gap: 10,
+                                                padding: '10px 16px 4px',
+                                                background: 'linear-gradient(transparent, rgba(0,0,0,0.88) 55%)'
+                                            }}>
+                                                <button
+                                                    onClick={() => {
+                                                        const v = videoRef.current;
+                                                        if (!v) return;
+                                                        v.paused ? v.play().catch(() => {}) : v.pause();
+                                                    }}
+                                                    aria-label={isPlaying ? 'Pause' : 'Play'}
+                                                    style={{
+                                                        background: 'rgba(255,255,255,0.12)', color: '#fff',
+                                                        border: 'none', borderRadius: '50%', width: 38, height: 38,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        cursor: 'pointer', flexShrink: 0, marginBottom: 10
+                                                    }}
+                                                >
+                                                    {isPlaying ? (
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+                                                    ) : (
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                                                    )}
+                                                </button>
+
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <CheckpointTimeline
+                                                        duration={videoDuration || videoRef.current?.duration || 0}
+                                                        currentTime={uiTime}
+                                                        checkpoints={sortedCheckpoints}
+                                                        attemptStatus={checkpointsData?.attemptStatus || {}}
+                                                        activeCheckpointId={activeCheckpoint?.checkpointId || null}
+                                                        onSeek={seekTo}
+                                                    />
+                                                </div>
+
+                                                <button
+                                                    onClick={() => {
+                                                        const el = playerContainerRef.current;
+                                                        if (!el) return;
+                                                        if (document.fullscreenElement) document.exitFullscreen?.();
+                                                        else el.requestFullscreen?.();
+                                                    }}
+                                                    aria-label="Toggle fullscreen"
+                                                    style={{
+                                                        background: 'rgba(255,255,255,0.12)', color: '#fff',
+                                                        border: 'none', borderRadius: 8, width: 38, height: 38,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        cursor: 'pointer', flexShrink: 0, marginBottom: 10
+                                                    }}
+                                                >
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                                                </button>
+                                            </div>
+                                        )}
+                                    </>
                                 )
                             ) : (
                                 <iframe key={videoUrl} src={videoUrl} title={activeLesson?.lessonTitle || 'Lesson video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen style={{ width: '100%', height: '100%', border: 'none' }} />
