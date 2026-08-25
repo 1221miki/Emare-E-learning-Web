@@ -188,7 +188,12 @@ const updateCourse = async (req, res, next) => {
                     linkedQuizId:       l.linkedQuizId       && String(l.linkedQuizId).trim()       ? l.linkedQuizId       : null,
                     linkedAssignmentId: l.linkedAssignmentId && String(l.linkedAssignmentId).trim() ? l.linkedAssignmentId : null,
                     quizRequired:       !!l.quizRequired,
-                    assignmentRequired: !!l.assignmentRequired
+                    assignmentRequired: !!l.assignmentRequired,
+                    // Normalise checkpoint startSeconds (default 0 for backwards compatibility)
+                    quizCheckpoints: Array.isArray(l.quizCheckpoints) ? l.quizCheckpoints.map(cp => ({
+                        ...cp,
+                        startSeconds: Number(cp.startSeconds) || 0
+                    })) : []
                 }))
             }));
         }

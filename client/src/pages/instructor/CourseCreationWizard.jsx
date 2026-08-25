@@ -60,11 +60,12 @@ const newLesson = () => ({
     quizCheckpoints: []
 });
 
-/** Create an empty in-video quiz checkpoint */
+/** Create an empty in-video quiz checkpoint (one video concept) */
 const newCheckpoint = () => ({
     checkpointId: `cp_${uid()}`,
     title: '',
-    timestampSeconds: 0,
+    startSeconds: 0,        // concept start time in the video
+    timestampSeconds: 0,    // concept end time — video pauses here for the quiz
     passingScorePercent: 60,
     questions: []
 });
@@ -227,6 +228,7 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
             ).map(cp => ({
                 checkpointId: cp.checkpointId,
                 title: cp.title.trim(),
+                startSeconds: Number(cp.startSeconds) || 0,
                 timestampSeconds: Number(cp.timestampSeconds) || 0,
                 passingScorePercent: Number(cp.passingScorePercent) || 60,
                 questions: cp.questions.map(q => ({
@@ -488,139 +490,165 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                     {draft.pdfProgress === 'error' && <div style={{ marginTop: 5, color: '#ef4444', fontSize: 12, fontWeight: 600 }}>✗ PDF upload failed — try again</div>}
                 </div>
 
-                {/* Row 3b: In-video quiz checkpoints */}
-                <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, border: '1px solid rgba(71,85,105,0.35)', padding: '12px 14px' }}>
+                {/* Row 3b: Video Concepts (formerly "In-video quiz checkpoints") */}
+                <div style={{ background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0', padding: '12px 14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-                        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                            In-Video Quiz Checkpoints
-                        </p>
+                        <div>
+                            <p style={{ margin: 0, fontSize: 12, fontWeight: 800, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                🎬 Video Concepts
+                            </p>
+                            <p style={{ margin: '2px 0 0', fontSize: 11, color: '#4ade80' }}>
+                                Divide one uploaded video into multiple learning concepts
+                            </p>
+                        </div>
                         <button type="button" onClick={addCheckpoint} style={{
                             display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)', color: '#86efac',
-                            borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer'
+                            background: '#16a34a', border: 'none', color: '#fff',
+                            borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer'
                         }}>
-                            <Plus size={13} /> Add Checkpoint Quiz
+                            <Plus size={13} /> Add Concept
                         </button>
                     </div>
-                    <p style={{ margin: '0 0 12px', fontSize: 11, color: '#94a3b8' }}>
-                        The video automatically pauses at each checkpoint timestamp and shows a quiz covering that segment. Each quiz needs 3–5 questions, and students must pass it to continue watching. Checkpoints with fewer than 3 or more than 5 complete questions will not be saved.
+                    <p style={{ margin: '0 0 12px', fontSize: 11, color: '#64748b', lineHeight: 1.6 }}>
+                        Each concept defines a <strong>start time</strong> and <strong>end time</strong> in the video. At the end time, the video pauses and shows a required quiz for that concept. Students must pass the quiz to continue. Each quiz needs <strong>3–5 questions</strong>.
                     </p>
 
                     {(draft.quizCheckpoints || []).length === 0 && (
-                        <p style={{ margin: 0, fontSize: 12, color: '#64748b', fontStyle: 'italic' }}>
-                            No checkpoints yet — add one to embed a mandatory quiz in this lesson's video timeline.
+                        <p style={{ margin: 0, fontSize: 12, color: '#64748b', fontStyle: 'italic', padding: '10px 0' }}>
+                            No concepts yet — click "Add Concept" to divide your video into learning segments.
                         </p>
                     )}
 
                     {(draft.quizCheckpoints || []).map((cp, cpIdx) => (
-                        <div key={cp.checkpointId} style={{ background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0', padding: '12px 14px', marginBottom: 12 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                                <span style={{ fontSize: 12, fontWeight: 800, color: '#f59e0b' }}>⏸ Checkpoint {cpIdx + 1}</span>
+                        <div key={cp.checkpointId} style={{ background: '#ffffff', borderRadius: 10, border: '2px solid #e2e8f0', padding: '14px', marginBottom: 14 }}>
+                            {/* Concept header */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                                <span style={{ fontSize: 13, fontWeight: 800, color: '#15803d' }}>
+                                    📌 Concept {cpIdx + 1}
+                                </span>
                                 <button type="button" onClick={() => removeCheckpoint(cpIdx)} style={{
                                     display: 'inline-flex', alignItems: 'center', gap: 4,
-                                    background: 'transparent', border: '1px solid rgba(239,68,68,0.35)', color: '#ef4444',
+                                    background: 'transparent', border: '1px solid rgba(239,68,68,0.4)', color: '#ef4444',
                                     borderRadius: 7, padding: '4px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer'
                                 }}>
                                     <Trash2 size={12} /> Remove
                                 </button>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+
+                            {/* Concept Title */}
+                            <div style={{ ...styles.formGroup, marginBottom: 12 }}>
+                                <label style={{ ...styles.label, color: '#374151' }}>Concept Title</label>
+                                <input
+                                    style={styles.input}
+                                    value={cp.title}
+                                    onChange={e => updateCheckpoint(cpIdx, { title: e.target.value })}
+                                    placeholder={`e.g. What is Python? / Functions / Data Types`}
+                                />
+                            </div>
+
+                            {/* Start Time / End Time / Passing Score row */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px', gap: 12, marginBottom: 12 }}>
+                                {/* Start Time */}
                                 <div style={styles.formGroup}>
-                                    <label style={styles.label}>Title</label>
-                                    <input style={styles.input} value={cp.title} onChange={e => updateCheckpoint(cpIdx, { title: e.target.value })} placeholder={`Segment ${cpIdx + 1} quiz`} />
-                                </div>
-                                <div style={styles.formGroup}>
-                                    <label style={styles.label}>Pause At (H : M : S)</label>
-                                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1 }}>
-                                            <input
-                                                type="number" min="0" max="23"
-                                                style={{ ...styles.input, textAlign: 'center' }}
-                                                value={Math.floor(cp.timestampSeconds / 3600)}
-                                                onChange={e => {
-                                                    const h = Math.max(0, Number(e.target.value) || 0);
-                                                    const m = Math.floor((cp.timestampSeconds % 3600) / 60);
-                                                    const s = cp.timestampSeconds % 60;
-                                                    updateCheckpoint(cpIdx, { timestampSeconds: h * 3600 + m * 60 + s });
-                                                }}
-                                                placeholder="0"
-                                            />
-                                            <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>HRS</span>
-                                        </div>
-                                        <span style={{ fontSize: 18, color: '#94a3b8', fontWeight: 700, paddingBottom: 16 }}>:</span>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1 }}>
-                                            <input
-                                                type="number" min="0" max="59"
-                                                style={{ ...styles.input, textAlign: 'center' }}
-                                                value={Math.floor((cp.timestampSeconds % 3600) / 60)}
-                                                onChange={e => {
-                                                    const h = Math.floor(cp.timestampSeconds / 3600);
-                                                    const m = Math.min(59, Math.max(0, Number(e.target.value) || 0));
-                                                    const s = cp.timestampSeconds % 60;
-                                                    updateCheckpoint(cpIdx, { timestampSeconds: h * 3600 + m * 60 + s });
-                                                }}
-                                                placeholder="0"
-                                            />
-                                            <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>MIN</span>
-                                        </div>
-                                        <span style={{ fontSize: 18, color: '#94a3b8', fontWeight: 700, paddingBottom: 16 }}>:</span>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1 }}>
-                                            <input
-                                                type="number" min="0" max="59"
-                                                style={{ ...styles.input, textAlign: 'center' }}
-                                                value={cp.timestampSeconds % 60}
-                                                onChange={e => {
-                                                    const h = Math.floor(cp.timestampSeconds / 3600);
-                                                    const m = Math.floor((cp.timestampSeconds % 3600) / 60);
-                                                    const s = Math.min(59, Math.max(0, Number(e.target.value) || 0));
-                                                    updateCheckpoint(cpIdx, { timestampSeconds: h * 3600 + m * 60 + s });
-                                                }}
-                                                placeholder="0"
-                                            />
-                                            <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>SEC</span>
-                                        </div>
+                                    <label style={{ ...styles.label, color: '#374151' }}>▶ Start Time (H : M : S)</label>
+                                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                        {[
+                                            { unit: 'HRS', max: 23, get: () => Math.floor((cp.startSeconds || 0) / 3600), set: (v) => { const m = Math.floor(((cp.startSeconds || 0) % 3600) / 60); const s = (cp.startSeconds || 0) % 60; updateCheckpoint(cpIdx, { startSeconds: Math.max(0, v) * 3600 + m * 60 + s }); } },
+                                            { unit: 'MIN', max: 59, get: () => Math.floor(((cp.startSeconds || 0) % 3600) / 60), set: (v) => { const h = Math.floor((cp.startSeconds || 0) / 3600); const s = (cp.startSeconds || 0) % 60; updateCheckpoint(cpIdx, { startSeconds: h * 3600 + Math.min(59, Math.max(0, v)) * 60 + s }); } },
+                                            { unit: 'SEC', max: 59, get: () => (cp.startSeconds || 0) % 60, set: (v) => { const h = Math.floor((cp.startSeconds || 0) / 3600); const m = Math.floor(((cp.startSeconds || 0) % 3600) / 60); updateCheckpoint(cpIdx, { startSeconds: h * 3600 + m * 60 + Math.min(59, Math.max(0, v)) }); } }
+                                        ].map(({ unit, max, get, set }, i, arr) => (
+                                            <React.Fragment key={unit}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1 }}>
+                                                    <input type="number" min="0" max={max} style={{ ...styles.input, textAlign: 'center', padding: '8px 4px' }} value={get()} onChange={e => set(Number(e.target.value) || 0)} placeholder="0" />
+                                                    <span style={{ fontSize: 9, color: '#64748b', fontWeight: 700 }}>{unit}</span>
+                                                </div>
+                                                {i < arr.length - 1 && <span style={{ fontSize: 16, color: '#94a3b8', fontWeight: 700, paddingBottom: 14 }}>:</span>}
+                                            </React.Fragment>
+                                        ))}
                                     </div>
-                                    <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-                                        = {cp.timestampSeconds}s total
-                                    </span>
+                                    <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>= {cp.startSeconds || 0}s</span>
                                 </div>
+
+                                {/* End Time (pause point) */}
                                 <div style={styles.formGroup}>
-                                    <label style={styles.label}>Passing Score (%)</label>
+                                    <label style={{ ...styles.label, color: '#dc2626' }}>⏸ End Time / Pause At (H : M : S)</label>
+                                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                        {[
+                                            { unit: 'HRS', max: 23, get: () => Math.floor(cp.timestampSeconds / 3600), set: (v) => { const m = Math.floor((cp.timestampSeconds % 3600) / 60); const s = cp.timestampSeconds % 60; updateCheckpoint(cpIdx, { timestampSeconds: Math.max(0, v) * 3600 + m * 60 + s }); } },
+                                            { unit: 'MIN', max: 59, get: () => Math.floor((cp.timestampSeconds % 3600) / 60), set: (v) => { const h = Math.floor(cp.timestampSeconds / 3600); const s = cp.timestampSeconds % 60; updateCheckpoint(cpIdx, { timestampSeconds: h * 3600 + Math.min(59, Math.max(0, v)) * 60 + s }); } },
+                                            { unit: 'SEC', max: 59, get: () => cp.timestampSeconds % 60, set: (v) => { const h = Math.floor(cp.timestampSeconds / 3600); const m = Math.floor((cp.timestampSeconds % 3600) / 60); updateCheckpoint(cpIdx, { timestampSeconds: h * 3600 + m * 60 + Math.min(59, Math.max(0, v)) }); } }
+                                        ].map(({ unit, max, get, set }, i, arr) => (
+                                            <React.Fragment key={unit}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1 }}>
+                                                    <input type="number" min="0" max={max} style={{ ...styles.input, textAlign: 'center', padding: '8px 4px', border: '1px solid #fca5a5' }} value={get()} onChange={e => set(Number(e.target.value) || 0)} placeholder="0" />
+                                                    <span style={{ fontSize: 9, color: '#64748b', fontWeight: 700 }}>{unit}</span>
+                                                </div>
+                                                {i < arr.length - 1 && <span style={{ fontSize: 16, color: '#94a3b8', fontWeight: 700, paddingBottom: 14 }}>:</span>}
+                                            </React.Fragment>
+                                        ))}
+                                    </div>
+                                    <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>= {cp.timestampSeconds}s</span>
+                                </div>
+
+                                {/* Passing Score */}
+                                <div style={styles.formGroup}>
+                                    <label style={{ ...styles.label, color: '#374151' }}>Pass Score (%)</label>
                                     <input type="number" min="0" max="100" style={styles.input} value={cp.passingScorePercent} onChange={e => updateCheckpoint(cpIdx, { passingScorePercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })} />
+                                    <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>min % to pass</span>
                                 </div>
                             </div>
 
-                            {/* Questions */}
-                            {(cp.questions || []).map((q, qIdx) => (
-                                <div key={qIdx} style={{ background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', padding: '10px 12px', marginBottom: 8 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                                        <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>Question {qIdx + 1}</span>
-                                        <button type="button" onClick={() => removeCheckpointQuestion(cpIdx, qIdx)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: 2 }}>✕ Remove</button>
-                                    </div>
-                                    <input style={{ ...styles.input, marginBottom: 8 }} value={q.questionText} onChange={e => updateCheckpointQuestion(cpIdx, qIdx, { questionText: e.target.value })} placeholder="Enter the question text" />
-                                    {(q.options || []).map((opt, oIdx) => (
-                                        <div key={oIdx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                                            <input type="radio" name={`correct_${cpIdx}_${qIdx}`} checked={q.correctAnswerIndex === oIdx} onChange={() => updateCheckpointQuestion(cpIdx, qIdx, { correctAnswerIndex: oIdx })} style={{ accentColor: '#10b981', width: 15, height: 15, flexShrink: 0 }} title="Mark as correct answer" />
-                                            <input style={{ ...styles.input, marginBottom: 0 }} value={opt} onChange={e => updateCheckpointQuestion(cpIdx, qIdx, { options: q.options.map((o, i) => i === oIdx ? e.target.value : o) })} placeholder={`Option ${oIdx + 1}`} />
-                                            {(q.options.length > 2) && (
-                                                <button type="button" onClick={() => removeCheckpointOption(cpIdx, qIdx, oIdx)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 13, padding: 2 }}>✕</button>
-                                            )}
-                                        </div>
-                                    ))}
-                                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
-                                        <button type="button" onClick={() => addCheckpointOption(cpIdx, qIdx)} style={{ background: 'transparent', border: 'none', color: '#4ade80', cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: 0 }}>+ Add Option</button>
-                                        <span style={{ fontSize: 10, color: '#94a3b8' }}>◉ = correct answer</span>
-                                    </div>
+                            {/* Validation hint */}
+                            {cp.timestampSeconds > 0 && (cp.startSeconds || 0) >= cp.timestampSeconds && (
+                                <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 7, padding: '6px 10px', marginBottom: 10, fontSize: 11, color: '#dc2626' }}>
+                                    ⚠ End time must be greater than start time.
                                 </div>
-                            ))}
+                            )}
+                            {cp.timestampSeconds > 0 && (cp.startSeconds || 0) < cp.timestampSeconds && (
+                                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 7, padding: '6px 10px', marginBottom: 10, fontSize: 11, color: '#15803d' }}>
+                                    ✓ Concept duration: {Math.round(cp.timestampSeconds - (cp.startSeconds || 0))}s ({Math.floor((cp.timestampSeconds - (cp.startSeconds || 0)) / 60)}m {(cp.timestampSeconds - (cp.startSeconds || 0)) % 60}s)
+                                </div>
+                            )}
 
-                            <button type="button" onClick={() => addCheckpointQuestion(cpIdx)} style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 6,
-                                background: 'transparent', border: '1px dashed rgba(148,163,184,0.4)', color: '#94a3b8',
-                                borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer'
-                            }}>
-                                <Plus size={12} /> Add Question
-                            </button>
+                            {/* Questions */}
+                            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 12, marginTop: 4 }}>
+                                <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: '#374151' }}>
+                                    Quiz Questions for this Concept ({(cp.questions || []).length}/5)
+                                </p>
+
+                                {(cp.questions || []).map((q, qIdx) => (
+                                    <div key={qIdx} style={{ background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', padding: '10px 12px', marginBottom: 8 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                            <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>Question {qIdx + 1}</span>
+                                            <button type="button" onClick={() => removeCheckpointQuestion(cpIdx, qIdx)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: 2 }}>✕ Remove</button>
+                                        </div>
+                                        <input style={{ ...styles.input, marginBottom: 8 }} value={q.questionText} onChange={e => updateCheckpointQuestion(cpIdx, qIdx, { questionText: e.target.value })} placeholder="Enter the question text" />
+                                        {(q.options || []).map((opt, oIdx) => (
+                                            <div key={oIdx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                                <input type="radio" name={`correct_${cpIdx}_${qIdx}`} checked={q.correctAnswerIndex === oIdx} onChange={() => updateCheckpointQuestion(cpIdx, qIdx, { correctAnswerIndex: oIdx })} style={{ accentColor: '#10b981', width: 15, height: 15, flexShrink: 0 }} title="Mark as correct answer" />
+                                                <input style={{ ...styles.input, marginBottom: 0 }} value={opt} onChange={e => updateCheckpointQuestion(cpIdx, qIdx, { options: q.options.map((o, i) => i === oIdx ? e.target.value : o) })} placeholder={`Option ${oIdx + 1}`} />
+                                                {(q.options.length > 2) && (
+                                                    <button type="button" onClick={() => removeCheckpointOption(cpIdx, qIdx, oIdx)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 13, padding: 2 }}>✕</button>
+                                                )}
+                                            </div>
+                                        ))}
+                                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
+                                            <button type="button" onClick={() => addCheckpointOption(cpIdx, qIdx)} style={{ background: 'transparent', border: 'none', color: '#16a34a', cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: 0 }}>+ Add Option</button>
+                                            <span style={{ fontSize: 10, color: '#94a3b8' }}>◉ = correct answer</span>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {(cp.questions || []).length < 5 && (
+                                    <button type="button" onClick={() => addCheckpointQuestion(cpIdx)} style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                                        background: 'transparent', border: '1px dashed #16a34a', color: '#16a34a',
+                                        borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                                    }}>
+                                        <Plus size={12} /> Add Question
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>

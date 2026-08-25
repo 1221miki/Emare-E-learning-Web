@@ -34,6 +34,11 @@ const InVideoQuizAttemptSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    // startSeconds: concept start time (video seek point when resuming this concept)
+    checkpointStartSeconds: {
+        type: Number,
+        default: 0
+    },
     // [{ questionIndex, selectedIndex, isCorrect }]
     answers: [{
         _id: false,

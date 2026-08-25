@@ -152,7 +152,8 @@ exports.getLessonCheckpoints = async (req, res, next) => {
             checkpointIndex: index,
             checkpointId: cp.checkpointId,
             title: cp.title,
-            timestampSeconds: cp.timestampSeconds,
+            startSeconds: cp.startSeconds ?? 0,       // concept start time for video seek
+            timestampSeconds: cp.timestampSeconds,     // concept end time — video pauses here
             passingScorePercent: cp.passingScorePercent ?? 60,
             questionCount: (cp.questions || []).length,
             questions: (cp.questions || []).map(q => ({
@@ -261,6 +262,7 @@ exports.submitCheckpointAttempt = async (req, res, next) => {
             checkpointId,
             checkpointIndex,
             checkpointTimestamp: checkpoint.timestampSeconds,
+            checkpointStartSeconds: checkpoint.startSeconds ?? 0,
             answers: gradedAnswers,
             scorePercent,
             correctCount,
@@ -286,7 +288,8 @@ exports.submitCheckpointAttempt = async (req, res, next) => {
                 correctCount,
                 totalQuestions,
                 passingScorePercent: passingScore,
-                resumeAtSeconds: checkpoint.timestampSeconds,
+                resumeAtSeconds: checkpoint.timestampSeconds,   // resume after passing
+                nextConceptStartSeconds: null,                  // filled by client from next checkpoint
                 review
             }
         });

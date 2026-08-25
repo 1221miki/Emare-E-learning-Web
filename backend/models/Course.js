@@ -50,14 +50,18 @@ const LessonSchema = new mongoose.Schema({
         default: null
     },
     // ── In-video quiz checkpoints ───────────────────────────────────────────
-    // Each checkpoint pauses the lesson video at timestampSeconds and shows a
-    // short quiz covering the segment just watched. Students cannot continue
-    // past a checkpoint until they pass it. Lesson completion requires every
-    // checkpoint to be passed (enforced server-side).
+    // Each checkpoint represents one VIDEO CONCEPT segment. The video plays
+    // from startSeconds → endSeconds (timestampSeconds), then pauses and shows
+    // a quiz covering that concept. Students cannot continue past a checkpoint
+    // until they pass it. Lesson completion requires every checkpoint to be
+    // passed (enforced server-side).
     quizCheckpoints: [{
         _id: false,
         checkpointId: { type: String, required: true }, // stable client/server id
         title: { type: String, default: '', trim: true, maxlength: 120 },
+        // startSeconds: where this concept begins in the video (default 0 for first concept)
+        startSeconds: { type: Number, default: 0, min: 0 },
+        // timestampSeconds: where the video PAUSES and the quiz is shown (concept end)
         timestampSeconds: { type: Number, required: true, min: 0 },
         passingScorePercent: { type: Number, default: 60, min: 0, max: 100 },
         questions: [{
