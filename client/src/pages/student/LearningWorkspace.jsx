@@ -202,6 +202,8 @@ export default function LearningWorkspace() {
     // Progress — source of truth from backend
     const [completedSet,    setCompletedSet]    = useState(new Set());
     const [progressPct,     setProgressPct]     = useState(0);
+    // Full progress data (progressItems) — used to restore video position on return
+    const [progressItems,   setProgressItems]   = useState([]);
 
     // Active lesson navigation
     const [activeFlatIdx,   setActiveFlatIdx]   = useState(0);
@@ -349,6 +351,8 @@ export default function LearningWorkspace() {
             const pct = flat.length > 0 ? Math.round((doneInCurrentTree / flat.length) * 100) : 0;
             setCompletedSet(done);
             setProgressPct(pct);
+            // Store progress items so the video load effect can restore position
+            setProgressItems(progressData?.progressItems || []);
             const resumeIdx = Math.min(firstUncompletedIndex(flat, done), Math.max(0, flat.length - 1));
             setActiveFlatIdx(resumeIdx);
             setExpandedChapters(new Set([flat[resumeIdx]?.chapterIndex ?? 0]));
@@ -403,16 +407,58 @@ export default function LearningWorkspace() {
                 setCheckpointsData(data);
                 if (data?.checkpoints?.length > 0 && data.directVideoUrl) {
                     setVideoUrl(data.directVideoUrl);
-                    // ── Seek to the first uncompleted concept's start time ──────────
-                    // After the video element mounts (slight delay), jump to where
-                    // the student should resume rather than always starting at 0.
+
+                    // ── Restore progress from previous session ─────────────────────
+                    // Use stored lastWatchedPosition to resume where the student left off.
+                    // Priority:
+                    //  1. If lastWatchedPosition falls inside a pending concept's window
+                    //     → resume from lastWatchedPosition (mid-concept resume)
+                    //  2. Otherwise → resume from the first uncompleted concept's startSeconds
+                    const storedItem = progressItems.find(
+                        item => item.lessonId?.toString() === activeLesson._id?.toString()
+                    );
+                    // Restore accumulated watched time so the 85% gate continues correctly
+                    if (storedItem?.watchedSeconds > 0) {
+                        watchedSecondsRef.current = storedItem.watchedSeconds;
+                    }
+
+                    const lastPos = storedItem?.lastWatchedPosition ?? 0;
                     const firstPending = data.checkpoints.find(cp =>
                         !(data.attemptStatus?.[cp.checkpointId]?.passed)
                     );
-                    if (firstPending && (firstPending.startSeconds ?? 0) > 0) {
+
+                    let seekTo = 0;
+                    if (firstPending) {
+                        const cStart = firstPending.startSeconds ?? 0;
+                        const cEnd   = firstPending.timestampSeconds;
+                        // If the stored position is inside this concept's window, resume there
+                        if (lastPos > cStart && lastPos < cEnd) {
+                            seekTo = lastPos;
+                        } else {
+                            seekTo = cStart;
+                        }
+                    }
+
+                    if (seekTo > 0) {
                         setTimeout(() => {
                             if (videoRef.current) {
-                                videoRef.current.currentTime = firstPending.startSeconds;
+                                videoRef.current.currentTime = seekTo;
+                            }
+                        }, 600);
+                    }
+                } else if (!data?.checkpoints?.length) {
+                    // No checkpoints — restore last watched position for regular videos
+                    const storedItem = progressItems.find(
+                        item => item.lessonId?.toString() === activeLesson._id?.toString()
+                    );
+                    if (storedItem?.watchedSeconds > 0) {
+                        watchedSecondsRef.current = storedItem.watchedSeconds;
+                    }
+                    const lastPos = storedItem?.lastWatchedPosition ?? 0;
+                    if (lastPos > 5) {
+                        setTimeout(() => {
+                            if (videoRef.current) {
+                                videoRef.current.currentTime = lastPos;
                             }
                         }, 600);
                     }
@@ -420,6 +466,7 @@ export default function LearningWorkspace() {
             })
             .catch(() => { if (!cancelled) setCheckpointsData(null); });
         return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeFlatIdx, activeLesson]);
 
     // ── Fetch requirement status whenever the active lesson changes ───────────
@@ -606,6 +653,7 @@ export default function LearningWorkspace() {
         if (updated) {
             const newDone = buildCompletedSet(updated.progressItems);
             setCompletedSet(newDone);
+            setProgressItems(updated.progressItems || []);
             // Recompute % against the CURRENT curriculum tree
             const doneInCurrentTree = flatLessons.filter(f => newDone.has(`${f.chapterIndex}-${f.lessonIndex}`)).length;
             const pct = flatLessons.length > 0 ? Math.round((doneInCurrentTree / flatLessons.length) * 100) : 0;
@@ -1244,6 +1292,12 @@ export default function LearningWorkspace() {
                                                         {/* Requirement badges in sidebar */}
                                                         {!isDone && hasQuizReq && <span style={{ fontSize: 10, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>Quiz</span>}
                                                         {!isDone && hasAsgReq && <span style={{ fontSize: 10, background: 'rgba(139,92,246,0.15)', color: '#4ade80', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>Assignment</span>}
+                                                        {/* Concept progress for active lesson */}
+                                                        {isActive && !isDone && hasCheckpoints && (
+                                                            <span style={{ fontSize: 10, background: allConceptsDone ? `${green}20` : `${gold}20`, color: allConceptsDone ? green : gold, borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>
+                                                                {(checkpointsData?.checkpoints || []).filter(cp => isCheckpointPassed(cp)).length}/{checkpointsData?.checkpoints?.length} concepts
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
