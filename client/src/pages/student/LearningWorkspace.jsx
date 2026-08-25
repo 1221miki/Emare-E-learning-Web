@@ -397,6 +397,19 @@ export default function LearningWorkspace() {
                 setCheckpointsData(data);
                 if (data?.checkpoints?.length > 0 && data.directVideoUrl) {
                     setVideoUrl(data.directVideoUrl);
+                    // ── Seek to the first uncompleted concept's start time ──────────
+                    // After the video element mounts (slight delay), jump to where
+                    // the student should resume rather than always starting at 0.
+                    const firstPending = data.checkpoints.find(cp =>
+                        !(data.attemptStatus?.[cp.checkpointId]?.passed)
+                    );
+                    if (firstPending && (firstPending.startSeconds ?? 0) > 0) {
+                        setTimeout(() => {
+                            if (videoRef.current) {
+                                videoRef.current.currentTime = firstPending.startSeconds;
+                            }
+                        }, 600);
+                    }
                 }
             })
             .catch(() => { if (!cancelled) setCheckpointsData(null); });
@@ -526,17 +539,29 @@ export default function LearningWorkspace() {
         }
     };
 
-    // Resume playback from the exact paused timestamp after passing
+    // Resume playback from the start of the next concept after passing
     const resumeAfterCheckpoint = () => {
-        const resumeAt = checkpointResult?.resumeAtSeconds ?? activeCheckpoint?.timestampSeconds ?? 0;
+        const passedCpId = activeCheckpoint?.checkpointId;
+        const allCps = checkpointsData?.checkpoints || [];
+
+        // Find the next concept (the one after the one just passed)
+        const passedIdx = allCps.findIndex(cp => cp.checkpointId === passedCpId);
+        const nextCp = allCps[passedIdx + 1] || null;
+
+        // Where to resume: start of the next concept, or fall back to the
+        // exact pause point of the current concept (for the final concept)
+        const resumeAt = nextCp
+            ? (nextCp.startSeconds ?? nextCp.timestampSeconds)
+            : (checkpointResult?.resumeAtSeconds ?? activeCheckpoint?.timestampSeconds ?? 0);
+
         setActiveCheckpoint(null);
         setCheckpointAnswers({});
         setCheckpointResult(null);
         setCheckpointError('');
         // If this was the last checkpoint, refresh gating status so "Mark as
         // Complete" reflects the pass immediately.
-        const allPassed = (checkpointsData?.checkpoints || []).every(cp =>
-            cp.checkpointId === activeCheckpoint?.checkpointId
+        const allPassed = allCps.every(cp =>
+            cp.checkpointId === passedCpId
                 ? true
                 : (checkpointsData?.attemptStatus?.[cp.checkpointId]?.passed || false));
         if (allPassed && lessonHasRequirements) refreshReqStatus();
@@ -617,8 +642,8 @@ export default function LearningWorkspace() {
     }, [activeLesson, lessonHasRequirements, courseId]);
 
     // Jump back into the lesson video so students blocked at "Mark as Complete"
-    // have a one-click path: resumes playback at the earliest unanswered
-    // checkpoint, or from the current position when only watch-through is missing.
+    // have a one-click path: resumes playback at the start of the earliest
+    // unanswered concept, or from the current position when only watch-through is missing.
     const jumpToNextCheckpoint = useCallback(() => {
         setShowBlocker(false);
         window.scrollTo(0, 0);
@@ -627,7 +652,11 @@ export default function LearningWorkspace() {
         if (hasCheckpoints) {
             const pending = (checkpointsData.checkpoints || []).filter(cp => !isCheckpointPassed(cp));
             if (pending.length === 0) { refreshReqStatus(); return; }
-            target = Math.max(0, Math.min(...pending.map(cp => cp.timestampSeconds)) - 5);
+            // Jump to the start of the first pending concept
+            const firstPending = pending.reduce((a, b) =>
+                (a.startSeconds ?? a.timestampSeconds) < (b.startSeconds ?? b.timestampSeconds) ? a : b
+            );
+            target = Math.max(0, firstPending.startSeconds ?? 0);
         }
         videoRef.current.currentTime = target;
         videoRef.current.play().catch(() => {});
@@ -887,6 +916,39 @@ export default function LearningWorkspace() {
                             </div>
                         )}
                     </div>
+
+                    {/* ── Video Concepts Progress Panel ──────────────────── */}
+                    {hasCheckpoints && checkpointsData?.checkpoints?.length > 0 && (
+                        <div style={{ background: isDark ? '#1e293b' : '#f8fafc', borderTop: `1px solid ${border}`, padding: '10px 20px', flexShrink: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflowX: 'auto', paddingBottom: 2 }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: muted, whiteSpace: 'nowrap', flexShrink: 0 }}>CONCEPTS:</span>
+                                {checkpointsData.checkpoints.map((cp, idx) => {
+                                    const passed = isCheckpointPassed(cp);
+                                    const isActive = activeCheckpoint?.checkpointId === cp.checkpointId;
+                                    const isPending = !passed && !isActive;
+                                    return (
+                                        <div key={cp.checkpointId} style={{
+                                            display: 'flex', alignItems: 'center', gap: 6,
+                                            padding: '5px 12px', borderRadius: 20, flexShrink: 0,
+                                            fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
+                                            background: isActive
+                                                ? `${gold}25`
+                                                : passed
+                                                    ? `${green}20`
+                                                    : isDark ? '#334155' : '#e2e8f0',
+                                            color: isActive ? gold : passed ? green : muted,
+                                            border: `1px solid ${isActive ? `${gold}50` : passed ? `${green}40` : 'transparent'}`
+                                        }}>
+                                            <span style={{ fontSize: 13 }}>
+                                                {isActive ? '⏸' : passed ? '✓' : `${idx + 1}`}
+                                            </span>
+                                            {cp.title || `Concept ${idx + 1}`}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Lesson Info */}
                     <div className="lw-info-padding" style={{ padding: '20px 28px 0', animation: 'fadeIn 0.25s ease' }}>
@@ -1159,15 +1221,21 @@ export default function LearningWorkspace() {
                     <div style={{ background: bgCard, borderRadius: 18, border: `1px solid ${border}`, width: 'min(100%, 720px)', maxHeight: '94vh', overflowY: 'auto', padding: '26px 26px 22px', boxShadow: '0 30px 90px rgba(0,0,0,0.5)' }}>
                         {!checkpointResult ? (
                             <>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
-                                    <span style={{ background: `${gold}20`, color: gold, borderRadius: 999, padding: '3px 12px', fontSize: 11, fontWeight: 800 }}>⏸ CHECKPOINT QUIZ</span>
-                                    <span style={{ fontSize: 12, color: muted }}>{activeCheckpoint.title || `Checkpoint at ${Math.floor(activeCheckpoint.timestampSeconds / 60)}:${String(activeCheckpoint.timestampSeconds % 60).padStart(2, '0')}`}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+                                    <span style={{ background: `${gold}20`, color: gold, borderRadius: 999, padding: '4px 14px', fontSize: 11, fontWeight: 800, letterSpacing: '0.06em' }}>
+                                        ⏸ CONCEPT {(checkpointsData?.checkpoints?.findIndex(c => c.checkpointId === activeCheckpoint.checkpointId) ?? 0) + 1} OF {checkpointsData?.checkpoints?.length ?? 1}
+                                    </span>
+                                    {activeCheckpoint.title && (
+                                        <span style={{ fontSize: 14, fontWeight: 700, color: text }}>
+                                            {activeCheckpoint.title}
+                                        </span>
+                                    )}
                                 </div>
-                                <h2 style={{ margin: '6px 0 4px', fontSize: 19, fontWeight: 800, color: text }}>
-                                    Quiz time! Answer all questions to continue watching
+                                <h2 style={{ margin: '0 0 4px', fontSize: 19, fontWeight: 800, color: text }}>
+                                    Quiz time! Answer all questions to continue
                                 </h2>
                                 <p style={{ margin: '0 0 18px', fontSize: 13, color: muted }}>
-                                    This quiz covers the lesson segment you just watched. You need {activeCheckpoint.passingScorePercent ?? 60}% to continue — the video resumes right where it stopped.
+                                    This quiz covers <strong>{activeCheckpoint.title || `Concept ${(checkpointsData?.checkpoints?.findIndex(c => c.checkpointId === activeCheckpoint.checkpointId) ?? 0) + 1}`}</strong>. You need {activeCheckpoint.passingScorePercent ?? 60}% to pass — the video will resume from the next concept after you pass.
                                 </p>
 
                                 {(activeCheckpoint.questions || []).map((q, qi) => (
@@ -1213,11 +1281,14 @@ export default function LearningWorkspace() {
                             /* ── Result view with instant feedback ── */
                             <>
                                 <div style={{ textAlign: 'center', padding: '10px 0 4px' }}>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: muted, marginBottom: 6 }}>
+                                        {activeCheckpoint.title || `Concept ${(checkpointsData?.checkpoints?.findIndex(c => c.checkpointId === activeCheckpoint.checkpointId) ?? 0) + 1}`}
+                                    </div>
                                     <div style={{ fontSize: 52, fontWeight: 900, color: checkpointResult.passed ? green : '#ef4444', lineHeight: 1.1 }}>
                                         {checkpointResult.scorePercent}%
                                     </div>
                                     <div style={{ fontSize: 17, fontWeight: 800, color: text, margin: '6px 0 2px' }}>
-                                        {checkpointResult.passed ? '🎉 Checkpoint passed!' : 'Almost there — try again'}
+                                        {checkpointResult.passed ? '🎉 Concept passed!' : 'Almost there — try again'}
                                     </div>
                                     <div style={{ fontSize: 13, color: muted }}>
                                         {checkpointResult.correctCount}/{checkpointResult.totalQuestions} correct · passing score {checkpointResult.passingScorePercent}%{!checkpointResult.passed && ' · review the explanations below and retake the quiz'}
@@ -1246,7 +1317,13 @@ export default function LearningWorkspace() {
                                 <div style={{ display: 'flex', justifyContent: 'center', gap: 10, paddingBottom: 4 }}>
                                     {checkpointResult.passed ? (
                                         <button onClick={resumeAfterCheckpoint} style={{ background: `linear-gradient(135deg, ${green}, #059669)`, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 32px', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
-                                            ▶ Continue Watching
+                                            {(() => {
+                                                const allCps = checkpointsData?.checkpoints || [];
+                                                const passedIdx = allCps.findIndex(cp => cp.checkpointId === activeCheckpoint.checkpointId);
+                                                return passedIdx < allCps.length - 1
+                                                    ? `▶ Continue to Concept ${passedIdx + 2}`
+                                                    : '▶ Finish Lesson';
+                                            })()}
                                         </button>
                                     ) : (
                                         <button onClick={() => { setCheckpointResult(null); setCheckpointAnswers({}); setCheckpointError(''); }} style={{ background: `linear-gradient(135deg, ${accent}, #15803d)`, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 32px', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
