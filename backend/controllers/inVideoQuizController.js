@@ -110,10 +110,13 @@ const resolveDirectVideoUrl = async (videoUrl) => {
         if (!match) return null;
         const [, libraryId, guid] = match;
 
+        // Only SUCCESSFUL resolutions are cached. Failures are NOT cached —
+        // a transient Bunny/CDN hiccup (timeout, 5xx, processing lag) must
+        // never poison the cache and permanently disable checkpoint mode.
         if (playbackUrlCache.has(guid)) return playbackUrlCache.get(guid);
 
         const host = await resolveLibraryHost(libraryId);
-        if (!host) { playbackUrlCache.set(guid, null); return null; }
+        if (!host) return null;
 
         let candidates = PLAYBACK_QUALITY_ORDER.map(q => `https://${host}/${guid}/play_${q}.mp4`);
 
@@ -132,7 +135,6 @@ const resolveDirectVideoUrl = async (videoUrl) => {
             }
         }
 
-        playbackUrlCache.set(guid, null);
         return null;
     } catch {
         return null;
