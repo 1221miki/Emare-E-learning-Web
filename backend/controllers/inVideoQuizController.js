@@ -81,7 +81,15 @@ const fetchAvailableQualities = async (libraryId, guid) => {
 
 let headVerify = async (url) => {
     try {
-        const res = await axios.head(url, { timeout: 8000, validateStatus: () => true });
+        const res = await axios.head(url, {
+            timeout: 8000,
+            validateStatus: () => true,
+            // Bunny Stream hotlink protection rejects requests WITHOUT a
+            // Referer header (HTTP 403) even when playback is otherwise
+            // allowed. Real browsers always send one for <video> playback,
+            // so mimic that here or every HEAD check would wrongly fail.
+            headers: { Referer: process.env.FRONTEND_URL || 'http://localhost:5173' }
+        });
         return res.status >= 200 && res.status < 400;
     } catch {
         return false;

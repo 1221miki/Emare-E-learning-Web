@@ -235,6 +235,10 @@ export default function LearningWorkspace() {
     const [videoDuration,          setVideoDuration]          = useState(0);
     const [uiTime,                 setUiTime]                 = useState(0);
     const [isPlaying,              setIsPlaying]              = useState(false);
+    // True when a lesson HAS checkpoints but no direct MP4 could be resolved —
+    // checkpoint quizzes cannot run on the iframe embed, so warn instead of
+    // silently playing an un-quizzed video.
+    const [checkpointDirectFailed, setCheckpointDirectFailed] = useState(false);
 
     // Completion actions
     const [markingDone,     setMarkingDone]     = useState(false);
@@ -393,6 +397,7 @@ export default function LearningWorkspace() {
         setVideoDuration(0);
         setUiTime(0);
         setIsPlaying(false);
+        setCheckpointDirectFailed(false);
 
         const raw = getLessonVideoUrl(activeLesson);
         if (!raw) { setVideoUrl(''); setVideoError('No video available for this lesson.'); return; }
@@ -455,6 +460,10 @@ export default function LearningWorkspace() {
                             }
                         }, 600);
                     }
+                } else if (data?.checkpoints?.length > 0 && !data.directVideoUrl) {
+                    // Checkpoints exist but no direct MP4 — quiz popups cannot
+                    // run on the iframe embed. Flag it so the UI warns clearly.
+                    setCheckpointDirectFailed(true);
                 } else if (!data?.checkpoints?.length) {
                     // No checkpoints — restore last watched position for regular videos
                     const storedItem = progressItems.find(
@@ -530,9 +539,52 @@ export default function LearningWorkspace() {
         setUiTime(clamped);
     }, [clampSeekTarget]);
 
-    // Pause + open quiz modal when a checkpoint timestamp is reached.
-    // Also accumulates REAL watched time (normal forward playback only —
-    // seeking ahead adds nothing) and heartbeats progress to the backend.
+    // Core mid-video quiz trigger — pauses playback and opens the checkpoint's
+    // quiz overlay the instant the playhead reaches the concept end timestamp.
+    // Shared by the timeupdate handler AND a watchdog interval so a throttled,
+    // dropped, or skipped timeupdate event can never let a quiz be bypassed.
+    const fireCheckpointIfReached = useCallback((videoEl, t) => {
+        if (!videoEl || !hasCheckpoints || activeCheckpoint) return false;
+        // Only consider the earliest pending checkpoint — later ones stay dormant
+        let nearest = null;
+        for (const cp of checkpointsData?.checkpoints || []) {
+            if (firedCheckpointsRef.current.has(cp.checkpointId)) continue;
+            if (isCheckpointPassed(cp)) { firedCheckpointsRef.current.add(cp.checkpointId); continue; }
+            if (!nearest || cp.timestampSeconds < nearest.timestampSeconds) nearest = cp;
+        }
+        if (nearest && t >= nearest.timestampSeconds - 0.25) {
+            videoEl.pause();                       // hard stop BEFORE anything else
+            firedCheckpointsRef.current.add(nearest.checkpointId);
+            setActiveCheckpoint(nearest);
+            setCheckpointAnswers({});
+            setCheckpointResult(null);
+            setCheckpointError('');
+            return true;
+        }
+        return false;
+    }, [hasCheckpoints, activeCheckpoint, checkpointsData, isCheckpointPassed]);
+
+    // Pause safety-net: while a quiz overlay is open the video must NEVER play —
+    // covers programmatic play() races and browser autoplay quirks.
+    useEffect(() => {
+        if (activeCheckpoint) {
+            const v = videoRef.current;
+            if (v && !v.paused) v.pause();
+        }
+    }, [activeCheckpoint]);
+
+    // Watchdog: checks the playhead every 500ms independent of timeupdate.
+    useEffect(() => {
+        if (!hasCheckpoints) return;
+        const id = setInterval(() => {
+            const v = videoRef.current;
+            if (v && !v.paused && !v.ended) fireCheckpointIfReached(v, v.currentTime);
+        }, 500);
+        return () => clearInterval(id);
+    }, [hasCheckpoints, fireCheckpointIfReached]);
+
+    // Accumulates REAL watched seconds, heartbeats progress to the backend,
+    // and hands off to the shared quiz trigger.
     const handleVideoTimeUpdate = (e) => {
         const t = e.target.currentTime;
         const dt = t - lastTickRef.current;
@@ -553,22 +605,7 @@ export default function LearningWorkspace() {
             }).catch(() => {});
         }
 
-        if (!hasCheckpoints || activeCheckpoint) return;
-        // Only consider the earliest pending checkpoint — later ones stay dormant
-        let nearest = null;
-        for (const cp of checkpointsData.checkpoints) {
-            if (firedCheckpointsRef.current.has(cp.checkpointId)) continue;
-            if (isCheckpointPassed(cp)) { firedCheckpointsRef.current.add(cp.checkpointId); continue; }
-            if (!nearest || cp.timestampSeconds < nearest.timestampSeconds) nearest = cp;
-        }
-        if (nearest && t >= nearest.timestampSeconds - 0.25) {
-            e.target.pause();
-            firedCheckpointsRef.current.add(nearest.checkpointId);
-            setActiveCheckpoint(nearest);
-            setCheckpointAnswers({});
-            setCheckpointResult(null);
-            setCheckpointError('');
-        }
+        fireCheckpointIfReached(e.target, t);
     };
 
     // Block seeking past the next unanswered checkpoint (native controls,
@@ -768,6 +805,39 @@ export default function LearningWorkspace() {
     // one — no manual clicking required.
     const autoAdvancingRef = useRef(false);
 
+    // Countdown-driven auto-navigation after a lesson completes on its own
+    const [autoNextIn, setAutoNextIn] = useState(null);
+    const autoNextIntervalRef = useRef(null);
+
+    const cancelAutoNext = useCallback(() => {
+        if (autoNextIntervalRef.current) {
+            clearInterval(autoNextIntervalRef.current);
+            autoNextIntervalRef.current = null;
+        }
+        setAutoNextIn(null);
+    }, []);
+
+    const startAutoNextCountdown = useCallback((targetIdx) => {
+        cancelAutoNext();
+        if (!flatLessons[targetIdx]) return;
+        let secs = 5;                                   // 5-second countdown
+        setAutoNextIn(secs);
+        autoNextIntervalRef.current = setInterval(() => {
+            secs -= 1;
+            if (secs <= 0) {
+                clearInterval(autoNextIntervalRef.current);
+                autoNextIntervalRef.current = null;
+                setAutoNextIn(null);
+                goToFlatIdx(targetIdx);                 // auto-route to next lesson
+            } else {
+                setAutoNextIn(secs);
+            }
+        }, 1000);
+    }, [cancelAutoNext, flatLessons, goToFlatIdx]);
+
+    // Leaving the lesson (any navigation) always cancels a pending countdown
+    useEffect(() => { cancelAutoNext(); }, [activeFlatIdx, cancelAutoNext]);
+
     const tryAutoCompleteAndAdvance = useCallback(async () => {
         if (!activeLesson || isCurrentDone || autoAdvancingRef.current) return;
 
@@ -783,8 +853,11 @@ export default function LearningWorkspace() {
         autoAdvancingRef.current = true;
         try {
             const updated = await performCompletion();
+            // performCompletion() already: saved completed=true to the backend,
+            // updated completedSet (unlocks the "Next Lesson" button) and
+            // recomputed the progress %. Now queue the countdown auto-route.
             if (updated && activeFlatIdx < totalLessons - 1) {
-                goToFlatIdx(activeFlatIdx + 1);
+                startAutoNextCountdown(activeFlatIdx + 1);
             }
         } catch (err) {
             // Requirements unmet (422) or network issue → student keeps watching;
@@ -798,7 +871,7 @@ export default function LearningWorkspace() {
         } finally {
             autoAdvancingRef.current = false;
         }
-    }, [activeLesson, isCurrentDone, checkpointsData, isCheckpointPassed, performCompletion, activeFlatIdx, totalLessons, goToFlatIdx]);
+    }, [activeLesson, isCurrentDone, checkpointsData, isCheckpointPassed, performCompletion, activeFlatIdx, totalLessons, startAutoNextCountdown]);
 
     const handleVideoEnded = useCallback(() => {
         tryAutoCompleteAndAdvance();
@@ -1074,6 +1147,13 @@ export default function LearningWorkspace() {
                             </div>
                         )}
                     </div>
+
+                    {/* ── Checkpoint direct-MP4 failure warning ─────────── */}
+                    {checkpointDirectFailed && (
+                        <div style={{ background: isDark ? 'rgba(245,158,11,0.1)' : '#fffbeb', borderBottom: `1px solid ${gold}55`, padding: '10px 20px', fontSize: 12.5, color: isDark ? gold : '#b45309', fontWeight: 600, lineHeight: 1.6, flexShrink: 0 }}>
+                            ⚠️ This lesson has {checkpointsData?.checkpoints?.length || 0} concept quiz checkpoints, but the video file could not be loaded in checkpoint mode — the quizzes cannot pop up on this player. Ask your instructor to re-save the lesson video (it may still be processing), or try again later.
+                        </div>
+                    )}
 
                     {/* ── Video Concepts Progress Panel ──────────────────── */}
                     {hasCheckpoints && checkpointsData?.checkpoints?.length > 0 && (
@@ -1410,6 +1490,33 @@ export default function LearningWorkspace() {
             </div>
 
             <AiAssistant context={{ courseName: course.courseTitle, courseId }} />
+
+            {/* ── Auto-next countdown toast (after lesson auto-completed) ── */}
+            {autoNextIn != null && (
+                <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 4000, background: bgCard, border: `1.5px solid ${green}66`, borderRadius: 14, boxShadow: '0 16px 50px rgba(0,0,0,0.3)', padding: '16px 18px', width: 300, animation: 'fadeIn 0.2s ease' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ color: green, fontWeight: 900, fontSize: 16 }}>✓</span>
+                        <span style={{ fontWeight: 800, fontSize: 14, color: text }}>Lesson completed!</span>
+                    </div>
+                    <div style={{ fontSize: 12.5, color: muted, marginTop: 6, lineHeight: 1.5 }}>
+                        Opening the next lesson in <strong style={{ color: accent }}>{autoNextIn}s</strong>…
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                        <button
+                            onClick={() => { const t = activeFlatIdx + 1; cancelAutoNext(); goToFlatIdx(t); }}
+                            style={{ flex: 1, background: `linear-gradient(135deg, ${accent}, #15803d)`, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
+                        >
+                            Next Lesson Now →
+                        </button>
+                        <button
+                            onClick={cancelAutoNext}
+                            style={{ background: 'transparent', border: `1px solid ${border}`, color: muted, borderRadius: 8, padding: '9px 12px', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}
+                        >
+                            Stay
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* ── In-Video Quiz Checkpoint Modal (full-screen, cannot be dismissed) ── */}
             {activeCheckpoint && (
