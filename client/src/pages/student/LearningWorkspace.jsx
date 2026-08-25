@@ -935,8 +935,6 @@ export default function LearningWorkspace() {
                     <span style={{ fontSize: 12, fontWeight: 700, color: muted, whiteSpace: 'nowrap' }}>{progressPct}% done</span>
                 </div>
                 <div className="lw-nav-secondary" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <button onClick={() => navigate(`/student/discussions/${course._id}`)} style={{ background: `${accent}18`, border: `1px solid ${accent}30`, color: accent, borderRadius: 7, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Q&amp;A</button>
-                    <button onClick={() => navigate(`/student/assignments/${course._id}`)} style={{ background: `${blue}18`, border: `1px solid ${blue}30`, color: blue, borderRadius: 7, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Assignments</button>
                     <button onClick={toggleTheme} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: muted, display: 'flex', padding: 6 }}>{isDark ? <IconSun /> : <IconMoon />}</button>
                     <button onClick={async () => { await logout(); navigate('/'); }} style={{ background: '#ef444418', border: '1px solid #ef444430', color: '#ef4444', borderRadius: 7, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Sign Out</button>
                 </div>
