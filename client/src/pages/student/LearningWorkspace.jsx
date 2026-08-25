@@ -267,6 +267,45 @@ export default function LearningWorkspace() {
     const hasPdf      = !!(activeLesson?.notesPdfUrl);
     const hasResource = !!(activeLesson?.resourceLink && activeLesson.resourceLink !== activeLesson.notesPdfUrl);
 
+    // ── Authenticated PDF download ────────────────────────────────────────────
+    // Plain <a href> links fail cross-origin because the browser doesn't send
+    // the Authorization header or cross-origin cookies. Instead we fetch the PDF
+    // via the Axios-equivalent fetch with the JWT, then trigger a blob download.
+    const [pdfDownloading, setPdfDownloading] = useState(false);
+    const downloadPdf = async (rawUrl, label = 'document.pdf') => {
+        const proxyUrl = getPdfUrl(rawUrl);
+        if (!proxyUrl) return;
+        // Non-Bunny URLs (Google Drive, etc.) — open normally
+        if (proxyUrl === rawUrl || !proxyUrl.includes('/api/pdf-proxy/')) {
+            window.open(proxyUrl, '_blank', 'noopener,noreferrer');
+            return;
+        }
+        setPdfDownloading(true);
+        try {
+            const token = localStorage.getItem('elms_token');
+            const res = await fetch(proxyUrl, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                credentials: 'include'
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const blob = await res.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = label;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+        } catch (err) {
+            console.error('[downloadPdf] failed:', err);
+            alert('Could not download the PDF. Please try again.');
+        } finally {
+            setPdfDownloading(false);
+        }
+    };
+
     // Does this lesson actually require anything?
     const lessonHasRequirements = !!(activeLesson?.quizRequired || activeLesson?.assignmentRequired);
 
@@ -969,9 +1008,14 @@ export default function LearningWorkspace() {
                                 {(hasPdf || hasResource) && (
                                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
                                         {hasPdf && (
-                                            <a href={getPdfUrl(activeLesson.notesPdfUrl)} target="_blank" rel="noopener noreferrer" className="action-link" style={{ background: `linear-gradient(135deg, ${green}, #059669)`, color: '#fff' }}>
-                                                <IconPdf /> Download Lesson PDF / Notes
-                                            </a>
+                                            <button
+                                                onClick={() => downloadPdf(activeLesson.notesPdfUrl, activeLesson.lessonTitle ? `${activeLesson.lessonTitle}.pdf` : 'lesson-notes.pdf')}
+                                                disabled={pdfDownloading}
+                                                className="action-link"
+                                                style={{ background: `linear-gradient(135deg, ${green}, #059669)`, color: '#fff', border: 'none', cursor: pdfDownloading ? 'wait' : 'pointer', opacity: pdfDownloading ? 0.7 : 1 }}
+                                            >
+                                                <IconPdf /> {pdfDownloading ? 'Downloading…' : 'Download Lesson PDF / Notes'}
+                                            </button>
                                         )}
                                         {hasResource && (
                                             <a href={getPdfUrl(activeLesson.resourceLink)} target="_blank" rel="noopener noreferrer" className="action-link" style={{ background: `linear-gradient(135deg, ${blue}, #22c55e)`, color: '#fff' }}>
@@ -1001,7 +1045,12 @@ export default function LearningWorkspace() {
                                                 <div style={{ fontSize: 12, color: muted, marginTop: 2 }}>Comprehensive notes for this lesson</div>
                                             </div>
                                         </div>
-                                        <a href={getPdfUrl(activeLesson.notesPdfUrl)} target="_blank" rel="noopener noreferrer" className="action-link" style={{ background: `linear-gradient(135deg, ${green}, #059669)`, color: '#fff', fontSize: 12, padding: '8px 16px' }}>Download</a>
+                                        <button
+                                                onClick={() => downloadPdf(activeLesson.notesPdfUrl, activeLesson.lessonTitle ? `${activeLesson.lessonTitle}.pdf` : 'lesson-notes.pdf')}
+                                                disabled={pdfDownloading}
+                                                className="action-link"
+                                                style={{ background: `linear-gradient(135deg, ${green}, #059669)`, color: '#fff', fontSize: 12, padding: '8px 16px', border: 'none', cursor: pdfDownloading ? 'wait' : 'pointer', opacity: pdfDownloading ? 0.7 : 1 }}
+                                            >{pdfDownloading ? 'Downloading…' : 'Download'}</button>
                                     </div>
                                 ) : (
                                     <div style={{ padding: '14px 18px', borderRadius: 10, background: isDark ? '#1e293b' : '#f8fafc', border: `1px solid ${border}`, color: muted, fontSize: 13 }}>No PDF notes attached.</div>
