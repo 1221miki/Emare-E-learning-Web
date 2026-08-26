@@ -1,35 +1,177 @@
 const LiveSession = require('../models/LiveSession');
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
+const meetingService = require('../services/meetingService');
+const googleMeetService = require('../services/googleMeetService');
 
-const generateMeetingCode = (title) => {
-    const base = (title || 'emare').toLowerCase().replace(/[^a-z0-9]+/g, '');
-    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    let code = base.slice(0, 10);
-    while (code.length < 10) {
-        code += chars[Math.floor(Math.random() * chars.length)];
-    }
-    code = code.slice(0, 10);
-    return `${code.slice(0, 3)}-${code.slice(3, 7)}-${code.slice(7, 10)}`;
-};
-
-const generateMeetingLink = (platform, title) => {
-    const slug = (title || 'emare-live-session')
+// Jitsi rooms are free and need no account — safe to generate server-side.
+const generateJitsiLink = (title) => {
+    const slug = `${(title || 'emare-live-session')
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '')
-        .slice(0, 24) || 'emare-live-session';
+        .slice(0, 24) || 'emare-live-session'}-${Date.now().toString(36)}`;
+    return `https://meet.jit.si/${slug}`;
+};
 
-    switch (platform) {
-        case 'Google Meet':
-            return `https://meet.google.com/${generateMeetingCode(title)}`;
-        case 'Jitsi Meet':
-            return `https://meet.jit.si/${slug}`;
-        case 'Custom':
-            return `https://meet.emarehub.com/${slug}`;
-        case 'Zoom':
-        default:
-            return `https://zoom.us/j/1234567890?pwd=${slug.toUpperCase().replace(/-/g, '').slice(0, 8)}`;
+const isValidHttpUrl = (value) => {
+    try {
+        const u = new URL(String(value).trim());
+        return u.protocol === 'http:' || u.protocol === 'https:';
+    } catch {
+        return false;
+    }
+};
+
+const ZOOM_ENV_VARS = ['ZOOM_ACCOUNT_ID', 'ZOOM_CLIENT_ID', 'ZOOM_CLIENT_SECRET'];
+
+const missingZoomEnv = () => ZOOM_ENV_VARS.filter((name) => !process.env[name]);
+
+const googleConfigError = () => {
+    const missing = googleMeetService.missingEnv();
+    if (missing.length > 0) {
+        return {
+            code: 'GOOGLE_NOT_CONFIGURED',
+            missing,
+            message: `Google Meet is not configured on this server. Missing backend/.env settings: ${missing.join(', ')}. An administrator must add them and restart the server.`
+        };
+    }
+    return {
+        code: 'GOOGLE_NOT_AUTHORIZED',
+        missing: ['Google authorization (refresh token)'],
+        message: 'Google Meet credentials exist but Google Calendar has not been authorized yet. An administrator must connect it from the Calendar Management page.'
+    };
+};
+
+// @desc    Which meeting integrations are configured on this server
+// @route   GET /api/live-sessions/integrations/status
+// @access  Private/Instructor|Admin
+exports.getIntegrationStatus = async (req, res) => {
+    try {
+        const googleConnected =
+            googleMeetService.isConfigured() && !!googleMeetService.getRefreshToken();
+        const zoomConfigured = meetingService.providerConfigured('zoom');
+        res.status(200).json({
+            success: true,
+            data: {
+                googleConnected,
+                zoomConfigured,
+                googleMissingEnv: googleMeetService.missingEnv(),
+                zoomMissingEnv: missingZoomEnv()
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// @desc    Generate a real meeting link for the selected platform
+// @route   POST /api/live-sessions/generate-link
+// @access  Private/Instructor|Admin
+//
+// One endpoint for all platforms so frontend and backend agree on what can be
+// auto-generated. Never returns fake/placeholder URLs and NEVER substitutes a
+// different platform:
+//   Jitsi Meet  → always generated (free, no account needed)
+//   Zoom        → real Zoom meeting via Server-to-Server OAuth; if the
+//                 integration is not configured a detailed configuration error
+//                 is returned listing exactly which env vars are missing
+//   Google Meet → real Google Calendar event with a real Meet conference; if
+//                 OAuth credentials or authorization are missing, a detailed
+//                 configuration error is returned
+//   Custom      → rejected — manual entry only
+exports.generateSessionMeetingLink = async (req, res) => {
+    try {
+        const { platform, title = '', startTime, durationMinutes } = req.body || {};
+        const normalizedPlatform = ['Zoom', 'Google Meet', 'Jitsi Meet', 'Custom'].includes(platform)
+            ? platform
+            : 'Jitsi Meet';
+
+        if (normalizedPlatform === 'Custom') {
+            return res.status(400).json({
+                success: false,
+                code: 'MANUAL_LINK_REQUIRED',
+                message: 'Custom meetings use a manually entered link. Paste any valid meeting URL in the Meeting Link field.'
+            });
+        }
+
+        if (normalizedPlatform === 'Jitsi Meet') {
+            return res.status(200).json({
+                success: true,
+                data: { url: generateJitsiLink(title), provider: 'jitsi', generated: true }
+            });
+        }
+
+        // Shared start/end resolution for Zoom and Google Meet.
+        let start = null;
+        let end = null;
+        if (startTime) {
+            start = new Date(startTime);
+            if (start.toString() === 'Invalid Date') {
+                return res.status(400).json({ success: false, code: 'BAD_START_TIME', message: 'Please enter a valid start time before generating a meeting link.' });
+            }
+            end = new Date(start.getTime() + Math.max(1, Number(durationMinutes) || 60) * 60000);
+        }
+
+        if (normalizedPlatform === 'Zoom') {
+            if (!meetingService.providerConfigured('zoom')) {
+                const missing = missingZoomEnv();
+                return res.status(400).json({
+                    success: false,
+                    code: 'ZOOM_NOT_CONFIGURED',
+                    missing,
+                    message: `Zoom is not configured on this server. Missing backend/.env settings: ${missing.join(', ')}. An administrator must add the Zoom Server-to-Server OAuth credentials and restart the server.`
+                });
+            }
+            // allowFallback:false — never silently return a Jitsi URL for Zoom.
+            const result = await meetingService.generateMeetingUrl({
+                provider: 'zoom',
+                title,
+                startDate: start ? start.toISOString() : undefined,
+                endDate: end ? end.toISOString() : undefined,
+                allowFallback: false
+            });
+            if (!result.url || !/^https:\/\/(us\w*\.)?zoom\.us\//.test(result.url)) {
+                throw new Error('Zoom did not return a valid meeting link.');
+            }
+            return res.status(200).json({
+                success: true,
+                data: { url: result.url, provider: 'zoom', generated: true }
+            });
+        }
+
+        // ── Google Meet: real Calendar event with a real Meet conference ──
+        const googleErr = googleConfigError();
+        if (!googleMeetService.isConfigured() || !googleMeetService.getRefreshToken()) {
+            return res.status(400).json({ success: false, ...googleErr });
+        }
+        const meetEvent = await googleMeetService.createCalendarMeet({
+            title,
+            startDate: start ? start.toISOString() : undefined,
+            endDate: end ? end.toISOString() : undefined
+        });
+        if (!meetEvent.url) throw new Error('Google Calendar did not return a Google Meet link.');
+        return res.status(200).json({
+            success: true,
+            data: {
+                url: meetEvent.url,
+                provider: 'googleMeet',
+                generated: true,
+                meetingId: meetEvent.calendarEventId || meetEvent.meetingProviderId || '',
+                meetingSpaceName: meetEvent.meetingSpaceName || ''
+            }
+        });
+    } catch (err) {
+        if (err.code === 'GOOGLE_NOT_AUTHORIZED' || err.code === 'PROVIDER_NOT_CONFIGURED') {
+            const cfg = googleConfigError();
+            return res.status(400).json({ success: false, code: cfg.code, missing: cfg.missing, message: cfg.message });
+        }
+        console.error('Live session meeting link generation error:', err && err.message);
+        return res.status(502).json({
+            success: false,
+            message: (err && err.userMessage) ||
+                'The meeting provider failed to create a link. Please try again, or paste an existing meeting link manually.'
+        });
     }
 };
 
@@ -90,15 +232,41 @@ exports.getMyLiveSessions = async (req, res) => {
 // @access  Private/Instructor
 exports.createLiveSession = async (req, res) => {
     try {
-        const { title, platform = 'Zoom', meetingLink, ...rest } = req.body;
-        const normalizedPlatform = ['Zoom', 'Google Meet', 'Jitsi Meet', 'Custom'].includes(platform) ? platform : 'Zoom';
-        const resolvedLink = meetingLink || generateMeetingLink(normalizedPlatform, title);
+        const { title, platform = 'Jitsi Meet', meetingLink, ...rest } = req.body;
+        const normalizedPlatform = ['Zoom', 'Google Meet', 'Jitsi Meet', 'Custom'].includes(platform) ? platform : 'Jitsi Meet';
+
+        // Resolve the meeting link — NEVER invent placeholder URLs in production.
+        let resolvedLink = (meetingLink || '').trim();
+        if (!resolvedLink && normalizedPlatform === 'Jitsi Meet') {
+            // Jitsi rooms are free and require no external account
+            resolvedLink = generateJitsiLink(title);
+        }
+        if (!resolvedLink) {
+            return res.status(400).json({
+                success: false,
+                message: `A meeting link is required for ${normalizedPlatform} sessions. Generate one automatically (Jitsi/Google Meet) or paste a valid URL.`
+            });
+        }
+        if (!isValidHttpUrl(resolvedLink)) {
+            return res.status(400).json({
+                success: false,
+                message: 'The meeting link must be a valid http(s) URL.'
+            });
+        }
+
+        const PLATFORM_TO_PROVIDER = {
+            'Zoom': 'zoom',
+            'Google Meet': 'googleMeet',
+            'Jitsi Meet': 'jitsi',
+            'Custom': 'custom'
+        };
 
         const session = await LiveSession.create({
             ...rest,
             title,
             platform: normalizedPlatform,
             meetingLink: resolvedLink,
+            meetingProvider: rest.meetingProvider || PLATFORM_TO_PROVIDER[normalizedPlatform],
             instructorRef: req.user.id
         });
 

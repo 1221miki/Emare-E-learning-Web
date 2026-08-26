@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { liveSessionService, courseService } from '../services/api';
+import { liveSessionService, courseService, calendarService } from '../services/api';
 import Sidebar from '../components/Sidebar';
 
 export default function LiveSessionsPage() {
@@ -19,14 +19,20 @@ export default function LiveSessionsPage() {
         description: '',
         startTime: '',
         durationMinutes: 60,
-        platform: 'Zoom',
+        // Jitsi is the default — it always generates a real link with no setup.
+        platform: 'Jitsi Meet',
         meetingLink: '',
+        meetingProvider: '',
+        meetingProviderId: '',
         meetingPassword: '',
         attendees: ''
     });
-    // Inline guidance for meeting-link generation (replaces blocking alerts).
-    // Shape: { type: 'info' | 'warning' | 'error', title: string, steps: string[] }
-    const [linkNotice, setLinkNotice] = useState(null);
+    // Small inline status message under the Meeting Link field
+    const [linkMsg, setLinkMsg] = useState(null);   // { type:'success'|'error'|'info', text }
+    const [generatingLink, setGeneratingLink] = useState(false);
+    const [fieldErrors, setFieldErrors] = useState({});
+    // Which meeting integrations this server actually has configured
+    const [integrations, setIntegrations] = useState({ googleConnected: null, zoomConfigured: null, googleMissingEnv: [], zoomMissingEnv: [] });
 
     const navItems = [
         { label: 'Dashboard', path: `/${user?.assignedRole.toLowerCase()}/dashboard`, key: 'dashboard' },
@@ -111,17 +117,6 @@ export default function LiveSessionsPage() {
         }
     };
 
-    const generateGoogleMeetCode = (title) => {
-        const base = (title || 'emare').toLowerCase().replace(/[^a-z0-9]+/g, '');
-        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-        let code = base.slice(0, 10);
-        while (code.length < 10) {
-            code += chars[Math.floor(Math.random() * chars.length)];
-        }
-        code = code.slice(0, 10);
-        return `${code.slice(0, 3)}-${code.slice(3, 7)}-${code.slice(7, 10)}`;
-    };
-
     const isValidMeetingLink = (link) => {
         return typeof link === 'string' && link.trim().startsWith('http');
     };
@@ -176,90 +171,182 @@ export default function LiveSessionsPage() {
     };
 
     const validateSessionForm = () => {
-        if (!formData.title?.trim()) {
-            alert('Please enter a session title.');
-            return false;
-        }
+        const errors = {};
 
-        const parsedStartTime = parseDateTimeValue(formData.startTime);
-        if (!parsedStartTime) {
-            alert('Please enter a valid start time.');
-            return false;
-        }
+        if (!formData.title?.trim()) errors.title = 'Please enter a session title.';
+        if (!parseDateTimeValue(formData.startTime)) errors.startTime = 'Please enter a valid start time.';
+        if (!formData.durationMinutes || Number(formData.durationMinutes) <= 0) errors.durationMinutes = 'Please enter a valid duration.';
 
-        if (!formData.durationMinutes || Number(formData.durationMinutes) <= 0) {
-            alert('Please enter a valid duration.');
-            return false;
-        }
-
-        if (!formData.meetingLink?.trim() && ['Zoom', 'Custom'].includes(formData.platform)) {
-            alert(`Please enter a real meeting link for ${formData.platform} sessions.`);
-            return false;
-        }
-
-        return true;
-    };
-
-    const handleGenerateMeetingLink = async () => {
-        setLinkNotice(null);
-        if (!formData.title?.trim()) {
-            return alert('Please enter a session title before generating a meeting link.');
-        }
-
-        if (formData.platform === 'Google Meet') {
+        const link = (formData.meetingLink || '').trim();
+        if (!link) {
+            // Every platform needs a link — the backend no longer invents one
+            errors.meetingLink =
+                formData.platform === 'Jitsi Meet'
+                    ? 'Click "Generate Meeting Link" to create your Jitsi room.'
+                    : `A meeting link is required for ${formData.platform} sessions.`;
+        } else {
             try {
-                const parsedStart = parseDateTimeValue(formData.startTime);
-                const startTimeISO = parsedStart ? parsedStart.toISOString() : formData.startTime;
-                const res = await liveSessionService.createGoogleMeet({
-                    title: formData.title,
-                    description: formData.description,
-                    startTime: startTimeISO,
-                    durationMinutes: Number(formData.durationMinutes),
-                    attendees: (formData.attendees || '').split(',').map(s => s.trim()).filter(Boolean)
-                });
-                const googleLink = res.data?.data?.meetLink;
-                if (!googleLink) {
-                    return setLinkNotice({
-                        type: 'error',
-                        title: 'Google Meet link could not be created.',
-                        steps: ['Enter a real Google Meet link manually in the field below.', 'Or switch the platform to Jitsi Meet, which generates a link instantly with no external account needed.']
-                    });
-                }
-                setFormData(prev => ({ ...prev, meetingLink: googleLink }));
-                return;
-            } catch (err) {
-                return setLinkNotice({
-                    type: 'error',
-                    title: err.response?.data?.message || 'Google Meet integration is not configured.',
-                    steps: [
-                        'Connect your Google Account first (Calendar Management → Connect Google Account), then come back and click Generate again.',
-                        'Or paste an existing Google Meet link manually in the field below.',
-                        'Or switch the platform to Jitsi Meet — links generate instantly without any Google login.'
-                    ]
-                });
+                const u = new URL(link);
+                if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error('bad protocol');
+            } catch {
+                errors.meetingLink = 'The meeting link must be a valid URL starting with http:// or https://';
             }
         }
 
-        if (formData.platform === 'Jitsi Meet') {
-            setFormData(prev => ({
-                ...prev,
-                meetingLink: getDefaultMeetingLink(prev.platform, prev.title)
-            }));
-            setLinkNotice({ type: 'info', title: 'Jitsi Meet link generated — no account needed. You can edit it or save the session.' });
+        setFieldErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+    // Fetch the real integration status from the server (no secrets returned).
+    const fetchIntegrationStatus = async () => {
+        try {
+            const res = await liveSessionService.getIntegrationStatus();
+            const status = {
+                googleConnected: !!res.data?.data?.googleConnected,
+                zoomConfigured: !!res.data?.data?.zoomConfigured,
+                googleMissingEnv: res.data?.data?.googleMissingEnv || [],
+                zoomMissingEnv: res.data?.data?.zoomMissingEnv || []
+            };
+            setIntegrations(status);
+            return status;
+        } catch {
+            const status = { googleConnected: false, zoomConfigured: false, googleMissingEnv: [], zoomMissingEnv: [] };
+            setIntegrations(status);
+            return status;
+        }
+    };
+
+    // Load integration status once for instructors/admins so the helper text is accurate immediately.
+    useEffect(() => {
+        if (user && user.assignedRole !== 'Student') {
+            fetchIntegrationStatus();
+        }
+    }, [user]);
+
+    const ensureIntegrationStatus = async () => {
+        if (integrations.googleConnected !== null && integrations.zoomConfigured !== null) {
+            return integrations;
+        }
+        return fetchIntegrationStatus();
+    };
+
+    // Short helper text shown under the Meeting Link input, per platform
+    const getPlatformHelperText = () => {
+        switch (formData.platform) {
+            case 'Google Meet':
+                return integrations.googleConnected === null
+                    ? 'Click "Generate Meeting Link" to create a real Google Calendar event with a Google Meet link.'
+                    : integrations.googleConnected
+                        ? 'Click "Generate Meeting Link" to create a real Google Calendar event with a Meet conference link.'
+                        : 'Not configured on this server — an administrator must connect Google Calendar from the Calendar Management page.';
+            case 'Zoom':
+                return integrations.zoomConfigured === null
+                    ? 'Click "Generate Meeting Link" to create a Zoom meeting if Zoom is connected on this server.'
+                    : integrations.zoomConfigured
+                        ? 'Click "Generate Meeting Link" to create a real Zoom meeting via the configured integration.'
+                        : 'Not configured on this server — an administrator must add the Zoom API credentials to backend/.env.';
+            case 'Jitsi Meet':
+                return 'Click "Generate Meeting Link" to create a free Jitsi room instantly — no account needed.';
+            case 'Custom':
+                return 'Enter any valid meeting URL manually (Zoom, Teams, YouTube Live, …).';
+            default:
+                return '';
+        }
+    };
+
+    // Admin one-click path to connect Google Calendar (enables real Meet links).
+    const handleConnectGoogleCalendar = async () => {
+        try {
+            const res = await calendarService.getGoogleAuthUrl('calendar');
+            const url = res.data?.data?.url;
+            if (!url) throw new Error('no url');
+            window.location.href = url;
+        } catch {
+            setLinkMsg({ type: 'error', text: 'Could not start the Google connection. An administrator can connect Google Calendar from the Calendar Management page.' });
+        }
+    };
+
+    const handleGenerateMeetingLink = async () => {
+        setLinkMsg(null);
+        setFieldErrors(prev => ({ ...prev, meetingLink: undefined }));
+
+        if (!formData.title?.trim()) {
+            setFieldErrors({ title: 'Enter a session title first — it is used to name the meeting.' });
             return;
         }
 
-        // Zoom / Custom — auto-generation is intentionally unavailable
-        setLinkNotice({
-            type: 'warning',
-            title: `Automatic generation is only available for Jitsi Meet and Google Meet — not for ${formData.platform}.`,
-            steps: [
-                `Create the meeting manually on ${formData.platform} and copy its invitation URL.`,
-                'Paste the URL directly into the Meeting Link field below.',
-                'Alternatively, switch the Platform dropdown to Jitsi Meet to auto-generate a free link instantly without any external login.'
-            ]
-        });
+        // ── Custom: manual entry only ──────────────────────────────────────
+        if (formData.platform === 'Custom') {
+            setLinkMsg({ type: 'info', text: 'Custom meetings use a manual link — paste any valid meeting URL in the Meeting Link field.' });
+            return;
+        }
+
+        setGeneratingLink(true);
+        try {
+            // ── Configuration pre-checks: fail with exact missing settings ──
+            const status = await ensureIntegrationStatus();
+            if (formData.platform === 'Google Meet' && !status.googleConnected) {
+                const missing = status.googleMissingEnv?.length
+                    ? status.googleMissingEnv.join(', ')
+                    : 'Google authorization (refresh token)';
+                setLinkMsg({
+                    type: 'error',
+                    text: `Configuration error — Google Meet cannot be generated. Missing: ${missing}. An administrator must fix this in backend/.env / Calendar Management.`
+                });
+                return;
+            }
+            if (formData.platform === 'Zoom' && !status.zoomConfigured) {
+                const missing = status.zoomMissingEnv?.length
+                    ? status.zoomMissingEnv.join(', ')
+                    : 'ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET';
+                setLinkMsg({
+                    type: 'error',
+                    text: `Configuration error — Zoom meetings cannot be generated. Missing backend/.env settings: ${missing}. An administrator must add the Zoom Server-to-Server OAuth credentials and restart the server.`
+                });
+                return;
+            }
+
+            // ── Real generation through the configured provider ────────────
+            const parsedStart = parseDateTimeValue(formData.startTime);
+            const res = await liveSessionService.generateLink({
+                platform: formData.platform,
+                title: formData.title,
+                startTime: parsedStart ? parsedStart.toISOString() : undefined,
+                durationMinutes: Number(formData.durationMinutes) || 60
+            });
+            const data = res.data?.data || {};
+            const url = data.url || '';
+            if (!url) throw new Error('The meeting provider did not return a link.');
+            setFormData(prev => ({
+                ...prev,
+                meetingLink: url,
+                meetingProvider: data.provider || '',
+                meetingProviderId: data.meetingId || ''
+            }));
+            setLinkMsg({ type: 'success', text: 'Meeting link generated successfully.' });
+        } catch (err) {
+            const code = err.response?.data?.code;
+            const raw = err.response?.data?.message || err.message || '';
+            const missing = err.response?.data?.missing;
+            let friendly;
+            if (code === 'GOOGLE_NOT_CONFIGURED' || code === 'GOOGLE_NOT_AUTHORIZED') {
+                friendly = `Configuration error — ${raw}`;
+            } else if (code === 'ZOOM_NOT_CONFIGURED') {
+                friendly = `Configuration error — ${raw}`;
+            } else if (code === 'PROVIDER_NOT_CONFIGURED') {
+                friendly = 'Configuration error — the meeting provider is not configured on this server.';
+            } else {
+                friendly = raw || 'Could not generate the meeting link. Please try again or paste a link manually.';
+            }
+            if (Array.isArray(missing) && missing.length > 0 && !/missing/i.test(friendly)) {
+                friendly += ` Missing: ${missing.join(', ')}.`;
+            }
+            setLinkMsg({ type: 'error', text: friendly });
+        } finally {
+            setGeneratingLink(false);
+        }
     };
+
 
     const handleCreate = async (e) => {
         e.preventDefault();
@@ -267,51 +354,30 @@ export default function LiveSessionsPage() {
 
         const parsedStart = parseDateTimeValue(formData.startTime);
         const startTimeISO = parsedStart ? parsedStart.toISOString() : formData.startTime;
+        const meetingLink = (formData.meetingLink || '').trim();
+
+        const payload = {
+            ...formData,
+            courseRef: selectedCourse,
+            meetingLink,
+            startTime: startTimeISO,
+            durationMinutes: Number(formData.durationMinutes),
+            attendees: (formData.attendees || '').split(',').map(s => s.trim()).filter(Boolean)
+        };
 
         try {
-            let meetingLink = (formData.meetingLink || '').trim();
-
-            if (!meetingLink && formData.platform === 'Google Meet') {
-                try {
-                    const res = await liveSessionService.createGoogleMeet({
-                        title: formData.title,
-                        description: formData.description,
-                        startTime: startTimeISO,
-                        durationMinutes: Number(formData.durationMinutes),
-                        attendees: (formData.attendees || '').split(',').map(s => s.trim()).filter(Boolean)
-                    });
-                    meetingLink = res.data?.data?.meetLink;
-                    if (!meetingLink) {
-                        throw new Error('Google Meet link could not be created.');
-                    }
-                } catch (err) {
-                    alert(err.response?.data?.message || 'Google Meet integration failed. Please enter a valid meeting link.');
-                    return;
-                }
-            }
-
-            if (!meetingLink && ['Zoom', 'Custom'].includes(formData.platform)) {
-                alert(`Please enter a valid ${formData.platform} meeting link.`);
-                return;
-            }
-
-            const payload = {
-                ...formData,
-                courseRef: selectedCourse,
-                meetingLink,
-                startTime: startTimeISO,
-                durationMinutes: Number(formData.durationMinutes),
-                attendees: (formData.attendees || '').split(',').map(s => s.trim()).filter(Boolean)
-            };
-
             await liveSessionService.createSession(payload);
             setShowForm(false);
-            setFormData({ title: '', description: '', startTime: '', durationMinutes: 60, platform: 'Zoom', meetingLink: '', meetingPassword: '', attendees: '' });
+            setLinkMsg(null);
+            setFormData({ title: '', description: '', startTime: '', durationMinutes: 60, platform: 'Jitsi Meet', meetingLink: '', meetingProvider: '', meetingProviderId: '', meetingPassword: '', attendees: '' });
             handleSelectCourse(selectedCourse); // refresh
         } catch (err) {
-            alert(err.response?.data?.message || 'Failed to schedule session');
+            const msg = err.response?.data?.message || 'Failed to schedule session';
+            if (/meeting link/i.test(msg)) setFieldErrors(prev => ({ ...prev, meetingLink: msg }));
+            else alert(msg);
         }
     };
+
 
     const handleDelete = async (id) => {
         if (!window.confirm("Delete this session?")) return;
@@ -384,16 +450,24 @@ export default function LiveSessionsPage() {
                             <label style={{ display: 'block', color: colors.text, marginBottom: '8px', fontWeight: '600' }}>Platform</label>
                             <select value={formData.platform} onChange={e => {
                                 const nextPlatform = e.target.value;
-                                setLinkNotice(null);
-                                setFormData(prev => ({
-                                    ...prev,
-                                    platform: nextPlatform,
-                                    meetingLink: nextPlatform === 'Jitsi Meet' ? getDefaultMeetingLink(nextPlatform, prev.title) : ''
-                                }));
+                                setLinkMsg(null);
+                                setFieldErrors(prev => ({ ...prev, meetingLink: undefined }));
+                                setFormData(prev => {
+                                    // Keep an existing valid link — only auto-fill Jitsi when empty
+                                    const keepLink = prev.meetingLink && prev.meetingLink.startsWith('http')
+                                        ? prev.meetingLink
+                                        : (nextPlatform === 'Jitsi Meet' ? getDefaultMeetingLink(nextPlatform, prev.title) : '');
+                                    return {
+                                        ...prev,
+                                        platform: nextPlatform,
+                                        meetingLink: keepLink,
+                                        ...(keepLink ? {} : { meetingProvider: '', meetingProviderId: '' })
+                                    };
+                                });
                             }} style={{ width: '100%', padding: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', outline: 'none' }}>
+                                <option value="Jitsi Meet">Jitsi Meet</option>
                                 <option value="Zoom">Zoom</option>
                                 <option value="Google Meet">Google Meet</option>
-                                <option value="Jitsi Meet">Jitsi Meet</option>
                                 <option value="Custom">Custom</option>
                             </select>
                         </div>
@@ -405,37 +479,35 @@ export default function LiveSessionsPage() {
                         )}
                         <div style={{ gridColumn: '1 / -1' }}>
                             <label style={{ display: 'block', color: colors.text, marginBottom: '8px', fontWeight: '600' }}>Meeting Link</label>
-                            <input type="url" value={formData.meetingLink} onChange={e => setFormData({...formData, meetingLink: e.target.value})} placeholder="Enter a meeting link or generate one automatically" style={{ width: '100%', padding: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', outline: 'none' }} />
-                            {linkNotice && (
-                                <div role="alert" style={{
-                                    marginTop: '12px',
-                                    borderRadius: '10px',
-                                    padding: '14px 16px',
-                                    fontSize: '13px',
-                                    lineHeight: 1.6,
-                                    background: linkNotice.type === 'error'
-                                        ? '#fef2f2'
-                                        : linkNotice.type === 'warning'
-                                            ? '#fffbeb'
-                                            : '#f0fdf4',
-                                    border: `1px solid ${linkNotice.type === 'error' ? 'rgba(239,68,68,0.4)' : linkNotice.type === 'warning' ? 'rgba(245,158,11,0.4)' : 'rgba(34,197,94,0.4)'}`,
-                                    color: colors.text
-                                }}>
-                                    <div style={{ fontWeight: 800, marginBottom: 6, color: linkNotice.type === 'error' ? '#ef4444' : linkNotice.type === 'warning' ? '#d97706' : '#16a34a' }}>
-                                        {linkNotice.type === 'error' ? '⚠️ ' : linkNotice.type === 'warning' ? '💡 ' : '✓ '}{linkNotice.title}
-                                    </div>
-                                    {(linkNotice.steps || []).length > 0 && (
-                                        <ol style={{ margin: 0, paddingLeft: 20 }}>
-                                            {linkNotice.steps.map((step, i) => <li key={i} style={{ marginBottom: 4 }}>{step}</li>)}
-                                        </ol>
+                            <input type="url" value={formData.meetingLink} onChange={e => { setFormData({...formData, meetingLink: e.target.value}); setFieldErrors(prev => ({ ...prev, meetingLink: undefined })); }} placeholder="https://…" style={{ width: '100%', padding: '12px', background: colors.bgInput, border: `1px solid ${fieldErrors.meetingLink ? '#ef4444' : colors.border}`, color: colors.text, borderRadius: '8px', outline: 'none' }} />
+                            {fieldErrors.meetingLink && (
+                                <div style={{ marginTop: '6px', fontSize: '12.5px', fontWeight: 600, color: '#ef4444' }}>{fieldErrors.meetingLink}</div>
+                            )}
+                            {!linkMsg && (
+                                <div style={{ marginTop: '6px', fontSize: '12px', color: colors.textMuted }}>{getPlatformHelperText()}</div>
+                            )}
+
+                            {linkMsg && (
+                                <div style={{
+                                    marginTop: '8px', fontSize: '12.5px', fontWeight: 600,
+                                    color: linkMsg.type === 'error' ? '#ef4444' : linkMsg.type === 'success' ? '#16a34a' : '#d97706'
+                                }} role="status">
+                                    {linkMsg.type === 'error' ? '⚠️ ' : linkMsg.type === 'success' ? '✓ ' : 'ℹ️ '}{linkMsg.text}
+                                </div>
+                            )}
+
+                            {formData.platform !== 'Custom' && (
+                                <div style={{ marginTop: '10px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                    <button type="button" onClick={handleGenerateMeetingLink} disabled={generatingLink} style={{ padding: '10px 14px', background: colors.accent, color: '#fff', border: 'none', borderRadius: '8px', cursor: generatingLink ? 'wait' : 'pointer', opacity: generatingLink ? 0.7 : 1 }}>
+                                        {generatingLink ? 'Generating…' : 'Generate Meeting Link'}
+                                    </button>
+                                    {formData.platform === 'Google Meet' && integrations.googleConnected === false && user?.assignedRole === 'Admin' && (
+                                        <button type="button" onClick={handleConnectGoogleCalendar} style={{ padding: '10px 14px', background: 'transparent', color: colors.accent, border: `1px solid ${colors.accent}`, borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>
+                                            Connect Google Calendar
+                                        </button>
                                     )}
                                 </div>
                             )}
-                            <div style={{ marginTop: '10px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                <button type="button" onClick={handleGenerateMeetingLink} style={{ padding: '10px 14px', background: colors.accent, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-                                    Generate Meeting Link
-                                </button>
-                            </div>
                         </div>
                         <div>
                             <label style={{ display: 'block', color: colors.text, marginBottom: '8px', fontWeight: '600' }}>Meeting Password (Optional)</label>

@@ -276,7 +276,11 @@ const createJitsiLink = (slug) => `https://meet.jit.si/${normalizeSlug(slug)}`;
  * @param {string} [eventData.slug]
  * @param {string} [eventData.startDate]
  * @param {string} [eventData.endDate]
- * @returns {Promise<{ url, provider, generated, meetingUrl?, meetingSpaceName?, meetingProviderId?, meetingCreatedAt?, meetingMetadata? }>}
+ * @param {boolean} [eventData.allowFallback=true]  When false, an unconfigured
+ *                  provider surfaces its error instead of silently returning a
+ *                  Jitsi URL (used by live sessions, which must never receive
+ *                  a link from the wrong platform).
+ * @returns {Promise<{ url, provider, generated, meetingUrl?, meetingSpaceName?, meetingProviderId?, meetingCreatedAt?, meetingMetadata? }>
  */
 const generateMeetingUrl = async (eventData = {}) => {
     const provider = normalizeProvider(eventData.provider);
@@ -313,7 +317,7 @@ const generateMeetingUrl = async (eventData = {}) => {
             error.code === 'PROVIDER_NOT_CONFIGURED' ||
             error.code === 'GOOGLE_NOT_AUTHORIZED' ||
             (provider === 'googleMeet' && /not connected|not configured|authorize/i.test(String(error.message || '')));
-        if (unconfigured) {
+        if (unconfigured && eventData.allowFallback !== false) {
             return { url: createJitsiLink(slug || title), provider: 'jitsi', generated: true };
         }
         throw error;

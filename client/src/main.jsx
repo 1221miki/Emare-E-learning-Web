@@ -11,6 +11,10 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
+if (!GOOGLE_CLIENT_ID) {
+  console.warn('VITE_GOOGLE_CLIENT_ID is not set — "Continue with Google" will be unavailable.');
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>

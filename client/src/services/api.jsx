@@ -343,6 +343,8 @@ export const liveSessionService = {
     markAttendance: (id) => API.put(`/live-sessions/${id}/attendance`),
     reserveSeat: (id) => API.post(`/live-sessions/${id}/reserve`),
     createGoogleMeet: (data) => API.post('/live-sessions/google/create', data),
+    generateLink: (data) => API.post('/live-sessions/generate-link', data),
+    getIntegrationStatus: () => API.get('/live-sessions/integrations/status'),
     deleteSession: (id) => API.delete(`/live-sessions/${id}`)
 };
 

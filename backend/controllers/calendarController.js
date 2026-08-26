@@ -226,7 +226,7 @@ exports.handleGoogleCallback = async (req, res) => {
         if (returnTo === 'events') {
             path = `/admin/events?googleMeet=${status}${reason ? `&reason=${encodeURIComponent(reason)}` : ''}`;
         } else {
-            path = `/admin?calendar=1&googleMeet=${status}${reason ? `&reason=${encodeURIComponent(reason)}` : ''}`;
+            path = `/admin/events?calendar=1&googleMeet=${status}${reason ? `&reason=${encodeURIComponent(reason)}` : ''}`;
         }
         return res.redirect(`${frontendBase}${path}`);
     };

@@ -38,6 +38,15 @@ const LiveSessionSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    meetingProvider: {
+        type: String,
+        enum: ['zoom', 'googleMeet', 'jitsi', 'custom', ''],
+        default: ''
+    },
+    meetingProviderId: {
+        type: String,
+        default: ''
+    },
     meetingPassword: {
         type: String
     },
