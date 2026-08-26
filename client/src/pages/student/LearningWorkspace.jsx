@@ -419,8 +419,13 @@ export default function LearningWorkspace() {
                 if (cancelled) return;
                 const data = res.data?.data || null;
                 setCheckpointsData(data);
-                if (data?.checkpoints?.length > 0 && data.directVideoUrl) {
-                    setVideoUrl(data.directVideoUrl);
+                // Prefer the API's live-resolved URL; fall back to the direct MP4
+                // stored on the lesson document (resolved & persisted at upload /
+                // by maintenance script) so checkpoint mode survives backend-side
+                // transient failures.
+                const storedDirect = data?.directVideoUrl || activeLesson.directVideoUrl;
+                if (data?.checkpoints?.length > 0 && storedDirect) {
+                    setVideoUrl(storedDirect);
 
                     // ── Restore progress from previous session ─────────────────────
                     // Use stored lastWatchedPosition to resume where the student left off.
@@ -460,9 +465,9 @@ export default function LearningWorkspace() {
                             }
                         }, 600);
                     }
-                } else if (data?.checkpoints?.length > 0 && !data.directVideoUrl) {
-                    // Checkpoints exist but no direct MP4 — quiz popups cannot
-                    // run on the iframe embed. Flag it so the UI warns clearly.
+                } else if (data?.checkpoints?.length > 0 && !storedDirect) {
+                    // Checkpoints exist but NO direct MP4 could be found anywhere —
+                    // quiz popups cannot run on the iframe embed. Warn clearly.
                     setCheckpointDirectFailed(true);
                 } else if (!data?.checkpoints?.length) {
                     // No checkpoints — restore last watched position for regular videos
