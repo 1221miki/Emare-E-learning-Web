@@ -1494,7 +1494,7 @@ export default function LearningWorkspace() {
                 )}
             </div>
 
-            <AiAssistant context={{ courseName: course.courseTitle, courseId }} />
+            <AiAssistant context={{ courseName: course.courseTitle, courseId, lessonPdfUrl: activeLesson?.notesPdfUrl || '', lessonTitle: activeLesson?.lessonTitle || '' }} />
 
             {/* ── Auto-next countdown toast (after lesson auto-completed) ── */}
             {autoNextIn != null && (

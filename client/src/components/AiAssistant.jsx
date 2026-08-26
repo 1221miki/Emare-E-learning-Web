@@ -42,6 +42,43 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
     const fileInputRef = useRef(null);
     const recognitionRef = useRef(null);
     const voiceActiveRef = useRef(false);
+    const autoPdfLoadedRef = useRef('');
+
+    // ── Auto-load the current lesson's PDF ────────────────────────────────
+    // When mounted inside a lesson workspace that has notes (context.lessonPdfUrl),
+    // extract its text once so every question is answered from the actual
+    // course material — same quality as asking Gemini with the PDF attached.
+    useEffect(() => {
+        const pdfUrl = context?.lessonPdfUrl;
+        if (!pdfUrl || autoPdfLoadedRef.current === pdfUrl) return;
+        autoPdfLoadedRef.current = pdfUrl;
+        let cancelled = false;
+        (async () => {
+            try {
+                setUploadingFile(true);
+                const res = await aiService.getPdfContext(pdfUrl);
+                if (cancelled) return;
+                const text = res.data?.data?.pdfText || '';
+                if (text) {
+                    setPdfText(text);
+                    setPdfUrl(pdfUrl);
+                    const name = res.data?.data?.fileName || 'lesson-notes.pdf';
+                    // Show it as the attached document (without a real File object)
+                    setAttachedFile(prev => prev || {
+                        name,
+                        autoLoaded: true,
+                        type: 'application/pdf',
+                        size: text.length || 0
+                    });
+                }
+            } catch (err) {
+                console.warn('[AiAssistant] Could not auto-load lesson PDF:', err?.response?.data?.message || err.message);
+            } finally {
+                if (!cancelled) setUploadingFile(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [context?.lessonPdfUrl]);
 
     const assistantCourseLabel = context.courseName || 'General Study';
     const storageKey = useMemo(() => `emare-ai-${assistantCourseLabel.replace(/\s+/g, '-').toLowerCase()}`, [assistantCourseLabel]);
@@ -177,7 +214,10 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
             const validCourseId = typeof context.courseId === 'string' && /^[a-fA-F0-9]{24}$/.test(context.courseId) ? context.courseId : null;
             const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
-            if (validCourseId) {
+            // When a lesson PDF is loaded, use the document-QA path (/ai/ask)
+            // so the tutor answers directly from the course material instead
+            // of the Socratic tutor (which never gives direct answers).
+            if (validCourseId && !pdfText) {
                 try {
                     let sessionId = window.sessionStorage.getItem(`socratic-session-${validCourseId}`);
 

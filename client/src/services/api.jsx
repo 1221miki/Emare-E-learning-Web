@@ -366,12 +366,16 @@ export const inVideoQuizService = {
 // ── AI Tutor API Calls ─────────────────────────────────────
 export const aiService = {
     askQuestion: (data) => API.post('/ai/ask', data),
+    getPdfContext: (pdfUrl) => API.post('/ai/pdf-context', { pdfUrl }, { timeout: 60000 }),
     getHistory: (params) => API.get('/ai/history', { params }),   // params may include { conversationId }
     clearHistory: () => API.delete('/ai/history/clear'),
     generateLearningPath: (data) => API.post('/ai/learning-path', data),
     recommendCourses: (data) => API.post('/ai/recommend-courses', data),
     generateQuiz: (data) => API.post('/ai/generate-quiz', data),
-    assignmentAssistant: (data) => API.post('/ai/assignment-assistant', data)
+    assignmentAssistant: (data) => API.post('/ai/assignment-assistant', data),
+    summarize: (data) => API.post('/ai/summarize', data),
+    generateFlashcards: (data) => API.post('/ai/flashcards', data),
+    generateMicroLesson: (data) => API.post('/ai/microlesson', data)
 };
 
 // ── Upload & Media API Calls (Phase 6) ─────────────────────

@@ -1,4 +1,5 @@
 const aiService = require('../services/aiService');
+const axios = require('axios');
 const AiHistory = require('../models/AiHistory');
 const AiConversation = require('../models/AiConversation');
 const { customAlphabet } = require('nanoid');
@@ -302,5 +303,69 @@ exports.generateFlashcards = async (req, res) => {
         res.status(200).json({ success: true, data: { cards, conversationId: sessionId } });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// @desc    Extract text from the lesson's stored PDF so the AI tutor can
+//          answer questions about it without the student manually re-uploading
+// @route   POST /api/ai/pdf-context
+// @access  Private/Student
+exports.getPdfContext = async (req, res) => {
+    try {
+        const { pdfUrl } = req.body || {};
+        if (!pdfUrl || typeof pdfUrl !== 'string') {
+            return res.status(400).json({ success: false, message: 'pdfUrl is required.' });
+        }
+
+        const STORAGE_API_KEY = process.env.BUNNY_STORAGE_API_KEY;
+        const STORAGE_ZONE = process.env.BUNNY_STORAGE_ZONE_NAME || 'emare-ict-hub1221';
+        if (!STORAGE_API_KEY) {
+            return res.status(500).json({ success: false, message: 'PDF storage not configured.' });
+        }
+
+        // Accept full Bunny CDN URLs, proxied paths, or raw storage paths
+        let raw = String(pdfUrl).trim();
+        raw = raw.replace(/^https?:\/\/[^/]+\/api\/pdf-proxy\//i, '');
+        raw = raw.replace(/^https?:\/\/[^/]+\.(b-cdn\.net|mediadelivery\.net)\//i, '');
+        raw = raw.replace(/^https?:\/\/storage\.bunnycdn\.com\/[^/]+\//i, '');
+        const storagePath = decodeURIComponent(raw).replace(/^\/+/, '')
+            .replace(new RegExp(`^${STORAGE_ZONE}/`), '');
+        if (!storagePath || !/\.pdf(\?|$)/i.test(storagePath)) {
+            return res.status(400).json({ success: false, message: 'A valid lesson PDF URL is required.' });
+        }
+
+        // Only allow paths inside the PDF folder
+        if (!/^courses\/pdfs\//i.test(storagePath)) {
+            return res.status(403).json({ success: false, message: 'Only lesson PDF files can be loaded.' });
+        }
+
+        const storageUrl = `https://storage.bunnycdn.com/${STORAGE_ZONE}/${storagePath}`;
+        const response = await axios.get(storageUrl, {
+            headers: { AccessKey: STORAGE_API_KEY },
+            responseType: 'arraybuffer',
+            timeout: 30000
+        });
+
+        const pdfParse = require('pdf-parse');
+        const parsed = await pdfParse(response.data);
+        let text = (parsed.text || '')
+            .replace(/\u00A0/g, ' ')
+            .replace(/\r?\n/g, ' ')
+            .replace(/([a-z])([A-Z])/g, '$1 $2')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 18000);
+
+        const fileName = storagePath.split('/').pop() || 'lesson-notes.pdf';
+        res.status(200).json({
+            success: true,
+            data: { pdfText: text, fileName, url: pdfUrl }
+        });
+    } catch (err) {
+        const status = err.response?.status === 404 ? 404 : 500;
+        res.status(status).json({
+            success: false,
+            message: status === 404 ? 'Lesson PDF file not found.' : `Failed to extract PDF text: ${err.message}`
+        });
     }
 };

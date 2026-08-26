@@ -11,7 +11,12 @@ class AIService {
     constructor() {
         this.apiKey = process.env.AI_API_KEY || '';
         this.provider = process.env.AI_PROVIDER || (this.apiKey ? 'openai' : 'mock');
-        this.model = process.env.AI_MODEL || 'gpt-4o-mini';
+        this.model = process.env.AI_MODEL || (this.provider === 'gemini' ? 'gemini-flash-latest' : 'gpt-4o-mini');
+        // A placeholder key must never be sent upstream — treat as mock
+        if (/your_.*_api_key_here/i.test(this.apiKey)) {
+            this.apiKey = '';
+            this.provider = 'mock';
+        }
     }
 
     /**
@@ -25,6 +30,16 @@ class AIService {
         if (this.provider === 'openai' && this.apiKey) {
             try {
                 return await this._callOpenAI(prompt, context, conversationHistory, pdfInstruction);
+            } catch (error) {
+                console.error('AIProvider error:', error.message || error);
+                const pdfFallback = this._getPdfFallbackResponse(prompt, context);
+                return pdfFallback ? pdfFallback : `${this._getMockResponse(prompt, context)}\n\n(Note: This response is a fallback because the external AI service was unavailable.)`;
+            }
+        }
+
+        if (this.provider === 'gemini' && this.apiKey) {
+            try {
+                return await this._callGemini(prompt, context, conversationHistory, pdfInstruction);
             } catch (error) {
                 console.error('AIProvider error:', error.message || error);
                 const pdfFallback = this._getPdfFallbackResponse(prompt, context);
@@ -100,6 +115,52 @@ class AIService {
         }
 
         return answer.trim();
+    }
+
+    /**
+     * Google Gemini chat completion. Reuses the same message builder as the
+     * OpenAI path, then maps roles: system messages become Gemini's
+     * systemInstruction, assistant messages become 'model' parts.
+     */
+    async _callGemini(prompt, context, conversationHistory = [], instruction = null) {
+        const messages = this._buildConversationMessages(prompt, context, conversationHistory, instruction);
+
+        const systemText = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
+        const contents = messages
+            .filter(m => m.role !== 'system')
+            .map(m => ({
+                role: m.role === 'assistant' ? 'model' : 'user',
+                parts: [{ text: m.content }]
+            }));
+
+        const response = await axios.post(
+            `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`,
+            {
+                ...(systemText ? { systemInstruction: { parts: [{ text: systemText }] } } : {}),
+                contents,
+                generationConfig: {
+                    temperature: 0.0,
+                    maxOutputTokens: 1200,
+                    topP: 0.8
+                }
+            },
+            {
+                headers: {
+                    'x-goog-api-key': this.apiKey,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 60000
+            }
+        );
+
+        const candidates = response?.data?.candidates || [];
+        const answer = candidates[0]?.content?.parts?.map(p => p.text).filter(Boolean).join('') ||
+                       candidates[0]?.finishReason && `The AI tutor could not answer this (reason: ${candidates[0].finishReason}).`;
+        if (!answer) {
+            throw new Error('Empty response from AI provider');
+        }
+
+        return String(answer).trim();
     }
 
     _buildConversationMessages(prompt, context, conversationHistory = [], instruction = null) {
