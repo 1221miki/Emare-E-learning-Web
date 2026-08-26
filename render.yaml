@@ -39,3 +39,17 @@ services:
         value: https://resplendent-profiterole-2ed049.netlify.app
       - key: APP_BASE_URL
         value: https://asamenew.onrender.com
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        value: https://asamenew.onrender.com/api/calendar/google/callback
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+      - key: ZOOM_ACCOUNT_ID
+        sync: false
+      - key: ZOOM_CLIENT_ID
+        sync: false
+      - key: ZOOM_CLIENT_SECRET
+        sync: false

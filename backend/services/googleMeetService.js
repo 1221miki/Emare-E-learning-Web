@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { google } = require('googleapis');
+const OAuthToken = require('../models/OAuthToken');
 
 /**
  * googleMeetService — REAL Google Meet API integration.
@@ -44,21 +45,58 @@ const isConfigured = () => missingEnv().length === 0;
 
 // ── Token store (server-side only, gitignored) ─────────────────────────
 
-const readStoredToken = () => {
+// Synchronous token read: env var → local file (MongoDB is async, handled separately)
+const readStoredTokenSync = () => {
+    // 1. Check env var first
+    const envToken = (process.env.GOOGLE_REFRESH_TOKEN || '').trim();
+    if (envToken) return envToken;
+
+    // 2. Fallback: local file (works on localhost only)
     try {
         if (fs.existsSync(TOKEN_FILE)) {
             const parsed = JSON.parse(fs.readFileSync(TOKEN_FILE, 'utf8'));
             return parsed && parsed.refresh_token ? parsed.refresh_token : null;
         }
     } catch (err) {
-        // Safe: never log token contents.
         console.warn('googleMeetService: could not read token store.', err && err.message);
     }
     return null;
 };
 
-const writeStoredToken = (refreshToken) => {
+// Async token read: checks MongoDB (persistent across deploys on Render)
+const readStoredTokenAsync = async () => {
+    // 1. Check env var first
+    const envToken = (process.env.GOOGLE_REFRESH_TOKEN || '').trim();
+    if (envToken) return envToken;
+
+    // 2. Check MongoDB (persistent across deploys)
+    try {
+        const doc = await OAuthToken.findOne({ provider: 'google' }).exec();
+        if (doc && doc.refreshToken) return doc.refreshToken;
+    } catch (err) {
+        console.warn('googleMeetService: could not read token from MongoDB.', err && err.message);
+    }
+
+    // 3. Fallback: local file
+    return readStoredTokenSync();
+};
+
+const writeStoredToken = async (refreshToken) => {
     if (!refreshToken) return;
+
+    // 1. Save to MongoDB (persistent across deploys)
+    try {
+        await OAuthToken.findOneAndUpdate(
+            { provider: 'google' },
+            { refreshToken, updatedAt: new Date() },
+            { upsert: true, new: true }
+        ).exec();
+        console.log('googleMeetService: refresh token saved to MongoDB.');
+    } catch (err) {
+        console.warn('googleMeetService: could not persist refresh token to MongoDB.', err && err.message);
+    }
+
+    // 2. Also save to local file (for localhost fallback)
     try {
         fs.writeFileSync(TOKEN_FILE, JSON.stringify({ refresh_token: refreshToken }, null, 2), { mode: TOKEN_FILE_MODE });
         if (process.platform !== 'win32') {
@@ -69,10 +107,15 @@ const writeStoredToken = (refreshToken) => {
     }
 };
 
-const getRefreshToken = () => (process.env.GOOGLE_REFRESH_TOKEN || '').trim() || readStoredToken();
+// Sync version for quick checks (env + file)
+const getRefreshToken = () => readStoredTokenSync();
 
-const requireToken = () => {
-    if (!getRefreshToken()) {
+// Async version that also checks MongoDB (for API calls)
+const getRefreshTokenAsync = async () => await readStoredTokenAsync();
+
+const requireToken = async () => {
+    const token = await getRefreshTokenAsync();
+    if (!token) {
         const err = new Error('Google Meet is not authorized yet. Connect your Google account from the Calendar Management page.');
         err.code = 'GOOGLE_NOT_AUTHORIZED';
         err.provider = PROVIDER;
@@ -111,7 +154,7 @@ const normalizeGoogleError = (err, action = 'Google request') => {
 
 // ── OAuth2 client ───────────────────────────────────────────────────────
 
-const buildOAuth2Client = () => {
+const buildOAuth2Client = async () => {
     if (!isConfigured()) {
         const err = new Error('Google Meet is not connected.');
         err.code = 'PROVIDER_NOT_CONFIGURED';
@@ -123,22 +166,22 @@ const buildOAuth2Client = () => {
         process.env.GOOGLE_CLIENT_SECRET,
         process.env.GOOGLE_REDIRECT_URI
     );
-    const refreshToken = getRefreshToken();
+    const refreshToken = await getRefreshTokenAsync();
     if (refreshToken) {
         client.setCredentials({ refresh_token: refreshToken });
     }
     return client;
 };
 
-const getMeetApi = () => {
-    const auth = buildOAuth2Client();
-    requireToken();
+const getMeetApi = async () => {
+    const auth = await buildOAuth2Client();
+    await requireToken();
     return google.meet({ version: 'v2', auth });
 };
 
-const getCalendarApi = () => {
-    const auth = buildOAuth2Client();
-    requireToken();
+const getCalendarApi = async () => {
+    const auth = await buildOAuth2Client();
+    await requireToken();
     return google.calendar({ version: 'v3', auth });
 };
 
@@ -181,7 +224,7 @@ const exchangeCode = async (code) => {
         throw new Error('Google did not return a refresh token. Please re-authorize (revoke and grant again).');
     }
     auth.setCredentials(tokens);
-    writeStoredToken(tokens.refresh_token);
+    await writeStoredToken(tokens.refresh_token);
     let email = null;
     try {
         const info = await auth.getTokenInfo(tokens.access_token);
@@ -189,17 +232,19 @@ const exchangeCode = async (code) => {
     } catch {
         email = null; // non-fatal
     }
+    console.log('Google OAuth: refresh token obtained and stored in MongoDB.');
     return { success: true, email };
 };
 
 /**
  * Status of the Google Meet connection. Safe to return to the client — it
  * contains NO secrets.
- * @returns {{ provider: string, label: string, connected: boolean, authorized: boolean, missingEnv: string[] }}
+ * @returns {Promise<{ provider: string, label: string, connected: boolean, authorized: boolean, missingEnv: string[] }>}
  */
-const getStatus = () => {
+const getStatus = async () => {
     const missing = missingEnv();
-    const authorized = Boolean(getRefreshToken());
+    const token = await getRefreshTokenAsync();
+    const authorized = Boolean(token);
     return {
         provider: PROVIDER,
         label: 'Google Meet',
@@ -241,7 +286,7 @@ const mapSpace = (space) => {
  * @returns {Promise<{ meetingUrl, meetingSpaceName, meetingProviderId, meetingCode, meetingCreatedAt, meetingMetadata, provider, generated }>}
  */
 const createMeetingSpace = async ({ title = '' } = {}) => {
-    const meet = getMeetApi();
+    const meet = await getMeetApi();
     // accessType TRUSTED keeps invitees-only access; OPEN allows anyone with
     // the link to join. entryPointAccess ALL keeps phone + web entry points.
     let response;
@@ -275,7 +320,7 @@ const createMeetingSpace = async ({ title = '' } = {}) => {
  * @param {string} spaceName  e.g. "spaces/abc-defg-hij"
  */
 const getMeetingSpace = async (spaceName) => {
-    const meet = getMeetApi();
+    const meet = await getMeetApi();
     try {
         const response = await meet.spaces.get({ name: spaceName });
         return response.data;
@@ -293,7 +338,7 @@ const getMeetingSpace = async (spaceName) => {
  * @param {object} patch  e.g. { config: { accessType: 'TRUSTED', entryPointAccess: 'ALL' } }
  */
 const updateMeetingSpace = async (spaceName, patch = {}) => {
-    const meet = getMeetApi();
+    const meet = await getMeetApi();
     try {
         const response = await meet.spaces.patch({
             name: spaceName,
@@ -320,7 +365,7 @@ const updateMeetingSpace = async (spaceName, patch = {}) => {
  *           meetingCreatedAt, calendarEventId, meetingMetadata, provider, generated, url }>}
  */
 const createCalendarMeet = async ({ title = '', startDate, endDate } = {}) => {
-    const calendar = getCalendarApi();
+    const calendar = await getCalendarApi();
     const start = startDate ? new Date(startDate) : new Date(Date.now() + 3600000);
     const end = endDate ? new Date(endDate) : new Date(start.getTime() + 3600000);
     const requestId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
@@ -392,7 +437,7 @@ const createCalendarMeet = async ({ title = '', startDate, endDate } = {}) => {
  */
 const updateCalendarMeet = async (calendarEventId, { title, startDate, endDate } = {}) => {
     if (!calendarEventId) return false;
-    const calendar = getCalendarApi();
+    const calendar = await getCalendarApi();
     const patch = {};
     if (title) patch.summary = title;
     if (startDate) patch.start = { dateTime: new Date(startDate).toISOString(), timeZone: 'UTC' };
@@ -414,7 +459,7 @@ const updateCalendarMeet = async (calendarEventId, { title, startDate, endDate }
  */
 const deleteCalendarEvent = async (calendarEventId) => {
     if (!calendarEventId) return { cleaned: false, reason: 'no-event' };
-    const calendar = getCalendarApi();
+    const calendar = await getCalendarApi();
     try {
         await calendar.events.delete({ calendarId: 'primary', eventId: calendarEventId });
         return { cleaned: true };
@@ -438,7 +483,7 @@ const deleteMeetingSpace = async (meeting = {}) => {
     const spaceName = meeting && (meeting.meetingSpaceName || meeting.meetingProviderId);
     if (!spaceName) return { cleaned: false, reason: 'no-space' };
     try {
-        const meet = getMeetApi();
+        const meet = await getMeetApi();
         await meet.spaces.endActiveConference({ name: spaceName });
         return { cleaned: true };
     } catch (err) {
@@ -482,6 +527,7 @@ module.exports = {
     connectStatus,
     requireToken,
     getRefreshToken,
+    getRefreshTokenAsync,
     normalizeGoogleError,
     createMeetingSpace,
     getMeetingSpace,

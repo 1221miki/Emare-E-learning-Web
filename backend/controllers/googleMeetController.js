@@ -27,7 +27,7 @@ exports.createGoogleMeetEvent = async (req, res) => {
         });
     } catch (err) {
         if (err.code === 'PROVIDER_NOT_CONFIGURED') {
-            return res.status(400).json({ success: false, message: missingEnvMessage(err.provider) || 'Google Meet is not connected.' });
+            return res.status(400).json({ success: false, message: await missingEnvMessage(err.provider) || 'Google Meet is not connected.' });
         }
         if (err.code === 'GOOGLE_NOT_AUTHORIZED') {
             return res.status(400).json({ success: false, message: err.userMessage || err.message });
@@ -48,13 +48,13 @@ exports.createGoogleMeetEvent = async (req, res) => {
  * Returns the Google OAuth authorization URL the admin opens to authorize the
  * app. The refresh token is stored securely on the backend after the callback.
  */
-exports.getGoogleAuthUrl = (req, res) => {
+exports.getGoogleAuthUrl = async (req, res) => {
     try {
         const url = googleMeetService.getAuthUrl();
         res.status(200).json({ success: true, data: { url } });
     } catch (err) {
         if (err.code === 'PROVIDER_NOT_CONFIGURED') {
-            return res.status(400).json({ success: false, message: missingEnvMessage('googleMeet') || 'Google Meet is not connected.' });
+            return res.status(400).json({ success: false, message: await missingEnvMessage('googleMeet') || 'Google Meet is not connected.' });
         }
         console.error('Google auth URL error:', err && err.message);
         res.status(500).json({ success: false, message: 'Failed to build Google authorization URL.' });
@@ -66,9 +66,10 @@ exports.getGoogleAuthUrl = (req, res) => {
  * Reports whether Google Meet is connected/authorized. Safe to expose — never
  * returns tokens or client secrets.
  */
-exports.getGoogleStatus = (req, res) => {
+exports.getGoogleStatus = async (req, res) => {
     try {
-        res.status(200).json({ success: true, data: googleMeetService.getStatus() });
+        const status = await googleMeetService.getStatus();
+        res.status(200).json({ success: true, data: status });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Failed to read Google Meet connection status.' });
     }

@@ -36,8 +36,8 @@ const withMeetingUrl = async (body, previous = null) => {
     return doc;
 };
 
-const googleError = (error) => {
-    if (error.code === 'PROVIDER_NOT_CONFIGURED') return { status: 400, message: missingEnvMessage(error.provider) || 'The selected meeting provider is not connected.' };
+const googleError = async (error) => {
+    if (error.code === 'PROVIDER_NOT_CONFIGURED') return { status: 400, message: await missingEnvMessage(error.provider) || 'The selected meeting provider is not connected.' };
     if (error.code === 'GOOGLE_NOT_AUTHORIZED') return { status: 400, message: error.userMessage || error.message };
     if (error.code === 'GOOGLE_PERMISSION_DENIED') return { status: 403, message: error.userMessage || 'Google denied access.' };
     if (error.code === 'INVALID_MEETING_URL') return { status: 400, message: error.message };
@@ -107,7 +107,7 @@ exports.createCalendarEvent = async (req, res) => {
         });
         res.status(201).json({ success: true, data: event });
     } catch (error) {
-        const mapped = googleError(error);
+        const mapped = await googleError(error);
         if (mapped) return res.status(mapped.status).json({ success: false, message: mapped.message });
         console.error('createCalendarEvent error:', error && error.message);
         res.status(500).json({ success: false, message: 'Failed to create calendar event.' });
@@ -140,7 +140,7 @@ exports.updateCalendarEvent = async (req, res) => {
         const event = await CalendarEvent.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true });
         res.status(200).json({ success: true, data: event });
     } catch (error) {
-        const mapped = googleError(error);
+        const mapped = await googleError(error);
         if (mapped) return res.status(mapped.status).json({ success: false, message: mapped.message });
         console.error('updateCalendarEvent error:', error && error.message);
         res.status(500).json({ success: false, message: 'Failed to update calendar event.' });
@@ -186,7 +186,7 @@ exports.getGoogleAuthUrl = async (req, res) => {
         const url = googleMeetService.getAuthUrl(returnTo, origin);
         res.status(200).json({ success: true, data: { url, provider: 'googleMeet' } });
     } catch (error) {
-        if (error.code === 'PROVIDER_NOT_CONFIGURED') return res.status(400).json({ success: false, message: missingEnvMessage(error.provider) || 'Google Meet is not configured.' });
+        if (error.code === 'PROVIDER_NOT_CONFIGURED') return res.status(400).json({ success: false, message: await missingEnvMessage(error.provider) || 'Google Meet is not configured.' });
         res.status(500).json({ success: false, message: 'Failed to build Google authorization URL.' });
     }
 };
@@ -194,7 +194,8 @@ exports.getGoogleAuthUrl = async (req, res) => {
 // GET /api/calendar/google/status — non-sensitive connection status for the UI.
 exports.getGoogleStatus = async (req, res) => {
     try {
-        res.status(200).json({ success: true, data: googleMeetService.connectStatus() });
+        const status = await googleMeetService.connectStatus();
+        res.status(200).json({ success: true, data: status });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to read Google Meet connection status.' });
     }

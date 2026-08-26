@@ -60,19 +60,21 @@ const normalizeProvider = (provider) => {
     return 'internal';
 };
 
-const providerConfigured = (provider) => {
+const providerConfigured = async (provider) => {
     const key = normalizeProvider(provider);
     if (key === 'googleMeet') {
-        return googleMeetService.isConfigured() && googleMeetService.getStatus().authorized;
+        const status = await googleMeetService.getStatus();
+        return googleMeetService.isConfigured() && status.authorized;
     }
     return PROVIDERS[key].env.every((name) => Boolean(process.env[name]));
 };
 
-const missingProviderEnv = (provider) => {
+const missingProviderEnv = async (provider) => {
     const key = normalizeProvider(provider);
     if (key === 'googleMeet') {
         const missing = googleMeetService.missingEnv();
-        if (!googleMeetService.getStatus().authorized) missing.push('GOOGLE_REFRESH_TOKEN (authorize from Event Management)');
+        const status = await googleMeetService.getStatus();
+        if (!status.authorized) missing.push('GOOGLE_REFRESH_TOKEN (authorize from Event Management)');
         return missing;
     }
     return PROVIDERS[key].env.filter((name) => !process.env[name]);
@@ -172,7 +174,7 @@ const meetingFields = (r = {}) => ({
 // ── Provider implementations ─────────────────────────────────────
 
 const createGoogleMeet = async ({ title, startDate, endDate }) => {
-    if (!providerConfigured('googleMeet')) {
+    if (!await providerConfigured('googleMeet')) {
         const err = new Error('Google Meet is not connected.');
         err.code = 'PROVIDER_NOT_CONFIGURED';
         err.provider = 'googleMeet';
@@ -325,16 +327,17 @@ const generateMeetingUrl = async (eventData = {}) => {
     return result;
 };
 
-const missingEnvMessage = (provider) => {
+const missingEnvMessage = async (provider) => {
     const key = normalizeProvider(provider);
     if (!isRealProvider(key) && key !== 'googleMeet') return null;
     if (key === 'googleMeet') {
         const missing = googleMeetService.missingEnv();
-        if (!googleMeetService.getStatus().authorized) missing.push('GOOGLE_REFRESH_TOKEN (authorize from Event Management)');
+        const status = await googleMeetService.getStatus();
+        if (!status.authorized) missing.push('GOOGLE_REFRESH_TOKEN (authorize from Event Management)');
         if (missing.length === 0) return null;
         return `Google Meet is not connected yet. Add to backend/.env: ${missing.join(', ')}`;
     }
-    const missing = missingProviderEnv(key);
+    const missing = await missingProviderEnv(key);
     if (missing.length === 0) return null;
     return `${PROVIDERS[key].label} is not connected yet. Add to backend/.env: ${missing.join(', ')}`;
 };

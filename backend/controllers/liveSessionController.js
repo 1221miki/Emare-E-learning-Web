@@ -48,9 +48,10 @@ const googleConfigError = () => {
 // @access  Private/Instructor|Admin
 exports.getIntegrationStatus = async (req, res) => {
     try {
+        const googleToken = await googleMeetService.getRefreshTokenAsync();
         const googleConnected =
-            googleMeetService.isConfigured() && !!googleMeetService.getRefreshToken();
-        const zoomConfigured = meetingService.providerConfigured('zoom');
+            googleMeetService.isConfigured() && !!googleToken;
+        const zoomConfigured = await meetingService.providerConfigured('zoom');
         res.status(200).json({
             success: true,
             data: {
@@ -114,7 +115,7 @@ exports.generateSessionMeetingLink = async (req, res) => {
         }
 
         if (normalizedPlatform === 'Zoom') {
-            if (!meetingService.providerConfigured('zoom')) {
+            if (!await meetingService.providerConfigured('zoom')) {
                 const missing = missingZoomEnv();
                 return res.status(400).json({
                     success: false,

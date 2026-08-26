@@ -91,8 +91,8 @@ const syncGoogleCalendarTime = async (payload, prev) => {
     }
 };
 
-const googleError = (error) => {
-    if (error.code === 'PROVIDER_NOT_CONFIGURED') return { status: 400, message: missingEnvMessage(error.provider) || 'The selected meeting provider is not connected.' };
+const googleError = async (error) => {
+    if (error.code === 'PROVIDER_NOT_CONFIGURED') return { status: 400, message: await missingEnvMessage(error.provider) || 'The selected meeting provider is not connected.' };
     if (error.code === 'GOOGLE_NOT_AUTHORIZED') return { status: 400, message: error.userMessage || error.message };
     if (error.code === 'GOOGLE_PERMISSION_DENIED') return { status: 403, message: error.userMessage || 'Google denied access.' };
     if (error.code === 'INVALID_MEETING_URL') return { status: 400, message: error.message };
@@ -333,7 +333,7 @@ exports.createAdminEvent = async (req, res) => {
 
         res.status(201).json({ success: true, data: event });
     } catch (error) {
-        const mapped = googleError(error);
+        const mapped = await googleError(error);
         if (mapped) return res.status(mapped.status).json({ success: false, message: mapped.message });
         if (error.code === 11000) return res.status(400).json({ success: false, message: 'An event with this slug already exists.' });
         res.status(500).json({ success: false, message: 'Failed to create event.' });
@@ -404,7 +404,7 @@ exports.updateAdminEvent = async (req, res) => {
         doc.liveStatus = computeLiveStatus(event);
         res.status(200).json({ success: true, data: doc, validation });
     } catch (error) {
-        const mapped = googleError(error);
+        const mapped = await googleError(error);
         if (mapped) return res.status(mapped.status).json({ success: false, message: mapped.message });
         res.status(500).json({ success: false, message: 'Failed to update event.' });
     }
@@ -456,7 +456,7 @@ exports.regenerateMeetingUrl = async (req, res) => {
             }
         });
     } catch (error) {
-        const mapped = googleError(error);
+        const mapped = await googleError(error);
         if (mapped) return res.status(mapped.status).json({ success: false, message: mapped.message });
         res.status(500).json({ success: false, message: 'Failed to regenerate meeting link.' });
     }
@@ -473,7 +473,7 @@ exports.generateMeetingLink = async (req, res) => {
         const result = await generateMeetingUrl({ provider: chosen, title, slug: title, startDate, endDate });
         res.status(200).json({ success: true, data: result });
     } catch (error) {
-        const mapped = googleError(error);
+        const mapped = await googleError(error);
         if (mapped) return res.status(mapped.status).json({ success: false, message: mapped.message });
         res.status(500).json({ success: false, message: 'Failed to generate meeting link.' });
     }
