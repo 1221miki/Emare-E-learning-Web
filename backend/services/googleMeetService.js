@@ -164,7 +164,7 @@ const buildOAuth2Client = async () => {
     const client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
-        process.env.GOOGLE_REDIRECT_URI
+        getRedirectUri()
     );
     const refreshToken = await getRefreshTokenAsync();
     if (refreshToken) {
@@ -193,6 +193,20 @@ const getCalendarApi = async () => {
  * @param {string} [origin]    Frontend origin from request (e.g. http://localhost:5173)
  * @returns {string}
  */
+const getRedirectUri = () => {
+    let uri = process.env.GOOGLE_REDIRECT_URI || '';
+    // In production, if the redirect URI still points to localhost, derive it
+    // from APP_BASE_URL so the OAuth flow works on the deployed site.
+    if (process.env.NODE_ENV === 'production' && uri.includes('localhost')) {
+        const base = (process.env.APP_BASE_URL || '').replace(/\/$/, '');
+        if (base && !base.includes('localhost')) {
+            uri = `${base}/api/calendar/google/callback`;
+            console.warn(`GOOGLE_REDIRECT_URI was localhost in production — auto-corrected to: ${uri}`);
+        }
+    }
+    return uri;
+};
+
 const getAuthUrl = (returnTo = 'calendar', origin = null) => {
     if (!isConfigured()) {
         const err = new Error('Google Meet is not connected.');
@@ -200,10 +214,11 @@ const getAuthUrl = (returnTo = 'calendar', origin = null) => {
         err.provider = PROVIDER;
         throw err;
     }
+    const redirectUri = getRedirectUri();
     const auth = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
-        process.env.GOOGLE_REDIRECT_URI
+        redirectUri
     );
     // Encode returnTo and origin inside the state so Google passes them back unchanged.
     const statePayload = JSON.stringify({
