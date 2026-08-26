@@ -631,18 +631,19 @@ export default function LandingPage() {
 
             {/* ── Services Section ─────────────────────────────────────────── */}
             <section id="services" style={{
-                background: theme === 'dark' ? '#0d1117' : '#0f1b2d',
+                background: theme === 'dark' ? '#0d1117' : '#f8fafc',
                 padding: '80px 5%',
                 width: '100%',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                transition: 'background 0.3s'
             }}>
                 {/* Badge */}
                 <div style={{ textAlign: 'center', marginBottom: '16px' }}>
                     <span style={{
                         display: 'inline-block',
-                        background: 'rgba(74,222,128,0.14)',
-                        color: '#86efac',
-                        border: '1px solid rgba(74,222,128,0.35)',
+                        background: theme === 'dark' ? 'rgba(74,222,128,0.14)' : '#dcfce7',
+                        color: theme === 'dark' ? '#86efac' : '#15803d',
+                        border: `1px solid ${theme === 'dark' ? 'rgba(74,222,128,0.35)' : '#86efac'}`,
                         borderRadius: '999px',
                         padding: '6px 18px',
                         fontSize: '12px',
@@ -655,7 +656,7 @@ export default function LandingPage() {
                 {/* Heading */}
                 <h2 style={{
                     textAlign: 'center',
-                    color: '#ffffff',
+                    color: theme === 'dark' ? '#ffffff' : '#0f172a',
                     fontSize: 'clamp(28px, 5vw, 44px)',
                     fontWeight: '800',
                     margin: '0 0 56px',
@@ -712,11 +713,11 @@ export default function LandingPage() {
                         <div
                             key={i}
                             style={{
-                                background: '#161d2b',
-                                border: '1px solid rgba(255,255,255,0.08)',
+                                background: theme === 'dark' ? '#161d2b' : '#ffffff',
+                                border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.08)' : '#e2e8f0'}`,
                                 borderRadius: '16px',
                                 padding: '32px 28px',
-                                transition: 'border-color 0.25s, transform 0.25s',
+                                transition: 'border-color 0.25s, transform 0.25s, background 0.3s',
                                 cursor: 'default'
                             }}
                             onMouseEnter={e => {
@@ -724,7 +725,7 @@ export default function LandingPage() {
                                 e.currentTarget.style.transform = 'translateY(-4px)';
                             }}
                             onMouseLeave={e => {
-                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+                                e.currentTarget.style.borderColor = theme === 'dark' ? 'rgba(255,255,255,0.08)' : '#e2e8f0';
                                 e.currentTarget.style.transform = 'translateY(0)';
                             }}
                         >
@@ -733,8 +734,10 @@ export default function LandingPage() {
                                 width: '52px',
                                 height: '52px',
                                 borderRadius: '14px',
-                                background: `linear-gradient(135deg, rgba(22,163,74,0.18), rgba(21,128,61,0.18))`,
-                                border: '1px solid rgba(74,222,128,0.3)',
+                                background: theme === 'dark'
+                                    ? 'linear-gradient(135deg, rgba(22,163,74,0.18), rgba(21,128,61,0.18))'
+                                    : 'linear-gradient(135deg, #dcfce7, #d1fae5)',
+                                border: `1px solid ${theme === 'dark' ? 'rgba(74,222,128,0.3)' : '#86efac'}`,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -746,7 +749,7 @@ export default function LandingPage() {
 
                             {/* Title */}
                             <h3 style={{
-                                color: '#ffffff',
+                                color: theme === 'dark' ? '#ffffff' : '#0f172a',
                                 fontSize: '17px',
                                 fontWeight: '700',
                                 margin: '0 0 12px'
@@ -756,7 +759,7 @@ export default function LandingPage() {
 
                             {/* Description */}
                             <p style={{
-                                color: '#94a3b8',
+                                color: theme === 'dark' ? '#94a3b8' : '#64748b',
                                 fontSize: '14px',
                                 lineHeight: '1.65',
                                 margin: 0
