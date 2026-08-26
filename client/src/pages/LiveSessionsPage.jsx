@@ -24,6 +24,9 @@ export default function LiveSessionsPage() {
         meetingPassword: '',
         attendees: ''
     });
+    // Inline guidance for meeting-link generation (replaces blocking alerts).
+    // Shape: { type: 'info' | 'warning' | 'error', title: string, steps: string[] }
+    const [linkNotice, setLinkNotice] = useState(null);
 
     const navItems = [
         { label: 'Dashboard', path: `/${user?.assignedRole.toLowerCase()}/dashboard`, key: 'dashboard' },
@@ -198,6 +201,7 @@ export default function LiveSessionsPage() {
     };
 
     const handleGenerateMeetingLink = async () => {
+        setLinkNotice(null);
         if (!formData.title?.trim()) {
             return alert('Please enter a session title before generating a meeting link.');
         }
@@ -215,13 +219,24 @@ export default function LiveSessionsPage() {
                 });
                 const googleLink = res.data?.data?.meetLink;
                 if (!googleLink) {
-                    return alert('Google Meet link could not be created. Please enter a valid meeting link manually.');
+                    return setLinkNotice({
+                        type: 'error',
+                        title: 'Google Meet link could not be created.',
+                        steps: ['Enter a real Google Meet link manually in the field below.', 'Or switch the platform to Jitsi Meet, which generates a link instantly with no external account needed.']
+                    });
                 }
                 setFormData(prev => ({ ...prev, meetingLink: googleLink }));
                 return;
             } catch (err) {
-                alert(err.response?.data?.message || 'Google Meet integration is not configured. Please enter a real Google Meet link manually.');
-                return;
+                return setLinkNotice({
+                    type: 'error',
+                    title: err.response?.data?.message || 'Google Meet integration is not configured.',
+                    steps: [
+                        'Connect your Google Account first (Calendar Management → Connect Google Account), then come back and click Generate again.',
+                        'Or paste an existing Google Meet link manually in the field below.',
+                        'Or switch the platform to Jitsi Meet — links generate instantly without any Google login.'
+                    ]
+                });
             }
         }
 
@@ -230,10 +245,20 @@ export default function LiveSessionsPage() {
                 ...prev,
                 meetingLink: getDefaultMeetingLink(prev.platform, prev.title)
             }));
+            setLinkNotice({ type: 'info', title: 'Jitsi Meet link generated — no account needed. You can edit it or save the session.' });
             return;
         }
 
-        alert(`Automatic meeting-link generation is only supported for Google Meet and Jitsi Meet. Please enter a real ${formData.platform} meeting link.`);
+        // Zoom / Custom — auto-generation is intentionally unavailable
+        setLinkNotice({
+            type: 'warning',
+            title: `Automatic generation is only available for Jitsi Meet and Google Meet — not for ${formData.platform}.`,
+            steps: [
+                `Create the meeting manually on ${formData.platform} and copy its invitation URL.`,
+                'Paste the URL directly into the Meeting Link field below.',
+                'Alternatively, switch the Platform dropdown to Jitsi Meet to auto-generate a free link instantly without any external login.'
+            ]
+        });
     };
 
     const handleCreate = async (e) => {
@@ -359,6 +384,7 @@ export default function LiveSessionsPage() {
                             <label style={{ display: 'block', color: colors.text, marginBottom: '8px', fontWeight: '600' }}>Platform</label>
                             <select value={formData.platform} onChange={e => {
                                 const nextPlatform = e.target.value;
+                                setLinkNotice(null);
                                 setFormData(prev => ({
                                     ...prev,
                                     platform: nextPlatform,
@@ -380,6 +406,31 @@ export default function LiveSessionsPage() {
                         <div style={{ gridColumn: '1 / -1' }}>
                             <label style={{ display: 'block', color: colors.text, marginBottom: '8px', fontWeight: '600' }}>Meeting Link</label>
                             <input type="url" value={formData.meetingLink} onChange={e => setFormData({...formData, meetingLink: e.target.value})} placeholder="Enter a meeting link or generate one automatically" style={{ width: '100%', padding: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', outline: 'none' }} />
+                            {linkNotice && (
+                                <div role="alert" style={{
+                                    marginTop: '12px',
+                                    borderRadius: '10px',
+                                    padding: '14px 16px',
+                                    fontSize: '13px',
+                                    lineHeight: 1.6,
+                                    background: linkNotice.type === 'error'
+                                        ? '#fef2f2'
+                                        : linkNotice.type === 'warning'
+                                            ? '#fffbeb'
+                                            : '#f0fdf4',
+                                    border: `1px solid ${linkNotice.type === 'error' ? 'rgba(239,68,68,0.4)' : linkNotice.type === 'warning' ? 'rgba(245,158,11,0.4)' : 'rgba(34,197,94,0.4)'}`,
+                                    color: colors.text
+                                }}>
+                                    <div style={{ fontWeight: 800, marginBottom: 6, color: linkNotice.type === 'error' ? '#ef4444' : linkNotice.type === 'warning' ? '#d97706' : '#16a34a' }}>
+                                        {linkNotice.type === 'error' ? '⚠️ ' : linkNotice.type === 'warning' ? '💡 ' : '✓ '}{linkNotice.title}
+                                    </div>
+                                    {(linkNotice.steps || []).length > 0 && (
+                                        <ol style={{ margin: 0, paddingLeft: 20 }}>
+                                            {linkNotice.steps.map((step, i) => <li key={i} style={{ marginBottom: 4 }}>{step}</li>)}
+                                        </ol>
+                                    )}
+                                </div>
+                            )}
                             <div style={{ marginTop: '10px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                                 <button type="button" onClick={handleGenerateMeetingLink} style={{ padding: '10px 14px', background: colors.accent, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
                                     Generate Meeting Link
