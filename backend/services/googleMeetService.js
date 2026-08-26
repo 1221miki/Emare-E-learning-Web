@@ -194,7 +194,17 @@ const getCalendarApi = async () => {
  * @returns {string}
  */
 const getAuthUrl = (returnTo = 'calendar', origin = null) => {
-    const auth = buildOAuth2Client();
+    if (!isConfigured()) {
+        const err = new Error('Google Meet is not connected.');
+        err.code = 'PROVIDER_NOT_CONFIGURED';
+        err.provider = PROVIDER;
+        throw err;
+    }
+    const auth = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI
+    );
     // Encode returnTo and origin inside the state so Google passes them back unchanged.
     const statePayload = JSON.stringify({
         nonce: crypto.randomBytes(16).toString('hex'),
