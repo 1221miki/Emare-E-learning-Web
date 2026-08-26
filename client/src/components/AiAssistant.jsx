@@ -147,12 +147,30 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
 
     const quickPrompts = useMemo(
         () => [
-            { label: 'Summarize my latest lesson', tag: 'Summary' },
-            { label: 'Explain this topic in simple terms', tag: 'Explain' },
-            { label: 'Generate a short quiz for me', tag: 'Practice' },
-            { label: 'Help me debug this code', tag: 'Code' },
-            { label: 'Review my assignment instructions', tag: 'Review' },
-            { label: 'Create flashcards for this lesson', tag: 'Study' },
+            {
+                label: 'Summarize my latest lesson', tag: 'Summary',
+                prompt: 'Summarize my latest lesson using ONLY the attached lesson document. Cover: the main topic, key concepts, tools/tech stack mentioned, the workflow or steps described, and why it matters. Group the summary under clear headings with short bullet points.'
+            },
+            {
+                label: 'Explain this topic in simple terms', tag: 'Explain',
+                prompt: 'Explain this lesson topic in simple terms using ONLY the attached lesson document. Start with a beginner-friendly analogy, then explain step by step how it works, then list the key terms from the document with one-line definitions.'
+            },
+            {
+                label: 'Generate a short quiz for me', tag: 'Practice',
+                prompt: 'Generate a practice quiz STRICTLY from the attached lesson document: 5 questions mixing multiple-choice (A-D), true/false, and fill-in-the-blank, ordered easy to hard. After the questions, give an answer key with a one-line explanation per answer.'
+            },
+            {
+                label: 'Help me debug this code', tag: 'Code',
+                prompt: 'From the attached lesson document, extract every code snippet, configuration file, command, or repository/folder structure it mentions. Present each as a properly formatted code block with a short explanation of what it does and common mistakes students make with it.'
+            },
+            {
+                label: 'Review my assignment instructions', tag: 'Review',
+                prompt: 'Review the attached lesson document as if it were my assignment brief. Extract: the objective, the tasks/requirements, key deliverables, prerequisites, evaluation criteria if present, and pitfalls to avoid. Present everything as an actionable checklist.'
+            },
+            {
+                label: 'Create flashcards for this lesson', tag: 'Study',
+                prompt: 'Create flashcards from the attached lesson document: at least 8 question-and-answer pairs covering the most testable facts, definitions, commands and concepts. Format each card exactly as **Q:** question on one line and *A:* answer on the next.'
+            },
             { label: 'Translate notes to Amharic', tag: 'Translate' },
             { label: 'Build a 3-day study plan', tag: 'Plan' }
         ],
@@ -302,8 +320,11 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
     const handleQuickPrompt = (prompt) => {
         if (blockedRef.current) { setError(blockedRef.current); return; }
         if (!isOpen) setIsOpen(true);
+        const entry = quickPrompts.find(q => q.label === prompt);
+        const richPrompt = entry?.prompt || prompt;
         setInput(prompt);
-        handleSend(null, prompt);
+        // Send the rich instruction to the AI, but show the friendly label
+        handleSend(null, richPrompt, prompt);
     };
 
     // Paste guard — while restricted, pasted exam/assignment content never

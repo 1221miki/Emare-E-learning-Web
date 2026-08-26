@@ -140,7 +140,7 @@ class AIService {
                 contents,
                 generationConfig: {
                     temperature: 0.0,
-                    maxOutputTokens: 1200,
+                    maxOutputTokens: 4096,
                     topP: 0.8
                 }
             },
