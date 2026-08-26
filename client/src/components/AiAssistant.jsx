@@ -230,7 +230,7 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
 
         try {
             const validCourseId = typeof context.courseId === 'string' && /^[a-fA-F0-9]{24}$/.test(context.courseId) ? context.courseId : null;
-            const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '/api';
 
             // When a lesson PDF is loaded, use the document-QA path (/ai/ask)
             // so the tutor answers directly from the course material instead

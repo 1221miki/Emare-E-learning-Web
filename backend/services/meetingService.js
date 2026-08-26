@@ -201,7 +201,7 @@ const getZoomToken = async () => {
 };
 
 const createZoomMeeting = async ({ title, startDate, endDate }) => {
-    if (!providerConfigured('zoom')) {
+    if (!await providerConfigured('zoom')) {
         const err = new Error('Zoom is not connected.');
         err.code = 'PROVIDER_NOT_CONFIGURED';
         err.provider = 'zoom';
@@ -244,7 +244,7 @@ const getTeamsToken = async () => {
 };
 
 const createTeamsMeeting = async ({ title, startDate, endDate }) => {
-    if (!providerConfigured('microsoftTeams')) {
+    if (!await providerConfigured('microsoftTeams')) {
         const err = new Error('Microsoft Teams is not connected.');
         err.code = 'PROVIDER_NOT_CONFIGURED';
         err.provider = 'microsoftTeams';

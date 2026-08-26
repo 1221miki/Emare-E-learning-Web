@@ -243,7 +243,7 @@ const getAuthUrl = (returnTo = 'calendar', origin = null) => {
  * @returns {Promise<{ success: boolean, email?: string }>}
  */
 const exchangeCode = async (code) => {
-    const auth = buildOAuth2Client();
+    const auth = await buildOAuth2Client();
     const { tokens } = await auth.getToken(code);
     if (!tokens.refresh_token) {
         throw new Error('Google did not return a refresh token. Please re-authorize (revoke and grant again).');

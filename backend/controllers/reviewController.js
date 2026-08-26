@@ -91,7 +91,7 @@ exports.toggleLike = async (req, res) => {
         const like = await ReviewLike.findOne({ reviewRef: reviewId, userRef: userId });
 
         if (like) {
-            await like.remove();
+            await like.deleteOne();
             await Review.findByIdAndUpdate(reviewId, { $inc: { likes: -1 } });
             return res.json({ success: true, data: { liked: false } });
         }

@@ -143,7 +143,7 @@ exports.generateSessionMeetingLink = async (req, res) => {
 
         // ── Google Meet: real Calendar event with a real Meet conference ──
         const googleErr = googleConfigError();
-        if (!googleMeetService.isConfigured() || !googleMeetService.getRefreshToken()) {
+        if (!googleMeetService.isConfigured() || !(await googleMeetService.getRefreshTokenAsync())) {
             return res.status(400).json({ success: false, ...googleErr });
         }
         const meetEvent = await googleMeetService.createCalendarMeet({
@@ -375,7 +375,7 @@ exports.deleteLiveSession = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Not authorized' });
         }
         
-        await session.remove();
+        await session.deleteOne();
         res.status(200).json({ success: true, data: {} });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
