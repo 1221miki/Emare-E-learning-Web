@@ -4,8 +4,7 @@ const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
 const { validateEvent } = require('../utils/eventValidation');
 const { broadcastEventNotification } = require('./notificationController');
-const { resolveMeetingUrl, isValidMeetingUrl, isValidGoogleMeetUrl, generateMeetingUrl, missingEnvMessage, normalizeProvider, mergeMeetingInfo, deleteProviderResource, validateInvitees } = require('../services/meetingService');
-const googleMeetService = require('../services/googleMeetService');
+const { resolveMeetingUrl, isValidMeetingUrl, generateMeetingUrl, missingEnvMessage, normalizeProvider, mergeMeetingInfo, deleteProviderResource, validateInvitees } = require('../services/meetingService');
 
 const EVENT_CATEGORIES = [
     'Masterclass',
@@ -59,45 +58,12 @@ const validateEventPayload = (body) => {
     if (body.streamUrl && !isValidMeetingUrl(body.streamUrl)) {
         return { error: 'Meeting URL is invalid — use a full http(s) link.' };
     }
-    if (body.meetingProvider === 'googleMeet' && body.streamUrl && !isValidGoogleMeetUrl(body.streamUrl)) {
-        return { error: 'Invalid Google Meet link. Only real https://meet.google.com/xxx-xxxx-xxx links are accepted.' };
-    }
-    if (body.meetingProvider && !['googleMeet', 'zoom', 'microsoftTeams', 'jitsi', 'internal', 'custom'].includes(body.meetingProvider)) {
+    if (body.meetingProvider && !['zoom', 'microsoftTeams', 'jitsi', 'internal', 'custom'].includes(body.meetingProvider)) {
         return { error: 'Meeting provider is invalid.' };
     }
     if (body.visibility && !['internal', 'public'].includes(body.visibility)) {
         return { error: 'Visibility must be internal or public.' };
     }
-    return null;
-};
-
-// Best-effort sync of a Google Calendar event when an Online/Hybrid event's
-// date/time is edited — the meeting URL is preserved (never recreated).
-const syncGoogleCalendarTime = async (payload, prev) => {
-    if (!payload || !prev || payload.eventType === 'Physical') return;
-    if (payload.meetingProvider !== 'googleMeet' && prev.meetingProvider !== 'googleMeet') return;
-    const calendarEventId =
-        (payload.meetingMetadata && payload.meetingMetadata.calendarEventId) ||
-        (prev.meetingMetadata && prev.meetingMetadata.calendarEventId);
-    if (!calendarEventId) return;
-    try {
-        await googleMeetService.updateCalendarMeet(calendarEventId, {
-            title: payload.title || prev.title,
-            startDate: payload.startDate || prev.startDate,
-            endDate: payload.endDate || prev.endDate
-        });
-    } catch (err) {
-        console.warn('eventController: could not sync Google Calendar event.', err && err.message);
-    }
-};
-
-const googleError = async (error) => {
-    if (error.code === 'PROVIDER_NOT_CONFIGURED') return { status: 400, message: await missingEnvMessage(error.provider) || 'The selected meeting provider is not connected.' };
-    if (error.code === 'GOOGLE_NOT_AUTHORIZED') return { status: 400, message: error.userMessage || error.message };
-    if (error.code === 'GOOGLE_PERMISSION_DENIED') return { status: 403, message: error.userMessage || 'Google denied access.' };
-    if (error.code === 'INVALID_MEETING_URL') return { status: 400, message: error.message };
-    if (error.code === 'MEET_CREATE_INCOMPLETE') return { status: 502, message: error.message };
-    if (error.code === 'GOOGLE_API_ERROR' || error.code === 'GOOGLE_BAD_REQUEST') return { status: 502, message: error.userMessage || 'Google request failed. No meeting link was created and the event was not saved.' };
     return null;
 };
 
@@ -333,8 +299,11 @@ exports.createAdminEvent = async (req, res) => {
 
         res.status(201).json({ success: true, data: event });
     } catch (error) {
-        const mapped = await googleError(error);
-        if (mapped) return res.status(mapped.status).json({ success: false, message: mapped.message });
+        if (error.code === 'PROVIDER_NOT_CONFIGURED') {
+            const msg = await missingEnvMessage(error.provider) || 'The selected meeting provider is not connected.';
+            return res.status(400).json({ success: false, message: msg });
+        }
+        if (error.code === 'INVALID_MEETING_URL') return res.status(400).json({ success: false, message: error.message });
         if (error.code === 11000) return res.status(400).json({ success: false, message: 'An event with this slug already exists.' });
         res.status(500).json({ success: false, message: 'Failed to create event.' });
     }
@@ -383,14 +352,6 @@ exports.updateAdminEvent = async (req, res) => {
         });
         mergeMeetingInfo(updated, meeting, event);
 
-        // Switching a real-provider meeting to Physical → clean up the provider
-        // resource (best effort) and never keep a stale meeting URL.
-        if (updated.eventType === 'Physical' && event.meetingProvider === 'googleMeet' && event.meetingSpaceName) {
-            await deleteProviderResource(event);
-        } else {
-            await syncGoogleCalendarTime(updated, event);
-        }
-
         Object.assign(event, updated);
         await event.save();
 
@@ -404,8 +365,11 @@ exports.updateAdminEvent = async (req, res) => {
         doc.liveStatus = computeLiveStatus(event);
         res.status(200).json({ success: true, data: doc, validation });
     } catch (error) {
-        const mapped = await googleError(error);
-        if (mapped) return res.status(mapped.status).json({ success: false, message: mapped.message });
+        if (error.code === 'PROVIDER_NOT_CONFIGURED') {
+            const msg = await missingEnvMessage(error.provider) || 'The selected meeting provider is not connected.';
+            return res.status(400).json({ success: false, message: msg });
+        }
+        if (error.code === 'INVALID_MEETING_URL') return res.status(400).json({ success: false, message: error.message });
         res.status(500).json({ success: false, message: 'Failed to update event.' });
     }
 };
@@ -427,12 +391,6 @@ exports.regenerateMeetingUrl = async (req, res) => {
             startDate: req.body?.startDate || event.startDate,
             endDate: req.body?.endDate || event.endDate
         });
-
-        // The admin intentionally asked for a new meeting — clean up the previous
-        // provider resource (best effort) before storing the new one.
-        if (result.provider === 'googleMeet' && (event.meetingMetadata?.calendarEventId || event.meetingProviderId)) {
-            await googleMeetService.deleteCalendarEvent(event.meetingMetadata?.calendarEventId || event.meetingProviderId).catch(() => {});
-        }
 
         event.streamUrl = result.url;
         event.meetingUrl = result.url;
@@ -456,8 +414,10 @@ exports.regenerateMeetingUrl = async (req, res) => {
             }
         });
     } catch (error) {
-        const mapped = await googleError(error);
-        if (mapped) return res.status(mapped.status).json({ success: false, message: mapped.message });
+        if (error.code === 'PROVIDER_NOT_CONFIGURED') {
+            const msg = await missingEnvMessage(error.provider) || 'The selected meeting provider is not connected.';
+            return res.status(400).json({ success: false, message: msg });
+        }
         res.status(500).json({ success: false, message: 'Failed to regenerate meeting link.' });
     }
 };
@@ -473,8 +433,10 @@ exports.generateMeetingLink = async (req, res) => {
         const result = await generateMeetingUrl({ provider: chosen, title, slug: title, startDate, endDate });
         res.status(200).json({ success: true, data: result });
     } catch (error) {
-        const mapped = await googleError(error);
-        if (mapped) return res.status(mapped.status).json({ success: false, message: mapped.message });
+        if (error.code === 'PROVIDER_NOT_CONFIGURED') {
+            const msg = await missingEnvMessage(error.provider) || 'The selected meeting provider is not connected.';
+            return res.status(400).json({ success: false, message: msg });
+        }
         res.status(500).json({ success: false, message: 'Failed to generate meeting link.' });
     }
 };

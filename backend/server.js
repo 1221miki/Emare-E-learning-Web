@@ -304,6 +304,15 @@ if (process.env.NODE_ENV === 'production') {
         // Critical: Only respond to non-API, non-static requests. Static assets
         // are already served above by express.static before this middleware runs.
         app.use('*', (req, res) => {
+            // CRITICAL: Never serve index.html for API routes.
+            // If we reach here for an /api/* route, it means no handler matched
+            // and the API 404 handler somehow didn't catch it.
+            if (req.path.startsWith('/api/')) {
+                return res.status(404).json({
+                    success: false,
+                    message: `API Route ${req.originalUrl} not found on this server.`
+                });
+            }
             const indexPath = path.resolve(staticDir, 'index.html');
             
             // Verify index.html still exists before serving

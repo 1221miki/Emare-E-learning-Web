@@ -342,7 +342,6 @@ export const liveSessionService = {
     createSession: (data) => API.post('/live-sessions', data),
     markAttendance: (id) => API.put(`/live-sessions/${id}/attendance`),
     reserveSeat: (id) => API.post(`/live-sessions/${id}/reserve`),
-    createGoogleMeet: (data) => API.post('/live-sessions/google/create', data),
     generateLink: (data) => API.post('/live-sessions/generate-link', data),
     getIntegrationStatus: () => API.get('/live-sessions/integrations/status'),
     deleteSession: (id) => API.delete(`/live-sessions/${id}`)
@@ -459,11 +458,7 @@ export const calendarService = {
     getEvents: (params) => API.get('/calendar', { params }),
     createEvent: (data) => API.post('/calendar', data),
     updateEvent: (id, data) => API.put(`/calendar/${id}`, data),
-    deleteEvent: (id) => API.delete(`/calendar/${id}`),
-    // Real Google Meet integration — OAuth stays on the backend.
-    // returnTo: 'calendar' (default) | 'events' — controls where the callback redirects
-    getGoogleAuthUrl: (returnTo = 'calendar') => API.get('/calendar/google/auth-url', { params: { returnTo } }),
-    getGoogleStatus: () => API.get('/calendar/google/status')
+    deleteEvent: (id) => API.delete(`/calendar/${id}`)
 };
 
 // ── Event Management API Calls (Admin) ─────────────────────

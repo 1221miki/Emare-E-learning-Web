@@ -153,7 +153,6 @@ const EMPTY_FORM = {
 
 // ── Meeting platform / provider helpers (ported from AdminDashboard) ──
 const MEETING_PLATFORMS = [
-    { value: 'googleMeet', label: 'Google Meet' },
     { value: 'zoom',       label: 'Zoom' },
     { value: 'microsoftTeams', label: 'Microsoft Teams' },
     { value: 'jitsi',      label: 'Jitsi Meet' },
@@ -161,14 +160,12 @@ const MEETING_PLATFORMS = [
     { value: 'youtubeLive',label: 'YouTube Live' },
     { value: 'rtmp',       label: 'Custom RTMP / Web Stream' },
 ];
-const platformToProvider = { googleMeet: 'googleMeet', zoom: 'zoom', microsoftTeams: 'microsoftTeams', jitsi: 'jitsi', custom: 'custom', youtubeLive: 'custom', rtmp: 'custom' };
-const meetingProviderLabel = (v) => ({ googleMeet: 'Google Meet', zoom: 'Zoom', microsoftTeams: 'Microsoft Teams', jitsi: 'Jitsi Meet', internal: 'Internal Join Link', custom: 'Manual URL' }[v] || 'Internal Join Link');
+const platformToProvider = { zoom: 'zoom', microsoftTeams: 'microsoftTeams', jitsi: 'jitsi', custom: 'custom', youtubeLive: 'custom', rtmp: 'custom' };
+const meetingProviderLabel = (v) => ({ zoom: 'Zoom', microsoftTeams: 'Microsoft Teams', jitsi: 'Jitsi Meet', internal: 'Internal Join Link', custom: 'Manual URL' }[v] || 'Internal Join Link');
 // Platforms where the "Generate Meeting Link" button is available (backend integration or local Jitsi).
-const GENERATABLE_PLATFORMS = ['googleMeet', 'zoom', 'microsoftTeams', 'jitsi'];
+const GENERATABLE_PLATFORMS = ['zoom', 'microsoftTeams', 'jitsi'];
 // Platforms that support a meeting password in the form.
-const PASSWORD_PLATFORMS = ['googleMeet', 'zoom', 'custom', 'youtubeLive', 'rtmp'];
-// Platform that uses OAuth (only Google Meet has a browser OAuth flow).
-const OAUTH_PLATFORM = 'googleMeet';
+const PASSWORD_PLATFORMS = ['zoom', 'custom', 'youtubeLive', 'rtmp'];
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const parseInviteesInput = (value) => {
     if (!value) return [];
@@ -224,8 +221,8 @@ const EMPTY_CREATE_FORM = {
     location: '',
     eventType: 'Online',
     streamUrl: '',
-    meetingPlatform: 'googleMeet',
-    meetingProvider: 'googleMeet',
+    meetingPlatform: 'zoom',
+    meetingProvider: 'zoom',
     meetingInvitees: '',
     meetingId: '',
     meetingPassword: '',
@@ -277,8 +274,6 @@ export default function AdminEventsPage() {
     const [meetingErrors, setMeetingErrors] = useState({});
     const [bannerUploading, setBannerUploading] = useState(false);
     const [bannerUploadError, setBannerUploadError] = useState('');
-    const [googleMeetStatus, setGoogleMeetStatus] = useState(null);
-    const [isGoogleConnecting, setIsGoogleConnecting] = useState(false);
 
     const { toasts, pushToast } = useToasts();
 
@@ -309,56 +304,10 @@ export default function AdminEventsPage() {
         }
     }, []);
 
-    const fetchGoogleStatus = useCallback(async () => {
-        try {
-            const res = await calendarService.getGoogleStatus();
-            setGoogleMeetStatus(res.data?.data || null);
-        } catch {
-            setGoogleMeetStatus(null);
-        }
-    }, []);
-
     useEffect(() => {
         loadEvents();
         loadStats();
-        fetchGoogleStatus();
-    }, [loadEvents, loadStats, fetchGoogleStatus]);
-
-    // ── Handle Google Meet OAuth callback return ─────────────────────────
-    useEffect(() => {
-        const params = new URLSearchParams(location.search);
-        const gm = params.get('googleMeet');
-        if (!gm) return;
-
-        if (gm === 'connected') {
-            pushToast('Google Meet connected. You can now create real meetings.', 'success');
-            fetchGoogleStatus();
-            // Restore the Create Event form the admin was filling out before
-            // clicking "Connect Google Meet".
-            const saved = sessionStorage.getItem('eventsPageReturnForm');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    if (parsed?.form) {
-                        setCreateForm(parsed.form);
-                        setCreateOpen(true);
-                    }
-                } catch { /* ignore corrupted payload */ }
-                sessionStorage.removeItem('eventsPageReturnForm');
-            }
-        } else if (gm === 'error') {
-            const reason = params.get('reason') || 'Google Meet connection failed.';
-            pushToast(reason, 'error');
-            sessionStorage.removeItem('eventsPageReturnForm');
-        }
-
-        // Clean the query params from the URL without a page reload
-        const clean = new URL(window.location.href);
-        clean.searchParams.delete('googleMeet');
-        clean.searchParams.delete('reason');
-        window.history.replaceState({}, '', clean.toString());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [loadEvents, loadStats]);
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -506,16 +455,6 @@ export default function AdminEventsPage() {
     };
 
     // ── Create event helpers ────────────────────────────────────────────────
-    // Google Meet connection states:
-    //   configured  — backend has GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI
-    //   connected   — configured AND an admin has authorized once (token stored)
-    const googleConfigured = Boolean(googleMeetStatus?.configured && (!googleMeetStatus.missingEnv || googleMeetStatus.missingEnv.length === 0));
-    const googleMeetConnected = Boolean(googleMeetStatus?.connected && googleMeetStatus?.authorized);
-    const googleMeetHint = googleMeetStatus
-        ? (googleMeetStatus.missingEnv?.length
-            ? `Missing backend/.env: ${googleMeetStatus.missingEnv.join(', ')}`
-            : (!googleMeetStatus.authorized ? 'Authorized account required — connect below.' : ''))
-        : '';
 
     const isFormPublic = createForm.visibility === 'public';
 
@@ -559,37 +498,10 @@ export default function AdminEventsPage() {
         }
     };
 
-    const handleConnectGoogleMeet = async () => {
-        try {
-            setIsGoogleConnecting(true);
-            // Pass returnTo=events so the backend encodes it in the OAuth state;
-            // the callback will redirect back to /admin/events instead of /admin
-            const res = await calendarService.getGoogleAuthUrl('events');
-            const url = res.data?.data?.url;
-            if (!url) throw new Error('No authorization URL returned.');
-            // Save the in-progress form so we can restore it after OAuth redirect
-            try {
-                sessionStorage.setItem('eventsPageReturnForm', JSON.stringify({ form: createForm }));
-            } catch { /* non-fatal */ }
-            window.location.href = url;
-        } catch (err) {
-            setIsGoogleConnecting(false);
-            pushToast(err.response?.data?.message || 'Could not start Google Meet connection.', 'error');
-        }
-    };
-
     const handleGenerateMeetingLink = async () => {
         const provider = platformToProvider[createForm.meetingPlatform] || createForm.meetingProvider;
         if (provider === 'custom') {
             return pushToast('Manual URLs are entered directly — paste your link into the Meeting Link field.', 'error');
-        }
-        if (provider === 'googleMeet' && !googleMeetConnected) {
-            return pushToast(
-                googleConfigured
-                    ? 'Google Meet is not connected. Click "Connect Google Meet" first.'
-                    : 'Google Meet is not configured on the backend. Add GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REDIRECT_URI to backend/.env and restart the server.',
-                'error'
-            );
         }
         if (!createForm.title.trim()) return pushToast('Enter an event title before generating a link.', 'error');
 
@@ -620,16 +532,12 @@ export default function AdminEventsPage() {
             if (!url) throw new Error('No meeting link was returned.');
             setCreateForm((f) => ({ ...f, streamUrl: url, meetingProvider: res?.data?.provider || provider, meetingId: res?.data?.meetingProviderId || '' }));
             pushToast(
-                provider === 'googleMeet'
-                    ? 'Meeting created successfully. Real Google Meet meeting attached.'
-                    : `${meetingProviderLabel(res?.data?.provider || provider)} meeting created successfully.`,
+                `${meetingProviderLabel(res?.data?.provider || provider)} meeting created successfully.`,
                 'success'
             );
         } catch (err) {
             pushToast(
-                err.response?.data?.message || (provider === 'googleMeet'
-                    ? 'Google Meet creation failed. No meeting was created.'
-                    : 'Failed to generate meeting link.'),
+                err.response?.data?.message || 'Failed to generate meeting link.',
                 'error'
             );
         } finally {
@@ -642,18 +550,6 @@ export default function AdminEventsPage() {
         setCreateFormError('');
         setMeetingErrors({});
 
-        const wantsGoogleMeet = createForm.eventType !== 'Physical'
-            && createForm.meetingPlatform === 'googleMeet'
-            && !createForm.streamUrl;
-
-        if (wantsGoogleMeet && !googleMeetConnected) {
-            setCreateFormError(
-                googleConfigured
-                    ? 'Google Meet is not connected. Click "Connect Google Meet" to authorize before creating the meeting.'
-                    : 'Google Meet is not configured on the backend. Add GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REDIRECT_URI to backend/.env and restart the server.'
-            );
-            return;
-        }
         if (!createForm.title.trim()) { setCreateFormError('Event title is required.'); return; }
         if (!createForm.startDate)    { setCreateFormError('Start date is required.'); return; }
 
@@ -719,7 +615,7 @@ export default function AdminEventsPage() {
                     endTime,
                     allDay: Boolean(createForm.isAllDay),
                     visibility: 'public',
-                    meetingProvider: platformToProvider[createForm.meetingPlatform] || createForm.meetingProvider || 'googleMeet',
+                    meetingProvider: platformToProvider[createForm.meetingPlatform] || createForm.meetingProvider || 'zoom',
                     meetingPlatform: createForm.meetingPlatform,
                     meetingInvitees: createForm.meetingInvitees || '',
                     invitees: inviteesResult.list,
@@ -735,7 +631,7 @@ export default function AdminEventsPage() {
                 const res = await eventService.create(payload);
                 const created = res.data?.data;
                 setEvents((prev) => [created, ...prev]);
-                pushToast(wantsGoogleMeet ? 'Event created with a real Google Meet meeting.' : 'Public event created.');
+                pushToast('Public event created.');
             } else {
                 // Internal event — stored in the Event model so it appears in the
                 // Admin Events table with visibility "internal", and mirrored to
@@ -764,7 +660,7 @@ export default function AdminEventsPage() {
                     endTime,
                     allDay: Boolean(createForm.isAllDay),
                     visibility: 'internal',
-                    meetingProvider: platformToProvider[createForm.meetingPlatform] || createForm.meetingProvider || 'googleMeet',
+                    meetingProvider: platformToProvider[createForm.meetingPlatform] || createForm.meetingProvider || 'zoom',
                     meetingPlatform: createForm.meetingPlatform,
                     meetingInvitees: createForm.meetingInvitees || '',
                     invitees: inviteesResult.list,
@@ -791,7 +687,7 @@ export default function AdminEventsPage() {
                         eventType: createForm.eventType || 'Online',
                         streamUrl: createForm.streamUrl || '',
                         visibility: 'internal',
-                        meetingProvider: platformToProvider[createForm.meetingPlatform] || createForm.meetingProvider || 'googleMeet',
+                        meetingProvider: platformToProvider[createForm.meetingPlatform] || createForm.meetingProvider || 'zoom',
                         meetingPlatform: createForm.meetingPlatform,
                         meetingInvitees: createForm.meetingInvitees || '',
                         invitees: inviteesResult.list,
@@ -803,16 +699,14 @@ export default function AdminEventsPage() {
                 } catch {
                     pushToast('Event saved, but the internal calendar could not be updated.', 'info');
                 }
-                pushToast(wantsGoogleMeet ? 'Internal event created with a real Google Meet meeting.' : 'Internal event created.');
+                pushToast('Internal event created.');
             }
             resetCreateForm();
             loadEvents();
             loadStats();
         } catch (err) {
             const msg = err.response?.data?.message || 'Failed to save event.';
-            setCreateFormError(wantsGoogleMeet && !err.response
-                ? 'Google Meet creation failed — the event was NOT saved. Check the backend connection and retry.'
-                : msg);
+            setCreateFormError(msg);
         } finally {
             setCreateSaving(false);
         }
@@ -1491,26 +1385,6 @@ export default function AdminEventsPage() {
                                     </select>
                                 </div>
 
-                                {/* Invitees — Google Meet only */}
-                                {createForm.meetingPlatform === 'googleMeet' && (
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Invitees</label>
-                                        <input
-                                            value={createForm.meetingInvitees}
-                                            onChange={(e) => {
-                                                setCreateForm({ ...createForm, meetingInvitees: e.target.value });
-                                                setMeetingErrors((m) => ({ ...m, meetingInvitees: '' }));
-                                            }}
-                                            placeholder="student1@example.com, student2@example.com"
-                                            style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
-                                        />
-                                        {meetingErrors.meetingInvitees && (
-                                            <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#ef4444' }}>{meetingErrors.meetingInvitees}</div>
-                                        )}
-                                        <p style={{ margin: '6px 0 0', fontSize: 12, color: '#6b7280' }}>Comma-separated email addresses. Whitespace is trimmed, duplicates are removed and invalid addresses are rejected.</p>
-                                    </div>
-                                )}
-
                                 {/* Meeting ID — Zoom only (optional) */}
                                 {createForm.meetingPlatform === 'zoom' && (
                                     <div>
@@ -1583,53 +1457,11 @@ export default function AdminEventsPage() {
                                     </div>
                                 )}
 
-                                {/* Google Meet connection status — Google only, never shown for other platforms */}
-                                {createForm.meetingPlatform === 'googleMeet' && (
-                                    googleConfigured && !googleMeetConnected ? (
-                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', padding: '10px 12px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)' }}>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#ef4444' }}>
-                                                <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 8px rgba(239,68,68,0.6)', flexShrink: 0 }} />
-                                                Google Meet Not Connected
-                                            </span>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                                                <span style={{ fontSize: 12, color: '#9ca3af' }}>Connect your Google account to automatically create Google Meet sessions.</span>
-                                                <button type="button" onClick={handleConnectGoogleMeet} disabled={isGoogleConnecting} style={{ padding: '6px 12px', fontSize: 12, borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: '#e5e7eb', cursor: isGoogleConnecting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                                    {isGoogleConnecting ? <><Loader2 size={13} className="animate-spin" /> Opening Google…</> : 'Connect Google Meet'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ) : !googleConfigured ? (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', borderRadius: 10, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.35)' }}>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#f59e0b' }}>
-                                                <AlertTriangle size={14} /> Google Meet Setup Required
-                                            </span>
-                                            <span style={{ fontSize: 12, color: '#9ca3af' }}>The administrator must configure Google OAuth credentials on the backend.</span>
-                                            {googleMeetStatus?.missingEnv?.length > 0 && (
-                                                <span style={{ fontSize: 12, color: '#6b7280' }}>Missing backend/.env: {googleMeetStatus.missingEnv.join(', ')}</span>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 12px', borderRadius: 10, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.35)' }}>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#10b981' }}>
-                                                <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px rgba(16,185,129,0.8)', flexShrink: 0 }} />
-                                                Google Meet Connected
-                                            </span>
-                                            <span style={{ fontSize: 12, color: '#9ca3af' }}>Your Google account is connected and ready to create meetings.</span>
-                                        </div>
-                                    )
-                                )}
-
                                 {/* Meeting creation progress / success */}
                                 {meetingGenerating ? (
                                     <p style={{ margin: 0, fontSize: 12, color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                                         <Loader2 size={13} className="animate-spin" /> Creating a real {meetingProviderLabel(createForm.meetingProvider)} meeting…
                                     </p>
-                                ) : createForm.meetingPlatform === 'googleMeet' && createForm.streamUrl ? (
-                                    <div style={{ padding: '10px 12px', borderRadius: 10, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.35)' }}>
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#10b981' }}>
-                                            <CheckCircle2 size={15} /> Real Google Meet created
-                                        </span>
-                                    </div>
                                 ) : null}
                             </div>
                         </div>
@@ -1740,7 +1572,7 @@ export default function AdminEventsPage() {
                                     <div style={{ display: 'grid', gap: 4, fontSize: 13, color: '#6b7280' }}>
                                         <div><strong style={{ color: '#9ca3af' }}>{createForm.isAllDay ? 'All day' : 'Scheduled'}: </strong>{pStart ? pStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</div>
                                         <div><strong style={{ color: '#9ca3af' }}>Format: </strong>{pType}{pType === 'Physical' ? ` — ${createForm.location || 'No location set'}` : pType === 'Hybrid' ? ` — ${createForm.location || 'Online + venue TBD'}` : ''}</div>
-                                        {pType !== 'Physical' && <div><strong style={{ color: '#9ca3af' }}>Meeting: </strong>{meetingProviderLabel(createForm.meetingProvider)}{createForm.streamUrl ? ` — ${createForm.streamUrl}` : (createForm.meetingPlatform === 'googleMeet' ? ' — real Google Meet will be created on save' : ' — will be created on save')}</div>}
+                                        {pType !== 'Physical' && <div><strong style={{ color: '#9ca3af' }}>Meeting: </strong>{meetingProviderLabel(createForm.meetingProvider)}{createForm.streamUrl ? ` — ${createForm.streamUrl}` : ' — will be created on save'}</div>}
                                         <div><strong style={{ color: '#9ca3af' }}>Visibility: </strong>{isFormPublic ? 'Public (review pipeline)' : 'Internal (calendar only)'}</div>
                                     </div>
                                 </div>
@@ -1756,9 +1588,7 @@ export default function AdminEventsPage() {
                             style={{ padding: '12px 28px', borderRadius: 10, background: 'linear-gradient(135deg, #16a34a, #15803d)', color: '#fff', fontWeight: 800, border: 'none', cursor: createSaving ? 'not-allowed' : 'pointer', opacity: createSaving ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14 }}
                         >
                             {createSaving
-                                ? (createForm.eventType !== 'Physical' && createForm.meetingPlatform === 'googleMeet' && !createForm.streamUrl
-                                    ? <><Loader2 size={16} className="animate-spin" /> Creating Google Meet…</>
-                                    : <><Loader2 size={16} className="animate-spin" /> Saving…</>)
+                                ? <><Loader2 size={16} className="animate-spin" /> Saving…</>
                                 : <><Plus size={16} /> Create Event</>}
                         </button>
                         <button type="button" onClick={resetCreateForm} style={{ padding: '12px 24px', borderRadius: 10, background: 'transparent', color: '#9ca3af', fontWeight: 600, border: '1px solid rgba(255,255,255,0.15)', cursor: 'pointer', fontSize: 14 }}>

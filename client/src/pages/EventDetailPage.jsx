@@ -108,7 +108,6 @@ export default function EventDetailPage() {
     const [submitting, setSubmitting] = useState(false);
     const [bookingRef, setBookingRef] = useState(() => `EMR-${Math.random().toString(36).slice(2, 8).toUpperCase()}`);
 
-    const isGoogleMeet = event?.meetingProvider === 'googleMeet';
     const copyMeetingLink = async () => {
         if (!joinUrl) return;
         try {
@@ -253,7 +252,7 @@ export default function EventDetailPage() {
                                     rel="noopener noreferrer"
                                     className="inline-flex w-fit items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black shadow-[0_0_30px_rgba(16,185,129,0.45)] transition hover:shadow-[0_0_45px_rgba(16,185,129,0.6)]"
                                 >
-                                    <Video className="h-4 w-4" /> {isGoogleMeet ? 'Join Google Meet' : 'Join Event Now'}
+                                    <Video className="h-4 w-4" /> Join Event Now
                                 </a>
                             ) : (
                                 <button
@@ -372,7 +371,7 @@ export default function EventDetailPage() {
                             ) : canJoin ? (
                                 <div className="mt-6 flex w-full flex-col gap-2">
                                     <a href={joinUrl} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-emerald-500 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110">
-                                        <Video className="h-4 w-4" /> {isGoogleMeet ? 'Join Google Meet' : 'Join Event'}
+                                        <Video className="h-4 w-4" /> Join Event
                                     </a>
                                     <button onClick={copyMeetingLink} className="flex w-full items-center justify-center gap-2 rounded-xl border border-green-500/40 bg-green-500/10 py-2.5 text-xs font-bold uppercase tracking-wide text-green-300 transition hover:bg-green-500/20">
                                         Copy Meeting Link

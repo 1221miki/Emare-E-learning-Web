@@ -123,7 +123,6 @@ export default function LiveSessionsPage() {
 
     const getDefaultMeetingLink = (platform, title) => {
         const slug = (title || 'emare-live-session').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 24) || 'emare-live-session';
-        if (platform === 'Google Meet') return null;
         if (platform === 'Jitsi Meet') return `https://meet.jit.si/${slug}`;
         if (platform === 'Custom') return null;
         return null;
@@ -233,12 +232,6 @@ export default function LiveSessionsPage() {
     // Short helper text shown under the Meeting Link input, per platform
     const getPlatformHelperText = () => {
         switch (formData.platform) {
-            case 'Google Meet':
-                return integrations.googleConnected === null
-                    ? 'Click "Generate Meeting Link" to create a real Google Calendar event with a Google Meet link.'
-                    : integrations.googleConnected
-                        ? 'Click "Generate Meeting Link" to create a real Google Calendar event with a Meet conference link.'
-                        : 'Not configured on this server — an administrator must connect Google Calendar from the Calendar Management page.';
             case 'Zoom':
                 return integrations.zoomConfigured === null
                     ? 'Click "Generate Meeting Link" to create a Zoom meeting if Zoom is connected on this server.'
@@ -251,18 +244,6 @@ export default function LiveSessionsPage() {
                 return 'Enter any valid meeting URL manually (Zoom, Teams, YouTube Live, …).';
             default:
                 return '';
-        }
-    };
-
-    // Admin one-click path to connect Google Calendar (enables real Meet links).
-    const handleConnectGoogleCalendar = async () => {
-        try {
-            const res = await calendarService.getGoogleAuthUrl('calendar');
-            const url = res.data?.data?.url;
-            if (!url) throw new Error('no url');
-            window.location.href = url;
-        } catch {
-            setLinkMsg({ type: 'error', text: 'Could not start the Google connection. An administrator can connect Google Calendar from the Calendar Management page.' });
         }
     };
 
@@ -285,16 +266,6 @@ export default function LiveSessionsPage() {
         try {
             // ── Configuration pre-checks: fail with exact missing settings ──
             const status = await ensureIntegrationStatus();
-            if (formData.platform === 'Google Meet' && !status.googleConnected) {
-                const missing = status.googleMissingEnv?.length
-                    ? status.googleMissingEnv.join(', ')
-                    : 'Google authorization (refresh token)';
-                setLinkMsg({
-                    type: 'error',
-                    text: `Configuration error — Google Meet cannot be generated. Missing: ${missing}. An administrator must fix this in backend/.env / Calendar Management.`
-                });
-                return;
-            }
             if (formData.platform === 'Zoom' && !status.zoomConfigured) {
                 const missing = status.zoomMissingEnv?.length
                     ? status.zoomMissingEnv.join(', ')
@@ -467,16 +438,9 @@ export default function LiveSessionsPage() {
                             }} style={{ width: '100%', padding: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', outline: 'none' }}>
                                 <option value="Jitsi Meet">Jitsi Meet</option>
                                 <option value="Zoom">Zoom</option>
-                                <option value="Google Meet">Google Meet</option>
                                 <option value="Custom">Custom</option>
                             </select>
                         </div>
-                        {formData.platform === 'Google Meet' && (
-                            <div style={{ gridColumn: '1 / -1' }}>
-                                <label style={{ display: 'block', color: colors.text, marginBottom: '8px', fontWeight: '600' }}>Invitees (comma separated emails)</label>
-                                <input type="text" value={formData.attendees || ''} onChange={e => setFormData({...formData, attendees: e.target.value})} placeholder="e.g. student1@example.com,student2@example.com" style={{ width: '100%', padding: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', outline: 'none' }} />
-                            </div>
-                        )}
                         <div style={{ gridColumn: '1 / -1' }}>
                             <label style={{ display: 'block', color: colors.text, marginBottom: '8px', fontWeight: '600' }}>Meeting Link</label>
                             <input type="url" value={formData.meetingLink} onChange={e => { setFormData({...formData, meetingLink: e.target.value}); setFieldErrors(prev => ({ ...prev, meetingLink: undefined })); }} placeholder="https://…" style={{ width: '100%', padding: '12px', background: colors.bgInput, border: `1px solid ${fieldErrors.meetingLink ? '#ef4444' : colors.border}`, color: colors.text, borderRadius: '8px', outline: 'none' }} />
@@ -501,11 +465,6 @@ export default function LiveSessionsPage() {
                                     <button type="button" onClick={handleGenerateMeetingLink} disabled={generatingLink} style={{ padding: '10px 14px', background: colors.accent, color: '#fff', border: 'none', borderRadius: '8px', cursor: generatingLink ? 'wait' : 'pointer', opacity: generatingLink ? 0.7 : 1 }}>
                                         {generatingLink ? 'Generating…' : 'Generate Meeting Link'}
                                     </button>
-                                    {formData.platform === 'Google Meet' && integrations.googleConnected === false && user?.assignedRole === 'Admin' && (
-                                        <button type="button" onClick={handleConnectGoogleCalendar} style={{ padding: '10px 14px', background: 'transparent', color: colors.accent, border: `1px solid ${colors.accent}`, borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>
-                                            Connect Google Calendar
-                                        </button>
-                                    )}
                                 </div>
                             )}
                         </div>

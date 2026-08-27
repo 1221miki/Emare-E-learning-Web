@@ -1,25 +1,16 @@
 const crypto = require('crypto');
 const axios = require('axios');
-const { google } = require('googleapis');
-const googleMeetService = require('./googleMeetService');
 
 /**
  * Meeting Service — real meeting-provider integration for event meeting links.
  *
  * Providers (provider key → display label → required env vars):
- *   googleMeet       → Google Meet        → GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
- *                                           GOOGLE_REDIRECT_URI (+ refresh token via
- *                                           GOOGLE_REFRESH_TOKEN or backend/.google-oauth.json)
  *   zoom             → Zoom               → ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET
  *   microsoftTeams   → Microsoft Teams    → TEAMS_TENANT_ID, TEAMS_CLIENT_ID,
  *                                           TEAMS_CLIENT_SECRET, TEAMS_USER_ID
  *   jitsi            → Jitsi Meet         → (no credentials — public rooms, real & free)
  *   internal         → Internal Join Link → (no credentials — app-domain join URL)
  *   custom           → Manual URL         → (admin pastes an external link)
- *
- * Google Meet uses the OFFICIAL Google Meet REST API (v2) through
- * googleMeetService — a real meeting space is created and the real meet.google.com
- * URI returned by Google is stored. We never construct or fake a Meet URL.
  *
  * If a provider is chosen but not configured, a PROVIDER_NOT_CONFIGURED error is
  * thrown so the caller can tell the admin exactly which env vars are missing —
@@ -29,10 +20,6 @@ const googleMeetService = require('./googleMeetService');
 const APP_BASE = process.env.APP_BASE_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
 
 const PROVIDERS = {
-    googleMeet: {
-        label: 'Google Meet',
-        env: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI']
-    },
     zoom: {
         label: 'Zoom',
         env: ['ZOOM_ACCOUNT_ID', 'ZOOM_CLIENT_ID', 'ZOOM_CLIENT_SECRET']
@@ -60,27 +47,17 @@ const normalizeProvider = (provider) => {
     return 'internal';
 };
 
-const providerConfigured = async (provider) => {
+const providerConfigured = (provider) => {
     const key = normalizeProvider(provider);
-    if (key === 'googleMeet') {
-        const status = await googleMeetService.getStatus();
-        return googleMeetService.isConfigured() && status.authorized;
-    }
     return PROVIDERS[key].env.every((name) => Boolean(process.env[name]));
 };
 
-const missingProviderEnv = async (provider) => {
+const missingProviderEnv = (provider) => {
     const key = normalizeProvider(provider);
-    if (key === 'googleMeet') {
-        const missing = googleMeetService.missingEnv();
-        const status = await googleMeetService.getStatus();
-        if (!status.authorized) missing.push('GOOGLE_REFRESH_TOKEN (authorize from Event Management)');
-        return missing;
-    }
     return PROVIDERS[key].env.filter((name) => !process.env[name]);
 };
 
-const isRealProvider = (provider) => ['googleMeet', 'zoom', 'microsoftTeams'].includes(provider);
+const isRealProvider = (provider) => ['zoom', 'microsoftTeams'].includes(provider);
 
 const isValidMeetingUrl = (value) => {
     if (!value || typeof value !== 'string') return false;
@@ -92,9 +69,6 @@ const isValidMeetingUrl = (value) => {
     }
 };
 
-// Real Google Meet URLs look like https://meet.google.com/abc-defg-hij (lowercase)
-const GOOGLE_MEET_URL_PATTERN = /^https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}(\?[a-z0-9&=#._/-]*)?$/;
-
 // Never treat placeholder/example URLs as valid meeting links.
 const PLACEHOLDER_PATTERNS = [
     /\/live\b/i,          // "https://.../live" placeholder
@@ -103,13 +77,6 @@ const PLACEHOLDER_PATTERNS = [
     /\.\.\./i,
     /your-meeting|your-url|your-.*-meeting/i
 ];
-
-const isValidGoogleMeetUrl = (value) => {
-    if (!value || typeof value !== 'string') return false;
-    const trimmed = value.trim();
-    if (!GOOGLE_MEET_URL_PATTERN.test(trimmed)) return false;
-    return !PLACEHOLDER_PATTERNS.some((re) => re.test(trimmed));
-};
 
 const isPlaceholderUrl = (value) =>
     typeof value === 'string' && PLACEHOLDER_PATTERNS.some((re) => re.test(value.trim()));
@@ -172,24 +139,6 @@ const meetingFields = (r = {}) => ({
 });
 
 // ── Provider implementations ─────────────────────────────────────
-
-const createGoogleMeet = async ({ title, startDate, endDate }) => {
-    if (!await providerConfigured('googleMeet')) {
-        const err = new Error('Google Meet is not connected.');
-        err.code = 'PROVIDER_NOT_CONFIGURED';
-        err.provider = 'googleMeet';
-        throw err;
-    }
-    // A real Google Calendar event is created with a Google Meet conference via
-    // conferenceData. The returned hangoutLink is the actual meet.google.com URL.
-    const result = await googleMeetService.createCalendarMeet({ title, startDate, endDate });
-    return {
-        url: result.meetingUrl,
-        ...meetingFields(result),
-        provider: 'googleMeet',
-        generated: true
-    };
-};
 
 const getZoomToken = async () => {
     const resp = await axios.post('https://zoom.us/oauth/token', null, {
@@ -273,7 +222,7 @@ const createJitsiLink = (slug) => `https://meet.jit.si/${normalizeSlug(slug)}`;
 /**
  * Generate a meeting link for a given provider.
  * @param {object} eventData
- * @param {string} eventData.provider     googleMeet | zoom | microsoftTeams | jitsi | internal | custom
+ * @param {string} eventData.provider     zoom | microsoftTeams | jitsi | internal | custom
  * @param {string} [eventData.title]
  * @param {string} [eventData.slug]
  * @param {string} [eventData.startDate]
@@ -291,9 +240,6 @@ const generateMeetingUrl = async (eventData = {}) => {
     let result;
     try {
         switch (provider) {
-            case 'googleMeet':
-                result = await createGoogleMeet({ title, startDate, endDate });
-                break;
             case 'zoom':
                 result = await createZoomMeeting({ title, startDate, endDate });
                 break;
@@ -311,14 +257,11 @@ const generateMeetingUrl = async (eventData = {}) => {
                 break;
         }
     } catch (error) {
-        // Graceful fallback: an unconnected premium provider (e.g. Google Meet
-        // that has not been authorized yet) must never block saving an event.
+        // Graceful fallback: an unconnected premium provider must never block saving an event.
         // Fall back to a free Jitsi room so Online/Hybrid events still get a
         // real, joinable meeting link out of the box.
         const unconfigured =
-            error.code === 'PROVIDER_NOT_CONFIGURED' ||
-            error.code === 'GOOGLE_NOT_AUTHORIZED' ||
-            (provider === 'googleMeet' && /not connected|not configured|authorize/i.test(String(error.message || '')));
+            error.code === 'PROVIDER_NOT_CONFIGURED';
         if (unconfigured && eventData.allowFallback !== false) {
             return { url: createJitsiLink(slug || title), provider: 'jitsi', generated: true };
         }
@@ -327,17 +270,10 @@ const generateMeetingUrl = async (eventData = {}) => {
     return result;
 };
 
-const missingEnvMessage = async (provider) => {
+const missingEnvMessage = (provider) => {
     const key = normalizeProvider(provider);
-    if (!isRealProvider(key) && key !== 'googleMeet') return null;
-    if (key === 'googleMeet') {
-        const missing = googleMeetService.missingEnv();
-        const status = await googleMeetService.getStatus();
-        if (!status.authorized) missing.push('GOOGLE_REFRESH_TOKEN (authorize from Event Management)');
-        if (missing.length === 0) return null;
-        return `Google Meet is not connected yet. Add to backend/.env: ${missing.join(', ')}`;
-    }
-    const missing = await missingProviderEnv(key);
+    if (!isRealProvider(key)) return null;
+    const missing = missingProviderEnv(key);
     if (missing.length === 0) return null;
     return `${PROVIDERS[key].label} is not connected yet. Add to backend/.env: ${missing.join(', ')}`;
 };
@@ -370,15 +306,6 @@ const resolveMeetingUrl = async ({ existing = '', supplied, eventType, provider,
     }
 
     if (manual) {
-        if (chosen === 'googleMeet') {
-            // Real Google Meet links only — never placeholders or fake URLs.
-            if (!isValidGoogleMeetUrl(manual)) {
-                const err = new Error('That is not a valid Google Meet link. Only real https://meet.google.com/xxx-xxxx-xxx links are accepted.');
-                err.code = 'INVALID_MEETING_URL';
-                throw err;
-            }
-            return { url: manual, provider: 'googleMeet', generated: false, changed: manual !== existing, meeting: null };
-        }
         if (!isValidMeetingUrl(manual) || isPlaceholderUrl(manual)) {
             const err = new Error('Meeting URL is invalid — use a full http(s) link.');
             err.code = 'INVALID_MEETING_URL';
@@ -402,7 +329,7 @@ const resolveMeetingUrl = async ({ existing = '', supplied, eventType, provider,
     return {
         ...result,
         changed: true,
-        meeting: result.provider === 'googleMeet' ? meetingFields(result) : null
+        meeting: null
     };
 };
 
@@ -445,7 +372,7 @@ const mergeMeetingInfo = (doc, resolved = {}, prev = null) => {
         doc.meetingCreatedAt = meeting.meetingCreatedAt || new Date();
         doc.meetingMetadata = meeting.meetingMetadata || null;
         doc.meetingStatus = 'created';
-        doc.meetingProvider = resolved.provider || 'googleMeet';
+        doc.meetingProvider = resolved.provider || 'internal';
         doc.streamUrl = doc.meetingUrl;
         return doc;
     }
@@ -489,20 +416,13 @@ const mergeMeetingInfo = (doc, resolved = {}, prev = null) => {
 
 /**
  * Best-effort provider resource cleanup when an event is deleted or switched to
- * Physical. Google Meet has no delete-space API, so we end any active
- * conference and log failures safely — the LMS document is always removed
- * regardless of the provider outcome so the database stays consistent.
+ * Physical. The LMS document is always removed regardless of the provider outcome
+ * so the database stays consistent.
  *
  * @param {object} event Previously stored event document
  * @returns {Promise<boolean>}
  */
 const deleteProviderResource = async (event = {}) => {
-    if (event.meetingProvider === 'googleMeet' && (event.meetingSpaceName || event.meetingProviderId)) {
-        return googleMeetService.deleteProviderResource({
-            meetingSpaceName: event.meetingSpaceName,
-            meetingProviderId: event.meetingProviderId
-        });
-    }
     return true;
 };
 
@@ -512,7 +432,6 @@ module.exports = {
     providerConfigured,
     missingEnvMessage,
     isValidMeetingUrl,
-    isValidGoogleMeetUrl,
     validateInvitees,
     generateMeetingUrl,
     resolveMeetingUrl,

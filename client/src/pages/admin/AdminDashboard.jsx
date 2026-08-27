@@ -28,7 +28,6 @@ const dateInRange = (date, fromDays, toDays) => {
 };
 const INTERNAL_EVENT_CATEGORIES = ['academic', 'exam', 'assignment', 'holiday', 'training', 'event'];
 const MEETING_PROVIDERS = [
-    { value: 'googleMeet', label: 'Google Meet' },
     { value: 'jitsi', label: 'Jitsi Meet' },
     { value: 'zoom', label: 'Zoom' },
     { value: 'microsoftTeams', label: 'Microsoft Teams' },
@@ -39,7 +38,6 @@ const meetingProviderLabel = (value) => (MEETING_PROVIDERS.find((p) => p.value =
 
 // Virtual Meeting & Live Stream Settings platforms (form-facing)
 const MEETING_PLATFORMS = [
-    { value: 'googleMeet', label: 'Google Meet' },
     { value: 'zoom', label: 'Zoom' },
     { value: 'microsoftTeams', label: 'Microsoft Teams' },
     { value: 'jitsi', label: 'Jitsi Meet' },
@@ -47,8 +45,8 @@ const MEETING_PLATFORMS = [
     { value: 'rtmp', label: 'Custom RTMP / Web Stream' },
     { value: 'custom', label: 'Custom / Manual URL' }
 ];
-const platformToProvider = { googleMeet: 'googleMeet', zoom: 'zoom', microsoftTeams: 'microsoftTeams', jitsi: 'jitsi', custom: 'custom', youtubeLive: 'custom', rtmp: 'custom' };
-const GENERATABLE_PLATFORMS = ['googleMeet', 'zoom', 'microsoftTeams', 'jitsi'];
+const platformToProvider = { zoom: 'zoom', microsoftTeams: 'microsoftTeams', jitsi: 'jitsi', custom: 'custom', youtubeLive: 'custom', rtmp: 'custom' };
+const GENERATABLE_PLATFORMS = ['zoom', 'microsoftTeams', 'jitsi'];
 
 // -- Event thumbnail normalization -------------------------
 // Every uploaded thumbnail is center-cropped to a uniform 16:9 (1280x720)
@@ -91,19 +89,16 @@ const normalizeEventThumbnail = async (file) => {
 };
 
 // Infer the true meeting provider from the link itself. Prevents mislabeling
-// (e.g. a Jitsi fallback link sent with meetingProvider 'googleMeet', which
-// the backend correctly rejects as "not a valid Google Meet link").
+// (e.g. a Jitsi fallback link sent with a wrong provider label).
 const inferProviderFromUrl = (url) => {
     const u = String(url || '').trim();
     if (!u) return '';
-    if (/^https:\/\/meet\.google\.com\/[a-z0-9-]+/i.test(u)) return 'googleMeet';
     if (/^https:\/\/meet\.jit\.si\//i.test(u)) return 'jitsi';
     if (/zoom\.us/i.test(u)) return 'zoom';
     if (/teams\.microsoft\.com|teams\.live\.com/i.test(u)) return 'microsoftTeams';
     return 'custom';
 };
-const PASSWORD_PLATFORMS = ['googleMeet', 'zoom', 'custom', 'youtubeLive', 'rtmp'];
-const OAUTH_PLATFORM = 'googleMeet';
+const PASSWORD_PLATFORMS = ['zoom', 'custom', 'youtubeLive', 'rtmp'];
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const normalizeInviteesInput = (value) => {
     const raw = (value || '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -119,7 +114,7 @@ const normalizeInviteesInput = (value) => {
     });
     return { list, invalid };
 };
-const meetingPlatformLabel = (value) => (MEETING_PLATFORMS.find((p) => p.value === value) || { label: 'Google Meet' }).label;
+const meetingPlatformLabel = (value) => (MEETING_PLATFORMS.find((p) => p.value === value) || { label: 'Zoom' }).label;
 const getDefaultMeetingLink = (platform, title) => {
     const slug = (title || 'emare-live-session').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 24) || 'emare-live-session';
     if (platform === 'jitsi') return `https://meet.jit.si/${slug}`;
@@ -127,7 +122,6 @@ const getDefaultMeetingLink = (platform, title) => {
 };
 const providerToPlatform = (provider) => {
     if (provider === 'zoom') return 'zoom';
-    if (provider === 'googleMeet') return 'googleMeet';
     if (provider === 'jitsi') return 'jitsi';
     if (provider === 'microsoftTeams') return 'microsoftTeams';
     if (provider === 'custom') return 'custom';
@@ -445,7 +439,7 @@ export default function AdminDashboard() {
     const [isAuditLoading, setIsAuditLoading] = useState(false);
     const [calendarEvents, setCalendarEvents] = useState([]);
     const [publicEvents, setPublicEvents] = useState([]);
-    const [calendarForm, setCalendarForm] = useState({ title: '', category: 'academic', description: '', startDate: '', endDate: '', location: '', isAllDay: false, color: '#16a34a', eventType: 'Hybrid', streamUrl: '', bannerImage: '', galleryImages: '', enableRegistration: true, capacity: '', price: 'FREE', instructor: '', eventStatus: 'SCHEDULED', eventCategory: 'Masterclass', visibility: 'internal', startTime: '10:00', endTime: '11:00', meetingProvider: 'googleMeet', meetingPlatform: 'googleMeet', meetingInvitees: '', meetingPassword: '' });
+    const [calendarForm, setCalendarForm] = useState({ title: '', category: 'academic', description: '', startDate: '', endDate: '', location: '', isAllDay: false, color: '#16a34a', eventType: 'Hybrid', streamUrl: '', bannerImage: '', galleryImages: '', enableRegistration: true, capacity: '', price: 'FREE', instructor: '', eventStatus: 'SCHEDULED', eventCategory: 'Masterclass', visibility: 'internal', startTime: '10:00', endTime: '11:00', meetingProvider: 'zoom', meetingPlatform: 'zoom', meetingInvitees: '', meetingPassword: '' });
     const [eventSearch, setEventSearch] = useState('');
     const [eventStatusFilter, setEventStatusFilter] = useState('all');
     const [eventCategoryFilter, setEventCategoryFilter] = useState('all');
@@ -464,9 +458,6 @@ export default function AdminDashboard() {
     const [thumbnailDragOver, setThumbnailDragOver] = useState(false);
     const thumbnailInputRef = useRef(null);
     const [isCalendarSaving, setIsCalendarSaving] = useState(false);
-    const [googleMeetStatus, setGoogleMeetStatus] = useState(null);
-    const googleConfigured = Boolean(googleMeetStatus?.configured && (!googleMeetStatus.missingEnv || googleMeetStatus.missingEnv.length === 0));
-    const [isGoogleConnecting, setIsGoogleConnecting] = useState(false);
     const [isGeneratingMeeting, setIsGeneratingMeeting] = useState(false);
     const [certificateVerificationNumber, setCertificateVerificationNumber] = useState('');
     const [certificateVerificationResult, setCertificateVerificationResult] = useState(null);
@@ -523,41 +514,6 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         fetchData();
-    }, []);
-
-    // Handle the Google Meet OAuth callback redirect (e.g. /admin?calendar=1&googleMeet=connected)
-    useEffect(() => {
-        const params = new URLSearchParams(location.search);
-        const gm = params.get('googleMeet');
-        if (params.get('calendar') === '1') setActiveTab('calendar');
-        if (gm === 'connected') {
-            showNotification('Google Meet connected. You can now create real Google Meet meetings.');
-            fetchGoogleStatus();
-            // Return the admin to the Create/Edit Event modal they were working on.
-            const saved = sessionStorage.getItem('googleAuthReturnForm');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    if (parsed && parsed.form) {
-                        setCalendarForm(parsed.form);
-                        if (parsed.editingId) setCalendarEditingId(parsed.editingId);
-                        setIsEventModalOpen(true);
-                    }
-                } catch (e) { /* ignore corrupted payload */ }
-                sessionStorage.removeItem('googleAuthReturnForm');
-            }
-        } else if (gm === 'error') {
-            showNotification(params.get('reason') ? `Google Meet connection failed: ${params.get('reason')}` : 'Google Meet connection failed.');
-            sessionStorage.removeItem('googleAuthReturnForm');
-        }
-        if (gm) {
-            const url = new URL(window.location.href);
-            url.searchParams.delete('googleMeet');
-            url.searchParams.delete('reason');
-            url.searchParams.delete('calendar');
-            window.history.replaceState({}, '', url);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
@@ -627,36 +583,6 @@ export default function AdminDashboard() {
             setCalendarEvents(response.data?.data || []);
         } catch (error) {
             console.error('Error fetching calendar events:', error);
-        }
-    };
-
-    const fetchGoogleStatus = async () => {
-        try {
-            const res = await calendarService.getGoogleStatus();
-            setGoogleMeetStatus(res.data?.data || null);
-        } catch (error) {
-            setGoogleMeetStatus(null);
-        }
-    };
-
-const handleConnectGoogleMeet = async () => {
-        try {
-            setIsGoogleConnecting(true);
-            const res = await calendarService.getGoogleAuthUrl();
-            const url = res.data?.data?.url;
-            if (!url) throw new Error('No authorization URL returned.');
-            // Preserve the form so the admin is returned to the Create Event modal
-            // after authorizing on Google.
-            try {
-                sessionStorage.setItem('googleAuthReturnForm', JSON.stringify({
-                    form: calendarForm,
-                    editingId: calendarEditingId
-                }));
-            } catch (e) { /* non-fatal � the form simply resets on return */ }
-            window.location.href = url;
-        } catch (error) {
-            setIsGoogleConnecting(false);
-            showNotification(error.response?.data?.message || 'Could not start Google Meet connection.');
         }
     };
 
@@ -741,7 +667,6 @@ const handleConnectGoogleMeet = async () => {
             fetchAuditLogs();
             fetchCalendarEvents();
             fetchPublicEvents();
-            fetchGoogleStatus();
         }, 100);
     };
 
@@ -1718,7 +1643,7 @@ const handleConnectGoogleMeet = async () => {
     };
 
 const resetCalendarForm = () => {
-        setCalendarForm({ title: '', category: 'academic', description: '', startDate: '', endDate: '', location: '', isAllDay: false, color: '#16a34a', eventType: 'Hybrid', streamUrl: '', bannerImage: '', galleryImages: '', enableRegistration: true, capacity: '', price: 'FREE', instructor: '', eventStatus: 'SCHEDULED', eventCategory: 'Masterclass', visibility: 'internal', startTime: '10:00', endTime: '11:00', meetingProvider: 'googleMeet', meetingPlatform: 'googleMeet', meetingInvitees: '', meetingId: '', meetingPassword: '' });
+        setCalendarForm({ title: '', category: 'academic', description: '', startDate: '', endDate: '', location: '', isAllDay: false, color: '#16a34a', eventType: 'Hybrid', streamUrl: '', bannerImage: '', galleryImages: '', enableRegistration: true, capacity: '', price: 'FREE', instructor: '', eventStatus: 'SCHEDULED', eventCategory: 'Masterclass', visibility: 'internal', startTime: '10:00', endTime: '11:00', meetingProvider: 'zoom', meetingPlatform: 'zoom', meetingInvitees: '', meetingId: '', meetingPassword: '' });
         setCalendarEditingId(null);
         setFormError('');
         setFormErrors({});
@@ -1783,9 +1708,8 @@ const resetCalendarForm = () => {
         if (calendarForm.bannerImage && !isValidUrl(calendarForm.bannerImage)) errors.bannerImage = 'Event thumbnail URL is invalid � use a full http(s) link.';
         const inviteesResult = normalizeInviteesInput(calendarForm.meetingInvitees);
         if (inviteesResult.invalid.length) errors.meetingInvitees = `Invalid invitee email(s): ${inviteesResult.invalid.join(', ')}`;
-        // NOTE: a disconnected Google Meet no longer blocks saving � the backend
-        // automatically falls back to a free Jitsi link so Online/Hybrid events
-        // always save with a working meeting URL.
+        // NOTE: the backend automatically falls back to a free Jitsi link so
+        // Online/Hybrid events always save with a working meeting URL.
         if (isPublic) {
             const price = String(calendarForm.price || '').trim().toUpperCase();
             if (!price) errors.price = 'Price is required (use FREE or a number).';
@@ -1806,10 +1730,10 @@ const resetCalendarForm = () => {
     const buildPublicEventPayload = ({ existing, start, end }) => {
         const streamUrl = (calendarForm.streamUrl || '').trim();
         // Trust the actual link over the dropdown: a Jitsi/custom URL must never
-        // be sent labeled as googleMeet (the backend would reject the save).
+        // be sent labeled with the wrong provider (the backend would reject the save).
         const meetingProvider = streamUrl
             ? inferProviderFromUrl(streamUrl)
-            : (platformToProvider[calendarForm.meetingPlatform] || calendarForm.meetingProvider || 'googleMeet');
+            : (platformToProvider[calendarForm.meetingPlatform] || calendarForm.meetingProvider || 'zoom');
         const startTime = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
         const endTime = calendarForm.isAllDay
             ? '23:59'
@@ -1861,7 +1785,7 @@ const resetCalendarForm = () => {
         const streamUrl = (calendarForm.streamUrl || '').trim();
         const meetingProvider = streamUrl
             ? inferProviderFromUrl(streamUrl)
-            : (platformToProvider[calendarForm.meetingPlatform] || calendarForm.meetingProvider || 'googleMeet');
+            : (platformToProvider[calendarForm.meetingPlatform] || calendarForm.meetingProvider || 'zoom');
         return {
             title: calendarForm.title,
             category: calendarForm.category,
@@ -1971,7 +1895,7 @@ const resetCalendarForm = () => {
             eventStatus: event.status === 'CANCELLED' ? 'CANCELLED' : 'SCHEDULED',
             eventCategory: event.category || 'Masterclass',
             visibility: isPublic ? 'public' : 'internal',
-            meetingProvider: event.meetingProvider || (event.streamUrl ? 'custom' : 'googleMeet'),
+            meetingProvider: event.meetingProvider || (event.streamUrl ? 'custom' : 'zoom'),
             meetingPlatform: event.meetingPlatform || providerToPlatform(event.meetingProvider),
             meetingInvitees: event.meetingInvitees || '',
             meetingPassword: event.meetingPassword || '',
@@ -2014,19 +1938,17 @@ const resetCalendarForm = () => {
             if (!url) throw new Error('No meeting link was returned.');
             setCalendarForm((f) => ({ ...f, streamUrl: url, meetingProvider: finalProvider }));
             showNotification(provider !== finalProvider
-                ? `${meetingProviderLabel(provider)} is not connected � created a ${meetingProviderLabel(finalProvider)} link instead.`
-                : (provider === 'googleMeet'
-                    ? 'Real Google Meet meeting created and attached to this event.'
-                    : `${meetingProviderLabel(finalProvider)} link generated.`));
+                ? `${meetingProviderLabel(provider)} is not connected – created a ${meetingProviderLabel(finalProvider)} link instead.`
+                : `${meetingProviderLabel(finalProvider)} link generated.`);
         } catch (error) {
-            showNotification(error.response?.data?.message || (provider === 'googleMeet' ? 'Google Meet creation failed. No meeting was created.' : 'Failed to generate meeting link.'));
+            showNotification(error.response?.data?.message || 'Failed to generate meeting link.');
         } finally {
             setIsGeneratingMeeting(false);
         }
     };
 
     const handleGeneratePlatformMeeting = async () => {
-        const platform = calendarForm.meetingPlatform || 'googleMeet';
+        const platform = calendarForm.meetingPlatform || 'zoom';
         const defaultLink = getDefaultMeetingLink(platform, calendarForm.title);
         if (defaultLink) {
             setCalendarForm((f) => ({ ...f, streamUrl: defaultLink, meetingProvider: 'jitsi' }));
@@ -4858,12 +4780,8 @@ const resetCalendarForm = () => {
             ? <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: colors.danger }}>{formErrors[key]}</div>
             : null;
         const isFormPublic = calendarForm.visibility === 'public';
-        const googleMeetConnected = Boolean(googleMeetStatus?.connected && googleMeetStatus?.authorized);
-        const googleMeetHint = !googleMeetStatus?.connected
-            ? (googleMeetStatus?.missingEnv?.length ? `Missing backend/.env: ${googleMeetStatus.missingEnv.join(', ')}` : 'Checking connection...')
-            : (!googleMeetStatus?.authorized ? 'Authorized account required � connect below.' : '');
 
-        // -"?-"? Unified event data (Internal + Public) -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?
+        // Unified event data (Internal + Public)
         const internalRows = calendarEvents.map((e) => ({
             ...e,
             visibility: 'internal',
@@ -5276,22 +5194,7 @@ const resetCalendarForm = () => {
                                     </select>
                                 </div>
 
-                                {/* Invitees (Google Meet only, like Live Sessions) */}
-                                {calendarForm.meetingPlatform === 'googleMeet' && (
-                                    <div>
-                                        <label style={fieldLabel}>Invitees</label>
-                                        <input value={calendarForm.meetingInvitees} onChange={(e) => {
-                                            setCalendarForm({ ...calendarForm, meetingInvitees: e.target.value });
-                                            setMeetingErrors((m) => ({ ...m, meetingInvitees: '' }));
-                                        }} placeholder="student1@example.com, student2@example.com" style={s.input} />
-                                        {meetingErrors.meetingInvitees && (
-                                            <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#ef4444' }}>{meetingErrors.meetingInvitees}</div>
-                                        )}
-                                        <p style={{ margin: '6px 0 0', fontSize: 12, color: colors.textMuted }}>Comma-separated email addresses. Whitespace is trimmed, duplicates are removed and invalid addresses are rejected.</p>
-                                    </div>
-                                )}
-
-                                {/* Meeting ID � Zoom only (optional) */}
+                                {/* Meeting ID – Zoom only (optional) */}
                                 {calendarForm.meetingPlatform === 'zoom' && (
                                     <div>
                                         <label style={fieldLabel}>Meeting ID (Optional)</label>
@@ -5359,52 +5262,10 @@ const resetCalendarForm = () => {
                                     </div>
                                 )}
 
-                                {/* Google Meet connection status � Google only, never shown for other platforms */}
-                                {calendarForm.meetingPlatform === 'googleMeet' && (
-                                    googleConfigured && !googleMeetConnected ? (
-                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', padding: '10px 12px', borderRadius: 10, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)' }}>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#22c55e' }}>
-                                                <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px rgba(34,197,94,0.6)' }} />
-                                                Google Meet Not Connected
-                                            </span>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                                                <span style={{ fontSize: 12, color: colors.textMuted }}>Optional � the event saves fine with an automatic free Jitsi link. Connect your Google account if you prefer real Meet sessions.</span>
-                                                <button type="button" onClick={handleConnectGoogleMeet} disabled={isGoogleConnecting} style={{ ...s.secondaryBtn, padding: '6px 12px', fontSize: 12 }}>
-                                                    {isGoogleConnecting ? 'Opening Google...' : 'Connect Google Meet'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ) : !googleConfigured ? (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', borderRadius: 10, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.35)' }}>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#f59e0b' }}>
-                                                <AlertTriangle size={14} /> Google Meet Setup Required
-                                            </span>
-                                            <span style={{ fontSize: 12, color: colors.textMuted }}>Events still save with an automatic free Jitsi link. To use real Google Meet sessions, the administrator must configure Google OAuth credentials on the backend.</span>
-                                            {googleMeetStatus?.missingEnv?.length > 0 && (
-                                                <span style={{ fontSize: 12, color: colors.textMuted }}>Missing backend/.env: {googleMeetStatus.missingEnv.join(', ')}</span>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 12px', borderRadius: 10, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.35)' }}>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#10b981' }}>
-                                                <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px rgba(16,185,129,0.8)' }} />
-                                                Google Meet Connected
-                                            </span>
-                                            <span style={{ fontSize: 12, color: colors.textMuted }}>Your Google account is connected and ready to create meetings.</span>
-                                        </div>
-                                    )
-                                )}
-
                                 {isGeneratingMeeting ? (
                                     <p style={{ margin: '0', fontSize: 12, color: colors.primary, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                        <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Creating a real {meetingProviderLabel(calendarForm.meetingProvider)} meeting...
+                                        <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Creating a {meetingProviderLabel(calendarForm.meetingProvider)} meeting...
                                     </p>
-                                ) : calendarForm.meetingPlatform === 'googleMeet' && calendarForm.streamUrl ? (
-                                    <div style={{ margin: '0', padding: '10px 12px', borderRadius: 10, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.35)' }}>
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#10b981' }}>
-                                            <CheckCircle2 size={15} /> Real Google Meet created
-                                        </span>
-                                    </div>
                                 ) : null}
                             </div>
                         </div>
@@ -5547,7 +5408,7 @@ const resetCalendarForm = () => {
                                     <div style={{ display: 'grid', gap: 4, fontSize: 13, color: colors.textMuted }}>
                                         <div><strong style={{ color: colors.text }}>{calendarForm.isAllDay ? 'All day' : 'Scheduled'}: </strong>{pStart ? formatEventDate(pStart.toISOString()) : '-"'}{pEnd && !calendarForm.isAllDay ? ` -+' ${formatEventDate(pEnd.toISOString())}` : ''}</div>
                                         <div><strong style={{ color: colors.text }}>Format: </strong>{pType} {pType === 'Physical' ? `-- ${calendarForm.location || 'No location set'}` : pType === 'Hybrid' ? `-- ${calendarForm.location || 'Online + venue TBD'}` : ''}</div>
-                                        {pType !== 'Physical' && <div><strong style={{ color: colors.text }}>Meeting: </strong>{meetingProviderLabel(calendarForm.meetingProvider)}{calendarForm.streamUrl ? ` � ${calendarForm.streamUrl}` : (calendarForm.meetingProvider === 'googleMeet' ? ' � real Google Meet will be created on save' : ' � will be created on save')}</div>}
+                                        {pType !== 'Physical' && <div><strong style={{ color: colors.text }}>Meeting: </strong>{meetingProviderLabel(calendarForm.meetingProvider)}{calendarForm.streamUrl ? ` – ${calendarForm.streamUrl}` : ' – will be created on save'}</div>}
                                         {isFormPublic && <div><strong style={{ color: colors.text }}>Price: </strong>{calendarForm.price || 'FREE'}{calendarForm.capacity !== '' ? ` -- Capacity: ${calendarForm.capacity}` : ''}</div>}
                                         <div><strong style={{ color: colors.text }}>Visibility: </strong>{isFormPublic ? 'Public (review pipeline)' : 'Internal (calendar only)'}</div>
                                     </div>
@@ -5559,7 +5420,7 @@ const resetCalendarForm = () => {
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', paddingTop: 4 }}>
                         <button type="submit" disabled={isCalendarSaving} style={{ ...s.primaryBtn, opacity: isCalendarSaving ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                             {isCalendarSaving
-                                ? (calendarForm.eventType !== 'Physical' && calendarForm.meetingProvider === 'googleMeet' && !calendarForm.streamUrl ? 'Creating Google Meet...' : 'Saving...')
+                                ? (calendarForm.eventType !== 'Physical' && !calendarForm.streamUrl ? 'Generating meeting...' : 'Saving...')
                                 : (calendarEditingId ? 'Save Changes' : 'Create Event')}
                         </button>
                         <button type="button" onClick={resetCalendarForm} style={s.secondaryBtn}>Cancel</button>
@@ -5628,7 +5489,7 @@ const resetCalendarForm = () => {
 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
                                     {ev.eventType !== 'Physical' && (ev.meetingUrl || ev.streamUrl) && live !== 'completed' && live !== 'cancelled' && (
                                         <a href={ev.meetingUrl || ev.streamUrl} target="_blank" rel="noopener noreferrer" style={{ ...s.primaryBtn, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-                                            <Video size={14} /> {ev.meetingProvider === 'googleMeet' ? 'Join Google Meet' : 'Join Event'}
+                                            <Video size={14} /> Join Event
                                         </a>
                                     )}
                                     {ev.eventType !== 'Physical' && (ev.meetingUrl || ev.streamUrl) && (
