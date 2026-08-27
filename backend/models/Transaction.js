@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const TransactionSchema = new mongoose.Schema({
     studentRef: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     courseRef: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
+    eventRef: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', default: null },
     amount: { type: Number, required: true },
     currency: { type: String, default: 'ETB' },
     status: { type: String, enum: ['Pending','Completed','Failed','Cancelled','Refunded'], default: 'Pending' },

@@ -1,10 +1,21 @@
 const Event = require('../models/Event');
 const EventRegistration = require('../models/EventRegistration');
+const Transaction = require('../models/Transaction');
 const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
 const { validateEvent } = require('../utils/eventValidation');
 const { broadcastEventNotification } = require('./notificationController');
 const { resolveMeetingUrl, isValidMeetingUrl, generateMeetingUrl, missingEnvMessage, normalizeProvider, mergeMeetingInfo, deleteProviderResource, validateInvitees } = require('../services/meetingService');
+const chapa = require('../services/chapaService');
+
+// Parse numeric price from event.price string (e.g. "500 ETB" → 500, "FREE" → 0)
+const parseEventPrice = (event) => {
+    if (!event || !event.price) return 0;
+    const raw = String(event.price).trim().toUpperCase();
+    if (raw === 'FREE' || raw === '0' || raw === '0.00') return 0;
+    const num = parseFloat(raw.replace(/[^0-9.]/g, ''));
+    return Number.isFinite(num) && num > 0 ? num : 0;
+};
 
 const EVENT_CATEGORIES = [
     'Masterclass',
@@ -624,28 +635,68 @@ exports.registerForEvent = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Full name and phone number are required.' });
         }
 
-        // Prevent double registration for logged-in users via the registeredUsers array
-        if (req.user && req.user.id && event.registeredUsers.some((id) => String(id) === String(req.user.id))) {
-            return res.status(400).json({ success: false, message: 'You have already registered for this event.' });
+        // Parse event price — if > 0, initiate Chapa payment before confirming
+        const eventPrice = parseEventPrice(event);
+        const isPaid = eventPrice > 0;
+
+        // ── Reuse an existing registration if one already exists ──────────
+        let registration = null;
+        if (req.user && req.user.id) {
+            registration = await EventRegistration.findOne({
+                eventRef: event._id,
+                userId: req.user.id,
+                status: { $ne: 'cancelled' }
+            });
+        }
+        if (!registration) {
+            registration = await EventRegistration.findOne({
+                eventRef: event._id,
+                phone,
+                selectedSlot: selectedSlot || '',
+                status: { $ne: 'cancelled' }
+            });
         }
 
-        const registered = await EventRegistration.countDocuments({ eventRef: event._id, status: { $ne: 'cancelled' } });
-        if (registered >= event.totalSlots) {
-            return res.status(400).json({ success: false, message: 'This event is fully booked.' });
-        }
+        if (registration) {
+            if (registration.status === 'confirmed') {
+                return res.status(400).json({
+                    success: false,
+                    alreadyRegistered: true,
+                    message: 'You have already registered for this event slot.',
+                    data: { bookingRef: registration.bookingRef, status: 'confirmed' }
+                });
+            }
+            // waitlisted (payment pending) → refresh contact details and resume payment
+            registration.fullName = fullName || registration.fullName;
+            registration.phone = phone || registration.phone;
+            registration.email = email || registration.email;
+            registration.city = city || registration.city;
+            registration.selectedDate = selectedDate || registration.selectedDate;
+            registration.selectedSlot = selectedSlot || registration.selectedSlot;
+        } else {
+            const registered = await EventRegistration.countDocuments({ eventRef: event._id, status: { $ne: 'cancelled' } });
+            if (registered >= event.totalSlots) {
+                return res.status(400).json({ success: false, message: 'This event is fully booked.' });
+            }
 
-        const bookingRef = `EMR-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-        const registration = await EventRegistration.create({
-            eventRef: event._id,
-            userId: req.user ? req.user.id : null,
-            fullName,
-            phone,
-            email: email || '',
-            city: city || '',
-            selectedDate: selectedDate || '',
-            selectedSlot: selectedSlot || '',
-            bookingRef
-        });
+            const bookingRef = `EMR-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+            registration = await EventRegistration.create({
+                eventRef: event._id,
+                userId: req.user ? req.user.id : null,
+                fullName,
+                phone,
+                email: email || '',
+                city: city || '',
+                selectedDate: selectedDate || '',
+                selectedSlot: selectedSlot || '',
+                bookingRef,
+                paymentStatus: isPaid ? 'pending' : 'none',
+                amountPaid: isPaid ? eventPrice : 0,
+                currency: isPaid ? (event.currency || 'ETB') : '',
+                status: isPaid ? 'waitlisted' : 'confirmed'
+            });
+        }
 
         // Track authenticated registrants on the event for seat/dedup purposes
         if (req.user && req.user.id && !event.registeredUsers.some((id) => String(id) === String(req.user.id))) {
@@ -653,19 +704,185 @@ exports.registerForEvent = async (req, res) => {
             await event.save();
         }
 
-        res.status(201).json({
-            success: true,
-            message: 'Registration confirmed.',
-            data: {
-                bookingRef,
-                event: serializePublic(event.toObject(), registered + 1)
+        // ── Free event: return confirmation immediately ──────────────────
+        if (!isPaid || eventPrice <= 0) {
+            if (registration.status !== 'confirmed') {
+                registration.status = 'confirmed';
+                registration.paymentStatus = 'none';
+                await registration.save();
+            }
+            const updatedCount = await EventRegistration.countDocuments({ eventRef: event._id, status: { $ne: 'cancelled' } });
+            return res.status(201).json({
+                success: true,
+                message: 'Registration confirmed.',
+                data: {
+                    bookingRef: registration.bookingRef,
+                    event: serializePublic(event.toObject(), updatedCount)
+                }
+            });
+        }
+
+        // ── Safety: never reach Chapa for free/zero-amount events ─────────
+        if (eventPrice <= 0) {
+            return res.status(400).json({ success: false, message: 'Invalid event price for payment.' });
+        }
+
+        // ── Paid event: initiate Chapa payment ──────────────────────────
+        const tx_ref = `EMARE-EVT-${registration._id.toString().slice(-8)}-${Date.now()}`;
+
+        // Invalidate any older pending transactions for the same registration
+        await Transaction.updateMany(
+            { 'metadata.registrationId': registration._id, status: 'Pending', 'metadata.tx_ref': { $ne: tx_ref } },
+            { $set: { status: 'Failed', 'metadata.replacedBy': tx_ref } }
+        );
+
+        const tx = await Transaction.create({
+            studentRef: req.user ? req.user._id : null,
+            courseRef: null,
+            eventRef: event._id,
+            amount: eventPrice,
+            currency: event.currency || 'ETB',
+            provider: 'chapa',
+            status: 'Pending',
+            metadata: {
+                tx_ref,
+                eventSlug: event.slug,
+                eventTitle: event.title,
+                registrationId: registration._id,
+                bookingRef: registration.bookingRef,
+                guestName: fullName,
+                guestPhone: phone,
+                guestEmail: email || ''
             }
         });
+
+        registration.txRef = tx_ref;
+        registration.paymentStatus = 'pending';
+        await registration.save();
+
+        // Build Chapa payload
+        const frontendUrl = req.get('origin') || process.env.FRONTEND_URL || 'http://localhost:5173';
+        const backendUrl = process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`;
+        const callbackUrl = `${frontendUrl}/payment/callback?tx_ref=${tx_ref}&type=event`;
+        const webhookUrl = `${backendUrl}/api/payments/chapa/webhook`;
+
+        const eventTitle = (event.title || 'event')
+            .replace(/[^a-zA-Z0-9\s\-_\.]/g, '')
+            .slice(0, 35);
+        const sanitizedDescription = `${'Event ' + eventTitle}`.slice(0, 50);
+
+        const userEmail = email || (req.user && (req.user.accountEmail || req.user.email)) || 'payments@emareicthub.com';
+        const nameParts = (fullName || '').trim().split(' ');
+        const userFirstName = nameParts[0] || 'Guest';
+        const userLastName = nameParts.slice(1).join(' ') || 'User';
+
+        const payload = {
+            amount: eventPrice,
+            currency: event.currency || 'ETB',
+            email: userEmail,
+            customer_email: userEmail,
+            first_name: userFirstName,
+            customer_first_name: userFirstName,
+            last_name: userLastName,
+            customer_last_name: userLastName,
+            tx_ref,
+            callback_url: callbackUrl,
+            return_url: callbackUrl,
+            webhook_url: webhookUrl,
+            customization: { title: 'Emare ICT Hub', description: sanitizedDescription }
+        };
+
+        try {
+            const chapaRes = await chapa.initialize(payload);
+            const checkoutUrl = chapaRes?.data?.data?.checkout_url || chapaRes?.data?.checkout_url;
+            if (!checkoutUrl) {
+                console.error('Chapa response missing checkout_url:', JSON.stringify(chapaRes?.data));
+                return res.status(500).json({ success: false, message: 'Payment gateway did not return a checkout URL.' });
+            }
+            return res.status(201).json({
+                success: true,
+                message: 'Payment required to complete registration.',
+                data: {
+                    bookingRef,
+                    paymentUrl: checkoutUrl,
+                    tx_ref,
+                    requiresPayment: true,
+                    amount: eventPrice,
+                    currency: event.currency || 'ETB'
+                }
+            });
+        } catch (err) {
+            console.error('Chapa init error for event payment:', err.response ? err.response.data : err.message);
+            return res.status(500).json({ success: false, message: 'Payment initialization failed. Please try again.' });
+        }
     } catch (error) {
         if (error.code === 11000) {
             return res.status(400).json({ success: false, message: 'You have already registered for this slot.' });
         }
         console.error('registerForEvent error:', error);
         res.status(500).json({ success: false, message: 'Failed to register for event.' });
+    }
+};
+
+// ────────────────────────────────────────────────────────────
+//  EVENT PAYMENT VERIFICATION
+// ────────────────────────────────────────────────────────────
+
+exports.verifyEventPayment = async (req, res) => {
+    try {
+        const { tx_ref } = req.params;
+        if (!tx_ref) return res.status(400).json({ success: false, message: 'Transaction reference is required.' });
+
+        const tx = await Transaction.findOne({ 'metadata.tx_ref': tx_ref });
+        if (!tx) return res.status(404).json({ success: false, message: 'Transaction not found.' });
+
+        // Try verifying with Chapa if still pending
+        if (tx.status !== 'Completed') {
+            try {
+                const chapaRes = await chapa.verify(tx_ref);
+                const status = (chapaRes?.data?.status || chapaRes?.data?.data?.status || '').toLowerCase();
+
+                if (status === 'success' || status === 'completed') {
+                    tx.status = 'Completed';
+                    tx.providerTransactionId = chapaRes?.data?.data?.id || chapaRes?.data?.id || tx.providerTransactionId;
+                    await tx.save();
+                } else if (status === 'failed' || status === 'error') {
+                    tx.status = 'Failed';
+                    await tx.save();
+                }
+            } catch (err) {
+                console.error('Chapa verify error for event payment:', err.message);
+            }
+        }
+
+        // Update the event registration based on tx status
+        const registrationId = tx.metadata?.registrationId;
+        if (registrationId) {
+            const registration = await EventRegistration.findById(registrationId);
+            if (registration) {
+                if (tx.status === 'Completed') {
+                    registration.paymentStatus = 'completed';
+                    registration.status = 'confirmed';
+                    await registration.save();
+                } else if (tx.status === 'Failed') {
+                    registration.paymentStatus = 'failed';
+                    await registration.save();
+                }
+            }
+        }
+
+        const verified = tx.status === 'Completed';
+        return res.status(200).json({
+            success: true,
+            verified,
+            transactionStatus: tx.status.toLowerCase(),
+            bookingRef: tx.metadata?.bookingRef || null,
+            eventSlug: tx.metadata?.eventSlug || null,
+            amount: tx.amount,
+            currency: tx.currency
+        });
+    } catch (err) {
+        console.error('verifyEventPayment error:', err);
+        res.status(500).json({ success: false, message: 'Failed to verify payment.' });
     }
 };

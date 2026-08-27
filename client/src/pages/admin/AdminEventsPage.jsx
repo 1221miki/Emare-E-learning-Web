@@ -1072,7 +1072,7 @@ export default function AdminEventsPage() {
             {/* ── Inspect & Validate Drawer ─────────────────────────── */}
             {drawerOpen && inspected && (
                 <div className="fixed inset-0 z-[60]">
-                    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
+                    <div className="absolute inset-0 bg-black/20" onClick={() => setDrawerOpen(false)} />
                     <div className="absolute inset-y-0 right-0 flex w-full max-w-5xl flex-col overflow-hidden border-l border-green-600/20 bg-[#10111A] shadow-2xl">
                         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
                             <div className="flex items-center gap-3">
@@ -1223,7 +1223,7 @@ export default function AdminEventsPage() {
             {/* ── Create Event Modal ────────────────────────────── */}
             {createOpen && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
-                    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={resetCreateForm} />
+                    <div className="absolute inset-0 bg-black/20" onClick={resetCreateForm} />
                     <div className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-green-600/25 bg-[#12131A] shadow-[0_24px_80px_rgba(2,6,23,0.6)]">
                         {/* Dark header */}
                         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#12131A] px-6 py-4">
@@ -1605,7 +1605,7 @@ export default function AdminEventsPage() {
             {editOpen && editTarget && (
 
                 <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
-                    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setEditOpen(false)} />
+                    <div className="absolute inset-0 bg-black/20" onClick={() => setEditOpen(false)} />
                     <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-green-600/25 bg-[#12131A] p-6 shadow-[0_0_60px_rgba(22,163,74,0.18)] sm:p-8">
                         <div className="flex items-center justify-between">
                             <h2 className="text-lg font-black">Edit Event Details</h2>

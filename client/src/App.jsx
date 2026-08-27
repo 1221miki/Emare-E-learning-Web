@@ -148,7 +148,7 @@ function AppRoutes() {
                 <Route path="/student/discussions/:courseId" element={<PrivateRoute allowedRoles={['Student']}><DiscussionPage /></PrivateRoute>} />
                 <Route path="/student/assignments/:courseId" element={<PrivateRoute allowedRoles={['Student']}><AssignmentPage /></PrivateRoute>} />
                 <Route path="/checkout/:courseId"            element={<PrivateRoute allowedRoles={['Student']}><Checkout /></PrivateRoute>} />
-                <Route path="/mock-checkout/:txRef"          element={<PrivateRoute allowedRoles={['Student']}><MockCheckoutPage /></PrivateRoute>} />
+                <Route path="/mock-checkout/:txRef"          element={<MockCheckoutPage />} />
                 <Route path="/payment/callback"              element={<PaymentCallbackPage />} />
                 <Route path="/payment/success"               element={<PaymentSuccess />} />
                 <Route path="/payment/failed"                element={<PaymentFailed />} />

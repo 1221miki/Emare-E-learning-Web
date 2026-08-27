@@ -4,6 +4,7 @@ const {
     getPublishedEvents,
     getPublishedEvent,
     registerForEvent,
+    verifyEventPayment,
     getAdminEvents,
     validateStatusAdminEvent,
     getEventCategories
@@ -15,6 +16,9 @@ router.get('/published', getPublishedEvents);
 
 // POST /api/events/register/:id — register a user (guest or logged-in) for an event
 router.post('/register/:id', optionalProtect, registerForEvent);
+
+// GET /api/events/verify-payment/:tx_ref — verify event payment (public, called by callback page)
+router.get('/verify-payment/:tx_ref', verifyEventPayment);
 
 // ── Admin sub-resource (mounts under /api/events/admin) ───────────────────
 // GET  /api/events/admin/all        — view all events regardless of status

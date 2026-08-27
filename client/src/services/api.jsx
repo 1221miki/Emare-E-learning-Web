@@ -484,7 +484,8 @@ export const eventService = {
 export const publicEventService = {
     getAll: () => API.get('/events/published'),
     getBySlug: (slug) => API.get(`/events/${slug}`),
-    register: (slug, data) => API.post(`/events/register/${slug}`, data)
+    register: (slug, data) => API.post(`/events/register/${slug}`, data),
+    verifyPayment: (txRef) => API.get(`/events/verify-payment/${txRef}`)
 };
 
 // ── Newsletter API (Visitor) ────────────────────────────────

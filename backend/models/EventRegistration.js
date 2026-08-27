@@ -37,7 +37,15 @@ const EventRegistrationSchema = new mongoose.Schema({
         enum: ['confirmed', 'waitlisted', 'cancelled'],
         default: 'confirmed'
     },
-    bookingRef: { type: String, trim: true }
+    bookingRef: { type: String, trim: true },
+    paymentStatus: {
+        type: String,
+        enum: ['none', 'pending', 'completed', 'failed'],
+        default: 'none'
+    },
+    amountPaid: { type: Number, default: 0 },
+    currency: { type: String, trim: true, default: '' },
+    txRef: { type: String, trim: true, default: '' }
 }, {
     timestamps: true
 });

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { paymentService } from '../../services/api';
+import { paymentService, publicEventService } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function PaymentCallbackPage() {
@@ -8,16 +8,18 @@ export default function PaymentCallbackPage() {
     const navigate = useNavigate();
     const { colors, theme } = useTheme();
     const txRef = searchParams.get('tx_ref') || searchParams.get('trx_ref') || '';
+    const paymentType = searchParams.get('type') || 'course';
 
     const [status, setStatus] = useState('verifying'); // 'verifying' | 'success' | 'failed'
     const [errorMsg, setErrorMsg] = useState('');
     const [progress, setProgress] = useState(0);
     const [enrolledCourseId, setEnrolledCourseId] = useState(null);
+    const [eventInfo, setEventInfo] = useState(null);
 
     useEffect(() => {
         if (!txRef) {
             setStatus('failed');
-            setErrorMsg('No transaction reference found. Please try enrolling again.');
+            setErrorMsg('No transaction reference found. Please try again.');
             return;
         }
 
@@ -31,20 +33,41 @@ export default function PaymentCallbackPage() {
 
         const verifyPayment = async () => {
             try {
-                const res = await paymentService.verifyChapa(txRef);
+                let verified = false;
+                let statusKey = '';
+                let payload = null;
+
+                if (paymentType === 'event') {
+                    // Event payment verification
+                    const res = await publicEventService.verifyPayment(txRef);
+                    payload = res.data;
+                    verified = payload?.verified === true;
+                    statusKey = payload?.transactionStatus || '';
+                    setEventInfo({
+                        bookingRef: payload?.bookingRef || '',
+                        eventSlug: payload?.eventSlug || '',
+                        amount: payload?.amount || 0,
+                        currency: payload?.currency || 'ETB'
+                    });
+                } else {
+                    // Course payment verification (existing flow)
+                    const res = await paymentService.verifyChapa(txRef);
+                    payload = res.data;
+                    verified = payload?.verified === true;
+                    statusKey = payload?.transactionStatus || '';
+                    setEnrolledCourseId(payload?.courseId || null);
+                }
+
                 clearInterval(progressInterval);
                 setProgress(100);
 
-                const verified = res.data?.verified === true;
-                const statusKey = res.data?.transactionStatus || '';
-
                 if (verified) {
                     setStatus('success');
-                    const cId = res.data.courseId;
-                    setEnrolledCourseId(cId);
                     setTimeout(() => {
-                        if (cId) {
-                            navigate(`/payment/success?courseId=${cId}&tx_ref=${encodeURIComponent(txRef)}`);
+                        if (paymentType === 'event' && payload?.eventSlug) {
+                            navigate(`/events/${payload.eventSlug}?paid=1&booking=${encodeURIComponent(payload?.bookingRef || '')}&tx_ref=${encodeURIComponent(txRef)}`);
+                        } else if (enrolledCourseId) {
+                            navigate(`/payment/success?courseId=${enrolledCourseId}&tx_ref=${encodeURIComponent(txRef)}`);
                         } else {
                             navigate(`/payment/success?tx_ref=${encodeURIComponent(txRef)}`);
                         }
@@ -53,7 +76,7 @@ export default function PaymentCallbackPage() {
                 }
 
                 setStatus('failed');
-                const failureMessage = res.data?.success === false && statusKey === 'failed'
+                const failureMessage = payload?.success === false && statusKey === 'failed'
                     ? 'Payment was declined or failed. Please try again or contact support.'
                     : statusKey === 'pending'
                         ? 'Payment is still pending verification. Please wait a moment and try again.'
@@ -76,12 +99,14 @@ export default function PaymentCallbackPage() {
         // Small delay to let the animation show
         const timer = setTimeout(verifyPayment, 1500);
         return () => { clearTimeout(timer); clearInterval(progressInterval); };
-    }, [txRef, navigate]);
+    }, [txRef, paymentType, enrolledCourseId, navigate]);
 
     const cardBg = theme === 'dark' ? 'rgba(30, 41, 59, 0.85)' : 'rgba(255, 255, 255, 0.95)';
     const textMuted = theme === 'dark' ? '#94a3b8' : '#64748b';
     const successGreen = '#10b981';
     const errorRed = '#ef4444';
+
+    const title = paymentType === 'event' ? 'Event Booking Payment' : 'Course Enrollment';
 
     return (
         <div style={{
@@ -175,7 +200,7 @@ export default function PaymentCallbackPage() {
                             color: textMuted, fontSize: '15px',
                             marginBottom: '32px', lineHeight: 1.6
                         }}>
-                            We're confirming your transaction with Chapa. Please don't close this page.
+                            We're confirming your {title} with Chapa. Please don't close this page.
                         </p>
 
                         {/* Progress bar */}
@@ -246,13 +271,15 @@ export default function PaymentCallbackPage() {
                             color: successGreen, fontSize: '15px',
                             marginBottom: '8px', fontWeight: '600'
                         }}>
-                            You have been enrolled successfully 
+                            {paymentType === 'event' ? 'Your event seat has been confirmed' : 'You have been enrolled successfully'}
                         </p>
                         <p style={{
                             color: textMuted, fontSize: '14px',
                             marginBottom: '32px', lineHeight: 1.6
                         }}>
-                            Redirecting you to your course in a few seconds...
+                            {paymentType === 'event'
+                                ? 'Redirecting you to your event booking in a few seconds...'
+                                : 'Redirecting you to your course in a few seconds...'}
                         </p>
 
                         {/* Success info card */}
@@ -268,6 +295,12 @@ export default function PaymentCallbackPage() {
                                 <span style={{ color: textMuted, fontSize: '13px', fontWeight: '600' }}>Status</span>
                                 <span style={{ color: successGreen, fontWeight: '700', fontSize: '13px' }}> Completed</span>
                             </div>
+                            {paymentType === 'event' && eventInfo?.bookingRef && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                    <span style={{ color: textMuted, fontSize: '13px', fontWeight: '600' }}>Booking Ref</span>
+                                    <span style={{ fontFamily: 'monospace', fontSize: '12px', fontWeight: '700', color: colors.text }}>{eventInfo.bookingRef}</span>
+                                </div>
+                            )}
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <span style={{ color: textMuted, fontSize: '13px', fontWeight: '600' }}>Reference</span>
                                 <span style={{ fontFamily: 'monospace', fontSize: '12px', fontWeight: '700', color: colors.text }}>{txRef}</span>
@@ -276,8 +309,13 @@ export default function PaymentCallbackPage() {
 
                         <button
                             onClick={() => {
-                                if (enrolledCourseId) navigate(`/student/learn/${enrolledCourseId}`);
-                                else navigate('/student/dashboard');
+                                if (paymentType === 'event' && eventInfo?.eventSlug) {
+                                    navigate(`/events/${eventInfo.eventSlug}?paid=1&booking=${encodeURIComponent(eventInfo?.bookingRef || '')}&tx_ref=${encodeURIComponent(txRef)}`);
+                                } else if (enrolledCourseId) {
+                                    navigate(`/student/learn/${enrolledCourseId}`);
+                                } else {
+                                    navigate('/student/dashboard');
+                                }
                             }}
                             style={{
                                 width: '100%',
@@ -293,7 +331,7 @@ export default function PaymentCallbackPage() {
                                 transition: 'all 0.2s'
                             }}
                         >
-                            ◈ Start Learning
+                            {paymentType === 'event' ? 'View My Event Booking' : '◈ Start Learning'}
                         </button>
                     </div>
                 )}
@@ -365,7 +403,7 @@ export default function PaymentCallbackPage() {
                                 ↻ Try Verification Again
                             </button>
                             <button
-                                onClick={() => navigate('/courses')}
+                                onClick={() => navigate(paymentType === 'event' ? '/events' : '/courses')}
                                 style={{
                                     background: 'transparent',
                                     color: textMuted,
@@ -378,7 +416,7 @@ export default function PaymentCallbackPage() {
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                Back to Courses
+                                {paymentType === 'event' ? 'Back to Events' : 'Back to Courses'}
                             </button>
                         </div>
                     </div>

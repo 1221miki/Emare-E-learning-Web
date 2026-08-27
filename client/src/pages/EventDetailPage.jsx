@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
     AlertTriangle,
     ArrowLeft,
@@ -28,6 +29,14 @@ import { getLiveStatus, LIVE_STATUS_META } from '../utils/eventStatus';
 
 const TIME_SLOTS = ['15:00', '17:00', '19:00'];
 
+const isPaidEvent = (price) => {
+    if (!price) return false;
+    const raw = String(price).trim().toUpperCase();
+    if (!raw || raw === 'FREE' || raw === '0' || raw === '0.00') return false;
+    const num = parseFloat(raw.replace(/[^0-9.]/g, ''));
+    return Number.isFinite(num) && num > 0;
+};
+
 const toISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 const padCount = (n) => String(n).padStart(2, '0');
@@ -55,6 +64,9 @@ function useCountdown(target) {
 
 export default function EventDetailPage() {
     const { eventId } = useParams();
+    const [searchParams] = useSearchParams();
+    const paidSuccess = searchParams.get('paid') === '1';
+    const paidBookingRef = searchParams.get('booking') || '';
     const [apiEvent, setApiEvent] = useState(null);
     const [apiEvents, setApiEvents] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -108,6 +120,47 @@ export default function EventDetailPage() {
     const [submitting, setSubmitting] = useState(false);
     const [bookingRef, setBookingRef] = useState(() => `EMR-${Math.random().toString(36).slice(2, 8).toUpperCase()}`);
 
+    const { isAuthenticated, user } = useAuth();
+    const navigate = useNavigate();
+
+    // Pre-fill form with user data when authenticated
+    useEffect(() => {
+        if (user) {
+            setForm(prev => ({
+                ...prev,
+                name: prev.name || user.fullName || user.name || '',
+                email: prev.email || user.accountEmail || user.email || '',
+                phone: prev.phone || user.phone || '',
+                city: prev.city || user.city || ''
+            }));
+        }
+    }, [user]);
+
+    // Save form to localStorage before login redirect
+    useEffect(() => {
+        if (form.name || form.phone || form.email || form.city) {
+            localStorage.setItem('event_registration_form', JSON.stringify(form));
+        }
+    }, [form]);
+
+    // Restore form from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem('event_registration_form');
+        if (saved) {
+            try {
+                setForm(JSON.parse(saved));
+            } catch {}
+        }
+    }, []);
+
+    // Show paid confirmation when returning from the payment gateway
+    useEffect(() => {
+        if (paidSuccess && apiEvent) {
+            if (paidBookingRef) setBookingRef(paidBookingRef);
+            setModal({ view: 'success' });
+        }
+    }, [paidSuccess, apiEvent, paidBookingRef]);
+
     const copyMeetingLink = async () => {
         if (!joinUrl) return;
         try {
@@ -121,7 +174,25 @@ export default function EventDetailPage() {
     const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
     const closeModal = () => setModal(null);
 
+    const isEventPaid = isPaidEvent(event?.price);
+
+    const validatePhone = (phone) => {
+        const cleaned = phone.replace(/\D/g, '');
+        return /^0[79]\d{8}$/.test(cleaned);
+    };
+
     const handleConfirm = async () => {
+        if (!validatePhone(form.phone)) {
+            setModal({ view: 'success', warning: true, message: 'Invalid phone number. Must start with 09 or 07 and be exactly 10 digits (numbers only).' });
+            return;
+        }
+        // Require authentication for paid events
+        if (isEventPaid && !isAuthenticated) {
+            const currentPath = window.location.pathname + window.location.search;
+            navigate(`/login?redirect=${encodeURIComponent(currentPath)}`);
+            return;
+        }
+
         setSubmitting(true);
         try {
             const res = await publicEventService.register(event.id, {
@@ -132,14 +203,31 @@ export default function EventDetailPage() {
                 selectedDate: `${selectedDate.year}-${padCount(selectedDate.month + 1)}-${padCount(selectedDate.day)}`,
                 selectedSlot,
             });
-            if (res.data?.data?.bookingRef) setBookingRef(res.data.data.bookingRef);
+            const payload = res.data?.data;
+            if (payload?.requiresPayment && payload?.paymentUrl) {
+                // Redirect to Chapa checkout to complete payment
+                window.location.href = payload.paymentUrl;
+                return;
+            }
+            if (payload?.bookingRef) setBookingRef(payload.bookingRef);
             setModal({ view: 'success' });
         } catch (err) {
-            // Backend unreachable → still confirm locally; API errors (fully booked / duplicate) are surfaced as a warning.
-            if (!err.response) {
+            const apiError = err.response?.data;
+            // Check if this is a free event that shouldn't have payment
+            const isFreeEvent = !isEventPaid;
+            if (apiError?.alreadyRegistered) {
+                // User already has a confirmed booking for this event
+                if (apiError.data?.bookingRef) setBookingRef(apiError.data.bookingRef);
+                setModal({ view: 'success', alreadyRegistered: true, message: apiError.message || 'You have already registered for this event.' });
+            } else if (!err.response) {
+                // Network error - show error, not success
+                setModal({ view: 'success', warning: true, message: 'Network error. Please check your connection and try again.' });
+            } else if (isFreeEvent && apiError?.message?.includes('Payment initialization')) {
+                // Free event should never reach payment - fallback to success
+                if (apiError.data?.bookingRef) setBookingRef(apiError.data.bookingRef);
                 setModal({ view: 'success' });
             } else {
-                setModal({ view: 'success', warning: true, message: err.response?.data?.message || 'Registration could not be saved.' });
+                setModal({ view: 'success', warning: true, message: apiError?.message || 'Registration could not be saved.' });
             }
         } finally {
             setSubmitting(false);
@@ -259,7 +347,7 @@ export default function EventDetailPage() {
                                     onClick={scrollToSecureSpot}
                                     className="inline-flex w-fit items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black shadow-[0_0_30px_rgba(74,222,128,0.45)] transition hover:shadow-[0_0_45px_rgba(74,222,128,0.6)]"
                                 >
-                                    Register Now <ArrowRight className="h-4 w-4" />
+                                    {isEventPaid ? `Pay ${event.price} & Register` : 'Register Now'} <ArrowRight className="h-4 w-4" />
                                 </button>
                             )}
                             <div className="w-full sm:w-52">
@@ -387,7 +475,7 @@ export default function EventDetailPage() {
                                     onClick={scrollToSecureSpot}
                                     className="mt-6 w-full rounded-xl bg-gradient-to-r from-green-500 to-green-600 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110"
                                 >
-                                    Register Now
+                                    {isEventPaid ? `Pay ${event.price} & Register` : 'Register Now'}
                                 </button>
                             )}
                         </div>
@@ -449,7 +537,9 @@ export default function EventDetailPage() {
                     </div>
                     <h2 className="text-center text-2xl font-extrabold text-white sm:text-3xl">Reserve your place today</h2>
                     <p className="mx-auto mt-2 max-w-xl text-center text-sm text-[#9CA3AF]">
-                        Select your preferred date and complete the registration. Seats are limited and filling up fast.
+                        {isEventPaid
+                            ? `Select your preferred date and complete payment of ${event.price}. Seats are limited and filling up fast.`
+                            : 'Select your preferred date and complete the registration. Seats are limited and filling up fast.'}
                     </p>
 
                     {isCancelled || isCompleted ? (
@@ -511,11 +601,16 @@ export default function EventDetailPage() {
                                     <label className="mb-1.5 block text-xs font-semibold text-gray-400">Phone Number</label>
                                     <input
                                         value={form.phone}
-                                        onChange={setField('phone')}
+                                        onChange={(e) => {
+                                            const cleaned = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                            setForm(prev => ({ ...prev, phone: cleaned }));
+                                        }}
                                         required
-                                        placeholder="+251 9XX XXX XXX"
+                                        placeholder="09XX XXX XXX"
+                                        maxLength={10}
                                         className="w-full rounded-xl border border-green-600/20 bg-[#1A1B23] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
                                     />
+                                    <p className="mt-1 text-xs text-gray-500">Must start with 09 or 07, exactly 10 digits</p>
                                 </div>
                                 <div>
                                     <label className="mb-1.5 block text-xs font-semibold text-gray-400">Email Address</label>
@@ -544,8 +639,8 @@ export default function EventDetailPage() {
                                     disabled={submitting}
                                     className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 py-4 text-sm font-extrabold uppercase tracking-wide text-black shadow-[0_0_30px_rgba(74,222,128,0.4)] transition hover:shadow-[0_0_45px_rgba(74,222,128,0.6)] disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2"
                                 >
-                                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Continue to Confirmation'}
-                                    {!submitting && <ArrowRight className="h-4 w-4" />}
+                                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : isEventPaid ? `Pay ${event.price} & Confirm` : 'Continue to Confirmation'}
+                                    {!submitting && isEventPaid ? <ShieldCheck className="h-4 w-4" /> : !submitting && <ArrowRight className="h-4 w-4" />}
                                 </button>
                             </form>
 
@@ -585,18 +680,34 @@ export default function EventDetailPage() {
                             </>
                         ) : (
                             <>
-                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/15 shadow-[0_0_35px_rgba(74,222,128,0.4)]">
-                            <CheckCircle2 className="h-8 w-8 text-green-500" />
-                        </div>
-                        <h3 className="mt-5 text-center text-2xl font-extrabold text-white">You're in! 🎉</h3>
-                        <p className="mt-2 text-center text-sm text-[#9CA3AF]">
-                            Your booking for <span className="font-bold text-white">{event.title}</span> is confirmed.
-                        </p>
-                        {modal.warning && (
-                            <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-green-500/40 bg-green-500/10 p-4 text-sm text-green-200">
-                                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                                <span>{modal.message || 'The platform could not confirm your registration right now — please contact us to finalize your spot.'}</span>
-                            </div>
+                        {modal.warning ? (
+                            <>
+                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/15 shadow-[0_0_35px_rgba(245,158,11,0.4)]">
+                                    <AlertTriangle className="h-8 w-8 text-amber-500" />
+                                </div>
+                                <h3 className="mt-5 text-center text-2xl font-extrabold text-white">Registration Issue</h3>
+                                <p className="mt-2 text-center text-sm text-[#9CA3AF]">
+                                    {modal.message || 'The platform could not confirm your registration right now — please contact us to finalize your spot.'}
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/15 shadow-[0_0_35px_rgba(74,222,128,0.4)]">
+                                    <CheckCircle2 className="h-8 w-8 text-green-500" />
+                                </div>
+                                <h3 className="mt-5 text-center text-2xl font-extrabold text-white">{modal.alreadyRegistered ? 'Already Registered ✓' : "You're in! 🎉"}</h3>
+                                <p className="mt-2 text-center text-sm text-[#9CA3AF]">
+                                    {modal.alreadyRegistered
+                                        ? `Your existing booking for ${event.title} is confirmed. No additional payment is needed.`
+                                        : `Your booking for ${event.title} is confirmed.`}
+                                </p>
+                                {modal.alreadyRegistered && (
+                                    <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-green-500/40 bg-green-500/10 p-4 text-sm text-green-200">
+                                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                                        <span>{modal.message}</span>
+                                    </div>
+                                )}
+                            </>
                         )}
                         <div className="mt-6 space-y-3 rounded-2xl border border-white/5 bg-[#1A1B23] p-5 text-sm">
                             <div className="flex items-center justify-between">
@@ -619,6 +730,14 @@ export default function EventDetailPage() {
                                 <span className="text-gray-400">Phone</span>
                                 <span className="font-semibold text-white">{form.phone || '—'}</span>
                             </div>
+                            {joinUrl && (
+                                <div className="mt-1 flex items-center justify-between gap-3 border-t border-white/5 pt-3">
+                                    <span className="flex items-center gap-1.5 text-gray-400"><Video className="h-3.5 w-3.5 text-green-500" /> Meeting Link</span>
+                                    <a href={joinUrl} target="_blank" rel="noopener noreferrer" className="max-w-[55%] truncate font-semibold text-green-300 underline decoration-green-500/40 underline-offset-2 hover:text-green-200">
+                                        {joinUrl}
+                                    </a>
+                                </div>
+                            )}
                         </div>
                         <p className="mt-4 text-center text-xs text-gray-500">
                             A confirmation SMS &amp; email have been sent to your contact details.

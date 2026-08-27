@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { paymentService } from '../../services/api';
+import { paymentService, publicEventService } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function MockCheckoutPage() {
@@ -17,15 +17,30 @@ export default function MockCheckoutPage() {
         try {
             const res = await paymentService.verifyChapa(txRef);
             if (res.data?.verified) {
-                setStatus('success');
                 const courseId = res.data.courseId;
-                setTimeout(() => {
-                    if (courseId) {
+                if (courseId) {
+                    setStatus('success');
+                    setTimeout(() => {
                         navigate(`/payment/success?courseId=${courseId}&tx_ref=${encodeURIComponent(txRef)}`);
+                    }, 1800);
+                } else {
+                    // Event payment — fetch booking details then send user to the event page
+                    const evRes = await publicEventService.verifyPayment(txRef);
+                    if (evRes.data?.verified) {
+                        setStatus('success');
+                        const { eventSlug, bookingRef } = evRes.data;
+                        setTimeout(() => {
+                            if (eventSlug) {
+                                navigate(`/events/${eventSlug}?paid=1&booking=${encodeURIComponent(bookingRef || '')}&tx_ref=${encodeURIComponent(txRef)}`);
+                            } else {
+                                navigate('/events');
+                            }
+                        }, 1800);
                     } else {
-                        navigate('/student/dashboard');
+                        setErrorMsg('Event payment could not be verified.');
+                        setStatus('failed');
                     }
-                }, 2200);
+                }
             } else {
                 setErrorMsg('Verification failed or returned unsuccessful.');
                 setStatus('failed');

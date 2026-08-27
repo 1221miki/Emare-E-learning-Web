@@ -5,6 +5,7 @@ const Transaction = require('../models/Transaction');
 const Payment = require('../models/Payment');
 const Coupon = require('../models/Coupon');
 const Enrollment = require('../models/Enrollment');
+const EventRegistration = require('../models/EventRegistration');
 const Course = require('../models/Course');
 const User = require('../models/User');
 const emailService = require('../services/emailService');
@@ -257,18 +258,21 @@ exports.chapaWebhook = async (req, res) => {
             tx.providerTransactionId = data.id || (data.transaction && data.transaction.id) || tx.providerTransactionId;
             await tx.save();
 
-            await Payment.findOneAndUpdate(
-                { tx_ref },
-                {
-                    $set: {
-                        status: 'Completed',
-                        providerTransactionId: tx.providerTransactionId,
-                        currency: tx.currency,
-                        paymentMethod: tx.provider
-                    }
-                },
-                { upsert: true, new: true }
-            );
+            // Payment records only exist for course transactions (model is course-only).
+            if (tx.courseRef) {
+                await Payment.findOneAndUpdate(
+                    { tx_ref },
+                    {
+                        $set: {
+                            status: 'Completed',
+                            providerTransactionId: tx.providerTransactionId,
+                            currency: tx.currency,
+                            paymentMethod: tx.provider
+                        }
+                    },
+                    { upsert: true, new: true }
+                );
+            }
 
             // Record coupon usage atomically if a coupon was attached to the tx
             try {
@@ -280,11 +284,22 @@ exports.chapaWebhook = async (req, res) => {
             }
 
             // Idempotent enrollment creation or update
-            await Enrollment.findOneAndUpdate(
-                { studentRef: tx.studentRef, courseRef: tx.courseRef },
-                { $set: { tuitionClearanceFlag: true, paymentStatus: 'Cleared', paymentAmount: tx.amount }, $setOnInsert: { enrollmentTimestamp: new Date() } },
-                { upsert: true, new: true }
-            );
+            if (tx.eventRef) {
+                // ── Event registration payment ────────────────────────────
+                const registrationId = tx.metadata?.registrationId;
+                if (registrationId) {
+                    await EventRegistration.findByIdAndUpdate(registrationId, {
+                        $set: { paymentStatus: 'completed', status: 'confirmed', amountPaid: tx.amount, currency: tx.currency }
+                    });
+                }
+            } else if (tx.courseRef) {
+                // ── Course enrollment payment ─────────────────────────────
+                await Enrollment.findOneAndUpdate(
+                    { studentRef: tx.studentRef, courseRef: tx.courseRef },
+                    { $set: { tuitionClearanceFlag: true, paymentStatus: 'Cleared', paymentAmount: tx.amount }, $setOnInsert: { enrollmentTimestamp: new Date() } },
+                    { upsert: true, new: true }
+                );
+            }
 
             // Send confirmation email asynchronously
             try {
@@ -299,10 +314,14 @@ exports.chapaWebhook = async (req, res) => {
         } else if (status === 'failed' || status === 'error') {
             tx.status = 'Failed';
             await tx.save();
-            await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Failed', providerTransactionId: tx.providerTransactionId } });
+            if (tx.courseRef) await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Failed', providerTransactionId: tx.providerTransactionId } });
+            // Mark event registration payment as failed
+            if (tx.eventRef && tx.metadata?.registrationId) {
+                await EventRegistration.findByIdAndUpdate(tx.metadata.registrationId, { $set: { paymentStatus: 'failed' } });
+            }
         } else {
             await tx.save();
-            await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Pending' } });
+            if (tx.courseRef) await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Pending' } });
         }
 
         res.json({ success: true });
@@ -329,23 +348,25 @@ exports.verifyChapa = async (req, res) => {
                 console.warn('Chapa verification amount mismatch', { expected: tx.amount, received: providerAmount, tx_ref });
                 tx.status = 'Failed';
                 await tx.save();
-                await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Failed' } });
+                if (tx.courseRef) await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Failed' } });
                 return res.status(400).json({ success: false, verified: false, transactionStatus: 'failed', message: 'Payment verification amount mismatch' });
             }
 
             tx.status = 'Completed';
             await tx.save();
-            await Payment.findOneAndUpdate(
-                { tx_ref },
-                {
-                    $set: {
-                        status: 'Completed',
-                        providerTransactionId: tx.providerTransactionId || chapaRes.data?.data?.id || chapaRes.data?.id,
-                        paymentMethod: tx.provider || 'chapa'
-                    }
-                },
-                { upsert: true, new: true }
-            );
+            if (tx.courseRef) {
+                await Payment.findOneAndUpdate(
+                    { tx_ref },
+                    {
+                        $set: {
+                            status: 'Completed',
+                            providerTransactionId: tx.providerTransactionId || chapaRes.data?.data?.id || chapaRes.data?.id,
+                            paymentMethod: tx.provider || 'chapa'
+                        }
+                    },
+                    { upsert: true, new: true }
+                );
+            }
 
                 // Record coupon usage now that we have a verified, completed transaction
                 try {
@@ -356,37 +377,49 @@ exports.verifyChapa = async (req, res) => {
                     console.error('Failed to record coupon usage from verify:', err);
                 }
 
-            await Enrollment.findOneAndUpdate(
-                { studentRef: tx.studentRef, courseRef: tx.courseRef },
-                {
-                    $set: {
-                        tuitionClearanceFlag: true,
-                        paymentStatus: 'Cleared',
-                        paymentAmount: tx.amount,
-                        paymentReference: tx_ref,
-                        paymentMethod: tx.provider || 'chapa'
+            if (tx.eventRef) {
+                // ── Event registration payment ────────────────────────────
+                const registrationId = tx.metadata?.registrationId;
+                if (registrationId) {
+                    await EventRegistration.findByIdAndUpdate(registrationId, {
+                        $set: { paymentStatus: 'completed', status: 'confirmed', amountPaid: tx.amount, currency: tx.currency }
+                    });
+                }
+            } else if (tx.courseRef) {
+                // ── Course enrollment payment ─────────────────────────────
+                await Enrollment.findOneAndUpdate(
+                    { studentRef: tx.studentRef, courseRef: tx.courseRef },
+                    {
+                        $set: {
+                            tuitionClearanceFlag: true,
+                            paymentStatus: 'Cleared',
+                            paymentAmount: tx.amount,
+                            paymentReference: tx_ref,
+                            paymentMethod: tx.provider || 'chapa'
+                        },
+                        $setOnInsert: { enrollmentTimestamp: new Date() }
                     },
-                    $setOnInsert: { enrollmentTimestamp: new Date() }
-                },
-                { upsert: true, new: true }
-            );
+                    { upsert: true, new: true }
+                );
+            }
 
             try {
                 const user = await User.findById(tx.studentRef);
-                const course = await Course.findById(tx.courseRef);
-                if (user && course && emailService.sendCourseEnrollmentEmail) {
-                    emailService.sendCourseEnrollmentEmail(user, course, tx_ref);
+                if (tx.courseRef) {
+                    const course = await Course.findById(tx.courseRef);
+                    if (user && course && emailService.sendCourseEnrollmentEmail) {
+                        emailService.sendCourseEnrollmentEmail(user, course, tx_ref);
+                    }
                 }
-                // Audit: successful enrollment after Chapa verify
-                if (user && course) {
-                    audit.enrollment({ action: 'CHAPA_PAYMENT_VERIFIED', severity: 'info',
-                        user,
-                        description: `Student user (${user.accountEmail}) enrolled in course '${course.courseTitle}' after successful Chapa payment (${tx_ref}).`,
-                        targetType: 'Course', targetId: tx.courseRef, targetLabel: course.courseTitle,
-                        metadata: { tx_ref, amount: tx.amount, currency: tx.currency } });
-                }
+                // Audit: successful payment
+                const targetLabel = tx.eventRef ? (tx.metadata?.eventTitle || 'Event') : (course?.courseTitle || 'Course');
+                audit.enrollment({ action: 'CHAPA_PAYMENT_VERIFIED', severity: 'info',
+                    user,
+                    description: `Payment verified for ${tx.eventRef ? 'event' : 'course'} '${targetLabel}' (${tx_ref}).`,
+                    targetType: tx.eventRef ? 'Event' : 'Course', targetId: tx.eventRef || tx.courseRef, targetLabel,
+                    metadata: { tx_ref, amount: tx.amount, currency: tx.currency } });
             } catch (err) {
-                console.error('Failed to send enrollment email from verify:', err);
+                console.error('Failed to send email from verify:', err);
             }
 
             return res.json({ success: true, verified: true, transactionStatus: normalizedStatus, courseId: tx.courseRef, raw: chapaRes.data });
@@ -395,14 +428,17 @@ exports.verifyChapa = async (req, res) => {
         if (normalizedStatus === 'failed' || normalizedStatus === 'error') {
             tx.status = 'Failed';
             await tx.save();
-            await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Failed' } });
+            if (tx.courseRef) await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Failed' } });
+            if (tx.eventRef && tx.metadata?.registrationId) {
+                await EventRegistration.findByIdAndUpdate(tx.metadata.registrationId, { $set: { paymentStatus: 'failed' } });
+            }
             return res.json({ success: false, verified: false, transactionStatus: normalizedStatus, courseId: tx.courseRef, raw: chapaRes.data });
         }
 
         // Pending or unknown status
         tx.status = 'Pending';
         await tx.save();
-        await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Pending' } }, { upsert: true, new: true });
+        if (tx.courseRef) await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Pending' } }, { upsert: true, new: true });
         return res.json({ success: true, verified: false, transactionStatus: normalizedStatus || 'pending', courseId: tx.courseRef, raw: chapaRes.data });
     } catch (err) {
         console.error(err);

@@ -3576,7 +3576,7 @@ const resetCalendarForm = () => {
                 {/* -"?-"?-"? CONTENT REVIEW DRAWER -"?-"?-"? */}
                 {isReviewDrawerOpen && reviewItem && (
                     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex' }}>
-                        <div style={{ flex: 1, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(3px)' }} onClick={() => setIsReviewDrawerOpen(false)} />
+                        <div style={{ flex: 1, background: 'rgba(15,23,42,0.2)' }} onClick={() => setIsReviewDrawerOpen(false)} />
                         <div style={{ width: '540px', maxWidth: '95vw', background: colors.bgCard, overflowY: 'auto', boxShadow: '-8px 0 48px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', animation: 'slideInRight 0.3s ease' }}>
                             {/* Drawer Header */}
                             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: colors.bg }}>
@@ -4169,7 +4169,7 @@ const resetCalendarForm = () => {
                 {/* -?-?-?-?-?-?-?-?-?-?-? CREATE ASSESSMENT MODAL -?-?-?-?-?-?-?-?-?-?-? */}
                 {isCreateAsmOpen && (
                     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(3px)' }} onClick={() => setIsCreateAsmOpen(false)} />
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.2)' }} onClick={() => setIsCreateAsmOpen(false)} />
                         <div style={{ position: 'relative', width: '580px', maxWidth: '95vw', maxHeight: '90vh', background: colors.bgCard, borderRadius: '20px', boxShadow: '0 24px 80px rgba(0,0,0,0.2)', overflow: 'auto', animation: 'fadeIn 0.2s ease' }}>
                             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: colors.bg, borderRadius: '20px 20px 0 0' }}>
                                 <div>
@@ -4643,7 +4643,7 @@ const resetCalendarForm = () => {
                 {/* -?-?-?-?-?-?-?-?-?-?-? GENERATE REPORT MODAL -?-?-?-?-?-?-?-?-?-?-? */}
                 {isGenReportOpen && (
                     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(3px)' }} onClick={() => setIsGenReportOpen(false)} />
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.2)' }} onClick={() => setIsGenReportOpen(false)} />
                         <div style={{ position: 'relative', width: '600px', maxWidth: '95vw', maxHeight: '90vh', background: colors.bgCard, borderRadius: '20px', boxShadow: '0 24px 80px rgba(0,0,0,0.2)', overflow: 'auto', animation: 'fadeIn 0.2s ease' }}>
                             {/* Modal Header */}
                             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: colors.bg, borderRadius: '20px 20px 0 0' }}>
