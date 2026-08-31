@@ -41,7 +41,7 @@ function renderTab(overrides = {}) {
         currentLessonTitle: 'Lesson 1',
         currentProgress: 0,
         quizAverage: 0,
-        upcomingAssignmentsCount: 0,
+        pendingAssignmentsCount: 0,
         badges: [],
         styles,
         ...overrides,
@@ -50,28 +50,25 @@ function renderTab(overrides = {}) {
 }
 
 describe('OverviewTab', () => {
-    it('shows an honest empty state when there are no upcoming deadlines', () => {
+    it('shows a schedule empty state when there are no live sessions', () => {
         renderTab();
-        expect(screen.getByText("No upcoming deadlines. You're all caught up!")).toBeInTheDocument();
+        expect(screen.getByText('No upcoming live classes or events scheduled.')).toBeInTheDocument();
     });
 
-    it('only shows real future-dated assignment deadlines', () => {
-        const future = new Date(Date.now() + 3 * 86400 * 1000).toISOString();
-        const past = new Date(Date.now() - 86400 * 1000).toISOString();
+    it('shows live sessions in the schedule', () => {
+        const start = new Date(Date.now() + 3 * 86400 * 1000).toISOString();
         renderTab({
-            assignmentsList: [
-                { _id: 'a1', title: 'Future Homework', dueDate: future },
-                { _id: 'a2', title: 'Old Homework', dueDate: past },
+            liveSessions: [
+                { _id: 'live1', title: 'Live Class: Intro to React', startTime: start },
             ],
         });
-        expect(screen.getByText('Future Homework')).toBeInTheDocument();
-        expect(screen.queryByText('Old Homework')).not.toBeInTheDocument();
+        expect(screen.getByText('Live Class: Intro to React')).toBeInTheDocument();
     });
 
     it('shows the four KPI stat cards in a compact row', () => {
-        renderTab({ activeCourses: [{ _id: 'e1' }], upcomingAssignmentsCount: 3, quizAverage: 78, xpPoints: 420 });
+        renderTab({ activeCourses: [{ _id: 'e1' }], pendingAssignmentsCount: 3, quizAverage: 78, xpPoints: 420 });
         expect(screen.getByText('In Progress Courses')).toBeInTheDocument();
-        expect(screen.getByText('Assignments Due')).toBeInTheDocument();
+        expect(screen.getByText('Pending Assignments')).toBeInTheDocument();
         expect(screen.getByText('Quiz Average')).toBeInTheDocument();
         expect(screen.getByText('XP Earned')).toBeInTheDocument();
     });

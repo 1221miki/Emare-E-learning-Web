@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { courseService, enrollmentService } from '../../services/api';
+import { courseService, enrollmentService, assignmentService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import Navbar from '../../components/Navbar';
@@ -14,6 +14,7 @@ export default function CourseDetails() {
     const [course, setCourse] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isEnrolled, setIsEnrolled] = useState(false);
+    const [assignments, setAssignments] = useState([]);
 
     useEffect(() => {
         const load = async () => {
@@ -28,6 +29,15 @@ export default function CourseDetails() {
                         return eId === courseId && (e.paymentStatus === 'Cleared' || e.tuitionClearanceFlag);
                     });
                     setIsEnrolled(enrolled);
+                    if (enrolled) {
+                        try {
+                            const assignRes = await assignmentService.getByCourse(courseId);
+                            setAssignments(assignRes.data?.data || []);
+                        } catch (err) {
+                            console.error('[CourseDetails] load assignments failed:', err);
+                            setAssignments([]);
+                        }
+                    }
                 }
             } catch (err) {
                 console.error(err);
@@ -98,12 +108,58 @@ export default function CourseDetails() {
                                 {isEnrolled ? 'Already Enrolled - Start Learning' : course.price === 0 ? 'Enroll for Free' : 'Enroll Now'}
                             </button>
                         </div>
-                    </div>
-                    <div style={{ width: '360px', background: colors.bgCard, borderRadius: '24px', border: `1px solid ${colors.border}`, padding: '28px' }}>
+                        {assignments.length > 0 && (
+                        <div style={{ marginTop: '28px' }}>
+                            <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '14px' }}>Assignments</h3>
+                            <div style={{ display: 'grid', gap: '12px' }}>
+                                {assignments.map(a => {
+                                    return (
+                                        <div key={a._id} style={{
+                                            background: colors.bgCard, border: `1px solid ${colors.border}`,
+                                            borderRadius: '16px', padding: '16px 18px'
+                                        }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                                                <div style={{ fontWeight: '700', fontSize: '15px' }}>{a.title}</div>
+                                                {a.required && (
+                                                    <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: '999px', padding: '3px 10px', fontSize: '11px', fontWeight: '700', flexShrink: 0 }}>
+                                                        Required for certificate
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {a.description && <div style={{ color: colors.textMuted, fontSize: '13px', marginTop: '6px' }}>{a.description}</div>}
+                                            <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginTop: '8px', color: colors.textMuted, fontSize: '12px' }}>
+                                                <span>Pass: {a.passingScore} / {a.maxScore}</span>
+                                                <span>Submission: {a.submissionType || 'file'}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                {course.notes && course.notes.length > 0 && (
+                            <div style={{ marginTop: '28px' }}>
+                                <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '14px' }}>Course Notes</h3>
+                                <div style={{ display: 'grid', gap: '12px' }}>
+                                    {course.notes.map((n, i) => (
+                                        <div key={n._id || i} style={{
+                                            background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.35)',
+                                            borderRadius: '16px', padding: '16px 18px'
+                                        }}>
+                                            {n.title && <div style={{ fontWeight: '800', fontSize: '15px', marginBottom: '6px' }}>📝 {n.title}</div>}
+                                            <div style={{ color: colors.textMuted, fontSize: '13px', whiteSpace: 'pre-wrap' }}>{n.content}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                </div>
+                <div style={{ width: '360px', background: colors.bgCard, borderRadius: '24px', border: `1px solid ${colors.border}`, padding: '28px' }}>
                         <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '18px' }}>What you get</h3>
                         <ul style={{ listStyle: 'none', margin: 0, padding: 0, color: colors.textMuted, display: 'grid', gap: '12px' }}>
                             <li> Full course access after payment</li>
                             <li> Video lessons, quizzes and PDF downloads</li>
+                            <li> Instructor-graded assignments</li>
                             <li> Progress tracking and completion certificate</li>
                             <li> Secure checkout via Chapa</li>
                         </ul>

@@ -130,7 +130,8 @@ const getCourseById = async (req, res, next) => {
                 isAuthorized = true;
             } else if (req.user.assignedRole === 'Student') {
                 const enrollment = await Enrollment.findOne({ studentRef: req.user.id, courseRef: course._id });
-                if (enrollment && enrollment.tuitionClearanceFlag) {
+                // Free course (price === 0) → always authorized; otherwise requires clearance
+                if (((course.price || 0) === 0) || (enrollment && enrollment.tuitionClearanceFlag)) {
                     isAuthorized = true;
                 }
             }
@@ -165,6 +166,90 @@ const getCourseById = async (req, res, next) => {
 // @route   PUT /api/courses/:id
 // @access  Private (Instructor - must be owner)
 // ─────────────────────────────────────────────
+
+/**
+ * Enrich lesson payloads whose clientId matches the assignment's linked lesson,
+ * so the same save that creates the assignment also links it to the lesson.
+ */
+const linkAssignmentToLessons = (curriculumPayload, lessonClientId, assignmentId) => {
+    if (!lessonClientId || !assignmentId) return;
+    (curriculumPayload || []).forEach(ch => {
+        (ch.lessons || []).forEach(l => {
+            const lc = l.clientId || l._id;
+            if (lc && String(lc) === String(lessonClientId)) {
+                l.assignmentRequired = true;
+                l.linkedAssignmentId = assignmentId.toString();
+            }
+        });
+    });
+};
+
+/**
+ * Synchronize the `assignments` array sent by the course-creation wizard.
+ *
+ * Each item may carry:
+ *   clientId             — stable client id (temp) for NEW assignments
+ *   _id                  — real id for already-created assignments (→ update)
+ *   _removed             — flag to soft-delete an existing assignment
+ *   title/description/instructions/dueDate/maxScore/passingScore/
+ *   submissionType/required
+ *   linkedLessonClientId — lesson.clientId to auto-link (sets
+ *                          assignmentRequired + linkedAssignmentId on the lesson)
+ *
+ * Assignments are created/updated BEFORE the course curriculum is saved so the
+ * curriculum update can carry the real assignment ids. Removed assignments are
+ * soft-deleted (isActive:false) to keep existing submissions/grades intact.
+ *
+ * @returns {Promise<Array>}  [{ clientId, _id, deleted? }] in input order
+ */
+const syncCourseAssignments = async (courseId, instructorId, assignments, curriculumPayload) => {
+    const results = [];
+    for (const item of assignments || []) {
+        if (item._removed && item._id) {
+            await Assignment.findByIdAndUpdate(item._id, { isActive: false, published: false });
+            results.push({ clientId: item.clientId || null, _id: item._id, deleted: true });
+            continue;
+        }
+
+        const fields = {
+            title:          String(item.title || '').trim(),
+            description:    String(item.description || ''),
+            instructions:   String(item.instructions || ''),
+            maxScore:       Number(item.maxScore) || 100,
+            passingScore:   Math.max(0, Number(item.passingScore) || 0),
+            submissionType: ['file', 'text', 'both'].includes(item.submissionType) ? item.submissionType : 'both',
+            required:       !!item.required,
+            dueDate:        item.dueDate ? new Date(item.dueDate) : null,
+            published:      true,
+            isActive:       true
+        };
+        if (!fields.title) {
+            // Skip nameless draft rows silently — the client validates these too
+            results.push({ clientId: item.clientId || null, _id: item._id || null, skipped: true });
+            continue;
+        }
+
+        let assignment;
+        if (item._id) {
+            assignment = await Assignment.findByIdAndUpdate(item._id, fields, { new: true, runValidators: true });
+        } else {
+            assignment = await Assignment.create({
+                courseRef:     courseId,
+                instructorRef: instructorId,
+                createdBy:     instructorId,
+                ...fields
+            });
+        }
+
+        const id = assignment._id;
+        if (item.clientId) results.push({ clientId: item.clientId, _id: id });
+        if (item.linkedLessonClientId) {
+            linkAssignmentToLessons(curriculumPayload, item.linkedLessonClientId, id);
+        }
+    }
+    return results;
+};
+
 const updateCourse = async (req, res, next) => {
     try {
         let course = await Course.findById(req.params.id);
@@ -178,6 +263,22 @@ const updateCourse = async (req, res, next) => {
             return res.status(403).json({ success: false, message: 'You are not the owner of this course.' });
         }
 
+        // ── Assignment sync (course-creation wizard) ────────────────────────
+        // Runs BEFORE the curriculum is persisted so the same request can link
+        // fresh assignments to lessons. Skipped entirely when not provided.
+        let syncedAssignments = null;
+        const incomingAssignments = req.body.assignments;
+        if (Array.isArray(incomingAssignments)) {
+            const curriculumPayload = Array.isArray(req.body.curriculumTree) ? req.body.curriculumTree : [];
+            syncedAssignments = await syncCourseAssignments(
+                req.params.id,
+                req.user.id,
+                incomingAssignments,
+                curriculumPayload
+            );
+            delete req.body.assignments;
+        }
+
         // Normalise per-lesson requirement fields so empty strings become null
         // (Mongoose ObjectId fields must be null or a valid id, not '').
         if (req.body.curriculumTree && Array.isArray(req.body.curriculumTree)) {
@@ -185,6 +286,7 @@ const updateCourse = async (req, res, next) => {
                 ...ch,
                 lessons: (ch.lessons || []).map(l => ({
                     ...l,
+                    clientId:           l.clientId && String(l.clientId).trim() ? String(l.clientId).trim() : null,
                     linkedQuizId:       l.linkedQuizId       && String(l.linkedQuizId).trim()       ? l.linkedQuizId       : null,
                     linkedAssignmentId: l.linkedAssignmentId && String(l.linkedAssignmentId).trim() ? l.linkedAssignmentId : null,
                     quizRequired:       !!l.quizRequired,
@@ -200,7 +302,94 @@ const updateCourse = async (req, res, next) => {
 
         course = await Course.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
 
-        res.status(200).json({ success: true, data: course });
+        res.status(200).json({
+            success: true,
+            data: course,
+            assignments: syncedAssignments
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Add a course note (instructor/admin authored, shown to students)
+// @route   POST /api/courses/:id/notes
+// @access  Private (Instructor owner or Admin)
+// ─────────────────────────────────────────────
+const addCourseNote = async (req, res, next) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+        if (req.user.assignedRole !== 'Admin' && course.creatorRef.toString() !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'You are not the owner of this course.' });
+        }
+
+        const content = String(req.body.content || '').trim();
+        if (!content) return res.status(400).json({ success: false, message: 'Note content is required.' });
+
+        course.notes.push({
+            title: String(req.body.title || '').trim(),
+            content
+        });
+        await course.save();
+
+        res.status(201).json({ success: true, data: course.notes[course.notes.length - 1] });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Update a course note
+// @route   PUT /api/courses/:id/notes/:noteId
+// @access  Private (Instructor owner or Admin)
+// ─────────────────────────────────────────────
+const updateCourseNote = async (req, res, next) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+        if (req.user.assignedRole !== 'Admin' && course.creatorRef.toString() !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'You are not the owner of this course.' });
+        }
+
+        const note = course.notes.id(req.params.noteId);
+        if (!note) return res.status(404).json({ success: false, message: 'Note not found.' });
+
+        const content = String(req.body.content ?? '').trim();
+        if (!content) return res.status(400).json({ success: false, message: 'Note content is required.' });
+
+        if ('title' in req.body) note.title = String(req.body.title || '').trim();
+        note.content = content;
+        note.updatedAt = Date.now();
+        await course.save();
+
+        res.json({ success: true, data: note });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Delete a course note
+// @route   DELETE /api/courses/:id/notes/:noteId
+// @access  Private (Instructor owner or Admin)
+// ─────────────────────────────────────────────
+const deleteCourseNote = async (req, res, next) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+        if (req.user.assignedRole !== 'Admin' && course.creatorRef.toString() !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'You are not the owner of this course.' });
+        }
+
+        const note = course.notes.id(req.params.noteId);
+        if (!note) return res.status(404).json({ success: false, message: 'Note not found.' });
+
+        note.remove();
+        await course.save();
+
+        res.json({ success: true, message: 'Note deleted.' });
     } catch (err) {
         next(err);
     }
@@ -566,12 +755,14 @@ const enrollInCourse = async (req, res, next) => {
         const enrollment = await Enrollment.create({
             studentRef: req.user.id,
             courseRef: course._id,
-            tuitionClearanceFlag: false
+            tuitionClearanceFlag: (course.price || 0) === 0
         });
 
         res.status(201).json({
             success: true,
-            message: 'Enrolled successfully. Please complete payment clearance to access course materials.',
+            message: (course.price || 0) === 0
+                ? 'Enrolled successfully. This is a free course — all materials are unlocked.'
+                : 'Enrolled successfully. Please complete payment clearance to access course materials.',
             data: enrollment
         });
     } catch (err) {
@@ -604,9 +795,10 @@ const getStudentEnrollments = async (req, res, next) => {
             .populate({ path: 'courseRef', populate: { path: 'creatorRef', select: 'fullName' } })
             .lean();
 
-        // Sanitize video URLs if tuition is not cleared
+        // Sanitize video URLs if tuition is not cleared (free courses are cleared automatically)
         const sanitizedEnrollments = enrollments.map(enrollment => {
-            if (!enrollment.tuitionClearanceFlag && enrollment.courseRef && enrollment.courseRef.curriculumTree) {
+            const isFree = (enrollment.courseRef && (enrollment.courseRef.price || 0) === 0);
+            if (!enrollment.tuitionClearanceFlag && !isFree && enrollment.courseRef && enrollment.courseRef.curriculumTree) {
                 enrollment.courseRef.curriculumTree = enrollment.courseRef.curriculumTree.map(chapter => {
                     if (chapter.lessons) {
                         chapter.lessons = chapter.lessons.map(lesson => {
@@ -694,7 +886,8 @@ const streamLessonVideo = async (req, res, next) => {
             isAuthorized = true;
         } else if (req.user.assignedRole === 'Student') {
             const enrollment = await Enrollment.findOne({ studentRef: req.user.id, courseRef: course._id });
-            if (enrollment && enrollment.tuitionClearanceFlag) {
+            // Free course (price === 0) → always authorized; otherwise requires clearance
+            if (((course.price || 0) === 0) || (enrollment && enrollment.tuitionClearanceFlag)) {
                 isAuthorized = true;
             }
         }
@@ -1150,6 +1343,9 @@ module.exports = {
     getAllCourses,
     getCourseById,
     updateCourse,
+    addCourseNote,
+    updateCourseNote,
+    deleteCourseNote,
     submitCourseForReview,
     approveCourse,
     requestCourseRevision,

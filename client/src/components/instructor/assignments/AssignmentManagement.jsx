@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-    ClipboardList, Plus, BarChart3, AlertTriangle, RefreshCw,
+    ClipboardList, Plus, BarChart3, RefreshCw,
     CheckCircle, Clock, FileText, TrendingUp, Users
 } from 'lucide-react';
 import { assignmentService, courseService } from '../../../services/api';
@@ -9,7 +9,6 @@ import AssignmentList     from './AssignmentList';
 import CreateAssignment   from './CreateAssignment';
 import SubmissionReviewer from './SubmissionReviewer';
 import GradingWorkspace   from './GradingWorkspace';
-import LateSubmissions    from './LateSubmissions';
 import AssignmentAnalytics from './AssignmentAnalytics';
 
 // ── Stat card ────────────────────────────────────────────────
@@ -32,7 +31,7 @@ function StatCard({ icon, color, label, value, sub }) {
     );
 }
 
-const VIEWS = ['overview', 'create', 'submissions', 'grading', 'late', 'analytics'];
+const VIEWS = ['overview', 'create', 'submissions', 'grading', 'analytics'];
 
 export default function AssignmentManagement({ courses: propCourses = [] }) {
     const [view, setView]                 = useState('overview');
@@ -90,11 +89,6 @@ export default function AssignmentManagement({ courses: propCourses = [] }) {
     const drafts      = assignments.filter(a => !a.published).length;
     const pending     = allSubmissions.filter(s => s.status === 'Submitted').length;
     const graded      = allSubmissions.filter(s => s.status === 'Graded').length;
-    const now         = Date.now();
-    const late        = allSubmissions.filter(s => {
-        const asgn = assignments.find(a => a._id === (s.assignmentRef?._id || s.assignmentRef));
-        return asgn?.dueDate && new Date(s.createdAt) > new Date(asgn.dueDate);
-    }).length;
     const avgScore = graded > 0
         ? Math.round(allSubmissions.filter(s => s.grade != null).reduce((a, s) => a + (s.grade || 0), 0) / Math.max(graded, 1))
         : null;
@@ -104,7 +98,6 @@ export default function AssignmentManagement({ courses: propCourses = [] }) {
         { icon: <CheckCircle />,   color: C.green,  label: 'Published',            value: published,                   sub: 'Active & visible to students' },
         { icon: <Clock />,         color: C.orange, label: 'Pending Submissions',  value: pending,                     sub: 'Awaiting instructor grading' },
         { icon: <FileText />,      color: C.purple, label: 'Graded',               value: graded,                      sub: `${allSubmissions.length} total submissions` },
-        { icon: <AlertTriangle />, color: C.red,    label: 'Late Submissions',     value: late,                        sub: 'After deadline' },
         { icon: <TrendingUp />,    color: C.cyan,   label: 'Avg Score',            value: avgScore !== null ? `${avgScore}%` : '—', sub: 'Across graded work' },
     ];
 
@@ -136,7 +129,6 @@ export default function AssignmentManagement({ courses: propCourses = [] }) {
     const navItems = [
         { key: 'overview',   label: 'Overview',    icon: <BarChart3 size={14} aria-hidden="true" /> },
         { key: 'submissions',label: 'Submissions',  icon: <Users size={14} aria-hidden="true" /> },
-        { key: 'late',       label: 'Late',         icon: <AlertTriangle size={14} aria-hidden="true" /> },
         { key: 'analytics',  label: 'Analytics',   icon: <TrendingUp size={14} aria-hidden="true" /> },
     ];
 
@@ -247,15 +239,6 @@ export default function AssignmentManagement({ courses: propCourses = [] }) {
                     assignment={activeAssignment}
                     onGraded={onGraded}
                     onBack={() => setView('submissions')}
-                />
-            )}
-
-            {view === 'late' && (
-                <LateSubmissions
-                    assignments={assignments}
-                    allSubmissions={allSubmissions}
-                    onGrade={openGrading}
-                    onAssignmentSelect={setActiveAssignment}
                 />
             )}
 

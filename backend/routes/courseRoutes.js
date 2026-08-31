@@ -8,6 +8,9 @@ const {
     getAllCourses,
     getCourseById,
     updateCourse,
+    addCourseNote,
+    updateCourseNote,
+    deleteCourseNote,
     submitCourseForReview,
     approveCourse,
     requestCourseRevision,
@@ -60,6 +63,9 @@ router.get('/instructor/mine', protect, authorizeRoles('Instructor'), getInstruc
 router.get('/instructor/analytics', protect, authorizeRoles('Instructor'), getInstructorAnalytics);
 router.post('/', protect, denySuspendedActions, authorizeRoles('Instructor', 'Admin'), createCourse);
 router.put('/:id', protect, denySuspendedActions, authorizeRoles('Instructor', 'Admin'), updateCourse);
+router.post('/:id/notes', protect, denySuspendedActions, authorizeRoles('Instructor', 'Admin'), addCourseNote);
+router.put('/:id/notes/:noteId', protect, denySuspendedActions, authorizeRoles('Instructor', 'Admin'), updateCourseNote);
+router.delete('/:id/notes/:noteId', protect, denySuspendedActions, authorizeRoles('Instructor', 'Admin'), deleteCourseNote);
 router.post('/:id/thumbnail', protect, denySuspendedActions, authorizeRoles('Instructor', 'Admin'), upload.single('thumbnail'), uploadCourseThumbnail);
 router.delete('/:id', protect, denySuspendedActions, authorizeRoles('Instructor', 'Admin'), deleteCourse);
 router.patch('/:id/submit', protect, denySuspendedActions, authorizeRoles('Instructor', 'Admin'), submitCourseForReview);

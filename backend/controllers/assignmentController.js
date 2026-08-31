@@ -5,8 +5,40 @@ const AssessmentAiBlock = require('../models/AssessmentAiBlock');
 const streamifier = require('streamifier');
 const cloudinary = require('../config/cloudinary');
 const { createNotification } = require('./notificationController');
+const { getAssignmentAccess, getSequenceForStudent } = require('../services/sequenceService');
 
 const getUserId = (req) => req.user?._id || req.user?.id;
+
+// Annotate the student-facing assignment list with its sequential unlock state
+// so the UI can grey out (but never truly forbid) locked assignments. The real
+// enforcement happens server-side on submit/grade.
+const annotateSequence = async (courseId, studentRef, assignments) => {
+    if (!courseId || assignments.length === 0) return assignments;
+    try {
+        const seq = await getSequenceForStudent(courseId, studentRef);
+        return assignments.map((a) => {
+            const obj = a.toObject ? a.toObject() : a;
+            const entry = seq.byAssignmentId.get(String(obj._id));
+            if (entry) {
+                obj.lessonTitle = entry.title;
+                obj.quizRequired = entry.quizRequired;
+                obj.quizPassed = entry.quizStatus.passed;
+                obj.sequenceLocked = !entry.unlocked;
+                obj.sequenceLockReason = entry.unlocked ? null : (entry.lockReason || null);
+            } else {
+                obj.lessonTitle = null;
+                obj.quizRequired = false;
+                obj.quizPassed = true;
+                obj.sequenceLocked = false;
+                obj.sequenceLockReason = null;
+            }
+            obj.sequenceStatus = entry ? entry.assignmentStatus : null;
+            return obj;
+        });
+    } catch (err) {
+        return assignments;
+    }
+};
 
 exports.createAssignment = async (req, res) => {
     try {
@@ -40,6 +72,24 @@ exports.getAssignment = async (req, res) => {
     try {
         const assignment = await Assignment.findById(req.params.id).populate('courseRef createdBy');
         if (!assignment) return res.status(404).json({ success: false, message: 'Assignment not found' });
+
+        if (req.user.assignedRole === 'Student') {
+            const access = await getAssignmentAccess(getUserId(req), assignment);
+            if (!access.granted) {
+                return res.status(403).json({
+                    success: false,
+                    message: access.reason,
+                    lessonLocked: true,
+                    lockReason: access.reason
+                });
+            }
+            const obj = assignment.toObject();
+            obj.lessonTitle = access.lesson;
+            obj.quizRequired = obj.lessonTitle ? true : false;
+            obj.quizPassed = access.quizPassed;
+            return res.json({ success: true, data: obj });
+        }
+
         res.json({ success: true, data: assignment });
     } catch (err) {
         console.error(err);
@@ -49,11 +99,38 @@ exports.getAssignment = async (req, res) => {
 
 exports.getAssignmentsByCourse = async (req, res) => {
     try {
-        const assignments = await Assignment.find({ courseRef: req.params.courseId }).sort({ dueDate: 1 });
-        res.json({ success: true, data: assignments });
+        const assignments = await Assignment.find({ courseRef: req.params.courseId, isActive: true }).sort({ dueDate: 1 });
+        const data = req.user.assignedRole === 'Student'
+            ? await annotateSequence(req.params.courseId, getUserId(req), assignments)
+            : assignments;
+        res.json({ success: true, data });
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false, message: 'Failed to list assignments' });
+    }
+};
+
+// @route   DELETE /api/assignments/:id
+// @desc    Soft-delete an assignment (keeps student submissions/grades intact)
+// @access  Private (Instructor owner or Admin)
+exports.deleteAssignment = async (req, res) => {
+    try {
+        const assignment = await Assignment.findById(req.params.id);
+        if (!assignment) return res.status(404).json({ success: false, message: 'Assignment not found' });
+
+        const isOwner = String(assignment.createdBy || assignment.instructorRef) === String(getUserId(req));
+        if (!isOwner && req.user.assignedRole !== 'Admin') {
+            return res.status(403).json({ success: false, message: 'You are not authorized to delete this assignment' });
+        }
+
+        assignment.isActive = false;
+        assignment.published = false;
+        await assignment.save();
+
+        res.json({ success: true, data: assignment });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Failed to delete assignment' });
     }
 };
 
@@ -105,9 +182,24 @@ exports.submitAssignment = async (req, res) => {
         const assignment = await Assignment.findById(assignmentId);
         if (!assignment) return res.status(404).json({ success: false, message: 'Assignment not found' });
 
-        if (new Date() > new Date(assignment.dueDate)) {
-            return res.status(400).json({ success: false, message: 'Assignment submission deadline has passed' });
+        // ── SEQUENTIAL GATE ─────────────────────────────────────────────
+        // Lesson-linked assignments may only be submitted once their lesson is
+        // unlocked and, when a lesson quiz is required, that quiz is passed.
+        if (req.user.assignedRole === 'Student') {
+            const access = await getAssignmentAccess(getUserId(req), assignment);
+            if (!access.granted) {
+                return res.status(403).json({
+                    success: false,
+                    message: access.reason,
+                    lessonLocked: true,
+                    lockReason: access.reason
+                });
+            }
         }
+
+        // No assignment submission deadline: students complete assignments at
+        // their own pace once they reach the lesson. Sequential progression is
+        // the only gate, enforced above.
 
         const previous = await Submission.findOne({ assignmentRef: assignmentId, studentRef: getUserId(req) }).sort({ version: -1 });
         const version = previous ? previous.version + 1 : 1;
@@ -149,6 +241,22 @@ exports.submitAssignmentMultipart = async (req, res) => {
     try {
         const assignmentId = req.params.id;
         const message = req.body.message || '';
+
+        const assignment = await Assignment.findById(assignmentId);
+        if (!assignment) return res.status(404).json({ success: false, message: 'Assignment not found' });
+
+        // ── SEQUENTIAL GATE — enforced BEFORE any file upload happens ────
+        if (req.user.assignedRole === 'Student') {
+            const access = await getAssignmentAccess(getUserId(req), assignment);
+            if (!access.granted) {
+                return res.status(403).json({
+                    success: false,
+                    message: access.reason,
+                    lessonLocked: true,
+                    lockReason: access.reason
+                });
+            }
+        }
 
         if (!req.files || req.files.length === 0) return res.status(400).json({ success: false, message: 'No files attached' });
 
@@ -232,7 +340,10 @@ exports.gradeSubmission = async (req, res) => {
 exports.getCourseAssignments = async (req, res) => {
     try {
         const assignments = await Assignment.find({ courseRef: req.params.courseId, isActive: true }).sort('dueDate');
-        res.status(200).json({ success: true, data: assignments });
+        const data = req.user.assignedRole === 'Student'
+            ? await annotateSequence(req.params.courseId, getUserId(req), assignments)
+            : assignments;
+        res.status(200).json({ success: true, data });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }

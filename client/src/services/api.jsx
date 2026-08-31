@@ -79,6 +79,9 @@ export const courseService = {
     create: (data) => API.post('/courses', data),
     update: (id, data) => API.put(`/courses/${id}`, data),
     delete: (id) => API.delete(`/courses/${id}`),
+    addCourseNote: (id, data) => API.post(`/courses/${id}/notes`, data),
+    updateCourseNote: (id, noteId, data) => API.put(`/courses/${id}/notes/${noteId}`, data),
+    deleteCourseNote: (id, noteId) => API.delete(`/courses/${id}/notes/${noteId}`),
     submitForReview: (id) => API.patch(`/courses/${id}/submit`),
     approve: (id) => API.patch(`/courses/${id}/approve`),
     publishCourse: (id) => API.patch(`/courses/${id}/publish`),
@@ -270,6 +273,9 @@ export const certificateService = {
     getMine:          ()         => API.get('/certificates/my'),
     myCertificates:   ()         => API.get('/certificates/my'),   // alias kept for existing components
     checkEligibility: (courseId) => API.get(`/certificates/check/${courseId}`),
+    // Per-enrolled-course eligibility + completion reports (single call, drives
+    // the Certificates page completion tracker)
+    getEligibilityOverview: ()  => API.get('/certificates/eligibility'),
 
     // Download — returns blob; always same certificateId on every download
     download: (id, opts = {}) => API.get(
@@ -306,6 +312,7 @@ export const assignmentService = {
     create: (data) => API.post('/assignments', data),
     getByCourse: (courseId) => API.get(`/assignments/course/${courseId}`),
     update: (id, data) => API.put(`/assignments/${id}`, data),
+    delete: (id) => API.delete(`/assignments/${id}`),
     submit: (id, data) => API.post(`/assignments/${id}/submit`, data),
     lockAiTutor: (id) => API.post(`/assignments/${id}/ai-lock`),
     getSubmissions: (id) => API.get(`/assignments/${id}/submissions`),
@@ -344,7 +351,28 @@ export const liveSessionService = {
     reserveSeat: (id) => API.post(`/live-sessions/${id}/reserve`),
     generateLink: (data) => API.post('/live-sessions/generate-link', data),
     getIntegrationStatus: () => API.get('/live-sessions/integrations/status'),
-    deleteSession: (id) => API.delete(`/live-sessions/${id}`)
+    deleteSession: (id) => API.delete(`/live-sessions/${id}`),
+    getSession: (id) => API.get(`/live-sessions/${id}`),
+    updateSession: (id, data) => API.put(`/live-sessions/${id}`, data),
+    getInstructorSessions: () => API.get('/live-sessions/instructor/sessions'),
+    getInstructorRecordings: () => API.get('/live-sessions/instructor/recordings'),
+    getStudentUpcoming: () => API.get('/live-sessions/student/upcoming'),
+    getStudentLive: () => API.get('/live-sessions/student/live'),
+    startSession: (id) => API.post(`/live-sessions/${id}/start`),
+    endSession: (id) => API.post(`/live-sessions/${id}/end`),
+    joinSession: (id) => API.post(`/live-sessions/${id}/join`),
+    startRecording: (id) => API.post(`/live-sessions/${id}/recording/start`),
+    stopRecording: (id) => API.post(`/live-sessions/${id}/recording/stop`),
+    uploadRecording: (id, formData) => API.post(`/live-sessions/${id}/recording/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+    getSessionRecording: (id) => API.get(`/live-sessions/${id}/recording`),
+    getRecordingsByCourse: (courseId) => API.get(`/live-sessions/recordings/course/${courseId}`),
+    getStudentRecordings: () => API.get('/live-sessions/recordings/student'),
+    updateRecording: (id, data) => API.put(`/live-sessions/recordings/${id}`, data),
+    publishRecording: (id) => API.post(`/live-sessions/recordings/${id}/publish`),
+    unpublishRecording: (id) => API.post(`/live-sessions/recordings/${id}/unpublish`),
+    deleteRecording: (id) => API.delete(`/live-sessions/recordings/${id}`)
 };
 
 // ── Learning Progress & Content Tracking API Calls ────────────────────────────
@@ -355,7 +383,9 @@ export const learningProgressService = {
     getLessonRequirementsStatus: (courseId, lessonId, params) => API.get(`/learning-progress/course/${courseId}/lesson/${lessonId}/requirements`, { params }),
     saveLessonProgress: (courseId, lessonId, payload) => API.post(`/learning-progress/course/${courseId}/lesson/${lessonId}/progress`, payload),
     markDocumentViewed: (courseId, lessonId) => API.post(`/learning-progress/course/${courseId}/lesson/${lessonId}/document`, {}),
-    trackResourceDownload: (courseId, lessonId, payload) => API.post(`/learning-progress/course/${courseId}/lesson/${lessonId}/resource`, payload)
+    trackResourceDownload: (courseId, lessonId, payload) => API.post(`/learning-progress/course/${courseId}/lesson/${lessonId}/resource`, payload),
+    // Sequential unlock state for every lesson (server computed)
+    getCourseSequence: (courseId) => API.get(`/learning-progress/course/${courseId}/sequence`)
 };
 
 // ── In-Video Quiz Checkpoint API Calls ────────────────────────────────────────

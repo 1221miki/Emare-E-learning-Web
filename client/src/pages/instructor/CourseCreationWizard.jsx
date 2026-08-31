@@ -15,8 +15,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { courseService, uploadService } from '../../services/api.jsx';
 import {
-    ArrowLeft, ArrowRight, CheckCircle, FileText,
-    ImagePlus, PlayCircle, Plus, Trash2, Video
+    ArrowLeft, ArrowRight, CheckCircle, ClipboardList,
+    FileText, ImagePlus, PlayCircle, Plus, Trash2, Video
 } from 'lucide-react';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -25,6 +25,7 @@ const STEPS = [
     { title: 'Course Info',       description: 'Define the course title, category, price and overview.' },
     { title: 'Curriculum',        description: 'Build chapters and lessons for your course.' },
     { title: 'Media & Resources', description: 'Upload thumbnail, preview video and supporting assets.' },
+    { title: 'Course Notes',      description: 'Add study notes students can read during the course.' },
     { title: 'Review & Publish',  description: 'Confirm course details and submit for review.' }
 ];
 
@@ -75,6 +76,26 @@ const newChapter = (title = '') => ({
     _id: uid(),
     chapterTitle: title,
     lessons: []
+});
+
+/**
+ * Create a fresh inline assignment for the curriculum builder.
+ * clientId is stable until the assignment is synced to the backend (then _id is
+ * filled from the server response). linkedLessonClientId references the lesson's
+ * clientId (lesson._id) so the same save can link them automatically.
+ */
+const newAssignment = () => ({
+    clientId: `a_${uid()}`,
+    _id: null,
+    _removed: false,
+    title: '',
+    description: '',
+    instructions: '',
+    maxScore: 100,
+    passingScore: 0,
+    submissionType: 'both',
+    required: true,
+    linkedLessonClientId: ''
 });
 
 /** Per-chapter draft state (completely isolated per chapter ID) */
@@ -741,6 +762,84 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
     const [errorMessage, setErrorMessage]   = useState('');
     const [isSaving, setIsSaving]     = useState(false);
     const [isUploading, setIsUploading] = useState(false); // for thumbnail/preview uploads
+    const [assignments, setAssignments] = useState([]);    // inline course assignments
+
+    // ── Course Notes ────────────────────────────────────────────────────────
+    const [notes, setNotes] = useState([]);          // { __key, _id, title, content }
+    const [noteSavingKey, setNoteSavingKey] = useState(null);
+
+    const addNoteDraft = () => {
+        setErrorMessage('');
+        setNotes(prev => [...prev, { __key: `n_${uid()}`, _id: null, title: '', content: '' }]);
+    };
+
+    const updateNote = (key, patch) => {
+        setNotes(prev => prev.map(n => n.__key === key ? { ...n, ...patch } : n));
+    };
+
+    // Persist one note immediately (used by the per-note Save/Update button).
+    const persistNote = async (key) => {
+        const note = notes.find(n => n.__key === key);
+        if (!note) return;
+        if (!String(note.content || '').trim()) {
+            setErrorMessage('Note content is required.');
+            return;
+        }
+        if (!courseId) {
+            setErrorMessage('Please save the course draft first (use Next Step) before adding notes.');
+            return;
+        }
+        setNoteSavingKey(key);
+        setErrorMessage('');
+        setStatusMessage('');
+        try {
+            if (note._id) {
+                const res = await courseService.updateCourseNote(courseId, note._id, { title: note.title, content: note.content });
+                updateNote(key, { title: res.data.data.title, content: res.data.data.content });
+            } else {
+                const res = await courseService.addCourseNote(courseId, { title: note.title, content: note.content });
+                updateNote(key, { _id: res.data.data._id, title: res.data.data.title, content: res.data.data.content });
+            }
+            setStatusMessage('Note saved.');
+        } catch (err) {
+            setErrorMessage(err.response?.data?.message || 'Failed to save note.');
+        } finally {
+            setNoteSavingKey(null);
+        }
+    };
+
+    const removeNote = async (key) => {
+        const note = notes.find(n => n.__key === key);
+        if (!note) return;
+        if (note._id && courseId) {
+            try {
+                await courseService.deleteCourseNote(courseId, note._id);
+            } catch (err) {
+                setErrorMessage(err.response?.data?.message || 'Failed to delete note.');
+                return;
+            }
+        }
+        setNotes(prev => prev.filter(n => n.__key !== key));
+        setStatusMessage('Note deleted.');
+    };
+
+    // Create/update every populated note in sequence (used when leaving the
+    // Notes step or submitting, so nothing the instructor typed is lost).
+    const saveAllNotes = async (courseToUse = courseId) => {
+        if (!courseToUse) return;
+        const result = [];
+        for (const note of notes) {
+            if (!String(note.content || '').trim()) { result.push(note); continue; }
+            if (note._id) {
+                await courseService.updateCourseNote(courseToUse, note._id, { title: note.title, content: note.content });
+                result.push({ ...note });
+            } else {
+                const res = await courseService.addCourseNote(courseToUse, { title: note.title, content: note.content });
+                result.push({ ...note, _id: res.data.data._id });
+            }
+        }
+        setNotes(result);
+    };
 
     const stepStatus = useMemo(() =>
         STEPS.map((s, i) => ({ ...s, completed: i < activeStep })),
@@ -771,6 +870,83 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
         setCurriculum(prev => prev.filter(ch => ch._id !== chapterId));
     }, []);
 
+    // ── Inline assignment helpers ───────────────────────────────────────────
+
+    // Flat list of all lessons (option source for linking assignments to lessons)
+    const lessonOptions = useMemo(() => {
+        const options = [];
+        curriculum.forEach(ch => (ch.lessons || []).forEach(l => {
+            options.push({ clientId: l._id, label: `${ch.chapterTitle || 'Chapter'} — ${l.lessonTitle || 'Untitled lesson'}` });
+        }));
+        return options;
+    }, [curriculum]);
+
+    const addAssignment = () => {
+        setErrorMessage('');
+        setAssignments(prev => [...prev, newAssignment()]);
+    };
+
+    const updateAssignment = (clientId, patch) => {
+        setAssignments(prev => prev.map(a => a.clientId === clientId ? { ...a, ...patch } : a));
+        // Linking an assignment to a lesson also switches that lesson's
+        // assignment requirement ON (mirrors the backend enrichment).
+        if (patch.linkedLessonClientId) {
+            setCurriculum(prev => prev.map(ch => ({
+                ...ch,
+                lessons: (ch.lessons || []).map(l =>
+                    l._id === patch.linkedLessonClientId ? { ...l, assignmentRequired: true } : l
+                )
+            })));
+        }
+    };
+
+    // Unlink any lesson pointing at this assignment (by real id or clientId)
+    const unlinkLessonsFromAssignment = (ref) => {
+        const refStr = String(ref);
+        setCurriculum(prev => prev.map(ch => ({
+            ...ch,
+            lessons: (ch.lessons || []).map(l =>
+                l.linkedAssignmentId && String(l.linkedAssignmentId) === refStr
+                    ? { ...l, assignmentRequired: false, linkedAssignmentId: '' }
+                    : l
+            )
+        })));
+    };
+
+    const removeAssignment = (clientId) => {
+        const a = assignments.find(x => x.clientId === clientId);
+        if (!a) return;
+        if (a._id) {
+            // Already created on the backend — mark for soft-delete on next save
+            setAssignments(prev => prev.map(x => x.clientId === clientId ? { ...x, _removed: true } : x));
+            unlinkLessonsFromAssignment(a._id);
+        } else {
+            // Never synced — drop the draft row entirely
+            setAssignments(prev => prev.filter(x => x.clientId !== clientId));
+            unlinkLessonsFromAssignment(clientId);
+        }
+    };
+
+    // Merge backend-synced assignment _ids into state so re-saves update instead
+    // of duplicating, and so lessons linked by clientId resolve to real ids.
+    const applySyncResults = (results) => {
+        const idByClient = {};
+        (Array.isArray(results) ? results : []).forEach(r => {
+            if (r.clientId && r._id) idByClient[r.clientId] = String(r._id);
+        });
+        if (Object.keys(idByClient).length === 0) return;
+        setAssignments(prev => prev.map(a =>
+            idByClient[a.clientId] ? { ...a, _id: idByClient[a.clientId], _removed: false } : a
+        ));
+        setCurriculum(prev => prev.map(ch => ({
+            ...ch,
+            lessons: (ch.lessons || []).map(l => {
+                if (!l.linkedAssignmentId || !idByClient[l.linkedAssignmentId]) return l;
+                return { ...l, assignmentRequired: true, linkedAssignmentId: idByClient[l.linkedAssignmentId] };
+            })
+        })));
+    };
+
     // ── Validation ───────────────────────────────────────────────────────────
 
     const validateStep = () => {
@@ -792,6 +968,16 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
                     if (!l.videoUrl.trim())
                         return `Lesson "${l.lessonTitle || 'Untitled'}" needs a video.`;
                 }
+            }
+            for (const a of assignments) {
+                if (!a._removed && !String(a.title || '').trim())
+                    return 'All assignments need a title (or remove the untitled assignment).';
+            }
+        }
+        if (activeStep === 3) {
+            for (const n of notes) {
+                if (!String(n.content || '').trim())
+                    return 'Every course note needs content (or delete the empty note).';
             }
         }
         return '';
@@ -816,6 +1002,7 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
         curriculumTree: curriculum.map(ch => ({
             chapterTitle: ch.chapterTitle.trim(),
             lessons: (ch.lessons || []).map(l => ({
+                clientId:           l._id,                            // stable handle for lesson↔assignment linking
                 lessonTitle:        l.lessonTitle.trim(),
                 videoUrl:           l.videoUrl.trim(),
                 notesPdfUrl:        l.notesPdfUrl   ? l.notesPdfUrl.trim()   : '',
@@ -829,6 +1016,21 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
                 // In-video quiz checkpoints embedded in the lesson video timeline
                 quizCheckpoints:    Array.isArray(l.quizCheckpoints) ? l.quizCheckpoints : []
             }))
+        })),
+        // Inline assignments — created/updated/deleted via course update sync.
+        // New rows carry clientId (no _id yet); existing rows carry _id.
+        assignments: assignments.map(a => ({
+            clientId: a.clientId,
+            _id: a._id || undefined,              // undefined → backend creates it
+            _removed: !!a._removed,
+            title: (a.title || '').trim(),
+            description: (a.description || '').trim(),
+            instructions: (a.instructions || '').trim(),
+            maxScore: Number(a.maxScore) || 100,
+            passingScore: Math.max(0, Number(a.passingScore) || 0),
+            submissionType: a.submissionType || 'both',
+            required: !!a.required,
+            linkedLessonClientId: a.linkedLessonClientId || null
         }))
     });
 
@@ -855,7 +1057,9 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
         try {
             let id = courseId;
             if (!id) id = await createDraftCourse();
-            await courseService.update(id, buildUpdatePayload());
+            if (notes.some(n => String(n.content || '').trim())) await saveAllNotes(id);
+            const res = await courseService.update(id, buildUpdatePayload());
+            applySyncResults(res.data?.assignments);
             setStatusMessage('Draft saved successfully.');
             return id;
         } catch (err) {
@@ -877,8 +1081,12 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
             finally { setIsSaving(false); }
         }
         if (activeStep > 0) {
-            try { await saveCourseDraft(); }
-            catch { return; }
+            try {
+                if (activeStep === 3 && notes.some(n => String(n.content || '').trim())) {
+                    await saveAllNotes();
+                }
+                await saveCourseDraft();
+            } catch { return; }
         }
         setActiveStep(p => Math.min(p + 1, STEPS.length - 1));
     };
@@ -898,7 +1106,9 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
         try {
             let id = courseId;
             if (!id) id = await createDraftCourse();
-            await courseService.update(id, buildUpdatePayload());
+            if (notes.some(n => String(n.content || '').trim())) await saveAllNotes(id);
+            const res = await courseService.update(id, buildUpdatePayload());
+            applySyncResults(res.data?.assignments);
 
             if (adminMode) {
                 // Admin path: publish the course directly without review
@@ -1061,6 +1271,94 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
                                 />
                             ))
                         )}
+
+                        {/* ── Inline course assignments ── */}
+                        <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 20, marginTop: 8 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
+                                <div>
+                                    <h3 style={{ ...styles.sectionTitle, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <ClipboardList size={18} /> Course Assignments
+                                    </h3>
+                                    <p style={styles.sectionSubtitle}>
+                                        Add assignments students must submit. Link one to a lesson to make it a required step before that lesson can be marked complete.
+                                    </p>
+                                </div>
+                                <button type="button" onClick={addAssignment} style={styles.secondaryBtn}>
+                                    <Plus size={15} /> Add Assignment
+                                </button>
+                            </div>
+
+                            {assignments.length === 0 ? (
+                                <div style={styles.emptyBox}>
+                                    No assignments yet. Assignments are optional, but linked/required ones must be submitted and approved before a student earns the course certificate.
+                                </div>
+                            ) : (
+                                assignments.map((a, ai) => (
+                                    <div key={a.clientId} style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 14, padding: 16, marginBottom: 12, display: 'grid', gap: 12 }}>
+                                        {a._removed && (
+                                            <p style={{ margin: 0, fontSize: 12, color: '#ef4444', fontWeight: 700 }}>
+                                                This assignment will be removed when you save.
+                                            </p>
+                                        )}
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 140px', gap: 12, alignItems: 'end' }}>
+                                            <div style={styles.formGroup}>
+                                                <label style={styles.label}>Assignment {ai + 1} Title *</label>
+                                                <input style={styles.input} value={a.title} onChange={e => updateAssignment(a.clientId, { title: e.target.value })} placeholder="e.g. Build a REST API with Node.js" />
+                                            </div>
+                                            <div style={styles.formGroup}>
+                                                <label style={styles.label}>Max Score</label>
+                                                <input type="number" min="1" step="1" style={styles.input} value={a.maxScore} onChange={e => updateAssignment(a.clientId, { maxScore: e.target.value })} />
+                                            </div>
+                                            <div style={styles.formGroup}>
+                                                <label style={styles.label}>Passing Score</label>
+                                                <input type="number" min="0" step="1" style={styles.input} value={a.passingScore} onChange={e => updateAssignment(a.clientId, { passingScore: e.target.value })} title="Minimum grade to count as passed (0 = any approved submission passes)" />
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 12 }}>
+                                            <div style={styles.formGroup}>
+                                                <label style={styles.label}>Submission Type</label>
+                                                <select style={styles.input} value={a.submissionType} onChange={e => updateAssignment(a.clientId, { submissionType: e.target.value })}>
+                                                    <option value="both">File upload or text answer</option>
+                                                    <option value="file">File upload only</option>
+                                                    <option value="text">Text answer only</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div style={styles.formGroup}>
+                                            <label style={styles.label}>Description</label>
+                                            <textarea style={{ ...styles.input, minHeight: 56 }} value={a.description} onChange={e => updateAssignment(a.clientId, { description: e.target.value })} placeholder="What should students deliver?" />
+                                        </div>
+
+                                        <div style={styles.formGroup}>
+                                            <label style={styles.label}>Instructions (optional)</label>
+                                            <textarea style={{ ...styles.input, minHeight: 56 }} value={a.instructions} onChange={e => updateAssignment(a.clientId, { instructions: e.target.value })} placeholder="Step-by-step guidance for submitting." />
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'center' }}>
+                                            <div style={styles.formGroup}>
+                                                <label style={styles.label}>Link to Lesson (turns it into a required step)</label>
+                                                <select style={styles.input} value={a.linkedLessonClientId || ''} onChange={e => updateAssignment(a.clientId, { linkedLessonClientId: e.target.value })}>
+                                                    <option value="">— Not linked to a lesson —</option>
+                                                    {lessonOptions.map(o => <option key={o.clientId} value={o.clientId}>{o.label}</option>)}
+                                                </select>
+                                            </div>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#374151', fontSize: 13, cursor: 'pointer' }}>
+                                                <input type="checkbox" checked={!!a.required} onChange={e => updateAssignment(a.clientId, { required: e.target.checked })} style={{ width: 16, height: 16, accentColor: '#15803d' }} />
+                                                Required for certificate (even if not linked to a lesson)
+                                            </label>
+                                        </div>
+
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                            <button type="button" onClick={() => removeAssignment(a.clientId)} style={{ ...styles.textBtn, color: '#ef4444', fontSize: 12 }}>
+                                                <Trash2 size={13} /> Remove Assignment
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
                 );
 
@@ -1088,8 +1386,62 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
                     </div>
                 );
 
-            // ── Step 3: Review ───────────────────────────────────────────────
+            // ── Step 3: Course Notes ────────────────────────────────────────
             case 3:
+                return (
+                    <div style={styles.panel}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
+                            <div>
+                                <h3 style={{ ...styles.sectionTitle, marginBottom: 6 }}>📝 Course Notes</h3>
+                                <p style={styles.sectionSubtitle}>
+                                    Add study/reference notes for your students. Notes are shown inside the Learning Workspace
+                                    and on the course details page. You can add multiple notes.
+                                </p>
+                            </div>
+                            <button type="button" onClick={addNoteDraft} disabled={isSaving || isUploading} style={styles.secondaryBtn}>
+                                <Plus size={15} /> Add Note
+                            </button>
+                        </div>
+
+                        {notes.length === 0 ? (
+                            <div style={styles.emptyBox}>
+                                No notes yet. Add short study notes, key formulas, or reference material to help students
+                                succeed while they work through the lessons.
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                {notes.map(note => (
+                                    <div key={note.__key} style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 14, padding: 16, display: 'grid', gap: 12 }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'end' }}>
+                                            <div style={styles.formGroup}>
+                                                <label style={styles.label}>Note Title (optional)</label>
+                                                <input style={styles.input} value={note.title} onChange={e => updateNote(note.__key, { title: e.target.value })} placeholder="e.g. Key formula sheet" />
+                                            </div>
+                                            <span style={{ ...styles.badge, background: note._id ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)', color: note._id ? '#15803d' : '#b45309', whiteSpace: 'nowrap', marginBottom: 2 }}>
+                                                {note._id ? '✓ Saved' : 'Not saved yet'}
+                                            </span>
+                                        </div>
+                                        <div style={styles.formGroup}>
+                                            <label style={styles.label}>Note Content *</label>
+                                            <textarea style={{ ...styles.input, minHeight: 110 }} value={note.content} onChange={e => updateNote(note.__key, { content: e.target.value })} placeholder="Visible to students — study tips, summary points, links…" />
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                                            <button type="button" onClick={() => removeNote(note.__key)} disabled={isSaving || isUploading} style={{ ...styles.textBtn, color: '#ef4444', fontSize: 12 }}>
+                                                <Trash2 size={13} /> Delete
+                                            </button>
+                                            <button type="button" onClick={() => persistNote(note.__key)} disabled={isSaving || isUploading || noteSavingKey === note.__key} style={styles.primaryBtn}>
+                                                {noteSavingKey === note.__key ? 'Saving…' : (note._id ? 'Update Note' : 'Save Note')}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                );
+
+            // ── Step 4: Review ───────────────────────────────────────────────
+            case 4:
                 return (
                     <div style={styles.reviewGrid}>
                         <div style={styles.panelCard}>
@@ -1103,7 +1455,8 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
                                 ['Duration', `${form.estimatedDurationHours} hour(s)`],
                                 ['Price',    form.price > 0 ? `${form.price} ETB` : 'Free'],
                                 ['Thumbnail', form.thumbnailUrl ? '✓ Uploaded' : '✗ Not uploaded'],
-                                ['Preview Video', form.previewVideoUrl ? '✓ Provided' : 'Not provided']
+                                ['Preview Video', form.previewVideoUrl ? '✓ Provided' : 'Not provided'],
+                                ['Notes',    notes.filter(n => n._id).length > 0 ? `${notes.filter(n => n._id).length} saved note${notes.filter(n => n._id).length !== 1 ? 's' : ''}` : 'None']
                             ].map(([k, v]) => (
                                 <div key={k} style={styles.summaryRow}><strong>{k}</strong><span>{v}</span></div>
                             ))}
@@ -1130,6 +1483,25 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
                                                 </span>
                                             </div>
                                         ))}
+                                    </div>
+                                ))
+                            }
+                        </div>
+                        <div style={styles.panelCard}>
+                            <h3 style={styles.sectionTitle}>Assignments ({assignments.filter(a => !a._removed).length})</h3>
+                            {assignments.filter(a => !a._removed).length === 0
+                                ? <p style={styles.emptyText}>No assignments.</p>
+                                : assignments.filter(a => !a._removed).map((a, i) => (
+                                    <div key={a.clientId} style={styles.summaryRow}>
+                                        <div>
+                                            <strong>{a.title || `Assignment ${i + 1}`}</strong>
+                                            {a.linkedLessonClientId && (
+                                                <div style={{ fontSize: 11, color: '#64748b' }}>
+                                                    ▶ Required before completing: {(lessonOptions.find(o => o.clientId === a.linkedLessonClientId) || {}).label || 'a lesson'}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <span style={styles.badge}>{a.maxScore} pts{a.required ? ' • Required' : ''}</span>
                                     </div>
                                 ))
                             }

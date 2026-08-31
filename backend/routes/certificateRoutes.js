@@ -30,6 +30,7 @@ router.get('/verify-page/:certificateId', c.verifyPage);
 router.get('/my',               protect, c.getMyCertificates);
 router.get('/mine',             protect, c.getMyCertificates);
 router.get('/check/:courseId',  protect, c.checkEligibility);
+router.get('/eligibility',      protect, c.getEligibilityOverview);
 router.post('/issue/:courseId', protect, c.issueCertificate);
 router.post('/generate',        protect, c.generateCertificate);
 router.get('/:id/download',     protect, c.downloadCertificate);

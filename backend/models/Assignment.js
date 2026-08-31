@@ -58,6 +58,29 @@ const AssignmentSchema = new mongoose.Schema({
         required: true,
         default: 100
     },
+    // passingScore: the minimum grade required for the assignment to count as
+    // passed/approved for course completion and certificate eligibility.
+    // 0 = any graded submission counts as passed (default).
+    passingScore: {
+        type: Number,
+        default: 0,
+        min: 0,
+        description: 'Minimum grade (%) required to consider the assignment passed'
+    },
+    // submissionType: how students are expected to submit.
+    // 'file' — upload a file, 'text' — write a text answer, 'both' — either/both.
+    submissionType: {
+        type: String,
+        enum: ['file', 'text', 'both'],
+        default: 'both'
+    },
+    // required: when true this assignment counts toward course completion and
+    // certificate eligibility even if it is not linked to a specific lesson.
+    required: {
+        type: Boolean,
+        default: false,
+        description: 'Required for course completion / certificate eligibility'
+    },
     allowedFileTypes: {
         type: [String],
         default: ['pdf', 'zip', 'doc', 'docx', 'png', 'jpg']

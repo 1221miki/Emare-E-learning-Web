@@ -18,8 +18,6 @@ export default function AssignmentBuilder() {
         title: '',
         description: '',
         instructions: '',
-        dueDate: '',
-        dueTime: '23:59',
         maxScore: 100,
         aiTutorEnabled: true,
         attachment: null,
@@ -53,15 +51,12 @@ export default function AssignmentBuilder() {
         if (!form.title.trim()) return setMsg('Provide a title');
         setSubmitting(true); setMsg('');
         try {
-            const dueAt = form.dueDate ? new Date(`${form.dueDate}T${form.dueTime || '23:59'}:00`) : null;
             const payload = {
                 courseRef: form.courseRef,
                 title: form.title,
                 description: form.description,
                 instructions: form.instructions,
-                dueDate: dueAt,
                 maxScore: Number(form.maxScore),
-                allowLate: false,
                 aiTutorEnabled: form.aiTutorEnabled !== false,
                 published: false
             };
@@ -90,7 +85,7 @@ export default function AssignmentBuilder() {
         <div style={{ padding: 28 }}>
             <div style={{ maxWidth: 920, margin: '0 auto' }}>
                 <h2 style={{ color: colors.text, marginBottom: 6 }}>Add Assignment</h2>
-                <p style={{ color: colors.textMuted, marginTop: 0 }}>Create an assignment with optional PDF/Word/Video attachment. Late submissions are not accepted.</p>
+                <p style={{ color: colors.textMuted, marginTop: 0 }}>Create an assignment with optional PDF/Word/Video attachment. Students complete it at their own pace when they reach the lesson.</p>
                 <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 12, marginTop: 20 }}>
                     <div>
                         <label style={{ color: colors.textMuted, fontSize: 13 }}>Course</label>
@@ -102,13 +97,6 @@ export default function AssignmentBuilder() {
                     <div>
                         <label style={{ color: colors.textMuted, fontSize: 13 }}>Title</label>
                         <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: 8, background: colors.bgInput, color: colors.text }} required />
-                    </div>
-                    <div>
-                        <label style={{ color: colors.textMuted, fontSize: 13 }}>Due Date</label>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            <input type="date" value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} style={{ padding: '8px', borderRadius: 8, background: colors.bgInput, color: colors.text }} />
-                            <input type="time" value={form.dueTime} onChange={e => setForm({ ...form, dueTime: e.target.value })} style={{ padding: '8px', borderRadius: 8, background: colors.bgInput, color: colors.text }} />
-                        </div>
                     </div>
                     <div>
                         <label style={{ color: colors.textMuted, fontSize: 13 }}>Description</label>

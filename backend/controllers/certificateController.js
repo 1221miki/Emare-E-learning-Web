@@ -17,6 +17,7 @@ const Enrollment          = require('../models/Enrollment');
 const User                = require('../models/User');
 const Course              = require('../models/Course');
 const { generateCertificatePdf, generateCertificateId } = require('../services/certificateService');
+const { buildCompletionReport } = require('../services/completionService');
 const { createNotification } = require('./notificationController');
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -56,16 +57,20 @@ const reqBaseUrl = (req) =>
 exports.checkEligibility = async (req, res) => {
     try {
         const { courseId } = req.params;
-        const enrollment = await Enrollment.findOne({
-            studentRef: req.user._id,
-            courseRef:  courseId
-        });
+        const [enrollment, course] = await Promise.all([
+            Enrollment.findOne({ studentRef: req.user._id, courseRef: courseId }),
+            Course.findById(courseId).lean()
+        ]);
         if (!enrollment) {
             return res.status(404).json({ success: false, message: 'Enrollment not found.' });
         }
+        if (!course) {
+            return res.status(404).json({ success: false, message: 'Course not found.' });
+        }
 
-        const pct      = enrollment.completionPercentage || 0;
-        const eligible = enrollment.tuitionClearanceFlag && pct >= 90;
+        // Full eligibility report — backend is the source of truth for what the
+        // student still needs to do (lessons, quizzes, assignments, payment).
+        const report = await buildCompletionReport({ studentRef: req.user._id, course, enrollment });
 
         // Check if certificate already issued
         const existing = await Certificate.findOne({
@@ -76,14 +81,68 @@ exports.checkEligibility = async (req, res) => {
         res.json({
             success: true,
             data: {
-                eligible,
-                completionPercentage: pct,
+                eligible: report.eligible,
+                completionPercentage: report.completionPercentage,
                 alreadyIssued: !!existing,
-                certificate:  existing || null
+                certificate:  existing || null,
+                report
             }
         });
     } catch (err) {
         console.error('[checkEligibility]', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// ── GET /certificates/eligibility  (protected, student) ──────────────────────
+// Per-enrolled-course eligibility reports so the Certificates page can render a
+// completion tracker in a single call (avoids N+1 check requests).
+exports.getEligibilityOverview = async (req, res) => {
+    try {
+        const enrollments = await Enrollment.find({ studentRef: req.user._id })
+            .populate('courseRef', 'courseTitle thumbnailUrl technicalCategory estimatedDurationHours')
+            .sort('-updatedAt')
+            .lean();
+
+        const certificates = await Certificate.find({
+            studentRef: req.user._id,
+            status: { $ne: 'Revoked' }
+        }).select('certificateId status issueDate courseRef').lean();
+        const certByCourse = new Map(
+            certificates.map((c) => [String(c.courseRef), c])
+        );
+
+        const data = [];
+        for (const enrollment of enrollments) {
+            const courseId = enrollment.courseRef?._id || enrollment.courseRef;
+            if (!courseId) continue;
+            const cert = certByCourse.get(String(courseId)) || null;
+            if (cert) {
+                data.push({
+                    course: enrollment.courseRef,
+                    eligible: true,
+                    hasCertificate: true,
+                    certificate: cert,
+                    completionPercentage: 100,
+                    report: null
+                });
+                continue;
+            }
+            const course = await Course.findById(courseId).lean();
+            const report = await buildCompletionReport({ studentRef: req.user._id, course, enrollment });
+            data.push({
+                course: enrollment.courseRef,
+                eligible: report.eligible,
+                hasCertificate: false,
+                certificate: null,
+                completionPercentage: report.completionPercentage,
+                report
+            });
+        }
+
+        res.json({ success: true, data });
+    } catch (err) {
+        console.error('[getEligibilityOverview]', err);
         res.status(500).json({ success: false, message: err.message });
     }
 };
@@ -102,14 +161,29 @@ exports.issueCertificate = async (req, res) => {
         if (!enrollment) {
             return res.status(404).json({ success: false, message: 'You are not enrolled in this course.' });
         }
-        if (!enrollment.tuitionClearanceFlag) {
+
+        // Load the course once — used for the eligibility report AND the PDF
+        const course = await Course.findById(courseId);
+        if (!course) {
+            return res.status(404).json({ success: false, message: 'Course not found.' });
+        }
+
+        // Free courses (price === 0) never block a certificate — tuition is
+        // treated as cleared automatically. Paid courses require clearance.
+        const tuitionCleared = (course.price || 0) === 0 || !!enrollment.tuitionClearanceFlag;
+        if (!tuitionCleared) {
             return res.status(400).json({ success: false, message: 'Course payment is not cleared.' });
         }
-        const pct = enrollment.completionPercentage || 0;
-        if (pct < 90) {
+
+        // ── BACKEND GATE: full eligibility (all lessons + required quizzes
+        //    passed + required assignments approved + payment cleared).
+        //    Reject even if the frontend was bypassed or cached stale state.
+        const report = await buildCompletionReport({ studentRef: student._id, course, enrollment });
+        if (!report.eligible) {
             return res.status(400).json({
                 success: false,
-                message: `You have completed ${pct}% of the course. At least 90% is required.`
+                message: 'You are not yet eligible for a certificate. Please complete all required lessons, quizzes, assignments, and other course activities.',
+                data: { report }
             });
         }
 
@@ -126,8 +200,7 @@ exports.issueCertificate = async (req, res) => {
         // 3. Generate atomic sequential ID
         const certId = await generateCertificateId();
 
-        // 4. Load course + template
-        const course   = await Course.findById(courseId);
+        // 4. Load template (course already loaded above)
         const template = await CertificateTemplate.findOne({ active: true }) || {};
 
         // 5. Generate PDF (uses certId from DB — consistent on every download)

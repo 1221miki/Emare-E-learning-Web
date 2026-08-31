@@ -86,31 +86,56 @@ export default function AssignmentPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         {assignments.map(a => {
                             const sub = getSubmissionStatus(a._id);
-                            const isPastDue = new Date() > new Date(a.dueDate);
+                            const isLocked = a.sequenceLocked === true;
+                            const seqStatus = a.sequenceStatus;
+
+                            // Friendly student-facing status (server computed):
+                            // Not Started · Submitted · Under Review · Approved · Returned for Revision
+                            const statusLabel = isLocked
+                                ? '🔒 Locked'
+                                : seqStatus
+                                    ? seqStatus.status
+                                    : (sub
+                                        ? (sub.status === 'Graded' ? 'Approved' : sub.status)
+                                        : 'Not Submitted');
+                            const statusColor = isLocked
+                                ? colors.textMuted
+                                : statusLabel === 'Approved'
+                                    ? '#10b981'
+                                    : ['Submitted', 'Under Review'].includes(statusLabel)
+                                        ? (colors.primary || '#22c55e')
+                                        : colors.textMuted;
 
                             return (
-                                <div key={a._id} style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '12px', padding: '24px' }}>
+                                <div key={a._id} style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '12px', padding: '24px', opacity: isLocked ? 0.92 : 1 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                                         <div>
                                             <h3 style={{ color: colors.text, fontSize: '20px', fontWeight: '700', margin: '0 0 8px' }}>{a.title}</h3>
                                             <div style={{ display: 'flex', gap: '16px', color: colors.textMuted, fontSize: '13px', alignItems: 'center', flexWrap: 'wrap' }}>
-                                                <span>Due: {new Date(a.dueDate).toLocaleString()}</span>
                                                 <span>Points: {a.maxScore}</span>
+                                                {a.passingScore >= 0 && <span>Pass: {a.passingScore}</span>}
+                                                {a.quizRequired && !a.quizPassed && (
+                                                    <span style={{ color: '#f59e0b', fontWeight: '600' }}>⚬ Quiz must be passed first</span>
+                                                )}
                                                 <span style={{ padding: '3px 12px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', background: a.aiTutorEnabled === false ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)', color: a.aiTutorEnabled === false ? '#ef4444' : '#10b981' }}>
                                                     {a.aiTutorEnabled === false ? '🔒 Emare AI Tutor Disabled' : '⊡ Emare AI Tutor Enabled'}
                                                 </span>
                                             </div>
                                         </div>
-                                        {sub ? (
-                                            <span style={{ background: sub.status === 'Graded' ? 'rgba(16,185,129,0.1)' : 'rgba(34,197,94,0.1)', color: sub.status === 'Graded' ? '#10b981' : colors.primary, padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: '700' }}>
-                                                {sub.status} {sub.grade !== null ? `(${sub.grade}/${a.maxScore})` : ''}
-                                            </span>
-                                        ) : isPastDue ? (
-                                            <span style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: '700' }}>Past Due</span>
-                                        ) : (
-                                            <span style={{ background: colors.bgInput, color: colors.textMuted, padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: '700' }}>Not Submitted</span>
-                                        )}
+                                        <span style={{ background: isLocked ? colors.bgInput : (statusLabel === 'Approved' ? 'rgba(16,185,129,0.1)' : 'rgba(34,197,94,0.1)'), color: statusColor, padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                                            {statusLabel}{(seqStatus?.grade != null && statusLabel === 'Approved') ? ` (${seqStatus.grade}/${a.maxScore})` : (sub?.grade != null && sub?.status !== 'Graded' ? '' : '')}
+                                        </span>
                                     </div>
+
+                                    {isLocked && a.sequenceLockReason && (
+                                        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: '16px', padding: '12px 16px', borderRadius: '10px', background: colors.bgInput, border: `1px dashed ${colors.border}`, color: colors.textMuted, fontSize: '13px', lineHeight: 1.6 }}>
+                                            <span>🔒</span>
+                                            <div>
+                                                <strong style={{ color: colors.text }}>This assignment is locked by the course sequence.</strong><br />
+                                                {a.sequenceLockReason}
+                                            </div>
+                                        </div>
+                                    )}
                                     
                                     <p style={{ color: colors.text, fontSize: '15px', lineHeight: 1.6, marginBottom: '20px' }}>{a.description}</p>
                                     
@@ -130,8 +155,14 @@ export default function AssignmentPage() {
                                         </div>
                                     )}
 
-                                    {!sub && !isPastDue && activeAssignment !== a._id && (
-                                        <button onClick={() => setActiveAssignment(a)} style={{ background: colors.primary, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>Submit Assignment</button>
+                                    {isLocked ? (
+                                        <div style={{ color: colors.textMuted, fontSize: '13px', fontWeight: '600', padding: '10px 0' }}>
+                                            Complete the previous lesson, quiz, and assignment to unlock this one.
+                                        </div>
+                                    ) : (
+                                        !sub && activeAssignment !== a._id && (
+                                            <button onClick={() => setActiveAssignment(a)} style={{ background: colors.primary, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>Submit Assignment</button>
+                                        )
                                     )}
 
                                     {activeAssignment === a._id && (

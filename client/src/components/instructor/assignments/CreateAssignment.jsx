@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
     ClipboardList, Upload, X, FileText, Image, Archive,
-    Calendar, Settings, Users, ArrowLeft, Plus, Trash2
+    Settings, Users, ArrowLeft, Plus, Trash2
 } from 'lucide-react';
 import { assignmentService, uploadService } from '../../../services/api';
 import { card, input, select, primaryBtn, ghostBtn, label as lbl, C } from './assignmentStyles';
@@ -41,11 +41,6 @@ export default function CreateAssignment({ courses, defaultCourse, onCreated, on
         maxScore:       100,
         passingScore:   60,
         gradingMethod:  'Manual Grading',
-        startDate:      '',
-        dueDate:        '',
-        dueTime:        '23:59',
-        allowLate:      false,
-        latePenalty:    0,
         // Emare AI Tutor access for this assignment
         aiTutorEnabled: true,
         // Access
@@ -97,25 +92,18 @@ export default function CreateAssignment({ courses, defaultCourse, onCreated, on
                 if (res.data?.success) attachments.push({ filename: item.name, url: res.data.data.url, mimeType: item.mime, size: item.size });
             }
 
-            const dueAt = form.dueDate ? new Date(`${form.dueDate}T${form.dueTime}:00`) : null;
-            const startAt = form.startDate ? new Date(form.startDate) : null;
-
             const payload = {
                 courseRef:    form.courseRef,
                 title:        form.title.trim(),
                 description:  form.description,
                 instructions: form.instructions,
                 maxScore:     Number(form.maxScore),
-                dueDate:      dueAt,
-                startDate:    startAt,
-                allowLate:    form.allowLate,
                 published:    true,
                 attachments,
                 rubricItems:  form.rubricItems.filter(r => r.criterion.trim()),
                 category:     form.category,
                 gradingMethod: form.gradingMethod,
                 passingScore: Number(form.passingScore),
-                latePenalty:  Number(form.latePenalty),
                 aiTutorEnabled: form.aiTutorEnabled !== false,
             };
             const res = await assignmentService.create(payload);
@@ -250,17 +238,6 @@ export default function CreateAssignment({ courses, defaultCourse, onCreated, on
                                 ))}
                             </div>
                         </div>
-                        <div>
-                            <label style={lbl}>Start Date</label>
-                            <input type="date" style={input} value={form.startDate} onChange={e => set('startDate', e.target.value)} />
-                        </div>
-                        <div>
-                            <label style={lbl}>Submission Deadline</label>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <input type="date" style={{ ...input, flex: '2' }} value={form.dueDate} onChange={e => set('dueDate', e.target.value)} />
-                                <input type="time" style={{ ...input, flex: '1' }} value={form.dueTime} onChange={e => set('dueTime', e.target.value)} />
-                            </div>
-                        </div>
                         {/* Emare AI Tutor Enable / Disable */}
                         <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', padding: '14px 16px', borderRadius: '12px', border: `1px solid ${form.aiTutorEnabled !== false ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`, background: form.aiTutorEnabled !== false ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)' }}>
                             <div>
@@ -275,17 +252,11 @@ export default function CreateAssignment({ courses, defaultCourse, onCreated, on
                             </div>
                         </div>
 
-                        <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#94a3b8', fontSize: '13px', fontWeight: '600' }}>
-                                <input type="checkbox" checked={form.allowLate} onChange={e => set('allowLate', e.target.checked)} style={{ accentColor: C.orange, width: '16px', height: '16px' }} />
-                                Allow Late Submissions
-                            </label>
-                            {form.allowLate && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <label style={{ color: '#64748b', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>Late Penalty %</label>
-                                    <input type="number" min="0" max="100" style={{ ...input, width: '80px' }} value={form.latePenalty} onChange={e => set('latePenalty', e.target.value)} />
-                                </div>
-                            )}
+                        <div style={{ gridColumn: '1 / -1', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '10px', padding: '12px 16px' }}>
+                            <div style={{ color: '#4ade80', fontSize: '13px', fontWeight: 700 }}>No submission deadline</div>
+                            <div style={{ color: '#64748b', fontSize: '12px', marginTop: '2px' }}>
+                                Students complete this assignment at their own pace when they reach its lesson. Progress is enforced by the lesson sequence, not a due date.
+                            </div>
                         </div>
                     </div>
                 )}

@@ -21,6 +21,8 @@ import { useAuth } from '../../context/AuthContext';
 import AiAssistant from '../../components/AiAssistant';
 import { getLessonVideoUrl, getVideoEmbedUrl, getVideoRenderMode, getVideoErrorReason } from '../../utils/videoPlayer';
 import CheckpointTimeline from '../../components/student/CheckpointTimeline';
+import LessonQuiz from '../../components/student/LessonQuiz';
+import LessonAssignment from '../../components/student/LessonAssignment';
 
 // ── Inline icons ──────────────────────────────────────────────────────────────
 const IconPlay  = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>;
@@ -61,38 +63,24 @@ function firstUncompletedIndex(flat, completedSet) {
     return flat.length; // all done
 }
 
+// ── Dev-mode request/response breadcrumb logging ──────────────────────────────
+// Only logs when running the Vite dev server (npm run dev). Prints every
+// workspace API call fired when the student clicks "Start Lesson" plus each
+// lesson/requirements fetch, so a failing request is instantly identifiable.
+const IS_DEV = import.meta.env.DEV;
+const devLog = (...args) => {
+    if (IS_DEV) console.info('[Dev][LearningWorkspace]', ...args);
+};
+
 // ── RequirementsBlocker — professional blocking panel shown below nav row ─────
 function RequirementsBlocker({ reqStatus, courseId, lessonId, onDismiss, onJumpToCheckpoint, colors, isDark }) {
-    const navigate = useNavigate();
     const border  = isDark ? '#334155' : '#e2e8f0';
     const text    = isDark ? '#f1f5f9' : '#0f172a';
     const muted   = isDark ? '#94a3b8' : '#64748b';
     const red     = '#ef4444';
     const green   = '#10b981';
 
-    const { quizRequired, quizPassed, assignmentRequired, assignmentSubmitted, linkedQuizId, linkedAssignmentId } = reqStatus;
-
     const items = [];
-    if (quizRequired) {
-        items.push({
-            done: quizPassed,
-            label: 'Quiz',
-            doneText: 'Completed',
-            todoText: 'Not completed',
-            action: linkedQuizId ? () => navigate(`/student/quiz/${linkedQuizId}`) : null,
-            actionLabel: 'Complete Quiz'
-        });
-    }
-    if (assignmentRequired) {
-        items.push({
-            done: assignmentSubmitted,
-            label: 'Assignment',
-            doneText: 'Submitted',
-            todoText: 'Not submitted',
-            action: linkedAssignmentId ? () => navigate(`/student/assignments/${courseId}`) : null,
-            actionLabel: 'Submit Assignment'
-        });
-    }
     // In-video checkpoint quizzes embedded in the lesson video timeline
     if (reqStatus.checkpointsRequired && !reqStatus.checkpointsPassed) {
         const total = reqStatus.checkpointsTotal || 0;
@@ -143,7 +131,7 @@ function RequirementsBlocker({ reqStatus, courseId, lessonId, onDismiss, onJumpT
             </div>
 
             <p style={{ margin: '0 0 14px', fontSize: 13, color: muted, lineHeight: 1.6 }}>
-                Please complete the required activities below before marking this lesson as complete.
+                Please finish the lesson content below before marking this lesson as complete.
             </p>
 
             {/* Status rows */}
@@ -199,6 +187,7 @@ export default function LearningWorkspace() {
     const [course,          setCourse]          = useState(null);
     const [pageError,       setPageError]       = useState(null);
     const [courseLoading,   setCourseLoading]   = useState(true);
+    const [loadRetryKey,    setLoadRetryKey]    = useState(0);  // bump to re-run the load effect
 
     // Progress — source of truth from backend
     const [completedSet,    setCompletedSet]    = useState(new Set());
@@ -248,11 +237,15 @@ export default function LearningWorkspace() {
     const [certId,          setCertId]          = useState('');
 
     // ── Requirement-gating state ──────────────────────────────────────────────
-    // null = not yet fetched; object = { quizRequired, quizPassed, assignmentRequired, assignmentSubmitted, canComplete }
+    // null = not yet fetched; object = { quizRequired, quizPassed, assignmentRequired, assignmentSubmitted, assignmentGraded, assignmentPassed, canComplete }
     const [reqStatus,       setReqStatus]       = useState(null);
     const [reqLoading,      setReqLoading]      = useState(false);
     // showBlocker is true after a failed "Mark Complete" attempt until dismissed or retried
     const [showBlocker,     setShowBlocker]     = useState(false);
+
+    // ── Loading progress ─────────────────────────────────────────────────────
+    const [seqEntries, setSeqEntries]   = useState([]);      // server sequence (unlock leases)
+    const [lockedNotice, setLockedNotice] = useState(null);  // banner shown when a locked lesson is clicked
 
     // Sidebar / UI
     const [sidebarOpen,     setSidebarOpen]     = useState(true);
@@ -274,7 +267,41 @@ export default function LearningWorkspace() {
     const isFinalLesson  = activeFlatIdx === totalLessons - 1;
 
     const firstUncompIdx     = firstUncompletedIndex(flatLessons, completedSet);
-    const isLessonAccessible = (flatIdx) => flatIdx <= firstUncompIdx;
+    // ── Sequential unlock state (server-computed) ─────────────────────────
+    const seqByLessonId = new Map();
+    (seqEntries || []).forEach(entry => seqByLessonId.set(String(entry.lessonId), entry));
+    // Access is driven by the BACKEND sequence when available; falls back to
+    // the pure client-side "first unfinished" rule while the sequence loads.
+    const isLessonAccessible = (flatIdx) => {
+        const lesson = flatLessons[flatIdx]?.lesson;
+        const entry  = lesson ? seqByLessonId.get(lesson._id?.toString()) : null;
+        if (entry) return entry.unlocked === true;
+        return flatIdx <= firstUncompIdx;
+    };
+    const getLockedReason = (flatIdx) => {
+        const lesson = flatLessons[flatIdx]?.lesson;
+        const entry  = lesson ? seqByLessonId.get(lesson._id?.toString()) : null;
+        return entry?.lockReason || 'Complete the previous lesson activities before continuing.';
+    };
+    // The lesson a student should actually be working on — the first lesson in
+    // the sequence that is not yet fully done (content + quiz + assignment
+    // submitted). Assignment APPROVAL is not required to advance — only the
+    // student's own learning steps are.
+    const seqCurrentIdx = seqEntries.length > 0 ? seqEntries.findIndex(e => !e.done) : -1;
+    const currentLessonIdx = seqCurrentIdx >= 0 ? seqCurrentIdx : (seqEntries.length > 0 ? 0 : Math.min(firstUncompIdx, Math.max(0, flatLessons.length - 1)));
+
+    // ── Per-lesson learning steps (content → quiz → assignment) ──────────────
+    // Server sequence entry for the ACTIVE lesson drives every step status.
+    const activeSeqEntry   = activeLesson ? (seqByLessonId.get(String(activeLesson._id)) || null) : null;
+    const isAdvanceReady   = activeSeqEntry?.done === true;   // all steps done → next unlocks / course finished
+    const lessonContentDone = activeSeqEntry?.contentCompleted === true || isCurrentDone;
+    const lessonQuizRequired = !!activeLesson?.quizRequired;
+    const lessonAssignmentRequired = !!activeLesson?.assignmentRequired;
+    const lessonQuizPassed  = activeSeqEntry ? activeSeqEntry.quizStatus?.passed === true : false;
+    const lessonQuizLinkedId = activeLesson?.linkedQuizId || activeSeqEntry?.quizLinkedId || null;
+    const lessonQuizAttempts = activeSeqEntry?.quizStatus?.attempts ?? 0;
+    const lessonAssignmentLinkedId = activeLesson?.linkedAssignmentId || activeSeqEntry?.assignmentLinkedId || null;
+    const lessonAssignmentSubmitted = activeSeqEntry?.assignmentSubmitted === true;
 
     const hasPdf      = !!(activeLesson?.notesPdfUrl);
     const hasResource = !!(activeLesson?.resourceLink && activeLesson.resourceLink !== activeLesson.notesPdfUrl);
@@ -344,15 +371,27 @@ export default function LearningWorkspace() {
     useEffect(() => {
         let cancelled = false;
         setCourseLoading(true);
+        // The three "Start Lesson" requests fired when this page opens. Log each
+        // request/response in dev mode so a failing call is easy to spot.
+        const courseReq   = courseService.getById(courseId);
+        const progressReq = learningProgressService.getCourseProgress(courseId);
+        const sequenceReq = learningProgressService.getCourseSequence(courseId);
+        devLog('Start Lesson →', 'GET /courses/' + courseId);
+        courseReq.then(r => devLog('  GET /courses/:id      →', r.status)).catch(e => devLog('  GET /courses/:id      → ERROR', e?.response?.status || e?.code || e?.message));
+        progressReq.then(r => devLog('  GET learning-progress →', r.status)).catch(e => devLog('  GET learning-progress → ERROR', e?.response?.status || e?.code || e?.message));
+        sequenceReq.then(r => devLog('  GET sequence          →', r.status)).catch(e => devLog('  GET sequence          → ERROR', e?.response?.status || e?.code || e?.message));
         Promise.all([
-            courseService.getById(courseId),
-            learningProgressService.getCourseProgress(courseId).catch(() => ({ data: { data: null } }))
-        ]).then(([courseRes, progressRes]) => {
+            courseReq,
+            progressReq.catch(() => ({ data: { data: null } })),
+            sequenceReq.catch(() => ({ data: { data: { entries: [] } } }))
+        ]).then(([courseRes, progressRes, seqRes]) => {
             if (cancelled) return;
             const courseData   = courseRes.data?.data;
-            if (!courseData) { setPageError('This course does not exist or is no longer available.'); return; }
+            if (!courseData) { setPageError({ message: 'This course does not exist or is no longer available.', retriable: false }); return; }
             const progressData = progressRes.data?.data;
+            const seqData      = seqRes.data?.data?.entries || [];
             setCourse(courseData);
+            setSeqEntries(seqData);
             const flat = flattenLessons(courseData.curriculumTree);
             const done = buildCompletedSet(progressData?.progressItems);
             // Progress % computed against the CURRENT curriculum — never trust
@@ -363,23 +402,50 @@ export default function LearningWorkspace() {
             setProgressPct(pct);
             // Store progress items so the video load effect can restore position
             setProgressItems(progressData?.progressItems || []);
-            const resumeIdx = Math.min(firstUncompletedIndex(flat, done), Math.max(0, flat.length - 1));
+            // Resume where the student actually needs to be: the first lesson
+            // that is NOT fully done per the server sequence (preferring it over
+            // the plain "first uncompleted" heuristic).
+            let resumeIdx;
+            if (seqData.length > 0) {
+                const firstNotDone = seqData.findIndex(e => !e.done);
+                resumeIdx = firstNotDone === -1 ? Math.max(0, flat.length - 1) : firstNotDone;
+            } else {
+                resumeIdx = Math.min(firstUncompletedIndex(flat, done), Math.max(0, flat.length - 1));
+            }
             setActiveFlatIdx(resumeIdx);
             setExpandedChapters(new Set([flat[resumeIdx]?.chapterIndex ?? 0]));
-            // Celebration screen only when EVERY lesson in the current tree is done
-            if (flat.length > 0 && doneInCurrentTree === flat.length) setShowCompletion(true);
+            // If the server says this lesson is locked, surface the reason.
+            const resumeEntry = seqData.find(e => String(e.lessonId) === String(flat[resumeIdx]?.lesson?._id));
+            if (resumeEntry && resumeEntry.unlocked !== true) {
+                setLockedNotice(resumeEntry.lockReason || 'Complete the previous lesson first to unlock this lesson.');
+            }
+            // Celebration screen only when EVERY lesson in the current tree is
+            // fully done (content + quizzes + assignments).
+            const seqAllDone = seqData.length > 0 && seqData.every(e => e.done);
+            if (flat.length > 0 && (seqData.length > 0 ? seqAllDone : doneInCurrentTree === flat.length)) setShowCompletion(true);
         }).catch(err => {
-            if (!cancelled) setPageError(err.response?.data?.message || 'Failed to load workspace.');
+            if (!cancelled) {
+                const status = err?.response?.status;
+                const code = err?.code;
+                let message, retriable = true;
+                if (status === 404) { message = 'This course does not exist or is no longer available.'; retriable = false; }
+                else if (status === 401 || status === 403) { message = 'You are not authorized to view this course.'; retriable = false; }
+                else if (code === 'ERR_NETWORK' || !status) { message = 'Could not reach the server. Check your connection and retry.'; }
+                else { message = err?.response?.data?.message || 'Failed to load workspace.'; }
+                devLog('Start Lesson load failed →', status || code || 'network', message);
+                setPageError({ message, retriable, details: `${status ? 'HTTP ' + status : (code || 'network error')}`.trim() });
+            }
         }).finally(() => {
             if (!cancelled) setCourseLoading(false);
         });
         return () => { cancelled = true; };
-    }, [courseId]);
+    }, [courseId, loadRetryKey]);
 
     // ── Load video whenever active lesson changes ─────────────────────────────
     useEffect(() => {
         if (!activeLesson) return;
         setShowBlocker(false);
+        setLockedNotice(null);
         setReqStatus(null);
         // Reset in-video checkpoint state for the new lesson
         setCheckpointsData(null);
@@ -400,13 +466,14 @@ export default function LearningWorkspace() {
         setCheckpointDirectFailed(false);
 
         const raw = getLessonVideoUrl(activeLesson);
-        if (!raw) { setVideoUrl(''); setVideoError('No video available for this lesson.'); return; }
+        if (!raw) { setVideoUrl(''); setVideoError('No video available for this lesson.'); devLog('Lesson → no videoUrl on lesson; video area shows notice.'); return; }
         setVideoLoading(true);
         setVideoError('');
         const url = getVideoEmbedUrl(raw);
         if (url) { setVideoUrl(url); } else {
             setVideoUrl('');
             setVideoError(getVideoErrorReason(raw) || 'This lesson does not have a playable video.');
+            devLog('Lesson → videoUrl not playable:', raw.slice(0, 120));
         }
         setVideoLoading(false);
         setTab('overview');
@@ -414,9 +481,11 @@ export default function LearningWorkspace() {
         // Fetch in-video quiz checkpoints — when present, swap to the direct
         // MP4 URL so we can control playback (pause at checkpoints, block skips)
         let cancelled = false;
+        devLog('Lesson →', `GET /in-video-quiz/${courseId}/${activeLesson._id.toString()} (checkpoints)`);
         inVideoQuizService.getLessonCheckpoints(courseId, activeLesson._id.toString())
             .then(res => {
                 if (cancelled) return;
+                devLog('  in-video-quiz →', res.status, `checkpoints=${res.data?.data?.checkpoints?.length || 0}`);
                 const data = res.data?.data || null;
                 setCheckpointsData(data);
                 // Prefer the API's live-resolved URL; fall back to the direct MP4
@@ -487,7 +556,7 @@ export default function LearningWorkspace() {
                     }
                 }
             })
-            .catch(() => { if (!cancelled) setCheckpointsData(null); });
+            .catch(err => { if (!cancelled) setCheckpointsData(null); devLog('  in-video-quiz → ERROR', err?.response?.status || err?.code || err?.message); });
         return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeFlatIdx, activeLesson]);
@@ -499,11 +568,13 @@ export default function LearningWorkspace() {
         if (!lessonHasRequirements) { setReqStatus(null); return; }
         let cancelled = false;
         setReqLoading(true);
+        devLog('Lesson →', `GET /learning-progress/course/${courseId}/lesson/${activeLesson._id.toString()}/requirements`);
         learningProgressService.getLessonRequirementsStatus(courseId, activeLesson._id.toString(), liveWatchParams())
             .then(res => {
                 if (!cancelled) setReqStatus(res.data?.data || null);
+                devLog('  requirements →', res.status);
             })
-            .catch(() => { if (!cancelled) setReqStatus(null); })
+            .catch(err => { if (!cancelled) setReqStatus(null); devLog('  requirements → ERROR', err?.response?.status || err?.code || err?.message); })
             .finally(() => { if (!cancelled) setReqLoading(false); });
         return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -708,9 +779,19 @@ export default function LearningWorkspace() {
     };
 
     // ── Mark Complete button handler ──────────────────────────────────────────
+    const refreshSequence = useCallback(() => {
+        learningProgressService.getCourseSequence(courseId)
+            .then(res => setSeqEntries(res.data?.data?.entries || []))
+            .catch(() => {});
+    }, [courseId]);
+
+    // performCompletion must stay AFTER refreshSequence: its useCallback
+    // dependency array below references refreshSequence eagerly, so a later
+    // declaration would throw a TDZ ReferenceError on every first render.
     const performCompletion = useCallback(async () => {
         const lesson = course?.curriculumTree?.[activeChapterIndex]?.lessons?.[activeLessonIndex];
         if (!lesson) return null;
+        devLog('Lesson →', `POST progress (mark complete) /courses/${courseId}/lesson/${lesson._id}`);
         const res = await learningProgressService.saveLessonProgress(
             courseId,
             lesson._id.toString(),
@@ -722,22 +803,25 @@ export default function LearningWorkspace() {
                 videoDurationSeconds: Math.round(videoRef.current?.duration || 0)
             }
         );
+        devLog('  progress (complete) →', res.status);
         const updated = res.data?.data;
         if (updated) {
             const newDone = buildCompletedSet(updated.progressItems);
             setCompletedSet(newDone);
             setProgressItems(updated.progressItems || []);
+            // Keep the server sequence in sync so the next lesson unlocks
+            refreshSequence();
             // Recompute % against the CURRENT curriculum tree
             const doneInCurrentTree = flatLessons.filter(f => newDone.has(`${f.chapterIndex}-${f.lessonIndex}`)).length;
             const pct = flatLessons.length > 0 ? Math.round((doneInCurrentTree / flatLessons.length) * 100) : 0;
             setProgressPct(pct);
             setShowBlocker(false);
-            if (flatLessons.length > 0 && doneInCurrentTree === flatLessons.length) {
-                setTimeout(() => setShowCompletion(true), 800);
-            }
+            // Completion is NOT decided here — it fires only when the FINAL
+            // lesson's full step flow (content → quiz → assignment submitted) is
+            // done, handled by the completion effect below.
         }
         return updated;
-    }, [course, courseId, activeChapterIndex, activeLessonIndex, flatLessons]);
+    }, [course, courseId, activeChapterIndex, activeLessonIndex, flatLessons, refreshSequence]);
 
     const handleMarkComplete = async () => {
         if (isCurrentDone || markingDone) return;
@@ -773,6 +857,18 @@ export default function LearningWorkspace() {
             .finally(() => setReqLoading(false));
     }, [activeLesson, courseId]);
 
+    // Called after the in-workspace quiz records a new attempt (pass or fail).
+    const handleQuizOutcome = useCallback(() => {
+        refreshReqStatus();
+        refreshSequence();
+    }, [refreshReqStatus, refreshSequence]);
+
+    // Called after the in-workspace assignment is submitted.
+    const handleAssignmentSubmitted = useCallback(() => {
+        refreshSequence();
+        refreshReqStatus();
+    }, [refreshReqStatus, refreshSequence]);
+
     // Jump back into the lesson video so students blocked at "Mark as Complete"
     // have a one-click path: resumes playback at the start of the earliest
     // unanswered concept, or from the current position when only watch-through is missing.
@@ -797,7 +893,11 @@ export default function LearningWorkspace() {
     // ── Navigate to a flat lesson index ──────────────────────────────────────
     const goToFlatIdx = useCallback((idx) => {
         if (!flatLessons[idx]) return;
-        if (!isLessonAccessible(idx)) return;
+        if (!isLessonAccessible(idx)) {
+            setLockedNotice(getLockedReason(idx));
+            return;
+        }
+        setLockedNotice(null);
         setActiveFlatIdx(idx);
         setExpandedChapters(prev => new Set([...prev, flatLessons[idx].chapterIndex]));
         window.scrollTo(0, 0);
@@ -860,7 +960,13 @@ export default function LearningWorkspace() {
             const updated = await performCompletion();
             // performCompletion() already: saved completed=true to the backend,
             // updated completedSet (unlocks the "Next Lesson" button) and
-            // recomputed the progress %. Now queue the countdown auto-route.
+            // recomputed the progress %. Now queue the countdown auto-route —
+            // BUT only when this lesson has no remaining quiz/assignment steps.
+            // Those steps are completed INSIDE the workspace, so we stop here
+            // and let the step panels take over instead of navigating away.
+            const quizStepPending   = lessonQuizRequired && !lessonQuizPassed;
+            const assignmentStepPending = lessonAssignmentRequired && !lessonAssignmentSubmitted;
+            if (quizStepPending || assignmentStepPending) return;
             if (updated && activeFlatIdx < totalLessons - 1) {
                 startAutoNextCountdown(activeFlatIdx + 1);
             }
@@ -876,7 +982,7 @@ export default function LearningWorkspace() {
         } finally {
             autoAdvancingRef.current = false;
         }
-    }, [activeLesson, isCurrentDone, checkpointsData, isCheckpointPassed, performCompletion, activeFlatIdx, totalLessons, startAutoNextCountdown]);
+    }, [activeLesson, isCurrentDone, checkpointsData, isCheckpointPassed, performCompletion, activeFlatIdx, totalLessons, startAutoNextCountdown, lessonQuizRequired, lessonQuizPassed, lessonAssignmentRequired, lessonAssignmentSubmitted]);
 
     const handleVideoEnded = useCallback(() => {
         tryAutoCompleteAndAdvance();
@@ -885,7 +991,7 @@ export default function LearningWorkspace() {
     const goPrev = () => { if (activeFlatIdx > 0) goToFlatIdx(activeFlatIdx - 1); };
 
     const goNext = () => {
-        if (!isCurrentDone) return;
+        if (!isAdvanceReady) return;
         if (isFinalLesson) { setShowCompletion(true); } else { goToFlatIdx(activeFlatIdx + 1); }
     };
 
@@ -910,7 +1016,19 @@ export default function LearningWorkspace() {
     };
 
     // ── Error / loading screens ───────────────────────────────────────────────
-    if (pageError) return <div style={{ color: '#ef4444', padding: 40, textAlign: 'center' }}>{pageError}</div>;
+    if (pageError) return (
+        <div style={{ minHeight: '100vh', background: bg, color: text, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24, textAlign: 'center' }}>
+            <div style={{ fontSize: 44 }} aria-hidden="true">⚠️</div>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>{pageError.message}</div>
+            {pageError.details && <div style={{ color: muted, fontSize: 13, maxWidth: 520 }}>{pageError.details}</div>}
+            <button
+                onClick={() => { if (pageError.retriable) setLoadRetryKey(k => k + 1); else navigate('/student/dashboard'); }}
+                style={{ background: accent, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
+            >
+                {pageError.retriable ? 'Retry' : 'Back to Dashboard'}
+            </button>
+        </div>
+    );
     if (courseLoading || !course) return (
         <div style={{ minHeight: '100vh', background: bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, color: muted }}>
             <div style={{ width: 42, height: 42, borderRadius: '50%', border: '3px solid rgba(148,163,184,0.3)', borderTopColor: accent, animation: 'spin 0.8s linear infinite' }} />
@@ -1153,6 +1271,32 @@ export default function LearningWorkspace() {
                         )}
                     </div>
 
+                    {/* ── Locked lesson banner (clicked a locked lesson) ── */}
+                    {lockedNotice && (
+                        <div style={{
+                            margin: '14px 28px 0', padding: '14px 18px', borderRadius: 12,
+                            background: isDark ? 'rgba(148,163,184,0.08)' : '#f1f5f9',
+                            border: `1px solid ${isDark ? '#475569' : '#cbd5e1'}`,
+                            display: 'flex', alignItems: 'flex-start', gap: 12, animation: 'fadeIn 0.2s ease'
+                        }}>
+                            <span style={{ color: muted, flexShrink: 0, marginTop: 2 }}><IconLock /></span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 800, fontSize: 13, color: text }}>Lesson locked</div>
+                                <div style={{ fontSize: 12.5, color: muted, marginTop: 3, lineHeight: 1.6 }}>{lockedNotice}</div>
+                            </div>
+                            <button
+                                onClick={() => goToFlatIdx(currentLessonIdx)}
+                                style={{
+                                    background: `linear-gradient(135deg, ${accent}, #15803d)`, color: '#fff',
+                                    border: 'none', borderRadius: 8, padding: '8px 14px', fontWeight: 700,
+                                    fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0
+                                }}
+                            >
+                                Go to current lesson →
+                            </button>
+                        </div>
+                    )}
+
                     {/* ── Checkpoint direct-MP4 failure warning ─────────── */}
                     {checkpointDirectFailed && (
                         <div style={{ background: isDark ? 'rgba(245,158,11,0.1)' : '#fffbeb', borderBottom: `1px solid ${gold}55`, padding: '10px 20px', fontSize: 12.5, color: isDark ? gold : '#b45309', fontWeight: 600, lineHeight: 1.6, flexShrink: 0 }}>
@@ -1227,21 +1371,21 @@ export default function LearningWorkspace() {
                                 {activeLesson.quizRequired && (
                                     <span style={{
                                         padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
-                                        background: reqStatus?.quizPassed ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
-                                        color: reqStatus?.quizPassed ? '#10b981' : '#f59e0b',
-                                        border: `1px solid ${reqStatus?.quizPassed ? 'rgba(16,185,129,0.35)' : 'rgba(245,158,11,0.35)'}`
+                                        background: lessonQuizPassed ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
+                                        color: lessonQuizPassed ? '#10b981' : '#f59e0b',
+                                        border: `1px solid ${lessonQuizPassed ? 'rgba(16,185,129,0.35)' : 'rgba(245,158,11,0.35)'}`
                                     }}>
-                                        {reqStatus?.quizPassed ? '✓ Quiz done' : '⚬ Quiz required'}
+                                        {lessonQuizPassed ? '✓ Quiz done' : '⚬ Quiz required'}
                                     </span>
                                 )}
                                 {activeLesson.assignmentRequired && (
                                     <span style={{
                                         padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
-                                        background: reqStatus?.assignmentSubmitted ? 'rgba(16,185,129,0.15)' : 'rgba(139,92,246,0.15)',
-                                        color: reqStatus?.assignmentSubmitted ? '#10b981' : '#4ade80',
-                                        border: `1px solid ${reqStatus?.assignmentSubmitted ? 'rgba(16,185,129,0.35)' : 'rgba(139,92,246,0.35)'}`
+                                        background: lessonAssignmentSubmitted ? 'rgba(16,185,129,0.15)' : 'rgba(139,92,246,0.15)',
+                                        color: lessonAssignmentSubmitted ? '#10b981' : (lessonAssignmentRequired && lessonQuizPassed ? '#f59e0b' : '#4ade80'),
+                                        border: `1px solid ${lessonAssignmentSubmitted ? 'rgba(16,185,129,0.35)' : 'rgba(139,92,246,0.35)'}`
                                     }}>
-                                        {reqStatus?.assignmentSubmitted ? '✓ Assignment done' : '⚬ Assignment required'}
+                                        {lessonAssignmentSubmitted ? '✓ Assignment submitted' : lessonAssignmentRequired && lessonQuizPassed ? '⏳ Assignment: submit to continue' : '⚬ Assignment required'}
                                     </span>
                                 )}
                                 {reqLoading && (
@@ -1289,6 +1433,13 @@ export default function LearningWorkspace() {
                                 </div>
                             )}
 
+                            {/* Step-pending hint: content done, but quiz/assignment remain below */}
+                            {isCurrentDone && !isAdvanceReady && (lessonQuizRequired || lessonAssignmentRequired) && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#f59e0b', fontWeight: 700, fontSize: 13, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '8px 14px' }}>
+                                    ⬇ Continue with the steps below
+                                </div>
+                            )}
+
                             {/* Refresh requirements button */}
                             {!isCurrentDone && lessonHasRequirements && reqStatus && !reqStatus.canComplete && (
                                 <button onClick={refreshReqStatus} disabled={reqLoading} title="Refresh requirement status" style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'transparent', border: `1px solid ${border}`, color: muted, borderRadius: 8, padding: '8px 12px', cursor: reqLoading ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 12 }}>
@@ -1300,10 +1451,10 @@ export default function LearningWorkspace() {
                             )}
 
                             {/* Next / Finish */}
-                            {!isCurrentDone ? (
+                            {!isAdvanceReady ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: isDark ? '#1e293b' : '#f1f5f9', border: `1.5px solid ${border}`, color: muted, borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 600 }}>
                                     <IconLock />
-                                    {isFinalLesson ? 'Finish Course (complete lesson first)' : 'Next Lesson (complete lesson first)'}
+                                    {isFinalLesson ? 'Finish Course (complete lesson, quiz & assignment)' : 'Next Lesson (complete lesson, quiz & assignment)'}
                                 </div>
                             ) : (
                                 <button onClick={goNext} style={{ display: 'flex', alignItems: 'center', gap: 6, background: isFinalLesson ? `linear-gradient(135deg, ${gold}, #d97706)` : `linear-gradient(135deg, ${accent}, #15803d)`, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
@@ -1323,6 +1474,88 @@ export default function LearningWorkspace() {
                                 colors={colors}
                                 isDark={isDark}
                             />
+                        )}
+
+                        {/* ── Lesson Steps: Content → Knowledge Check → Assignment ── */}
+                        {((lessonQuizRequired || lessonAssignmentRequired) || lessonContentDone) && (
+                            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+                                {/* Step 1 · Lesson content */}
+                                <div style={{ background: isDark ? '#1a2434' : '#f8fafc', border: `1px solid ${lessonContentDone ? `${green}55` : border}`, borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: lessonContentDone ? green : (isDark ? '#334155' : '#e2e8f0'), color: lessonContentDone ? '#fff' : muted, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
+                                        {lessonContentDone ? <IconCheck size={14} /> : '1'}
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: 800, fontSize: 13.5, color: text }}>1 · Lesson Content</div>
+                                        <div style={{ fontSize: 12, color: lessonContentDone ? green : muted, fontWeight: 600, textAlign: 'left' }}>
+                                            {lessonContentDone ? '✓ Complete' : 'Watch / read the lesson, then press "Mark as Complete".'}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Step 2 · Knowledge Check */}
+                                {lessonQuizRequired && (
+                                    lessonQuizPassed ? (
+                                        <div style={{ background: isDark ? '#10281f' : '#f0fdf4', border: `1px solid ${green}55`, borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                                            <div style={{ width: 28, height: 28, borderRadius: '50%', background: green, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><IconCheck size={14} /></div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontWeight: 800, fontSize: 13.5, color: text }}>2 · Knowledge Check</div>
+                                                <div style={{ fontSize: 12, color: green, fontWeight: 600, textAlign: 'left' }}>✓ Passed{lessonQuizAttempts > 0 ? ` (score from your best attempt)` : ''}</div>
+                                            </div>
+                                        </div>
+                                    ) : lessonContentDone && lessonQuizLinkedId ? (
+                                        <LessonQuiz
+                                            quizId={lessonQuizLinkedId}
+                                            isDark={isDark}
+                                            onOutcome={handleQuizOutcome}
+                                        />
+                                    ) : (
+                                        <div style={{ background: isDark ? '#1a2434' : '#f8fafc', border: `1px solid ${border}`, borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, opacity: 0.85 }}>
+                                            <div style={{ width: 28, height: 28, borderRadius: '50%', background: isDark ? '#334155' : '#e2e8f0', color: muted, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><IconLock size={13} /></div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontWeight: 800, fontSize: 13.5, color: text }}>2 · Knowledge Check</div>
+                                                <div style={{ fontSize: 12, color: muted, fontWeight: 600, textAlign: 'left' }}>🔒 Complete the lesson content above to unlock.</div>
+                                            </div>
+                                        </div>
+                                    )
+                                )}
+
+                                {/* Step 3 · Assignment */}
+                                {lessonAssignmentRequired && (
+                                    lessonAssignmentSubmitted ? (
+                                        <div style={{ background: isDark ? '#10281f' : '#f0fdf4', border: `1px solid ${green}55`, borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                                            <div style={{ width: 28, height: 28, borderRadius: '50%', background: green, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><IconCheck size={14} /></div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontWeight: 800, fontSize: 13.5, color: text }}>3 · Assignment</div>
+                                                <div style={{ fontSize: 12, color: green, fontWeight: 600, textAlign: 'left' }}>✓ Submitted{lessonQuizRequired ? ' — the next lesson is unlocked' : ''}</div>
+                                            </div>
+                                        </div>
+                                    ) : lessonQuizPassed ? (
+                                        lessonAssignmentLinkedId ? (
+                                            <LessonAssignment
+                                                courseId={courseId}
+                                                assignmentId={lessonAssignmentLinkedId}
+                                                lessonTitle={activeLesson?.lessonTitle}
+                                                isDark={isDark}
+                                                onSubmitted={handleAssignmentSubmitted}
+                                            />
+                                        ) : (
+                                            <div style={{ background: '#7c2d1218', border: `1px solid #f59e0b55`, borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#f59e0b', fontWeight: 600, textAlign: 'left' }}>
+                                                3 · Assignment — this lesson requires an assignment, but it hasn't been linked yet. Please ask your instructor.
+                                            </div>
+                                        )
+                                    ) : (
+                                        <div style={{ background: isDark ? '#1a2434' : '#f8fafc', border: `1px solid ${border}`, borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, opacity: 0.85 }}>
+                                            <div style={{ width: 28, height: 28, borderRadius: '50%', background: isDark ? '#334155' : '#e2e8f0', color: muted, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><IconLock size={13} /></div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontWeight: 800, fontSize: 13.5, color: text }}>3 · Assignment</div>
+                                                <div style={{ fontSize: 12, color: muted, fontWeight: 600, textAlign: 'left' }}>🔒 {lessonContentDone ? 'Pass the Knowledge Check first.' : 'Complete the lesson content above to unlock.'}</div>
+                                            </div>
+                                        </div>
+                                    )
+                                )}
+
+                            </div>
                         )}
 
                         {/* Tabs */}
@@ -1419,6 +1652,19 @@ export default function LearningWorkspace() {
                                         </ul>
                                     </div>
                                 )}
+                                {course.notes?.length > 0 && (
+                                    <div style={{ marginTop: 24 }}>
+                                        <h4 style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 700, color: text }}>📝 Course Notes</h4>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                            {course.notes.map(note => (
+                                                <div key={note._id} style={{ padding: '14px 18px', borderRadius: 10, background: isDark ? '#1e293b' : '#f8fafc', border: `1px solid ${border}` }}>
+                                                    {note.title && <div style={{ fontWeight: 700, fontSize: 13.5, color: text, marginBottom: 4 }}>{note.title}</div>}
+                                                    <div style={{ fontSize: 13, color: muted, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{note.content}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -1457,9 +1703,10 @@ export default function LearningWorkspace() {
                                         const locked   = !isLessonAccessible(flatIdx);
                                         const hasQuizReq = lesson.quizRequired;
                                         const hasAsgReq  = lesson.assignmentRequired;
+                                        const entry = seqByLessonId.get(lesson._id?.toString()) || null;
 
                                         return (
-                                            <div key={lesson._id || lIdx} className={locked ? '' : 'lesson-row'} onClick={() => !locked && goToFlatIdx(flatIdx)} style={{ padding: '10px 18px 10px 26px', display: 'flex', alignItems: 'flex-start', gap: 10, cursor: locked ? 'not-allowed' : 'pointer', background: isActive ? `${accent}15` : 'transparent', borderLeft: isActive ? `3px solid ${accent}` : '3px solid transparent', opacity: locked ? 0.45 : 1, transition: 'all 0.15s' }}>
+                                            <div key={lesson._id || lIdx} className={locked ? '' : 'lesson-row'} onClick={() => goToFlatIdx(flatIdx)} style={{ padding: '10px 18px 10px 26px', display: 'flex', alignItems: 'flex-start', gap: 10, cursor: locked ? 'not-allowed' : 'pointer', background: isActive ? `${accent}15` : 'transparent', borderLeft: isActive ? `3px solid ${accent}` : '3px solid transparent', opacity: locked ? 0.45 : 1, transition: 'all 0.15s' }}>
                                                 {/* Status icon */}
                                                 <div style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, marginTop: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDone ? green : isActive ? accent : isDark ? '#334155' : '#cbd5e1', color: '#fff', fontSize: 10, fontWeight: 700 }}>
                                                     {locked ? '🔒' : isDone ? <IconCheck /> : isActive ? <IconPlay /> : <span style={{ fontSize: 10 }}>{lIdx + 1}</span>}
@@ -1473,9 +1720,27 @@ export default function LearningWorkspace() {
                                                         {locked && <span style={{ fontSize: 10, color: muted }}>Complete previous lesson first</span>}
                                                         {isDone && !locked && <span style={{ fontSize: 10, color: green, fontWeight: 600 }}>✓ Done</span>}
                                                         {lesson.isFreePreview && !locked && <span style={{ fontSize: 10, background: `${accent}20`, color: accent, borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>Free</span>}
-                                                        {/* Requirement badges in sidebar */}
-                                                        {!isDone && hasQuizReq && <span style={{ fontSize: 10, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>Quiz</span>}
-                                                        {!isDone && hasAsgReq && <span style={{ fontSize: 10, background: 'rgba(139,92,246,0.15)', color: '#4ade80', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>Assignment</span>}
+                                                        {/* Requirement badges in sidebar — live status derived from the server sequence */}
+                                                        {!isDone && hasQuizReq && (
+                                                            <span style={{ fontSize: 10, background: entry?.quizStatus?.passed ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)', color: entry?.quizStatus?.passed ? '#10b981' : '#f59e0b', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>
+                                                                {entry?.quizStatus?.passed
+                                                                    ? `✓ Quiz passed`
+                                                                    : `Quiz • ${entry?.quizStatus?.attempts || 0} attempt${entry?.quizStatus?.attempts === 1 ? '' : 's'}`}
+                                                            </span>
+                                                        )}
+                                                        {!isDone && hasAsgReq && (
+                                                            <span style={{ fontSize: 10, background: 'rgba(139,92,246,0.15)', color: '#4ade80', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>
+                                                                {(() => {
+                                                                    const st = entry?.assignmentStatus;
+                                                                    if (!st) return 'Assignment';
+                                                                    if (st.status === 'Approved') return '✓ Assignment approved';
+                                                                    if (st.status === 'Submitted') return '⏳ Submitted';
+                                                                    if (st.status === 'Under Review') return '⏳ Under review';
+                                                                    if (st.status === 'Returned for Revision') return '↻ Returned for revision';
+                                                                    return 'Assignment not submitted';
+                                                                })()}
+                                                            </span>
+                                                        )}
                                                         {/* Concept progress for active lesson */}
                                                         {isActive && !isDone && hasCheckpoints && (
                                                             <span style={{ fontSize: 10, background: allConceptsDone ? `${green}20` : `${gold}20`, color: allConceptsDone ? green : gold, borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>

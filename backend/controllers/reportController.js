@@ -190,17 +190,16 @@ const getReportRows = async (reportType) => {
             const assignments = await Assignment.find()
                 .populate('courseRef', 'courseTitle')
                 .populate('instructorRef', 'fullName')
-                .select('title dueDate maxScore isActive createdAt')
+                .select('title maxScore isActive createdAt')
                 .lean();
 
             return {
                 title: 'Assignment Report',
-                headers: ['Assignment Title', 'Course', 'Instructor', 'Due Date', 'Max Score', 'Status', 'Created'],
+                headers: ['Assignment Title', 'Course', 'Instructor', 'Max Score', 'Status', 'Created'],
                 rows: assignments.map((assignment) => ({
                     'Assignment Title': assignment.title,
                     Course: assignment.courseRef?.courseTitle || 'Unknown',
                     Instructor: assignment.instructorRef?.fullName || 'N/A',
-                    'Due Date': formatDate(assignment.dueDate),
                     'Max Score': assignment.maxScore || 0,
                     Status: assignment.isActive ? 'Active' : 'Inactive',
                     Created: formatDate(assignment.createdAt)

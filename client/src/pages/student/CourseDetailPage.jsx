@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { courseService, reviewService, enrollmentService } from '../../services/api';
+import { courseService, reviewService, enrollmentService, liveSessionService } from '../../services/api';
 import Navbar from '../../components/Navbar';
 import GuestModal from '../../components/GuestModal';
 import LearningContentAccessChecklist from '../../components/dashboard/LearningContentAccessChecklist';
+import CourseLiveSessions from '../../components/course/CourseLiveSessions';
 
 export default function CourseDetailPage() {
     const { courseId } = useParams();
@@ -18,6 +19,7 @@ export default function CourseDetailPage() {
     const [enrolling, setEnrolling] = useState(false);
     const [isEnrolled, setIsEnrolled] = useState(false);
     const [guestModal, setGuestModal] = useState({ open: false, action: '' });
+    const [courseLiveSessions, setCourseLiveSessions] = useState([]);
 
     // Review Form State
     const [showReviewForm, setShowReviewForm] = useState(false);
@@ -62,6 +64,11 @@ export default function CourseDetailPage() {
                         return eCourseId === courseId && (e.paymentStatus === 'Cleared' || e.tuitionClearanceFlag === true);
                     });
                     setIsEnrolled(enrolled);
+                    if (enrolled) {
+                        liveSessionService.getCourseSessions(courseId)
+                            .then(res2 => setCourseLiveSessions(res2.data?.data || []))
+                            .catch(() => {});
+                    }
                 }).catch(() => {});
             }
         }).catch(() => {
@@ -275,6 +282,11 @@ export default function CourseDetailPage() {
                             ))}
                         </div>
                     </section>
+
+                    {/* Live Sessions (enrolled students only) */}
+                    {isEnrolled && (
+                        <CourseLiveSessions sessions={courseLiveSessions} colors={colors} />
+                    )}
 
                     {/* Reviews */}
                     <section style={{ marginBottom: '48px' }}>

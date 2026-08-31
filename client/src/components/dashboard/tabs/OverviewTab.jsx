@@ -8,7 +8,7 @@ import {
 export default function OverviewTab(dash) {
     const {
         user, setActiveTab, enrollments, allCourses, liveSessions,
-        assignmentsList, upcomingAssignmentsCount, quizAverage, xpPoints,
+        pendingAssignmentsCount, quizAverage, xpPoints,
         currentLevel, notifications, notificationTab, setNotificationTab,
         handleMarkNotificationAsRead, navigate, completedCoursesCount,
         activeCourses: activeCoursesProp
@@ -23,29 +23,10 @@ export default function OverviewTab(dash) {
         return 'Good evening';
     };
 
-    const nowMs = Date.now();
-    const deadlines = assignmentsList
-        .filter(a => a.dueDate && new Date(a.dueDate).getTime() > nowMs)
-        .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
-        .slice(0, 5)
-        .map(a => ({
-            id: a._id,
-            title: a.title || 'Assignment Task',
-            dueDate: new Date(a.dueDate)
-        }));
-
     const enrolledIds = enrollments.map(e => e.courseRef?._id || e.courseRef);
     const recommendations = allCourses.filter(c => !enrolledIds.includes(c._id)).slice(0, 4);
 
     const scheduleItems = [
-        ...deadlines.map(d => ({
-            id: d.id,
-            title: d.title,
-            kind: 'Assignment',
-            time: d.dueDate,
-            icon: <ClipboardCheck size={16} className="text-red-500" aria-hidden="true" />,
-            badge: 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400'
-        })),
         ...(liveSessions || []).map(l => ({
             id: l._id,
             title: l.title || 'Live Class',
@@ -66,7 +47,7 @@ export default function OverviewTab(dash) {
 
     const kpis = [
         { label: 'In Progress Courses', value: activeCourses.length, icon: <GraduationCap size={20} aria-hidden="true" />, chip: 'bg-green-600/10 text-green-600 dark:text-green-500' },
-        { label: 'Assignments Due', value: upcomingAssignmentsCount, icon: <ClipboardCheck size={20} aria-hidden="true" />, chip: 'bg-green-700/10 text-green-700 dark:text-green-500' },
+        { label: 'Pending Assignments', value: pendingAssignmentsCount, icon: <ClipboardCheck size={20} aria-hidden="true" />, chip: 'bg-green-700/10 text-green-700 dark:text-green-500' },
         { label: 'Quiz Average', value: `${quizAverage}%`, icon: <BarChart3 size={20} aria-hidden="true" />, chip: 'bg-emerald-600/10 text-emerald-600 dark:text-emerald-400' },
         { label: 'XP Earned', value: xpPoints, icon: <Zap size={20} aria-hidden="true" />, chip: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' }
     ];
@@ -205,7 +186,7 @@ export default function OverviewTab(dash) {
                     {/* Upcoming deadlines & schedule */}
                     <div className={card}>
                         <h3 className="mb-4 flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
-                            <CalendarDays size={16} className="text-green-600 dark:text-green-500" aria-hidden="true" /> Upcoming Deadlines &amp; Schedule
+                            <CalendarDays size={16} className="text-green-600 dark:text-green-500" aria-hidden="true" /> Schedule
                         </h3>
                         {scheduleItems.length > 0 ? (
                             <div className="space-y-3">
@@ -224,7 +205,7 @@ export default function OverviewTab(dash) {
                             </div>
                         ) : (
                             <div className="rounded-xl border border-dashed border-slate-300 py-8 text-center dark:border-slate-700">
-                                <p className="text-xs text-slate-500 dark:text-slate-400">No upcoming deadlines. You're all caught up!</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">No upcoming live classes or events scheduled.</p>
                             </div>
                         )}
                     </div>

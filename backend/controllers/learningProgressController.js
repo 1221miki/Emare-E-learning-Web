@@ -3,7 +3,11 @@ const Enrollment = require('../models/Enrollment');
 const LearningProgress = require('../models/LearningProgress');
 const GradeBook = require('../models/GradeBook');
 const Submission = require('../models/Submission');
+const Quiz = require('../models/Quiz');
+const Assignment = require('../models/Assignment');
 const InVideoQuizAttempt = require('../models/InVideoQuizAttempt');
+const { isQuizPassed, isAssignmentApproved } = require('../services/completionService');
+const { getSequenceForStudent, getLessonAccess } = require('../services/sequenceService');
 
 const getCourseProgress = async (req, res, next) => {
     try {
@@ -55,7 +59,8 @@ const getResumeProgress = async (req, res, next) => {
 // requirements for a given lesson.
 //
 // Returns:
-//   { quizRequired, quizPassed, assignmentRequired, assignmentSubmitted, canComplete }
+//   { quizRequired, quizPassed, assignmentRequired, assignmentSubmitted,
+//     assignmentGraded, assignmentPassed, canComplete, ... }
 // ─────────────────────────────────────────────────────────────────────────────
 const checkLessonRequirements = async (studentId, lessonData, watchInfo = {}) => {
     const quizRequired        = lessonData.quizRequired        === true;
@@ -65,6 +70,8 @@ const checkLessonRequirements = async (studentId, lessonData, watchInfo = {}) =>
 
     let quizPassed           = false;
     let assignmentSubmitted  = false;
+    let assignmentGraded     = false;
+    let assignmentPassed     = false;
 
     // ── In-video checkpoint gate ─────────────────────────────────────────────
     // Every embedded quiz checkpoint in the lesson video must be passed before
@@ -84,17 +91,26 @@ const checkLessonRequirements = async (studentId, lessonData, watchInfo = {}) =>
 
     // ── Quiz gate ────────────────────────────────────────────────────────────
     if (quizRequired && linkedQuizId) {
-        const gradeEntry = await GradeBook.findOne({
-            studentRef: studentId,
-            assessmentRef: linkedQuizId
-        }).lean();
-        // A quiz entry is created on any submission; consider it "passed" if
-        // it was graded and the score meets the threshold OR the quiz itself
-        // doesn't enforce a threshold (entry existence = completion).
-        quizPassed = !!(gradeEntry && gradeEntry.isGraded);
+        const [gradeRows, quiz] = await Promise.all([
+            // Best-of-attempts policy: a failed retake never revokes an earlier
+            // pass, so use the BEST grade row (highest score) for this student.
+            GradeBook.find({ studentRef: studentId, assessmentRef: linkedQuizId })
+                .sort({ submissionTimestamp: 1 })
+                .lean(),
+            Quiz.findById(linkedQuizId).lean()
+        ]);
+        const gradeEntry = gradeRows.reduce(
+            (best, g) => !best || (g.numericalScoreEarned ?? 0) >= (best.numericalScoreEarned ?? 0) ? g : best,
+            null
+        );
+        // A GradeBook entry is created on ANY submission (pass or fail), so the
+        // quiz's passingScoreThreshold is applied here — a submission alone no
+        // longer counts as "passed".
+        quizPassed = isQuizPassed(gradeEntry, quiz);
     } else if (quizRequired && !linkedQuizId) {
-        // Quiz required but no quiz linked yet — block completion
-        quizPassed = false;
+        // Quiz required but not linked yet — safe default: treat as satisfied
+        // so the flow can never dead-lock on an instructor oversight.
+        quizPassed = true;
     } else {
         // Quiz not required — treat as satisfied
         quizPassed = true;
@@ -102,17 +118,24 @@ const checkLessonRequirements = async (studentId, lessonData, watchInfo = {}) =>
 
     // ── Assignment gate ──────────────────────────────────────────────────────
     if (assignmentRequired && linkedAssignmentId) {
-        const submission = await Submission.findOne({
-            assignmentRef: linkedAssignmentId,
-            studentRef: studentId
-        }).lean();
-        assignmentSubmitted = !!(submission);
+        const [submission, assignment] = await Promise.all([
+            Submission.findOne({ assignmentRef: linkedAssignmentId, studentRef: studentId }).lean(),
+            Assignment.findById(linkedAssignmentId).lean()
+        ]);
+        assignmentSubmitted = !!submission;
+        assignmentGraded    = !!(submission && submission.status === 'Graded');
+        assignmentPassed    = isAssignmentApproved(submission, assignment);
     } else if (assignmentRequired && !linkedAssignmentId) {
-        // Assignment required but none linked yet — block completion
-        assignmentSubmitted = false;
+        // Assignment required but none linked yet — safe default: treat as
+        // satisfied so the flow can never dead-lock on an instructor oversight.
+        assignmentSubmitted = true;
+        assignmentGraded    = false;
+        assignmentPassed    = true;
     } else {
         // Assignment not required — treat as satisfied
         assignmentSubmitted = true;
+        assignmentGraded    = false;
+        assignmentPassed    = true;
     }
 
     // ── Video watch-through gate ─────────────────────────────────────────────
@@ -127,13 +150,21 @@ const checkLessonRequirements = async (studentId, lessonData, watchInfo = {}) =>
         : (videoWatchRequired ? 0 : 100);
     const videoWatched         = !videoWatchRequired || watchedSeconds >= videoDurationSeconds * 0.85;
 
-    const canComplete = quizPassed && assignmentSubmitted && checkpointsPassed && videoWatched;
+    // ── Completion gate ─────────────────────────────────────────────────
+    // "Mark lesson as complete" means the CONTENT is done: the student has
+    // worked through the material (watch-through + in-video checkpoints).
+    // The linked quiz and assignment are separate steps handled afterwards in
+    // the same workspace — the quiz gate (lesson content done) and the
+    // assignment gate (quiz passed) live in sequenceService, NOT here.
+    const canComplete = checkpointsPassed && videoWatched;
 
     return {
         quizRequired,
         quizPassed,
         assignmentRequired,
         assignmentSubmitted,
+        assignmentGraded,
+        assignmentPassed,
         checkpointsRequired: checkpoints.length > 0,
         checkpointsPassed,
         checkpointsTotal: checkpoints.length,
@@ -243,6 +274,18 @@ const saveLessonProgress = async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Lesson not found.' });
         }
 
+        // ── BACKEND GATE: sequential unlock — a locked lesson cannot receive any
+        // heartbeat/completion write, regardless of what the client sends. ──
+        const seqAccess = await getLessonAccess(req.user.id, courseId, lessonId, course);
+        if (!seqAccess.granted) {
+            return res.status(403).json({
+                success: false,
+                message: seqAccess.reason,
+                lessonLocked: true,
+                lockReason: seqAccess.reason
+            });
+        }
+
         // Load existing progress first so watch data can be merged across sessions
         let progress = await LearningProgress.findOne({ studentRef: req.user.id, courseRef: courseId });
         const prevItem = progress?.progressItems?.find(item => item.lessonId.toString() === lessonId);
@@ -328,6 +371,21 @@ const saveLessonProgress = async (req, res, next) => {
     }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// @desc    Get the sequential unlock state for every lesson of a course
+// @route   GET /api/learning-progress/course/:courseId/sequence
+// @access  Private (Student) — used by the Learning Workspace to render locks
+//          and to surface per-lesson quiz/assignment status.
+// ─────────────────────────────────────────────────────────────────────────────
+const getCourseSequence = async (req, res, next) => {
+    try {
+        const sequence = await getSequenceForStudent(req.params.courseId, req.user.id);
+        return res.status(200).json({ success: true, data: { entries: sequence.entries } });
+    } catch (err) {
+        next(err);
+    }
+};
+
 const markDocumentViewed = async (req, res, next) => {
     try {
         const { courseId, lessonId } = req.params;
@@ -355,6 +413,7 @@ module.exports = {
     getCourseProgress,
     getResumeProgress,
     getLessonRequirementsStatus,
+    getCourseSequence,
     saveLessonProgress,
     markDocumentViewed,
     trackResourceDownload,

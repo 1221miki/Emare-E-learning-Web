@@ -18,8 +18,13 @@ const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
+const http = require('http');
+const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 const { errorHandler } = require('./middleware/errorHandler');
+const User = require('./models/User');
+const Enrollment = require('./models/Enrollment');
+const Course = require('./models/Course');
 
 // Route Imports
 const authRoutes = require('./routes/authRoutes');
@@ -141,7 +146,80 @@ app.use('/certificates', express.static(path.join(__dirname, 'public/certificate
 // Start the HTTP server immediately so Render's health check passes.
 // DB connection happens in the background — requests will work once connected.
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, '0.0.0.0', () => {
+const server = http.createServer(app);
+
+// ── Socket.IO Setup ──────────────────────────────────────────
+const io = new Server(server, {
+    cors: {
+        origin: (origin, callback) => {
+            if (isAllowedOrigin(origin)) {
+                return callback(null, true);
+            }
+            callback(new Error(`CORS policy blocked origin: ${origin}`));
+        },
+        credentials: true
+    }
+});
+
+const userSocketMap = new Map();
+
+io.on('connection', (socket) => {
+    console.log(`Socket connected: ${socket.id}`);
+
+    socket.on('authenticate', async (token) => {
+        try {
+            const jwt = require('jsonwebtoken');
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const user = await User.findById(decoded.id).select('-securedPassword');
+            
+            if (user && user.isActive) {
+                socket.userId = user._id.toString();
+                socket.userRole = user.assignedRole;
+                userSocketMap.set(socket.userId, socket.id);
+                
+                const enrollments = await Enrollment.find({ studentRef: user._id }).select('courseRef');
+                const courseIds = enrollments.map(e => e.courseRef.toString());
+                
+                courseIds.forEach(courseId => {
+                    socket.join(`course:${courseId}`);
+                });
+                
+                if (user.assignedRole === 'Instructor') {
+                    const courses = await Course.find({ assignedInstructorRef: user._id }).select('_id');
+                    courses.forEach(course => {
+                        socket.join(`course:${course._id.toString()}`);
+                    });
+                }
+                
+                socket.emit('authenticated', { success: true, userId: socket.userId });
+                console.log(`User authenticated on socket: ${user.fullName} (${user._id})`);
+            } else {
+                socket.emit('authenticated', { success: false, message: 'User not found or inactive' });
+            }
+        } catch (err) {
+            socket.emit('authenticated', { success: false, message: 'Invalid token' });
+        }
+    });
+
+    socket.on('joinCourse', (courseId) => {
+        if (socket.userId) {
+            socket.join(`course:${courseId}`);
+        }
+    });
+
+    socket.on('leaveCourse', (courseId) => {
+        socket.leave(`course:${courseId}`);
+    });
+
+    socket.on('disconnect', () => {
+        if (socket.userId) {
+            userSocketMap.delete(socket.userId);
+        }
+        console.log(`Socket disconnected: ${socket.id}`);
+    });
+});
+
+server.listen(PORT, '0.0.0.0', () => {
     const ENV = (process.env.NODE_ENV || 'development').toUpperCase();
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
@@ -158,6 +236,8 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 ╚═══════════════════════════════════════════════════════════╝
 `);
 });
+
+module.exports.io = io;
 
 connectDB()
     .catch(err => {

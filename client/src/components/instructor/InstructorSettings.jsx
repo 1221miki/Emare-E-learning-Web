@@ -295,7 +295,7 @@ function ProfileTab({ user, onSaved, updateUser }) {
                     {[
                         { label: 'New enrollments',   email: true,  app: false },
                         { label: 'Quiz submissions',  email: true,  app: false },
-                        { label: 'Assignment deadlines', email: true, app: false },
+                        { label: 'Assignment submissions', email: true, app: false },
                         { label: 'Student messages',  email: true,  app: false },
                     ].map((n, i) => (
                         <NotifRow key={i} label={n.label} emailDefault={n.email} appDefault={n.app} />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { assignmentService, uploadService } from '../../../services/api';
-import { ClipboardList, Paperclip, CalendarDays, Target, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { ClipboardList, Paperclip, Target, CheckCircle2, Clock } from 'lucide-react';
 
 export default function AssignmentsTab(dash) {
     const { assignmentsList, mySubmissions, setMySubmissions, assignmentSubmitText, setAssignmentSubmitText, assignmentFile, setAssignmentFile, submittingAssignmentId, setSubmittingAssignmentId, assignmentMsg, setAssignmentMsg, triggerAssistantPrompt } = dash;
@@ -79,7 +79,6 @@ export default function AssignmentsTab(dash) {
                 <div className="space-y-5">
                     {assignmentsList.map((asgn) => {
                         const isSubmitted = submittedIds.includes(asgn._id);
-                        const isOverdue = asgn.dueDate && new Date(asgn.dueDate) < new Date();
                         return (
                             <div key={asgn._id} className={card}>
                                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -87,18 +86,12 @@ export default function AssignmentsTab(dash) {
                                         <div className="flex flex-wrap items-center gap-2">
                                             <h3 className="text-base font-bold text-slate-900 dark:text-white">{asgn.title || 'Assignment Task'}</h3>
                                             {isSubmitted && <span className="inline-flex items-center gap-1 rounded-md bg-emerald-600/15 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400"><CheckCircle2 size={12} aria-hidden="true" /> SUBMITTED</span>}
-                                            {!isSubmitted && isOverdue && <span className="inline-flex items-center gap-1 rounded-md bg-red-600/15 px-2 py-0.5 text-[11px] font-bold text-red-600 dark:text-red-400"><AlertCircle size={12} aria-hidden="true" /> OVERDUE</span>}
-                                            {!isSubmitted && !isOverdue && <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-600 dark:text-amber-400"><Clock size={12} aria-hidden="true" /> PENDING</span>}
+                                            {!isSubmitted && <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-600 dark:text-amber-400"><Clock size={12} aria-hidden="true" /> PENDING</span>}
                                         </div>
                                         {asgn.description || asgn.instructions ? (
                                             <p className="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{asgn.description || asgn.instructions}</p>
                                         ) : null}
                                         <div className="mt-2 flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400">
-                                            {asgn.dueDate && (
-                                                <span className="inline-flex items-center gap-1">
-                                                    <CalendarDays size={13} aria-hidden="true" /> Due: <strong className={isOverdue ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-white'}>{new Date(asgn.dueDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>
-                                                </span>
-                                            )}
                                             {asgn.totalMarks && (
                                                 <span className="inline-flex items-center gap-1">
                                                     <Target size={13} aria-hidden="true" /> Max Marks: <strong className="text-slate-900 dark:text-white">{asgn.totalMarks}</strong>

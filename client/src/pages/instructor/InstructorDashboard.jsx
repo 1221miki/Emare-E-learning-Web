@@ -20,7 +20,10 @@ import StudentManagement from '../../components/instructor/StudentManagement';
 import AssignmentManagement from '../../components/instructor/assignments/AssignmentManagement';
 import InstructorSettings from '../../components/instructor/InstructorSettings';
 import QuizManagement from '../../components/instructor/QuizManagement';
-import { LayoutDashboard, BookOpen, NotebookPen, ClipboardList, FileQuestion, Video, Users, GraduationCap, Award, BarChart3, MessagesSquare, MessageCircle, Megaphone, CalendarDays, Star, Settings, Upload, UploadCloud, FilePen, FileText, Archive, PlusCircle, AlertTriangle, X, Link2, Trash2, ArrowUp, ArrowDown, Edit3, PauseCircle } from 'lucide-react';
+import {
+    LayoutDashboard, BookOpen, NotebookPen, ClipboardList, FileQuestion, Video, Users, GraduationCap, Award, BarChart3, MessagesSquare, MessageCircle, Megaphone, CalendarDays, Star, Settings, Upload, UploadCloud, FilePen, FileText, Archive, PlusCircle, AlertTriangle, X, Link2, Trash2, ArrowUp, ArrowDown, Edit3, PauseCircle, Circle, Square, Eye, Play, Trash, FileVideo, Clock, RadioTower
+} from 'lucide-react';
+import InstructorLiveSessions from '../../components/instructor/InstructorLiveSessions';
 
 
 export default function InstructorDashboard() {
@@ -128,6 +131,31 @@ export default function InstructorDashboard() {
     const [reviews, setReviews] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [liveSessions, setLiveSessions] = useState([]);
+    const [instructorSessions, setInstructorSessions] = useState([]);
+    const [instructorRecordings, setInstructorRecordings] = useState([]);
+    const [showLiveSessionForm, setShowLiveSessionForm] = useState(false);
+    const [editingSession, setEditingSession] = useState(null);
+    const [showRecordingModal, setShowRecordingModal] = useState(false);
+    const [recordingSession, setRecordingSession] = useState(null);
+    const [recordingFile, setRecordingFile] = useState(null);
+    const [recordingTitle, setRecordingTitle] = useState('');
+    const [recordingDescription, setRecordingDescription] = useState('');
+    const [uploadingRecording, setUploadingRecording] = useState(false);
+    const [liveSessionForm, setLiveSessionForm] = useState({
+        title: '',
+        description: '',
+        courseRef: '',
+        startTime: '',
+        durationMinutes: 60,
+        platform: 'Jitsi Meet',
+        meetingLink: '',
+        meetingPassword: ''
+    });
+    const [liveSessionFieldErrors, setLiveSessionFieldErrors] = useState({});
+    const [generatingMeetingLink, setGeneratingMeetingLink] = useState(false);
+    const [meetingLinkMsg, setMeetingLinkMsg] = useState(null);
+    const [integrations, setIntegrations] = useState({ zoomConfigured: null, zoomMissingEnv: [] });
+    const [liveFilter, setLiveFilter] = useState('upcoming');
 
     // Modal & Form States
     const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
@@ -158,8 +186,6 @@ export default function InstructorDashboard() {
         title: '',
         description: '',
         instructions: '',
-        dueDate: '',
-        dueTime: '23:59',
         maxScore: 100,
         attachment: null,
         attachmentPreview: ''
@@ -203,28 +229,52 @@ export default function InstructorDashboard() {
 
     const fetchDashboardData = async () => {
         try {
-            const [coursesRes, analyticsRes, notificationsRes] = await Promise.all([
+            const [coursesRes, analyticsRes, notificationsRes, sessionsRes, recordingsRes] = await Promise.all([
                 courseService.getInstructorCourses(),
                 courseService.getInstructorAnalytics(),
-                notificationService.getAll()
+                notificationService.getAll(),
+                liveSessionService.getInstructorSessions().catch(() => ({ data: { data: [] } })),
+                liveSessionService.getInstructorRecordings().catch(() => ({ data: { data: [] } }))
             ]);
 
             const instructorCourses = coursesRes.data.data || [];
             setCourses(instructorCourses);
             setAnalytics(analyticsRes.data.data || {});
             setNotifications(notificationsRes.data.data || []);
+            setInstructorSessions(sessionsRes.data.data || []);
+            setInstructorRecordings(recordingsRes.data.data || []);
 
             const defaultCourse = instructorCourses[0] || null;
             setSelectedCourse(defaultCourse);
 
             if (defaultCourse) {
-                const sessionsRes = await liveSessionService.getCourseSessions(defaultCourse._id).catch(() => ({ data: { data: [] } }));
-                setLiveSessions(sessionsRes.data.data || []);
+                const courseSessionsRes = await liveSessionService.getCourseSessions(defaultCourse._id).catch(() => ({ data: { data: [] } }));
+                setLiveSessions(courseSessionsRes.data.data || []);
             }
         } catch (err) {
             console.error('Dashboard fetch error:', err);
         }
     };
+
+    // Fetch live sessions and recordings when live tab is active
+    useEffect(() => {
+        if (activeTab === 'live') {
+            liveSessionService.getInstructorSessions()
+                .then(res => setInstructorSessions(res.data.data || []))
+                .catch(console.error);
+            liveSessionService.getInstructorRecordings()
+                .then(res => setInstructorRecordings(res.data.data || []))
+                .catch(console.error);
+            
+            // Fetch integration status
+            liveSessionService.getIntegrationStatus()
+                .then(res => setIntegrations({
+                    zoomConfigured: res.data.data.zoomConfigured,
+                    zoomMissingEnv: res.data.data.zoomMissingEnv
+                }))
+                .catch(console.error);
+        }
+    }, [activeTab]);
 
     // When grading tab or selected course changes, fetch submissions
     useEffect(() => {
@@ -335,15 +385,12 @@ export default function InstructorDashboard() {
         }
 
         try {
-            const dueAt = assignmentForm.dueDate ? new Date(`${assignmentForm.dueDate}T${assignmentForm.dueTime || '23:59'}:00`) : null;
             const payload = {
                 courseRef: selectedCourse._id,
                 title: assignmentForm.title,
                 description: assignmentForm.description,
                 instructions: assignmentForm.instructions,
-                dueDate: dueAt,
                 maxScore: Number(assignmentForm.maxScore),
-                allowLate: false,
                 published: false
             };
 
@@ -363,7 +410,7 @@ export default function InstructorDashboard() {
 
             const res = await assignmentService.create(payload);
             setAssignments(prev => [res.data.data, ...prev]);
-            setAssignmentForm({ title: '', description: '', instructions: '', dueDate: '', dueTime: '23:59', maxScore: 100, attachment: null, attachmentPreview: '' });
+            setAssignmentForm({ title: '', description: '', instructions: '', maxScore: 100, attachment: null, attachmentPreview: '' });
             setAssignmentMsg('Assignment draft created successfully. You can publish it from the list.');
         } catch (err) {
             setAssignmentMsg(err.response?.data?.message || 'Failed to create assignment.');
@@ -393,7 +440,7 @@ export default function InstructorDashboard() {
     };
 
     const handleResetAssignmentForm = () => {
-        setAssignmentForm({ title: '', description: '', instructions: '', dueDate: '', maxScore: 100, allowLate: false });
+        setAssignmentForm({ title: '', description: '', instructions: '', maxScore: 100, allowLate: false });
         setAssignmentMsg('');
     };
 
@@ -814,6 +861,342 @@ export default function InstructorDashboard() {
         } catch (err) { alert('Failed to reply'); }
     };
 
+    // ── Live Session Helpers ─────────────────────────────────────
+    const isValidHttpUrl = (value) => {
+        try {
+            const u = new URL(String(value).trim());
+            return u.protocol === 'http:' || u.protocol === 'https:';
+        } catch {
+            return false;
+        }
+    };
+
+    const generateJitsiLink = (title) => {
+        const slug = (title || 'emare-live-session').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 24) || 'emare-live-session';
+        return `https://meet.jit.si/${slug}`;
+    };
+
+    const getPlatformHelperText = () => {
+        switch (liveSessionForm.platform) {
+            case 'Zoom':
+                return integrations.zoomConfigured === null
+                    ? 'Click "Generate Meeting Link" to create a Zoom meeting if Zoom is connected on this server.'
+                    : integrations.zoomConfigured
+                        ? 'Click "Generate Meeting Link" to create a real Zoom meeting via the configured integration.'
+                        : 'Not configured on this server — an administrator must add the Zoom API credentials to backend/.env.';
+            case 'Jitsi Meet':
+                return 'Click "Generate Meeting Link" to create a free Jitsi room instantly — no account needed.';
+            case 'Custom':
+                return 'Enter any valid meeting URL manually (Zoom, Teams, YouTube Live, …).';
+            default:
+                return '';
+        }
+    };
+
+    const validateLiveSessionForm = () => {
+        const errors = {};
+        if (!liveSessionForm.title?.trim()) errors.title = 'Please enter a session title.';
+        if (!liveSessionForm.startTime) errors.startTime = 'Please enter a valid start time.';
+        if (!liveSessionForm.durationMinutes || Number(liveSessionForm.durationMinutes) <= 0) errors.durationMinutes = 'Please enter a valid duration.';
+        if (!liveSessionForm.courseRef) errors.courseRef = 'Please select a course.';
+
+        const link = (liveSessionForm.meetingLink || '').trim();
+        if (!link) {
+            errors.meetingLink =
+                liveSessionForm.platform === 'Jitsi Meet'
+                    ? 'Click "Generate Meeting Link" to create your Jitsi room.'
+                    : `A meeting link is required for ${liveSessionForm.platform} sessions.`;
+        } else if (!isValidHttpUrl(link)) {
+            errors.meetingLink = 'The meeting link must be a valid URL starting with http:// or https://';
+        }
+
+        setLiveSessionFieldErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+    const handleGenerateMeetingLink = async () => {
+        setMeetingLinkMsg(null);
+        setLiveSessionFieldErrors(prev => ({ ...prev, meetingLink: undefined }));
+
+        if (!liveSessionForm.title?.trim()) {
+            setLiveSessionFieldErrors({ title: 'Enter a session title first — it is used to name the meeting.' });
+            return;
+        }
+
+        if (liveSessionForm.platform === 'Custom') {
+            setMeetingLinkMsg({ type: 'info', text: 'Custom meetings use a manual link — paste any valid meeting URL in the Meeting Link field.' });
+            return;
+        }
+
+        setGeneratingMeetingLink(true);
+        try {
+            if (liveSessionForm.platform === 'Zoom' && integrations.zoomConfigured !== null && !integrations.zoomConfigured) {
+                const missing = integrations.zoomMissingEnv?.length
+                    ? integrations.zoomMissingEnv.join(', ')
+                    : 'ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET';
+                setMeetingLinkMsg({
+                    type: 'error',
+                    text: `Configuration error — Zoom meetings cannot be generated. Missing backend/.env settings: ${missing}. An administrator must add the Zoom Server-to-Server OAuth credentials and restart the server.`
+                });
+                return;
+            }
+
+            const res = await liveSessionService.generateLink({
+                platform: liveSessionForm.platform,
+                title: liveSessionForm.title,
+                startTime: liveSessionForm.startTime ? new Date(liveSessionForm.startTime).toISOString() : undefined,
+                durationMinutes: Number(liveSessionForm.durationMinutes) || 60
+            });
+            const data = res.data?.data || {};
+            const url = data.url || '';
+            if (!url) throw new Error('The meeting provider did not return a link.');
+            setLiveSessionForm(prev => ({
+                ...prev,
+                meetingLink: url,
+                meetingProvider: data.provider || ''
+            }));
+            setMeetingLinkMsg({ type: 'success', text: 'Meeting link generated successfully.' });
+        } catch (err) {
+            const code = err.response?.data?.code;
+            const raw = err.response?.data?.message || err.message || '';
+            const missing = err.response?.data?.missing;
+            let friendly;
+            if (code === 'ZOOM_NOT_CONFIGURED') {
+                friendly = `Configuration error — ${raw}`;
+            } else if (code === 'PROVIDER_NOT_CONFIGURED') {
+                friendly = 'Configuration error — the meeting provider is not configured on this server.';
+            } else {
+                friendly = raw || 'Could not generate the meeting link. Please try again or paste a link manually.';
+            }
+            if (Array.isArray(missing) && missing.length > 0 && !/missing/i.test(friendly)) {
+                friendly += ` Missing: ${missing.join(', ')}.`;
+            }
+            setMeetingLinkMsg({ type: 'error', text: friendly });
+        } finally {
+            setGeneratingMeetingLink(false);
+        }
+    };
+
+    const handleCreateLiveSession = async (e) => {
+        e.preventDefault();
+        if (!validateLiveSessionForm()) return;
+
+        const meetingLink = (liveSessionForm.meetingLink || '').trim();
+        const payload = {
+            ...liveSessionForm,
+            meetingLink,
+            startTime: liveSessionForm.startTime ? new Date(liveSessionForm.startTime).toISOString() : undefined,
+            durationMinutes: Number(liveSessionForm.durationMinutes)
+        };
+
+        try {
+            await liveSessionService.createSession(payload);
+            setShowLiveSessionForm(false);
+            setMeetingLinkMsg(null);
+            setLiveSessionForm({ title: '', description: '', courseRef: '', startTime: '', durationMinutes: 60, platform: 'Jitsi Meet', meetingLink: '', meetingPassword: '' });
+            setLiveSessionFieldErrors({});
+            
+            const res = await liveSessionService.getInstructorSessions();
+            setInstructorSessions(res.data.data || []);
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Failed to schedule session';
+            if (/meeting link/i.test(msg)) setLiveSessionFieldErrors(prev => ({ ...prev, meetingLink: msg }));
+            else alert(msg);
+        }
+    };
+
+    const handleEditLiveSession = (session) => {
+        setEditingSession(session);
+        setLiveSessionForm({
+            title: session.title,
+            description: session.description || '',
+            courseRef: session.courseRef?._id || session.courseRef,
+            startTime: session.startTime ? new Date(session.startTime).toISOString().slice(0, 16) : '',
+            durationMinutes: session.durationMinutes || 60,
+            platform: session.platform || 'Jitsi Meet',
+            meetingLink: session.meetingLink || '',
+            meetingPassword: session.meetingPassword || ''
+        });
+        setShowLiveSessionForm(true);
+    };
+
+    const handleUpdateLiveSession = async (e) => {
+        e.preventDefault();
+        if (!validateLiveSessionForm()) return;
+
+        if (!editingSession) return;
+
+        const meetingLink = (liveSessionForm.meetingLink || '').trim();
+        const payload = {
+            ...liveSessionForm,
+            meetingLink,
+            startTime: liveSessionForm.startTime ? new Date(liveSessionForm.startTime).toISOString() : undefined,
+            durationMinutes: Number(liveSessionForm.durationMinutes)
+        };
+
+        try {
+            await liveSessionService.updateSession(editingSession._id, payload);
+            setShowLiveSessionForm(false);
+            setEditingSession(null);
+            setMeetingLinkMsg(null);
+            setLiveSessionForm({ title: '', description: '', courseRef: '', startTime: '', durationMinutes: 60, platform: 'Jitsi Meet', meetingLink: '', meetingPassword: '' });
+            setLiveSessionFieldErrors({});
+            
+            const res = await liveSessionService.getInstructorSessions();
+            setInstructorSessions(res.data.data || []);
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Failed to update session';
+            if (/meeting link/i.test(msg)) setLiveSessionFieldErrors(prev => ({ ...prev, meetingLink: msg }));
+            else alert(msg);
+        }
+    };
+
+    const handleDeleteLiveSession = async (id) => {
+        if (!window.confirm('Delete this live session?')) return;
+        try {
+            await liveSessionService.deleteSession(id);
+            setInstructorSessions(prev => prev.filter(s => s._id !== id));
+        } catch (err) {
+            alert('Failed to delete session');
+        }
+    };
+
+    const handleStartLiveSession = async (id) => {
+        try {
+            const res = await liveSessionService.startSession(id);
+            setInstructorSessions(prev => prev.map(s => s._id === id ? res.data.data : s));
+            alert('Live session started successfully!');
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to start session');
+        }
+    };
+
+    const handleEndLiveSession = async (id) => {
+        if (!window.confirm('End this live session?')) return;
+        try {
+            const res = await liveSessionService.endSession(id);
+            setInstructorSessions(prev => prev.map(s => s._id === id ? res.data.data : s));
+            alert('Live session ended successfully!');
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to end session');
+        }
+    };
+
+    const handleStartRecording = async (id) => {
+        try {
+            const res = await liveSessionService.startRecording(id);
+            setInstructorSessions(prev => prev.map(s => s._id === id ? res.data.data : s));
+            alert('Recording started!');
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to start recording');
+        }
+    };
+
+    const handleStopRecording = async (id) => {
+        try {
+            const res = await liveSessionService.stopRecording(id);
+            setInstructorSessions(prev => prev.map(s => s._id === id ? res.data.data : s));
+            alert('Recording stopped. Processing...');
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to stop recording');
+        }
+    };
+
+    const handleOpenRecordingModal = (session) => {
+        setRecordingSession(session);
+        setRecordingTitle(session.title);
+        setRecordingDescription('');
+        setRecordingFile(null);
+        setShowRecordingModal(true);
+    };
+
+    const handleUploadRecording = async (e) => {
+        e.preventDefault();
+        if (!recordingFile) {
+            alert('Please select a recording file');
+            return;
+        }
+        if (!recordingSession) return;
+
+        setUploadingRecording(true);
+        try {
+            const formData = new FormData();
+            formData.append('recording', recordingFile);
+            formData.append('title', recordingTitle);
+            formData.append('description', recordingDescription);
+
+            await liveSessionService.uploadRecording(recordingSession._id, formData);
+            
+            setShowRecordingModal(false);
+            setRecordingSession(null);
+            setRecordingFile(null);
+            setRecordingTitle('');
+            setRecordingDescription('');
+            
+            const res = await liveSessionService.getInstructorRecordings();
+            setInstructorRecordings(res.data.data || []);
+            
+            alert('Recording uploaded successfully!');
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to upload recording');
+        } finally {
+            setUploadingRecording(false);
+        }
+    };
+
+    const handlePublishRecording = async (id) => {
+        try {
+            await liveSessionService.publishRecording(id);
+            setInstructorRecordings(prev => prev.map(r => r._id === id ? { ...r, isPublished: true } : r));
+            alert('Recording published successfully!');
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to publish recording');
+        }
+    };
+
+    const handleUnpublishRecording = async (id) => {
+        try {
+            await liveSessionService.unpublishRecording(id);
+            setInstructorRecordings(prev => prev.map(r => r._id === id ? { ...r, isPublished: false } : r));
+            alert('Recording unpublished');
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to unpublish recording');
+        }
+    };
+
+    const handleDeleteRecording = async (id) => {
+        if (!window.confirm('Delete this recording permanently?')) return;
+        try {
+            await liveSessionService.deleteRecording(id);
+            setInstructorRecordings(prev => prev.filter(r => r._id !== id));
+            alert('Recording deleted');
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to delete recording');
+        }
+    };
+
+    const getStatusBadge = (status) => {
+        const styles = {
+            upcoming: { bg: 'rgba(34,197,94,0.15)', color: '#4ade80', text: 'Upcoming' },
+            live: { bg: 'rgba(239,68,68,0.15)', color: '#f87171', text: '🔴 LIVE NOW' },
+            ended: { bg: 'rgba(100,116,139,0.15)', color: '#94a3b8', text: 'Ended' },
+            cancelled: { bg: 'rgba(239,68,68,0.15)', color: '#ef4444', text: 'Cancelled' }
+        };
+        const style = styles[status] || styles.upcoming;
+        return <span style={{ background: style.bg, color: style.color, padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>{style.text}</span>;
+    };
+
+    const getRecordingStatusBadge = (status) => {
+        const styles = {
+            processing: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b', text: 'Processing' },
+            available: { bg: 'rgba(34,197,94,0.15)', color: '#4ade80', text: 'Available' },
+            failed: { bg: 'rgba(239,68,68,0.15)', color: '#ef4444', text: 'Failed' },
+            draft: { bg: 'rgba(100,116,139,0.15)', color: '#94a3b8', text: 'Draft' }
+        };
+        const style = styles[status] || styles.draft;
+        return <span style={{ background: style.bg, color: style.color, padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase' }}>{style.text}</span>;
+    };
+
     // ── Stat helpers ───────────────────────────────────────────
     const completedCoursesCount = courses.filter(c => c.publicationState === 'Active').length;
 
@@ -1111,108 +1494,9 @@ export default function InstructorDashboard() {
         <QuizManagement courses={courses} colors={colors} s={s} />
     );
 
-    const renderLiveClasses = () => {
-        // Build upcoming events from live sessions
-        const upcomingEvents = liveSessions
-            .filter(ls => ls.startTime && new Date(ls.startTime) >= new Date())
-            .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
-            .slice(0, 8);
-
-        return (
-            <div>
-                <div style={s.tabHeader}>
-                    <h2 style={s.tabTitle}>Live Classes</h2>
-                    <p style={s.tabSubtitle}>Schedule live sessions and interact with learners in real time.</p>
-                </div>
-
-                {/* Quick action */}
-                <div style={{ ...s.panelCard, marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                    <div>
-                        <p style={{ color: colors.text, fontWeight: '700', margin: '0 0 4px', fontSize: '15px' }}>Manage Live Sessions</p>
-                        <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Create, edit, and join live virtual classrooms with your students.</p>
-                    </div>
-                    <button onClick={() => navigate('/live-sessions')} style={s.primaryBtn}>
-                        <Video size={16} aria-hidden="true" style={{ marginRight: '6px' }} /> Open Live Sessions
-                    </button>
-                </div>
-
-                {/* ── Schedule Calendar ───────────────────────── */}
-                <div style={s.panelCard}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <CalendarDays size={18} color="#4ade80" aria-hidden="true" />
-                            </div>
-                            <div>
-                                <h3 style={{ ...s.panelTitle, margin: 0 }}>Schedule Calendar</h3>
-                                <p style={{ color: colors.textMuted, fontSize: '12px', margin: '2px 0 0' }}>Upcoming live classes and course events</p>
-                            </div>
-                        </div>
-                        <button onClick={() => navigate('/live-sessions')} style={s.actionBtn}>
-                            + Schedule New Session
-                        </button>
-                    </div>
-
-                    {upcomingEvents.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '40px 20px', background: 'rgba(9,13,22,0.35)', borderRadius: '12px', border: '1px dashed rgba(51,65,85,0.4)' }}>
-                            <CalendarDays size={36} color="#1e293b" style={{ display: 'block', margin: '0 auto 12px' }} aria-hidden="true" />
-                            <p style={{ color: '#475569', fontSize: '14px', margin: '0 0 16px' }}>No upcoming live sessions scheduled.</p>
-                            <button onClick={() => navigate('/live-sessions')} style={s.primaryBtn}>Schedule Your First Session</button>
-                        </div>
-                    ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {upcomingEvents.map((session, idx) => {
-                                const sessionDate = new Date(session.startTime);
-                                const isToday = sessionDate.toDateString() === new Date().toDateString();
-                                const isTomorrow = sessionDate.toDateString() === new Date(Date.now() + 86400000).toDateString();
-                                const dayLabel = isToday ? 'Today' : isTomorrow ? 'Tomorrow' : sessionDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-                                const timeLabel = sessionDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                                return (
-                                    <div key={session._id || idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 16px', background: 'rgba(9,13,22,0.45)', borderRadius: '12px', border: `1px solid ${isToday ? 'rgba(34,197,94,0.35)' : 'rgba(51,65,85,0.35)'}` }}>
-                                        {/* Date block */}
-                                        <div style={{ textAlign: 'center', minWidth: '56px', padding: '8px', background: isToday ? 'rgba(34,197,94,0.15)' : 'rgba(30,41,59,0.5)', borderRadius: '10px', border: `1px solid ${isToday ? 'rgba(34,197,94,0.3)' : 'rgba(51,65,85,0.3)'}` }}>
-                                            <div style={{ color: isToday ? '#4ade80' : colors.textMuted, fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{dayLabel.split(' ')[0]}</div>
-                                            <div style={{ color: isToday ? '#4ade80' : colors.text, fontSize: '18px', fontWeight: '800', lineHeight: 1.2 }}>
-                                                {isToday || isTomorrow ? sessionDate.getDate() : dayLabel.split(' ').slice(-1)[0]}
-                                            </div>
-                                        </div>
-                                        {/* Info */}
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ color: colors.text, fontSize: '14px', fontWeight: '700', marginBottom: '3px' }}>{session.title || session.sessionTitle || 'Live Class'}</div>
-                                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                                                <span style={{ color: colors.textMuted, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                    <Video size={11} aria-hidden="true" /> {timeLabel}
-                                                </span>
-                                                {session.durationMinutes && (
-                                                    <span style={{ color: colors.textMuted, fontSize: '12px' }}>{session.durationMinutes} min</span>
-                                                )}
-                                                {session.courseRef?.courseTitle && (
-                                                    <span style={{ color: '#4ade80', fontSize: '12px', fontWeight: '600' }}>{session.courseRef.courseTitle}</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        {/* Badge + Join */}
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
-                                            {isToday && (
-                                                <span style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '20px', padding: '3px 10px', fontSize: '10px', fontWeight: '800' }}>
-                                                    TODAY
-                                                </span>
-                                            )}
-                                            {session.meetingLink && session.meetingLink !== '#' && (
-                                                <button onClick={() => window.open(session.meetingLink, '_blank')} style={s.actionBtn}>
-                                                    Join
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
-    };
+    const renderLiveClasses = () => (
+        <InstructorLiveSessions courses={courses} />
+    );
 
     const renderMessages = () => (
         <div>
@@ -1420,8 +1704,6 @@ export default function InstructorDashboard() {
         { key: 'overview', label: 'Dashboard', icon: <LayoutDashboard size={20} aria-hidden="true" /> },
         { key: 'courses', label: 'My Courses', icon: <BookOpen size={20} aria-hidden="true" /> },
         { key: 'students', label: 'Students', icon: <Users size={20} aria-hidden="true" /> },
-        { key: 'assignments', label: 'Assignments', icon: <ClipboardList size={20} aria-hidden="true" /> },
-        { key: 'quizzes', label: 'Quizzes', icon: <FileQuestion size={20} aria-hidden="true" /> },
         { key: 'live', label: 'Live Classes', icon: <Video size={20} aria-hidden="true" /> },
         { key: 'analytics', label: 'Analytics', icon: <BarChart3 size={20} aria-hidden="true" /> },
         { key: 'messages', label: 'Messages', icon: <MessagesSquare size={20} aria-hidden="true" /> },

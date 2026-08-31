@@ -5,11 +5,13 @@ const {
     getCourseProgress,
     getResumeProgress,
     getLessonRequirementsStatus,
+    getCourseSequence,
     saveLessonProgress,
     markDocumentViewed,
     trackResourceDownload
 } = require('../controllers/learningProgressController');
 
+router.get('/course/:courseId/sequence',                                protect, authorizeRoles('Student'), getCourseSequence);
 router.get('/course/:courseId',                                         protect, authorizeRoles('Student'), getCourseProgress);
 router.get('/resume',                                                   protect, authorizeRoles('Student'), getResumeProgress);
 router.get('/course/:courseId/lesson/:lessonId/requirements',           protect, authorizeRoles('Student'), getLessonRequirementsStatus);

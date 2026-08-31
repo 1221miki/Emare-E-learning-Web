@@ -42,6 +42,7 @@ export default function QuizPage() {
     const [timeLeft, setTimeLeft] = useState(0);
     const [submitting, setSubmitting] = useState(false);
     const [result, setResult] = useState(null);
+    const [accessError, setAccessError] = useState(null);
 
     useEffect(() => {
         // Fetch quiz details
@@ -55,6 +56,11 @@ export default function QuizPage() {
                 if (q.aiTutorEnabled === false) setAiTutorBlocked(AI_TUTOR_BLOCKED_MESSAGE);
             })
             .catch(err => {
+                // Sequential workflow: quiz locked because its lesson isn't unlocked yet
+                if (err.response?.status === 403 && err.response?.data?.lessonLocked) {
+                    setAccessError(err.response.data.lockReason || err.response.data.message || 'This quiz is not unlocked yet.');
+                    return;
+                }
                 alert("Quiz not found or you don't have access.");
                 navigate('/student/dashboard');
             });
@@ -119,6 +125,38 @@ export default function QuizPage() {
         submitPayload();
     };
 
+    const handleRetry = () => {
+        setResult(null);
+        setAnswers({});
+        setTimeLeft(quiz.allottedDurationMinutes * 60);
+    };
+
+    if (accessError) {
+        return (
+            <div style={{ ...styles.centerContainer, background: colors.bg, color: colors.text, display: 'flex', flexDirection: 'column' }}>
+                <Navbar />
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                    <div style={{ ...styles.resultCard, background: colors.bgCard, borderColor: colors.border }}>
+                        <div style={{ fontSize: 44, marginBottom: 12 }}>🔒</div>
+                        <h2 style={{ margin: '0 0 8px', color: colors.text }}>Quiz locked</h2>
+                        <p style={{ color: colors.textMuted, margin: '0 0 24px', lineHeight: 1.6 }}>{accessError}</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            <button
+                                onClick={() => quiz?.courseRef ? navigate(`/student/learn/${quiz.courseRef}`) : navigate('/student/dashboard')}
+                                style={styles.primaryBtn}
+                            >
+                                Continue Learning
+                            </button>
+                            <button onClick={() => navigate('/student/dashboard')} style={{ ...styles.primaryBtn, background: 'transparent', color: colors.textMuted, border: `1px solid ${colors.border}` }}>
+                                Return to Dashboard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (!quiz) return <div style={{ ...styles.centerContainer, background: colors.bg, color: colors.text }} />;
 
     if (result) {
@@ -138,7 +176,23 @@ export default function QuizPage() {
                         <div style={{...styles.badge, background: result.passed ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: result.passed ? '#10b981' : '#ef4444', marginBottom:'24px', fontSize:'16px', padding:'8px 16px'}}>
                             {result.passed ? 'PASSED ' : 'FAILED '}
                         </div>
-                        <button onClick={() => navigate('/student/dashboard')} style={styles.primaryBtn}>Return to Dashboard</button>
+                        <p style={{ color: colors.textMuted, margin: '0 0 24px', fontSize: 12.5, lineHeight: 1.6 }}>
+                            {result.attemptLimit > 1 && `Attempts used: ${result.attemptsUsed}/${result.attemptLimit}. `}
+                            {!result.passed && result.attemptsLeft > 0
+                                ? `You have ${result.attemptsLeft} attempt${result.attemptsLeft > 1 ? 's' : ''} left — try again to pass and unlock the next lesson.`
+                                : result.passed
+                                    ? 'The next lesson is now unlocked.'
+                                    : 'You have used all your attempts for this quiz.'}
+                        </p>
+                        {!result.passed && result.attemptsLeft > 0 && (
+                            <button onClick={handleRetry} style={{ ...styles.primaryBtn, marginBottom: 10 }}>
+                                ↻ Try Again ({result.attemptsLeft} attempt{result.attemptsLeft > 1 ? 's' : ''} left)
+                            </button>
+                        )}
+                        <button onClick={() => quiz.courseRef ? navigate(`/student/learn/${quiz.courseRef}`) : navigate('/student/dashboard')} style={{ ...styles.primaryBtn, background: 'transparent', color: colors.textMuted, border: `1px solid ${colors.border}`, marginTop: 10 }}>
+                            Continue Learning
+                        </button>
+                        <button onClick={() => navigate('/student/dashboard')} style={{ background: 'transparent', color: colors.textMuted, border: 'none', cursor: 'pointer', fontSize: 13, marginTop: 12 }}>Return to Dashboard</button>
                     </div>
                 </div>
             </div>

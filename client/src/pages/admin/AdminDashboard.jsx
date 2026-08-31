@@ -5701,7 +5701,7 @@ const resetCalendarForm = () => {
                                         reviewAssignments.map((assignment) => (
                                             <div key={assignment._id} style={{ padding: '12px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, marginBottom: '8px' }}>
                                                 <strong style={{ color: colors.text }}>{assignment.title}</strong>
-                                                <div style={{ color: colors.textMuted, fontSize: '13px' }}>Due in {assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : 'N/A'}</div>
+                                                <div style={{ color: colors.textMuted, fontSize: '13px' }}>{assignment.maxScore || '—'} points · No deadline</div>
                                             </div>
                                         ))
                                     ) : (

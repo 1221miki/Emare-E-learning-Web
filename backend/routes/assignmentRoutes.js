@@ -14,6 +14,7 @@ router.post('/:id/submit-multipart', upload.array('files'), assignmentController
 // Instructor routes
 router.post('/', denySuspendedActions, authorizeRoles('Instructor'), assignmentController.createAssignment);
 router.put('/:id', authorizeRoles('Instructor'), assignmentController.updateAssignment);
+router.delete('/:id', denySuspendedActions, authorizeRoles('Instructor', 'Admin'), assignmentController.deleteAssignment);
 router.get('/:id/submissions', authorizeRoles('Instructor', 'Admin'), assignmentController.getSubmissionsForAssignment);
 router.patch('/submissions/:submissionId/grade', denySuspendedActions, authorizeRoles('Instructor'), assignmentController.gradeSubmission);
 

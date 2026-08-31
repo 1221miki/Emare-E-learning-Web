@@ -22,7 +22,7 @@ export default function AssignmentList({ courseId }) {
                         <div key={a._id} style={{ display: 'flex', justifyContent: 'space-between', padding: 8, borderRadius: 8, background: colors.bgInput, border: `1px solid ${colors.border}` }}>
                             <div>
                                 <div style={{ fontWeight: 800, color: colors.text }}>{a.title}</div>
-                                <div style={{ fontSize: 12, color: colors.textMuted }}>{a.dueDate ? new Date(a.dueDate).toLocaleString() : 'No due date'}</div>
+                                <div style={{ fontSize: 12, color: colors.textMuted }}>{a.maxScore} pts</div>
                             </div>
                             <div>
                                 <a href={`/student/assignments/${a._id}`} style={{ color: colors.primary, fontWeight: 800 }}>Open</a>

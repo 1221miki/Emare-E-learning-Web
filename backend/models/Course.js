@@ -6,6 +6,14 @@ const LessonSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
+    // clientId: stable client-side identifier used by the course-creation wizard
+    // to match lessons to inline assignments within the same save (e.g.
+    // "_abc123"). Not shown to students.
+    clientId: {
+        type: String,
+        default: null,
+        trim: true
+    },
     videoUrl: {
         type: String, // Bunny Stream embed URL: https://iframe.mediadelivery.net/embed/LIBRARY_ID/VIDEO_GUID
         required: true
@@ -80,6 +88,32 @@ const ChapterSchema = new mongoose.Schema({
         trim: true
     },
     lessons: [LessonSchema]
+});
+
+// Course Notes — plain study/reference notes authored by the instructor/admin
+// during course creation. Visible to enrolled students inside the workspace.
+const CourseNoteSchema = new mongoose.Schema({
+    title: {
+        type: String,
+        trim: true,
+        maxlength: 150,
+        default: ''
+    },
+    content: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now
+    }
+}, {
+    _id: true
 });
 
 const CourseSchema = new mongoose.Schema({
@@ -183,6 +217,7 @@ const CourseSchema = new mongoose.Schema({
     },
     thumbnailUrl: String,
     previewVideoUrl: String,
+    notes: [CourseNoteSchema],
     isFeatured: {
         type: Boolean,
         default: false

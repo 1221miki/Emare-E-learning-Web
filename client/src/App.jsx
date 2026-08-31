@@ -72,6 +72,7 @@ import Checkout              from './pages/student/Checkout';
 import PaymentCallbackPage   from './pages/student/PaymentCallbackPage';
 import PaymentSuccess        from './pages/student/PaymentSuccess';
 import PaymentFailed         from './pages/student/PaymentFailed';
+import RecordingPlayerPage   from './pages/student/RecordingPlayerPage';
 
 // Instructor pages
 import InstructorDashboard   from './pages/instructor/InstructorDashboard';
@@ -152,6 +153,7 @@ function AppRoutes() {
                 <Route path="/payment/callback"              element={<PaymentCallbackPage />} />
                 <Route path="/payment/success"               element={<PaymentSuccess />} />
                 <Route path="/payment/failed"                element={<PaymentFailed />} />
+                <Route path="/recordings/:id"                element={<PrivateRoute><RecordingPlayerPage /></PrivateRoute>} />
                 <Route path="/messages"                      element={<PrivateRoute><MessageInboxPage /></PrivateRoute>} />
                 <Route path="/support-messages"              element={<PrivateRoute><SupportMessagesPage /></PrivateRoute>} />
                 <Route path="/live-sessions"                 element={<PrivateRoute><LiveSessionsPage /></PrivateRoute>} />

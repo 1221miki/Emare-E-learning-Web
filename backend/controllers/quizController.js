@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Course = require('../models/Course');
 const GradeBook = require('../models/GradeBook');
 const AssessmentAiBlock = require('../models/AssessmentAiBlock');
+const { getQuizAccess } = require('../services/sequenceService');
 
 // ─────────────────────────────────────────────
 // @desc    Create a new quiz for a course
@@ -13,7 +14,7 @@ const createQuiz = async (req, res, next) => {
     try {
         const {
             courseRef, quizTitle, allottedDurationMinutes, passingScoreThreshold,
-            questionArray, submissionDeadline,
+            questionArray, submissionDeadline, attemptLimit,
             lessonRef   // optional — links quiz to a specific embedded lesson
         } = req.body;
 
@@ -32,6 +33,7 @@ const createQuiz = async (req, res, next) => {
             quizTitle,
             allottedDurationMinutes,
             passingScoreThreshold: passingScoreThreshold || 60,
+            attemptLimit: Number(attemptLimit) || 1,
             questionArray,
             submissionDeadline,
             aiTutorEnabled: req.body.aiTutorEnabled !== false
@@ -75,6 +77,19 @@ const getQuizById = async (req, res, next) => {
 
         // If the requesting user is a Student, strip correct answers from the response
         if (req.user.assignedRole === 'Student') {
+            // ── SEQUENTIAL GATE ─────────────────────────────────────────────
+            // A quiz belonging to a lesson may only be viewed once its owning
+            // lesson is unlocked (i.e. all earlier lessons are fully complete).
+            const access = await getQuizAccess(req.user.id, quiz);
+            if (!access.granted) {
+                return res.status(403).json({
+                    success: false,
+                    message: access.reason,
+                    lessonLocked: true,
+                    lockReason: access.reason
+                });
+            }
+
             quiz.questionArray = quiz.questionArray.map(q => ({
                 _id: q._id,
                 questionText: q.questionText,
@@ -120,10 +135,30 @@ const submitQuizAttempt = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'This quiz is no longer active.' });
         }
 
-        // Check if student has already attempted this quiz
-        const existingAttempt = await GradeBook.findOne({ studentRef: req.user.id, assessmentRef: quiz._id });
-        if (existingAttempt) {
-            return res.status(400).json({ success: false, message: 'You have already submitted an attempt for this quiz.' });
+        // ── SEQUENTIAL GATE ────────────────────────────────────────────────
+        // A quiz linked to a lesson is only attemptable when its lesson is
+        // unlocked. Attempting an out-of-order quiz is rejected on the server.
+        const access = await getQuizAccess(req.user.id, quiz);
+        if (!access.granted) {
+            return res.status(403).json({
+                success: false,
+                message: access.reason,
+                lessonLocked: true,
+                lockReason: access.reason
+            });
+        }
+
+        // ── ATTEMPT LIMIT ──────────────────────────────────────────────────
+        // Retries are allowed only up to the quiz's attemptLimit (each attempt
+        // is recorded as a GradeBook row). A failed attempt therefore locks the
+        // lesson until the student passes — students with attempts left can retry.
+        const attemptLimit = Number(quiz.attemptLimit) || 1;
+        const attemptsUsed = await GradeBook.countDocuments({ studentRef: req.user.id, assessmentRef: quiz._id });
+        if (attemptsUsed >= attemptLimit) {
+            return res.status(400).json({
+                success: false,
+                message: `You have used all ${attemptLimit} allowed attempt${attemptLimit > 1 ? 's' : ''} for this quiz.`
+            });
         }
 
         // Auto-grade: compare submitted answers against correct answer indices
@@ -183,6 +218,9 @@ const submitQuizAttempt = async (req, res, next) => {
                 totalQuestions,
                 passingThreshold: quiz.passingScoreThreshold,
                 passed,
+                attemptLimit,
+                attemptsUsed: attemptsUsed + 1,
+                attemptsLeft: Math.max(0, attemptLimit - (attemptsUsed + 1)),
                 gradeEntryId: gradeEntry._id,
                 gamification: {
                     pointsAwarded,

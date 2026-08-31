@@ -124,6 +124,7 @@ export default function StudentDashboard() {
     // Live Sessions Tab States
     const [allLiveSessions, setAllLiveSessions] = useState([]);
     const [liveFilter, setLiveFilter] = useState('upcoming');
+    const [studentRecordings, setStudentRecordings] = useState([]);
 
     // Discussions Tab States
     const [discussionsList, setDiscussionsList] = useState([]);
@@ -378,6 +379,25 @@ export default function StudentDashboard() {
         return () => { cancelled = true; };
     }, [user, changeLanguage]);
 
+    // ── Real-time live session polling (30 s interval) ────
+    // Uses the existing REST API since socket.io-client is not bundled
+    // in the frontend. The LiveSessionsTab also has its own 30 s poll,
+    // but this one keeps the sidebar live-session badge current.
+    useEffect(() => {
+        if (!user) return;
+        const poll = setInterval(() => {
+            liveSessionService.getMySessions()
+                .then(res => {
+                    const data = res.data?.data || [];
+                    setAllLiveSessions(data);
+                    setLiveSessions(data);
+                })
+                .catch(() => {});
+        }, 30000);
+        return () => clearInterval(poll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user]);
+
     const assignmentCount = assignmentsList.length;
     const quizCount = quizzesList.length;
     const liveSessionCount = liveSessions?.length || 0;
@@ -496,14 +516,21 @@ export default function StudentDashboard() {
     const currentLessonTitle = primaryActiveCourse?.courseRef?.currentLessonTitle || assignmentsList[0]?.title || quizzesList[0]?.title || 'Your latest lesson';
     const currentProgress = Math.round(primaryActiveCourse?.completionPercentage || 0);
     const quizAverage = grades.length ? Math.round(grades.reduce((sum, grade) => sum + (grade.numericalScoreEarned || 0), 0) / grades.length) : 0;
-    const upcomingAssignmentsCount = assignmentsList.filter(a => new Date(a.dueDate || Date.now()) >= new Date()).length;
+    const pendingAssignmentsCount = (() => {
+        const approvedIds = new Set(
+            mySubmissions
+                .filter(s => s.status === 'Graded' || s.grade != null)
+                .map(s => s.assignmentRef?._id || s.assignmentRef)
+        );
+        return assignmentsList.filter(a => !approvedIds.has(a._id)).length;
+    })();
     const courseAwareness = {
         courseName: currentCourseTitle,
         courseId: currentCourseId,
         currentLessonTitle,
         courseProgress: currentProgress,
         quizAverage,
-        upcomingAssignmentsCount,
+        pendingAssignmentsCount,
         summary: `You are currently ${currentProgress}% through ${currentCourseTitle}.`
     };
 
@@ -578,6 +605,8 @@ export default function StudentDashboard() {
         setAllLiveSessions,
         liveFilter,
         setLiveFilter,
+        studentRecordings,
+        setStudentRecordings,
         discussionsList,
         setDiscussionsList,
         newDiscussionTitle,
@@ -696,7 +725,7 @@ export default function StudentDashboard() {
         currentLessonTitle,
         currentProgress,
         quizAverage,
-        upcomingAssignmentsCount,
+        pendingAssignmentsCount,
         courseAwareness,
         badges,
         styles,
@@ -731,11 +760,8 @@ export default function StudentDashboard() {
                 navItems={[
                     { key: 'overview', label: t('nav_overview'), icon: <LayoutDashboard size={18} aria-hidden="true" /> },
                     { key: 'learning', label: t('nav_my_learning'), icon: <GraduationCap size={18} aria-hidden="true" /> },
-                    { key: 'assignments', label: t('nav_assignments'), icon: <ClipboardList size={18} aria-hidden="true" />, badge: assignmentCount > 0 ? `${assignmentCount}` : null },
-                    { key: 'quizzes', label: t('nav_quizzes'), icon: <BrainCircuit size={18} aria-hidden="true" />, badge: quizCount > 0 ? `${quizCount}` : null },
                     { key: 'live', label: t('nav_live'), icon: <Video size={18} aria-hidden="true" />, badge: liveSessionCount > 0 ? `${liveSessionCount}` : null },
                     { key: 'discussions', label: t('nav_discussions'), icon: <MessageSquare size={18} aria-hidden="true" /> },
-                    { key: 'leaderboard', label: t('nav_leaderboard'), icon: <Trophy size={18} aria-hidden="true" /> },
                     // ── Communication section ────────────────────────────────────────────
                     { key: 'messages', label: t('nav_inbox'), icon: <Mail size={18} aria-hidden="true" />, badge: unreadMessagesCount > 0 ? `${unreadMessagesCount}` : null },
                     // ────────────────────────────────────────────────────────────────────

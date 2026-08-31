@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
 import {
     Eye, Edit3, Copy, Trash2, Users, MoreHorizontal,
-    ClipboardList, Calendar, BookOpen, Plus
+    ClipboardList, BookOpen, Plus
 } from 'lucide-react';
 import { assignmentService } from '../../../services/api';
 import { card, ghostBtn, primaryBtn, dangerBtn, STATUS_CONFIG, C } from './assignmentStyles';
 
-function StatusBadge({ published, dueDate }) {
-    let key = 'Draft';
-    if (published) {
-        const overdue = dueDate && new Date(dueDate) < new Date();
-        key = overdue ? 'Closed' : 'Published';
-    }
+function StatusBadge({ published }) {
+    const key = published ? 'Published' : 'Draft';
     const cfg = STATUS_CONFIG[key];
     return (
         <span style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`, borderRadius: '20px', padding: '3px 10px', fontSize: '11px', fontWeight: '700' }}>
@@ -57,9 +53,7 @@ function EditModal({ assignment, onSave, onClose }) {
     const [form, setForm] = useState({
         title: assignment.title,
         description: assignment.description || '',
-        dueDate: assignment.dueDate ? new Date(assignment.dueDate).toISOString().slice(0, 10) : '',
         maxScore: assignment.maxScore || 100,
-        allowLate: assignment.allowLate || false,
         published: assignment.published || false,
         aiTutorEnabled: assignment.aiTutorEnabled !== false
     });
@@ -69,7 +63,7 @@ function EditModal({ assignment, onSave, onClose }) {
     const handleSave = async () => {
         setSaving(true); setErr('');
         try {
-            const payload = { ...form, dueDate: form.dueDate ? new Date(form.dueDate + 'T23:59:00') : null };
+            const payload = { ...form };
             const res = await assignmentService.update(assignment._id, payload);
             onSave(res.data.data);
         } catch (e) {
@@ -90,20 +84,18 @@ function EditModal({ assignment, onSave, onClose }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div><label style={lbl}>Title</label><input style={inp} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
                     <div><label style={lbl}>Description</label><textarea style={{ ...inp, minHeight: '80px', resize: 'vertical' }} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        <div><label style={lbl}>Due Date</label><input type="date" style={inp} value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} /></div>
-                        <div><label style={lbl}>Max Score</label><input type="number" min="0" style={inp} value={form.maxScore} onChange={e => setForm(f => ({ ...f, maxScore: Number(e.target.value) }))} /></div>
-                    </div>
+                    <div><label style={lbl}>Max Score</label><input type="number" min="0" style={inp} value={form.maxScore} onChange={e => setForm(f => ({ ...f, maxScore: Number(e.target.value) }))} /></div>
                     <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#94a3b8', fontSize: '13px' }}>
-                            <input type="checkbox" checked={form.allowLate} onChange={e => setForm(f => ({ ...f, allowLate: e.target.checked }))} style={{ accentColor: C.orange }} /> Allow Late
-                        </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#94a3b8', fontSize: '13px' }}>
                             <input type="checkbox" checked={form.published} onChange={e => setForm(f => ({ ...f, published: e.target.checked }))} style={{ accentColor: C.green }} /> Published
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: form.aiTutorEnabled ? '#10b981' : '#ef4444' }}>
                             <input type="checkbox" checked={form.aiTutorEnabled} onChange={e => setForm(f => ({ ...f, aiTutorEnabled: e.target.checked }))} style={{ accentColor: form.aiTutorEnabled ? '#10b981' : '#ef4444' }} /> ⊡ Emare AI Tutor
                         </label>
+                    </div>
+                    <div style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '8px', padding: '10px 14px' }}>
+                        <div style={{ color: '#4ade80', fontSize: '12px', fontWeight: 700 }}>No submission deadline</div>
+                        <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>Students complete this at their own pace when they reach the lesson.</div>
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
@@ -115,7 +107,7 @@ function EditModal({ assignment, onSave, onClose }) {
     );
 }
 
-const COLS = ['Assignment', 'Course', 'Due Date', 'Submissions', 'Avg Score', 'Status', ''];
+const COLS = ['Assignment', 'Course', 'Submissions', 'Avg Score', 'Status', ''];
 
 export default function AssignmentList({ assignments, allSubmissions, courses, selectedCourse, onViewSubmissions, onUpdated, onDeleted, onCreateNew }) {
     const [editTarget, setEditTarget] = useState(null);
@@ -180,8 +172,6 @@ export default function AssignmentList({ assignments, allSubmissions, courses, s
                                 const subs = subMap[asgn._id] || [];
                                 const graded = subs.filter(s => s.grade != null);
                                 const avgScore = graded.length ? Math.round(graded.reduce((a, s) => a + (s.grade || 0), 0) / graded.length) : null;
-                                const due = asgn.dueDate ? new Date(asgn.dueDate) : null;
-                                const overdue = due && due < new Date();
                                 return (
                                     <tr key={asgn._id}
                                         style={{ borderBottom: '1px solid rgba(51,65,85,0.22)', transition: 'background 0.12s' }}
@@ -195,7 +185,7 @@ export default function AssignmentList({ assignments, allSubmissions, courses, s
                                                 </div>
                                                 <div>
                                                     <div style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: '700' }}>{asgn.title}</div>
-                                                    <div style={{ color: '#475569', fontSize: '11px', marginTop: '2px' }}>{asgn.maxScore} pts · {asgn.allowLate ? 'Late OK' : 'No late'}</div>
+                                                    <div style={{ color: '#475569', fontSize: '11px', marginTop: '2px' }}>{asgn.maxScore} pts · No deadline</div>
                                                     <span style={{ display: 'inline-block', marginTop: '4px', padding: '2px 10px', borderRadius: '999px', fontSize: '10px', fontWeight: 800, background: asgn.aiTutorEnabled === false ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)', color: asgn.aiTutorEnabled === false ? '#f87171' : '#34d399' }}>
                                                         {asgn.aiTutorEnabled === false ? '🔒 AI Tutor Disabled' : '⊡ AI Tutor Enabled'}
                                                     </span>
@@ -209,15 +199,6 @@ export default function AssignmentList({ assignments, allSubmissions, courses, s
                                                     {courses.find(c => c._id === (asgn.courseRef?._id || asgn.courseRef))?.courseTitle || '—'}
                                                 </span>
                                             </div>
-                                        </td>
-                                        <td style={{ padding: '14px 18px' }}>
-                                            {due ? (
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: overdue ? C.red : '#94a3b8', fontSize: '12px', fontWeight: overdue ? '700' : '400' }}>
-                                                    <Calendar size={12} aria-hidden="true" />
-                                                    {due.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
-                                                    {overdue && <span style={{ background: 'rgba(239,68,68,0.12)', color: C.red, fontSize: '10px', padding: '2px 6px', borderRadius: '6px', fontWeight: '700' }}>CLOSED</span>}
-                                                </span>
-                                            ) : <span style={{ color: '#334155', fontSize: '12px' }}>No deadline</span>}
                                         </td>
                                         <td style={{ padding: '14px 18px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -242,7 +223,7 @@ export default function AssignmentList({ assignments, allSubmissions, courses, s
                                             }
                                         </td>
                                         <td style={{ padding: '14px 18px' }}>
-                                            <StatusBadge published={asgn.published} dueDate={asgn.dueDate} />
+                                            <StatusBadge published={asgn.published} />
                                         </td>
                                         <td style={{ padding: '14px 18px' }}>
                                             <ActionMenu

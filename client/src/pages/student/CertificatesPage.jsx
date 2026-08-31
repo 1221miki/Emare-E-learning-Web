@@ -16,8 +16,15 @@ const navItems = [
 export default function CertificatesPage() {
     const { colors, theme } = useTheme();
     const navigate = useNavigate();
+    const isDark = theme === 'dark';
+
     const [certificates, setCertificates] = useState([]);
+    const [eligibility, setEligibility]   = useState([]);
+    const [eligibilityLoading, setEligibilityLoading] = useState(true);
     const [downloadingId, setDownloadingId] = useState(null);
+    const [issuingId, setIssuingId]       = useState(null);
+    const [issueError, setIssueError]     = useState('');
+    const [issuedMsg, setIssuedMsg]       = useState('');
     const [copyMsg, setCopyMsg]           = useState('');
 
     const fetchCertificates = useCallback(async () => {
@@ -25,11 +32,27 @@ export default function CertificatesPage() {
             const res = await certificateService.getMine();
             setCertificates(res.data?.data || []);
         } catch (err) {
-            console.error('[CertificatesPage] fetch failed:', err);
+            console.error('[CertificatesPage] fetch certificates failed:', err);
         }
     }, []);
 
-    useEffect(() => { fetchCertificates(); }, [fetchCertificates]);
+    const fetchEligibility = useCallback(async () => {
+        setEligibilityLoading(true);
+        try {
+            const res = await certificateService.getEligibilityOverview();
+            setEligibility(res.data?.data || []);
+        } catch (err) {
+            console.error('[CertificatesPage] fetch eligibility overview failed:', err);
+            setEligibility([]);
+        } finally {
+            setEligibilityLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchCertificates();
+        fetchEligibility();
+    }, [fetchCertificates, fetchEligibility]);
 
     // ── Download PDF ──────────────────────────────────────────────────────────
     const handleDownload = async (cert) => {
@@ -51,6 +74,22 @@ export default function CertificatesPage() {
         }
     };
 
+    // ── Issue certificate (only possible once the backend approves eligibility) ─
+    const handleGetCertificate = async (courseId, courseTitle) => {
+        setIssuingId(courseId);
+        setIssueError('');
+        setIssuedMsg('');
+        try {
+            await certificateService.issue(courseId);
+            await Promise.all([fetchCertificates(), fetchEligibility()]);
+            setIssuedMsg(`Certificate issued for "${courseTitle}" — you can download it below.`);
+        } catch (err) {
+            setIssueError(err?.response?.data?.message || 'Unable to generate certificate.');
+        } finally {
+            setIssuingId(null);
+        }
+    };
+
     // ── Copy verification link ────────────────────────────────────────────────
     const handleCopyLink = (certId) => {
         const url = `${window.location.origin}/verify-certificate/${certId}`;
@@ -60,13 +99,128 @@ export default function CertificatesPage() {
         });
     };
 
-    // ── Navigate to verify page ───────────────────────────────────────────────
-    const handleVerify = (certId) => {
-        navigate(`/verify-certificate/${certId}`);
+    const handleVerify = (certId) => navigate(`/verify-certificate/${certId}`);
+
+    const reqColor = (done) =>
+        done ? (isDark ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.1)')
+              : (isDark ? 'rgba(239,68,68,0.12)' : 'rgba(254,242,242,1)');
+
+    // ── Render a single eligibility tracker card ─────────────────────────────
+    const renderTrackerCard = (item) => {
+        const course     = item.course || {};
+        const courseId   = item.course?._id || item.course?.courseRef;
+        const report     = item.report || {};
+        const requirements = report.requirements || [];
+        const pct        = Math.min(100, Math.max(0, item.completionPercentage || 0));
+        const missing    = report.missingRequirements || [];
+        const earned     = item.hasCertificate;
+        const locked     = !item.eligible;
+
+        return (
+            <div key={`track-${courseId || course._id || Math.random()}`} style={{
+                background: colors.bgCard,
+                border: `1px solid ${colors.border}`,
+                borderRadius: 16,
+                padding: 22,
+                display: 'flex', flexDirection: 'column', gap: 16
+            }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: locked ? '#f59e0b' : '#10b981', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+                            {earned ? '🏅 Certificate Earned' : (locked ? '🔒 In Progress' : '✅ Ready for Certificate')}
+                        </div>
+                        <h3 style={{ color: colors.text, margin: 0, fontSize: 18, fontWeight: 800, lineHeight: 1.3 }}>
+                            {course.courseTitle || course.title || 'Course'}
+                        </h3>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ color: colors.text, fontSize: 24, fontWeight: 800 }}>{pct}%</div>
+                        <div style={{ color: colors.textMuted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>complete</div>
+                    </div>
+                </div>
+
+                {/* Progress bar */}
+                <div style={{ height: 8, borderRadius: 999, background: colors.bgInput, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, borderRadius: 999, background: locked ? 'linear-gradient(90deg,#f59e0b,#f97316)' : 'linear-gradient(90deg,#10b981,#059669)', transition: 'width 0.4s ease' }} />
+                </div>
+
+                {/* Missing summary chips */}
+                {!earned && missing.length > 0 && (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {missing.map(m => (
+                            <span key={m} style={{ background: reqColor(false), color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 999, padding: '4px 10px', fontSize: 11, fontWeight: 700 }}>
+                                {m} missing
+                            </span>
+                        ))}
+                    </div>
+                )}
+
+                {/* Requirement checklist */}
+                {!earned && requirements.length > 0 && (
+                    <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {requirements.map(req => (
+                            <div key={req.key} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                                <span style={{ fontSize: 14, marginTop: 1 }}>{req.done ? '✅' : '⬜'}</span>
+                                <div style={{ minWidth: 0 }}>
+                                    <div style={{ color: colors.text, fontSize: 13, fontWeight: 600 }}>
+                                        {req.title}
+                                        {req.lessonTitle ? <span style={{ color: colors.textMuted, fontWeight: 400 }}> — {req.lessonTitle}</span> : null}
+                                    </div>
+                                    <div style={{ color: req.done ? '#10b981' : colors.textMuted, fontSize: 12, marginTop: 1 }}>
+                                        {req.detail}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Issue error */}
+                {issueError && issuingId === courseId && (
+                    <div style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 600 }}>
+                        ⚠ {issueError}
+                    </div>
+                )}
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 'auto' }}>
+                    {earned ? (
+                        <button onClick={() => handleVerify(certIdOf(item))} style={{ ...buttonBase(colors), background: 'transparent', color: colors.primary, border: `1px solid ${colors.primary}` }}>
+                            🔍 Verify Certificate
+                        </button>
+                    ) : locked ? (
+                        <button onClick={() => navigate(`/student/learn/${courseId || ''}`)} style={{ ...buttonBase(colors), background: colors.primary, color: '#fff' }}>
+                            Continue Learning →
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => handleGetCertificate(courseId, course.courseTitle || course.title)}
+                            disabled={issuingId === courseId}
+                            style={{ ...buttonBase(colors), background: issuingId === courseId ? colors.textMuted : 'linear-gradient(135deg,#16a34a,#15803d)', color: '#fff', cursor: issuingId === courseId ? 'not-allowed' : 'pointer' }}
+                        >
+                            {issuingId === courseId ? 'Issuing…' : '🎓 Get My Certificate'}
+                        </button>
+                    )}
+                    {!earned && pct > 0 && (
+                        <button onClick={() => navigate(`/student/learn/${courseId || ''}`)} style={{ ...buttonBase(colors), background: 'transparent', color: colors.textMuted, border: `1px solid ${colors.border}` }}>
+                            Resume
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
     };
 
-    // ── Styles ────────────────────────────────────────────────────────────────
-    const isDark = theme === 'dark';
+    const certIdOf = (item) =>
+        item.certificate?.certificateId || item.certificate?.certificateNumber || item.certificate?._id || '';
+
+    const buttonBase = (colors) => ({
+        border: 'none', padding: '10px 18px', borderRadius: 10,
+        fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'inline-flex',
+        alignItems: 'center', gap: 6, textDecoration: 'none'
+    });
+
+    const pendingCourses = eligibility.filter(e => !e.hasCertificate);
 
     return (
         <div style={{ display: 'flex', minHeight: '100vh', background: colors.bg, fontFamily: "'Outfit', sans-serif" }}>
@@ -78,10 +232,37 @@ export default function CertificatesPage() {
                         🎓 My Certificates
                     </h1>
                     <p style={{ color: colors.textMuted, marginTop: 6, fontSize: 14 }}>
-                        Download, share, or verify your earned certificates.
+                        Complete every lesson, required quiz and assignment — then your certificate unlocks automatically.
                     </p>
                 </div>
 
+                {issuedMsg && (
+                    <div style={{ marginBottom: 20, background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 12, padding: '12px 16px', fontSize: 14, fontWeight: 600 }}>
+                        🎉 {issuedMsg}
+                    </div>
+                )}
+
+                {/* ── Completion tracker ── */}
+                {eligibilityLoading ? (
+                    <div style={{ padding: 48, textAlign: 'center', color: colors.textMuted }}>
+                        Loading your course progress…
+                    </div>
+                ) : pendingCourses.length > 0 ? (
+                    <>
+                        <h2 style={{ color: colors.text, fontSize: 19, fontWeight: 800, margin: '0 0 16px' }}>
+                            Your Progress
+                        </h2>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+                            gap: 24, marginBottom: 40
+                        }}>
+                            {pendingCourses.map(renderTrackerCard)}
+                        </div>
+                    </>
+                ) : null}
+
+                {/* ── Earned certificates ── */}
                 {certificates.length === 0 ? (
                     <div style={{
                         padding: 48, background: colors.bgCard,
@@ -89,9 +270,9 @@ export default function CertificatesPage() {
                         textAlign: 'center'
                     }}>
                         <div style={{ fontSize: 56, marginBottom: 16 }}>📜</div>
-                        <h3 style={{ color: colors.text, margin: '0 0 8px' }}>No certificates yet</h3>
+                        <h3 style={{ color: colors.text, margin: '0 0 8px' }}>{pendingCourses.length ? 'A certificate will appear here when you finish' : 'No certificates yet'}</h3>
                         <p style={{ color: colors.textMuted, fontSize: 14 }}>
-                            Complete a course at least 90% to earn your certificate.
+                            Finish all lessons, pass required quizzes, get required assignments approved, and clear payment to unlock your certificate.
                         </p>
                     </div>
                 ) : (
@@ -121,13 +302,11 @@ export default function CertificatesPage() {
                                     boxShadow: isRevoked ? 'none' : '0 10px 30px rgba(0,0,0,0.25)',
                                     opacity: isRevoked ? 0.75 : 1
                                 }}>
-                                    {/* Background emoji watermark */}
                                     <div style={{
                                         position: 'absolute', top: -10, right: -10,
                                         fontSize: 120, opacity: 0.06, userSelect: 'none', pointerEvents: 'none'
                                     }}>🎓</div>
 
-                                    {/* Revoked badge */}
                                     {isRevoked && (
                                         <div style={{
                                             position: 'absolute', top: 14, right: 14,
@@ -139,7 +318,6 @@ export default function CertificatesPage() {
                                         </div>
                                     )}
 
-                                    {/* Header label */}
                                     <div style={{
                                         color: isRevoked ? '#9ca3af' : '#fbbf24',
                                         fontSize: 11, fontWeight: 800, letterSpacing: 2,
@@ -148,20 +326,14 @@ export default function CertificatesPage() {
                                         Certificate of Completion
                                     </div>
 
-                                    {/* Course name */}
-                                    <h3 style={{
-                                        color: isRevoked ? '#9ca3af' : '#ffffff',
-                                        fontSize: 20, margin: '0 0 6px', lineHeight: 1.3
-                                    }}>
+                                    <h3 style={{ color: isRevoked ? '#9ca3af' : '#ffffff', fontSize: 20, margin: '0 0 6px', lineHeight: 1.3 }}>
                                         {courseName}
                                     </h3>
 
-                                    {/* Issue date */}
                                     <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 20 }}>
                                         Issued: {issueDate}
                                     </div>
 
-                                    {/* Certificate ID box */}
                                     <div style={{
                                         background: 'rgba(255,255,255,0.06)',
                                         border: '1px solid rgba(255,255,255,0.12)',
@@ -179,9 +351,7 @@ export default function CertificatesPage() {
                                         </div>
                                     </div>
 
-                                    {/* Action buttons */}
                                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                                        {/* Download */}
                                         <button
                                             onClick={() => handleDownload(cert)}
                                             disabled={isRevoked || downloadingId === cert._id}
@@ -204,31 +374,22 @@ export default function CertificatesPage() {
                                             ) : '⬇ Download PDF'}
                                         </button>
 
-                                        {/* Verify */}
-                                        <button
-                                            onClick={() => handleVerify(certId)}
-                                            style={{
-                                                background: 'rgba(255,255,255,0.1)',
-                                                color: '#e2e8f0',
-                                                border: '1px solid rgba(255,255,255,0.2)',
-                                                padding: '10px 14px', borderRadius: 8,
-                                                cursor: 'pointer', fontWeight: 600, fontSize: 13
-                                            }}
-                                        >
+                                        <button onClick={() => handleVerify(certId)} style={{
+                                            background: 'rgba(255,255,255,0.1)', color: '#e2e8f0',
+                                            border: '1px solid rgba(255,255,255,0.2)',
+                                            padding: '10px 14px', borderRadius: 8,
+                                            cursor: 'pointer', fontWeight: 600, fontSize: 13
+                                        }}>
                                             🔍 Verify
                                         </button>
 
-                                        {/* Copy link */}
-                                        <button
-                                            onClick={() => handleCopyLink(certId)}
-                                            style={{
-                                                background: isCopied ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.08)',
-                                                color: isCopied ? '#10b981' : '#94a3b8',
-                                                border: `1px solid ${isCopied ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.12)'}`,
-                                                padding: '10px 14px', borderRadius: 8,
-                                                cursor: 'pointer', fontWeight: 600, fontSize: 13
-                                            }}
-                                        >
+                                        <button onClick={() => handleCopyLink(certId)} style={{
+                                            background: isCopied ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.08)',
+                                            color: isCopied ? '#10b981' : '#94a3b8',
+                                            border: `1px solid ${isCopied ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.12)'}`,
+                                            padding: '10px 14px', borderRadius: 8,
+                                            cursor: 'pointer', fontWeight: 600, fontSize: 13
+                                        }}>
                                             {isCopied ? '✓ Copied!' : '🔗 Copy'}
                                         </button>
                                     </div>
