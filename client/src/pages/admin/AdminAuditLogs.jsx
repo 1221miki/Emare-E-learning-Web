@@ -7,8 +7,8 @@ import {
     Shield, Search, Filter, RefreshCw, Download, AlertTriangle,
     Info, AlertOctagon, User, BookOpen, DollarSign, Cpu,
     ChevronLeft, ChevronRight, Calendar, Clock, Globe, Activity,
-    LayoutDashboard, Users, ShieldCheck, BarChart3, MessageSquare,
-    ClipboardList, Wallet, Megaphone, FileBarChart, ClipboardCheck,
+    LayoutDashboard, Users, ShieldCheck, BarChart3,
+    Wallet, Megaphone, ClipboardCheck,
     Clock3, Settings
 } from 'lucide-react';
 
@@ -71,11 +71,8 @@ export default function AdminAuditLogs() {
         { key: 'security', label: 'Security & Roles', icon: <ShieldCheck size={20} aria-hidden="true" /> },
         { key: 'courses', label: 'Course Management', icon: <BookOpen size={20} aria-hidden="true" /> },
         { key: 'analytics', label: 'Analytics Dashboard', icon: <BarChart3 size={20} aria-hidden="true" /> },
-        { key: 'content', label: 'Content & Moderation', icon: <MessageSquare size={20} aria-hidden="true" /> },
-        { key: 'assessments', label: 'Assessments & Certs', icon: <ClipboardList size={20} aria-hidden="true" /> },
         { key: 'finances', label: 'Finances & Revenue', icon: <Wallet size={20} aria-hidden="true" /> },
         { key: 'cms', label: 'CMS & Comms', icon: <Megaphone size={20} aria-hidden="true" /> },
-        { key: 'reports', label: 'Reports & Exports', icon: <FileBarChart size={20} aria-hidden="true" /> },
         { key: 'audit', label: 'Audit Logs', icon: <ClipboardCheck size={20} aria-hidden="true" /> },
         { key: 'calendar', label: 'Event Management', icon: <Clock3 size={20} aria-hidden="true" /> },
         { key: 'system', label: 'System Settings', icon: <Settings size={20} aria-hidden="true" /> }
