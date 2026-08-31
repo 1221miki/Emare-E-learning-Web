@@ -6,6 +6,8 @@ const {
     getQuizzesByCourse,
     getQuizById,
     submitQuizAttempt,
+    checkQuestionAnswer,
+    getQuizTracking,
     getQuizResults,
     getInstructorQuizzes,
     updateQuiz,
@@ -24,6 +26,8 @@ router.get('/:id', protect, getQuizById);
 
 // ── Student Routes ──────────────────────────────────────────
 router.post('/:id/attempt', protect, denySuspendedActions, authorizeRoles('Student'), submitQuizAttempt);
+router.post('/:id/check', protect, denySuspendedActions, authorizeRoles('Student'), checkQuestionAnswer);
+router.get('/:id/tracking', protect, denySuspendedActions, authorizeRoles('Student'), getQuizTracking);
 router.get('/:id/results', protect, denySuspendedActions, authorizeRoles('Student'), getQuizResults);
 
 module.exports = router;

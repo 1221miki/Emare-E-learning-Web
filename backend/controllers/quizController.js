@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Course = require('../models/Course');
 const GradeBook = require('../models/GradeBook');
 const AssessmentAiBlock = require('../models/AssessmentAiBlock');
+const QuestionAttempt = require('../models/QuestionAttempt');
 const { getQuizAccess } = require('../services/sequenceService');
 
 // ─────────────────────────────────────────────
@@ -238,6 +239,231 @@ const submitQuizAttempt = async (req, res, next) => {
 // @route   GET /api/quizzes/:id/results
 // @access  Private (Student only)
 // ─────────────────────────────────────────────
+// @desc    Check a single question answer (three-attempt answer & reveal)
+// @route   POST /api/quizzes/:id/check
+// @access  Private (Student only)
+// ─────────────────────────────────────────────
+const checkQuestionAnswer = async (req, res, next) => {
+    try {
+        const { questionId, selectedIndex } = req.body;
+
+        const quiz = await Quiz.findById(req.params.id);
+        if (!quiz) {
+            return res.status(404).json({ success: false, message: 'Quiz not found.' });
+        }
+        if (!quiz.isActive) {
+            return res.status(400).json({ success: false, message: 'This quiz is no longer active.' });
+        }
+
+        // ── SEQUENTIAL GATE ────────────────────────────────────────────────
+        // A lesson-linked quiz is only answerable once its lesson is unlocked.
+        const access = await getQuizAccess(req.user.id, quiz);
+        if (!access.granted) {
+            return res.status(403).json({
+                success: false,
+                message: access.reason,
+                lessonLocked: true,
+                lockReason: access.reason
+            });
+        }
+
+        // ── Locate the question ────────────────────────────────────────────
+        const question = quiz.questionArray.id(questionId);
+        if (!question) {
+            return res.status(400).json({ success: false, message: 'Question not found.' });
+        }
+
+        // ── Load (or create) the per-student tracking row ──────────────────
+        // Persisted server-side so refreshing/logging out can never reset the
+        // attempt counter or re-hide a revealed answer.
+        let tracking = await QuestionAttempt.findOne({
+            studentRef: req.user.id,
+            quizRef: quiz._id,
+            questionId
+        });
+        if (!tracking) {
+            tracking = await QuestionAttempt.create({
+                studentRef: req.user.id,
+                quizRef: quiz._id,
+                questionId,
+                attemptsUsed: 0,
+                correctAnswerRevealed: false,
+                answered: false
+            });
+        }
+
+        // Already completed — just report it back idempotently.
+        if (tracking.answered) {
+            return res.status(200).json({
+                success: true,
+                data: {
+                    correct: true,
+                    attemptsUsed: tracking.attemptsUsed,
+                    attemptsLeft: 0,
+                    answerRevealed: true,
+                    answered: true,
+                    quizCompleted: await isQuizFullyCompleted(req.user.id, quiz)
+                }
+            });
+        }
+
+        const selected = Number(selectedIndex);
+        const isCorrect = question.correctAnswerIndex === selected;
+        let attemptsUsed = tracking.attemptsUsed;
+        let answerRevealed = tracking.correctAnswerRevealed;
+
+        if (isCorrect) {
+            // Correct at any time (including as the "reveal then select" step).
+            tracking.answered = true;
+            tracking.completedAt = new Date();
+            if (tracking.correctAnswerRevealed === false) {
+                // A correct answer on first/second attempt means no reveal needed.
+                tracking.attemptsUsed = Math.min(tracking.attemptsUsed, 2);
+            }
+            await tracking.save();
+        } else if (!answerRevealed) {
+            // Wrong answer → consume one attempt.
+            attemptsUsed += 1;
+            tracking.attemptsUsed = Math.min(3, attemptsUsed);
+            if (tracking.attemptsUsed >= 3) {
+                tracking.correctAnswerRevealed = true; // permanently persist the reveal
+                answerRevealed = true;
+            } else {
+                answerRevealed = false;
+            }
+            await tracking.save();
+        } else {
+            // Wrong answer after the answer was already revealed — the student
+            // must select the revealed correct answer. No extra attempts are
+            // consumed; keep the reveal state so they can try the correct one.
+            tracking.attemptsUsed = 3;
+            await tracking.save();
+        }
+
+        const quizCompleted = await isQuizFullyCompleted(req.user.id, quiz);
+
+        // If the whole quiz just became complete, record a passing GradeBook
+        // row so the sequential progression + certificate eligibility unlock.
+        if (quizCompleted) {
+            await finalizeQuizPass(req, quiz);
+        }
+
+        let correctAnswerIndex = null;
+        let explanation = null;
+        // Only ever expose the answer once it has legitimately been revealed.
+        if (answerRevealed) {
+            correctAnswerIndex = question.correctAnswerIndex ?? null;
+            explanation = question.explanation || null;
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                correct: isCorrect,
+                attemptsUsed: tracking.attemptsUsed,
+                attemptsLeft: Math.max(0, 3 - tracking.attemptsUsed),
+                answerRevealed: answerRevealed,
+                correctAnswerIndex: answerRevealed ? correctAnswerIndex : null,
+                explanation: answerRevealed ? explanation : null,
+                answered: tracking.answered,
+                quizCompleted
+            }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// True when every question in the quiz has been answered by this student.
+const isQuizFullyCompleted = async (studentRef, quiz) => {
+    const answered = await QuestionAttempt.countDocuments({
+        studentRef,
+        quizRef: quiz._id,
+        answered: true
+    });
+    return answered >= quiz.questionArray.length;
+};
+
+// Record a passing GradeBook entry (100%) once every question is completed so
+// sequenceService / completionService treat the quiz as passed and the
+// certificate and next-lesson gates unlock. Idempotent — never double-awards.
+const finalizeQuizPass = async (req, quiz) => {
+    const existing = await GradeBook.findOne({
+        studentRef: req.user.id,
+        assessmentRef: quiz._id,
+        isGraded: true,
+        numericalScoreEarned: 100
+    });
+    if (existing) return existing;
+
+    // Release the AI Tutor block (if any) — the assessment is now complete.
+    await AssessmentAiBlock.deleteOne({ studentRef: req.user.id, quizRef: quiz._id });
+
+    const gradeEntry = await GradeBook.create({
+        studentRef: req.user.id,
+        assessmentRef: quiz._id,
+        numericalScoreEarned: 100,
+        submissionTimestamp: Date.now(),
+        gradingTimestamp: Date.now(),
+        isGraded: true,
+        instructorReviewNotes: 'Auto-graded: completed all questions (3-attempt answer & reveal).'
+    });
+
+    // Gamification: award points for the completed quiz.
+    const user = await User.findById(req.user.id);
+    user.gamificationPoints += 100;
+    if (!user.earnedBadges.includes('Quiz Master')) {
+        user.earnedBadges.push('Quiz Master');
+    }
+    await user.save({ validateBeforeSave: false });
+
+    return gradeEntry;
+};
+
+// ─────────────────────────────────────────────
+// @desc    Get the per-question 3-attempt tracking state for a student
+// @route   GET /api/quizzes/:id/tracking
+// @access  Private (Student only)
+// ─────────────────────────────────────────────
+const getQuizTracking = async (req, res, next) => {
+    try {
+        const quiz = await Quiz.findById(req.params.id);
+        if (!quiz) {
+            return res.status(404).json({ success: false, message: 'Quiz not found.' });
+        }
+
+        // Sequential gate — a lesson-linked quiz is only viewable once unlocked.
+        const access = await getQuizAccess(req.user.id, quiz);
+        if (!access.granted) {
+            return res.status(403).json({
+                success: false,
+                message: access.reason,
+                lessonLocked: true,
+                lockReason: access.reason
+            });
+        }
+
+        // Only expose reveal/answered status — never the correct answer itself.
+        const rows = await QuestionAttempt.find({
+            studentRef: req.user.id,
+            quizRef: quiz._id
+        }).lean();
+
+        res.status(200).json({
+            success: true,
+            data: rows.map(r => ({
+                questionId: r.questionId,
+                attemptsUsed: r.attemptsUsed,
+                correctAnswerRevealed: r.correctAnswerRevealed,
+                answered: r.answered
+            }))
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
 const getQuizResults = async (req, res, next) => {
     try {
         const gradeEntry = await GradeBook.findOne({
@@ -338,4 +564,4 @@ const deleteQuiz = async (req, res, next) => {
     }
 };
 
-module.exports = { createQuiz, getQuizzesByCourse, getQuizById, submitQuizAttempt, getQuizResults, getInstructorQuizzes, updateQuiz, deleteQuiz };
+module.exports = { createQuiz, getQuizzesByCourse, getQuizById, submitQuizAttempt, checkQuestionAnswer, getQuizTracking, getQuizResults, getInstructorQuizzes, updateQuiz, deleteQuiz };

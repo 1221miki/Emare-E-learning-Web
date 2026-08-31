@@ -113,6 +113,8 @@ export const quizService = {
     delete: (id) => API.delete(`/quizzes/${id}`),
     getInstructorQuizzes: () => API.get('/quizzes/instructor/mine'),
     submitAttempt: (id, answers) => API.post(`/quizzes/${id}/attempt`, { answers }),
+    checkQuestion: (id, questionId, selectedIndex) => API.post(`/quizzes/${id}/check`, { questionId, selectedIndex }),
+    getTracking: (id) => API.get(`/quizzes/${id}/tracking`),
     getResults: (id) => API.get(`/quizzes/${id}/results`)
 };
 
