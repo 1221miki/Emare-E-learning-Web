@@ -77,9 +77,7 @@ import RecordingPlayerPage   from './pages/student/RecordingPlayerPage';
 // Instructor pages
 import InstructorDashboard   from './pages/instructor/InstructorDashboard';
 import InstructorSettings    from './pages/instructor/InstructorSettings';
-import AssignmentBuilder     from './pages/instructor/AssignmentBuilder';
 import CourseCreationWizard  from './pages/instructor/CourseCreationWizard';
-import QuizManagementDashboard from './pages/instructor/QuizManagementDashboard';
 
 // Admin pages
 import AdminDashboard        from './pages/admin/AdminDashboard';
@@ -90,7 +88,6 @@ import CouponDetail          from './pages/admin/CouponDetail';
 import AdminEventsPage       from './pages/admin/AdminEventsPage';
 import AdminDevelopers       from './pages/AdminDevelopers';
 import AdminContactMessages  from './pages/admin/AdminContactMessages';
-import SupportMessagesPage   from './pages/SupportMessagesPage';
 
 // Shared pages
 import VerifyCertificatePage from './pages/VerifyCertificatePage';
@@ -155,17 +152,14 @@ function AppRoutes() {
                 <Route path="/payment/failed"                element={<PaymentFailed />} />
                 <Route path="/recordings/:id"                element={<PrivateRoute><RecordingPlayerPage /></PrivateRoute>} />
                 <Route path="/messages"                      element={<PrivateRoute><MessageInboxPage /></PrivateRoute>} />
-                <Route path="/support-messages"              element={<PrivateRoute><SupportMessagesPage /></PrivateRoute>} />
                 <Route path="/live-sessions"                 element={<PrivateRoute><LiveSessionsPage /></PrivateRoute>} />
                 <Route path="/events"                        element={<EventsPage />} />
                 <Route path="/events/:eventId"               element={<EventDetailPage />} />
 
                 {/* ── Instructor Routes ───────────────────────────────── */}
                 <Route path="/instructor/dashboard"          element={<PrivateRoute allowedRoles={['Instructor']}><InstructorDashboard /></PrivateRoute>} />
-                <Route path="/instructor/quizzes"            element={<PrivateRoute allowedRoles={['Instructor']}><QuizManagementDashboard /></PrivateRoute>} />
                 <Route path="/instructor/settings"           element={<PrivateRoute allowedRoles={['Instructor']}><InstructorSettings /></PrivateRoute>} />
                 <Route path="/instructor/courses/new"        element={<PrivateRoute allowedRoles={['Instructor']}><CourseCreationWizard /></PrivateRoute>} />
-                <Route path="/instructor/assignments/new"    element={<PrivateRoute allowedRoles={['Instructor']}><AssignmentBuilder /></PrivateRoute>} />
 
                 {/* ── Admin Routes ─────────────────────────────────────── */}
                 <Route path="/admin/dashboard"               element={<PrivateRoute allowedRoles={['Admin']}><AdminDashboard /></PrivateRoute>} />

@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
 import {
-    User, Shield, Settings, Bell, CreditCard,
+    User, Shield, CreditCard,
     Camera, Download, Plus, X, Edit3, Eye, EyeOff,
     Check, AlertTriangle, Lock, Globe, Zap, Star,
-    ChevronDown, ChevronUp, Upload, FileText
+    ChevronDown, ChevronUp, FileText
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -215,31 +215,6 @@ function ProfileTab({ user, onSaved, updateUser }) {
                     </div>
                 </Section>
 
-                {/* Instructor Preferences */}
-                <Section title="Instructor Preferences" icon={<Settings />}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                        <Field label="Default Course Language">
-                            <select style={T.select}><option>English</option><option>Amharic</option><option>French</option></select>
-                        </Field>
-                        <Field label="Time Zone">
-                            <select style={T.select}><option>Time Zone / Senior Instructor</option><option>UTC+3 (East Africa)</option><option>UTC+0</option><option>UTC-5 (EST)</option></select>
-                        </Field>
-                        <Field label="Time Zone Format">
-                            <select style={T.select}><option>Standard (English)</option><option>12-hour</option><option>24-hour</option></select>
-                        </Field>
-                        <Field label="Grading System Preferences">
-                            <select style={T.select}><option>Standard letter grade vs. numeric</option><option>Numeric only</option><option>Pass / Fail</option></select>
-                        </Field>
-                        <Field label="Communication Tools" span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <input type="checkbox" defaultChecked style={{ accentColor: '#22c55e', width: '15px', height: '15px' }} id="enable-msg" />
-                                <label htmlFor="enable-msg" style={{ color: '#64748b', fontSize: '13px', cursor: 'pointer' }}>Enable internal messaging</label>
-                                <Toggle checked={true} onChange={() => {}} color="#22c55e" ariaLabel="Toggle internal messaging" />
-                            </div>
-                        </Field>
-                    </div>
-                </Section>
-
                 {/* Save / Cancel */}
                 {msg && (
                     <div style={{ background: msg.includes('success') ? '#d1fae5' : '#fee2e2', border: `2px solid ${msg.includes('success') ? '#6ee7b7' : '#fecaca'}`, color: msg.includes('success') ? '#065f46' : '#991b1b', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', marginBottom: '14px' }}>
@@ -284,24 +259,6 @@ function ProfileTab({ user, onSaved, updateUser }) {
                     </div>
                 </div>
 
-                {/* Notification Settings */}
-                <div style={{ ...T.card, padding: '18px 20px' }}>
-                    <h3 style={T.sectionHead}><Bell size={15} color="#22c55e" /> Notification Settings</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '0', alignItems: 'center' }}>
-                        <div style={{ color: '#64748b', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', paddingBottom: '8px' }}>Notification</div>
-                        <div style={{ color: '#64748b', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', paddingBottom: '8px', textAlign: 'center', minWidth: '48px' }}>Email</div>
-                        <div style={{ color: '#64748b', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', paddingBottom: '8px', textAlign: 'center', minWidth: '48px' }}>In-app</div>
-                    </div>
-                    {[
-                        { label: 'New enrollments',   email: true,  app: false },
-                        { label: 'Quiz submissions',  email: true,  app: false },
-                        { label: 'Assignment submissions', email: true, app: false },
-                        { label: 'Student messages',  email: true,  app: false },
-                    ].map((n, i) => (
-                        <NotifRow key={i} label={n.label} emailDefault={n.email} appDefault={n.app} />
-                    ))}
-                </div>
-
                 {/* Upgrade card */}
                 <div style={{ background: 'linear-gradient(135deg, #dcfce7, #e9d5ff)', border: '2px solid #d1fae5', borderRadius: '16px', padding: '18px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
@@ -323,22 +280,6 @@ function ProfileTab({ user, onSaved, updateUser }) {
     );
 }
 
-function NotifRow({ label, emailDefault, appDefault }) {
-    const [email, setEmail] = useState(emailDefault);
-    const [app, setApp]     = useState(appDefault);
-    return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #dcfce7' }}>
-            <span style={{ color: '#1e293b', fontSize: '13px' }}>{label}</span>
-            <div style={{ display: 'flex', justifyContent: 'center', minWidth: '48px' }}>
-                <Toggle checked={email} onChange={setEmail} color="#22c55e" ariaLabel={`Email: ${label}`} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', minWidth: '48px' }}>
-                <Toggle checked={app} onChange={setApp} color="#22c55e" ariaLabel={`In-app: ${label}`} />
-            </div>
-        </div>
-    );
-}
-
 // ════════════════════════════════════════════════════════════════
 // TAB 2 — Security & Account
 // ════════════════════════════════════════════════════════════════
@@ -347,7 +288,6 @@ function SecurityTab({ user }) {
     const [newPwd, setNewPwd]     = useState('');
     const [confPwd, setConfPwd]   = useState('');
     const [show, setShow]         = useState({ curr: false, new: false, conf: false });
-    const [twoFA, setTwoFA]       = useState(user?.twoFactorEnabled || false);
     const [saving, setSaving]     = useState(false);
     const [msg, setMsg]           = useState('');
 
@@ -356,7 +296,7 @@ function SecurityTab({ user }) {
         if (newPwd && !currPwd) return setMsg('Current password is required.');
         setSaving(true); setMsg('');
         try {
-            await userService.updateProfile({ currentPassword: currPwd, newPassword: newPwd, twoFactorEnabled: twoFA });
+            await userService.updateProfile({ currentPassword: currPwd, newPassword: newPwd });
             setMsg('Security settings saved!');
             setCurrPwd(''); setNewPwd(''); setConfPwd('');
         } catch (e) {
@@ -404,16 +344,6 @@ function SecurityTab({ user }) {
                 </div>
             </Section>
 
-            <Section title="Two-Factor Authentication" icon={<Shield />}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                        <div style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>Authenticator App</div>
-                        <div style={{ color: '#64748b', fontSize: '12px' }}>Use an authenticator app to get 2FA codes when signing in.</div>
-                    </div>
-                    <Toggle checked={twoFA} onChange={setTwoFA} color="#10b981" ariaLabel="Toggle two-factor authentication" />
-                </div>
-            </Section>
-
             <Section title="Active Sessions" icon={<Globe />}>
                 {[
                     { device: 'Chrome on macOS', location: 'Addis Ababa, Ethiopia', current: true, time: 'Active now' },
@@ -449,173 +379,7 @@ function SecurityTab({ user }) {
 }
 
 // ════════════════════════════════════════════════════════════════
-// TAB 3 — Preferences
-// ════════════════════════════════════════════════════════════════
-function PreferencesTab({ user }) {
-    const [prefs, setPrefs] = useState({
-        language: user?.preferredLanguage || 'English',
-        timeZone: user?.timeZone || 'UTC+3 (East Africa Time)',
-        theme: 'dark',
-        compactMode: false,
-        autoSave: true,
-        showStudentProgress: true,
-        defaultVideoQuality: '1080p',
-        gradingMethod: 'numeric',
-    });
-    const [msg, setMsg] = useState('');
-
-    const set = (k, v) => setPrefs(p => ({ ...p, [k]: v }));
-
-    const handleSave = async () => {
-        try {
-            await userService.updateProfile({ preferredLanguage: prefs.language, timeZone: prefs.timeZone });
-            setMsg('Preferences saved!');
-            setTimeout(() => setMsg(''), 3000);
-        } catch (e) { setMsg('Failed to save preferences.'); }
-    };
-
-    return (
-        <div style={{ maxWidth: '700px' }}>
-            <Section title="Display & Language" icon={<Globe />}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                    <Field label="Interface Language">
-                        <select style={T.select} value={prefs.language} onChange={e => set('language', e.target.value)}>
-                            {['English', 'Amharic', 'French', 'Arabic', 'Spanish'].map(l => <option key={l}>{l}</option>)}
-                        </select>
-                    </Field>
-                    <Field label="Time Zone">
-                        <select style={T.select} value={prefs.timeZone} onChange={e => set('timeZone', e.target.value)}>
-                            {['UTC+3 (East Africa Time)', 'UTC+0 (GMT)', 'UTC-5 (EST)', 'UTC+1 (CET)', 'UTC+8 (CST)'].map(t => <option key={t}>{t}</option>)}
-                        </select>
-                    </Field>
-                    <Field label="Theme">
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            {['dark', 'light', 'system'].map(t => (
-                                <button key={t} onClick={() => set('theme', t)} style={{ flex: 1, padding: '9px', borderRadius: '10px', border: `2px solid ${prefs.theme === t ? '#4ade80' : '#d1fae5'}`, background: prefs.theme === t ? '#dcfce7' : '#f0f4ff', color: prefs.theme === t ? '#166534' : '#16a34a', fontSize: '12px', fontWeight: '700', cursor: 'pointer', textTransform: 'capitalize' }}>
-                                    {t}
-                                </button>
-                            ))}
-                        </div>
-                    </Field>
-                    <Field label="Default Video Quality">
-                        <select style={T.select} value={prefs.defaultVideoQuality} onChange={e => set('defaultVideoQuality', e.target.value)}>
-                            {['480p', '720p', '1080p', 'Auto'].map(q => <option key={q}>{q}</option>)}
-                        </select>
-                    </Field>
-                </div>
-            </Section>
-
-            <Section title="Instructor Workspace" icon={<Settings />}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {[
-                        { key: 'autoSave',            label: 'Auto-save drafts',                sub: 'Automatically save course and assignment drafts' },
-                        { key: 'compactMode',          label: 'Compact sidebar mode',           sub: 'Show icons only in the sidebar' },
-                        { key: 'showStudentProgress',  label: 'Show student progress on overview', sub: 'Display real-time learner progress on the dashboard' },
-                    ].map(pref => (
-                        <div key={pref.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f0f4ff', borderRadius: '10px', border: '2px solid #d1fae5' }}>
-                            <div>
-                                <div style={{ color: '#1e293b', fontSize: '13px', fontWeight: '600' }}>{pref.label}</div>
-                                <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>{pref.sub}</div>
-                            </div>
-                            <Toggle checked={prefs[pref.key]} onChange={v => set(pref.key, v)} color="#22c55e" ariaLabel={pref.label} />
-                        </div>
-                    ))}
-                </div>
-            </Section>
-
-            <Section title="Grading Preferences" icon={<Star />}>
-                <Field label="Default Grading Method">
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        {[['numeric', 'Numeric (0–100)'], ['letter', 'Letter Grade (A–F)'], ['pass_fail', 'Pass / Fail']].map(([val, lbl]) => (
-                            <button key={val} onClick={() => set('gradingMethod', val)} style={{ padding: '9px 16px', borderRadius: '10px', border: `2px solid ${prefs.gradingMethod === val ? '#4ade80' : '#d1fae5'}`, background: prefs.gradingMethod === val ? '#dcfce7' : '#f0f4ff', color: prefs.gradingMethod === val ? '#166534' : '#16a34a', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
-                                {lbl}
-                            </button>
-                        ))}
-                    </div>
-                </Field>
-            </Section>
-
-            {msg && <div style={{ background: '#d1fae5', border: '2px solid #6ee7b7', color: '#065f46', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', marginBottom: '14px' }}>{msg}</div>}
-            <div style={{ display: 'flex', gap: '12px' }}>
-                <button onClick={handleSave} style={T.primaryBtn}><Check size={15} /> Save Preferences</button>
-                <button style={T.ghostBtn}>Reset to Defaults</button>
-            </div>
-        </div>
-    );
-}
-
-// ════════════════════════════════════════════════════════════════
-// TAB 4 — Notifications
-// ════════════════════════════════════════════════════════════════
-function NotificationsTab() {
-    const groups = [
-        {
-            title: 'Course Activity',
-            items: [
-                { label: 'New student enrollment', email: true, app: true, sms: false },
-                { label: 'Student question posted', email: false, app: true, sms: false },
-                { label: 'Assignment submitted', email: true, app: true, sms: false },
-                { label: 'Quiz attempt completed', email: false, app: true, sms: false },
-            ]
-        },
-        {
-            title: 'Reviews & Feedback',
-            items: [
-                { label: 'New course review', email: true, app: true, sms: false },
-                { label: 'Student feedback', email: false, app: true, sms: false },
-            ]
-        },
-        {
-            title: 'Payments & Earnings',
-            items: [
-                { label: 'Payment received', email: true, app: true, sms: true },
-                { label: 'Payout processed', email: true, app: false, sms: false },
-            ]
-        },
-        {
-            title: 'Platform & System',
-            items: [
-                { label: 'Platform announcements', email: true, app: true, sms: false },
-                { label: 'Security alerts', email: true, app: true, sms: true },
-            ]
-        },
-    ];
-
-    return (
-        <div style={{ maxWidth: '680px' }}>
-            {groups.map(group => (
-                <Section key={group.title} title={group.title} icon={<Bell />} collapsible>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '0', alignItems: 'center', marginBottom: '6px' }}>
-                        <div />
-                        {['Email', 'In-App', 'SMS'].map(ch => (
-                            <div key={ch} style={{ color: '#475569', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center', minWidth: '52px' }}>{ch}</div>
-                        ))}
-                    </div>
-                    {group.items.map((item, i) => (
-                        <NotifRow3 key={i} label={item.label} defaults={[item.email, item.app, item.sms]} />
-                    ))}
-                </Section>
-            ))}
-        </div>
-    );
-}
-
-function NotifRow3({ label, defaults }) {
-    const [vals, setVals] = useState(defaults);
-    return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #dcfce7' }}>
-            <span style={{ color: '#1e293b', fontSize: '13px' }}>{label}</span>
-            {vals.map((v, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'center', minWidth: '52px' }}>
-                    <Toggle checked={v} onChange={nv => setVals(vs => vs.map((x, j) => j === i ? nv : x))} color={['#22c55e','#22c55e','#10b981'][i]} ariaLabel={`${['Email','In-App','SMS'][i]}: ${label}`} />
-                </div>
-            ))}
-        </div>
-    );
-}
-
-// ════════════════════════════════════════════════════════════════
-// TAB 5 — Subscription
+// TAB 3 — Subscription
 // ════════════════════════════════════════════════════════════════
 function SubscriptionTab() {
     const plans = [
@@ -669,8 +433,6 @@ function SubscriptionTab() {
 const TABS = [
     { key: 'profile',      label: 'Profile Info',      icon: <User size={15} /> },
     { key: 'security',     label: 'Security & Account', icon: <Shield size={15} /> },
-    { key: 'preferences',  label: 'Preferences',        icon: <Settings size={15} /> },
-    { key: 'notifications',label: 'Notifications',      icon: <Bell size={15} /> },
     { key: 'subscription', label: 'Subscription',       icon: <CreditCard size={15} /> },
 ];
 
@@ -699,7 +461,7 @@ export default function InstructorSettings({ user }) {
                 <h2 style={{ color: colors.text, fontSize: '22px', fontWeight: '800', margin: '0 0 4px' }}>
                     Profile &amp; Account Settings{user?.fullName ? ` — ${user.fullName}` : ''}
                 </h2>
-                <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Manage your instructor profile, security, preferences and subscription.</p>
+                <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>Manage your instructor profile, security and subscription.</p>
             </div>
 
             {/* Tab strip */}
@@ -734,8 +496,6 @@ export default function InstructorSettings({ user }) {
             {/* Tab content */}
             {activeTab === 'profile'       && <ProfileTab       user={user} updateUser={updateUser} />}
             {activeTab === 'security'      && <SecurityTab      user={user} />}
-            {activeTab === 'preferences'   && <PreferencesTab   user={user} />}
-            {activeTab === 'notifications' && <NotificationsTab />}
             {activeTab === 'subscription'  && <SubscriptionTab />}
         </div>
     );

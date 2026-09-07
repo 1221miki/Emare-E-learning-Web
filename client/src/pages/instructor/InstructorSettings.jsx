@@ -4,27 +4,6 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { userService, uploadService } from '../../services/api';
 
-// ── Reusable Toggle Switch ─────────────────────────────────
-function Toggle({ checked, onChange }) {
-    return (
-        <div
-            onClick={() => onChange(!checked)}
-            style={{
-                width: 44, height: 24, borderRadius: 999, cursor: 'pointer',
-                background: checked ? '#22c55e' : '#cbd5e1',
-                position: 'relative', transition: 'background 0.25s',
-                flexShrink: 0
-            }}
-        >
-            <div style={{
-                position: 'absolute', top: 3, left: checked ? 23 : 3,
-                width: 18, height: 18, borderRadius: '50%', background: '#fff',
-                transition: 'left 0.25s', boxShadow: '0 1px 4px rgba(0,0,0,0.2)'
-            }} />
-        </div>
-    );
-}
-
 // ── Status Toast ───────────────────────────────────────────
 function Toast({ message, type }) {
     if (!message) return null;
@@ -39,7 +18,7 @@ function Toast({ message, type }) {
 }
 
 export default function InstructorSettings() {
-    const { colors, theme, setTheme } = useTheme();
+    const { colors } = useTheme();
     const { user, updateUser } = useAuth();
     const [active, setActive] = useState('profile');
     const [toast, setToast] = useState({ message: '', type: 'success' });
@@ -128,9 +107,6 @@ export default function InstructorSettings() {
         confirmPassword: '',
         showCurrent: false,
         showNew: false,
-        is2FAEnabled: false,
-        loginNotifEmail: true,
-        loginNotifSMS: false,
     });
     const updateSecurity = (f, v) => setSecurity(p => ({ ...p, [f]: v }));
 
@@ -151,65 +127,6 @@ export default function InstructorSettings() {
             showToast('Password changed successfully!');
         } catch (err) {
             showToast(err.response?.data?.message || 'Failed to change password.', 'error');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    // ── Preferences State ─────────────────────────────────
-    const [prefs, setPrefs] = useState({
-        theme: theme,
-        language: 'English (US)',
-        accent: 'Indigo',
-        timeFormat: '12-hour',
-        defaultView: 'Table',
-        commTool: 'Integrated Internal Messaging',
-        zoom: false, teams: false, meet: false,
-        autoAccept: true,
-        showStudentProgress: true,
-        gradingSystem: 'Percentage',
-        autoSchedule: 'Never',
-        showSuggestedContent: true,
-        hideArchived: true,
-        prioritizeUnread: true,
-        notifSummary: 'Real-time',
-    });
-    const updatePrefs = (f, v) => setPrefs(p => ({ ...p, [f]: v }));
-
-    const switchTheme = (val) => {
-        updatePrefs('theme', val);
-        setTheme(val);
-    };
-
-    const savePreferences = async () => {
-        setSaving(true);
-        try {
-            await userService.updateProfile({ preferredLanguage: prefs.language });
-            showToast('Preferences saved!');
-        } catch {
-            showToast('Failed to save preferences.', 'error');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    // ── Notifications State ───────────────────────────────
-    const [notifs, setNotifs] = useState({
-        newEnrollEmail: true, newEnrollApp: true,
-        quizEmail: true, quizApp: false,
-        assignEmail: true, assignApp: false,
-        msgEmail: true, msgApp: true,
-        summary: 'Real-time',
-    });
-    const updateNotif = (f, v) => setNotifs(p => ({ ...p, [f]: v }));
-
-    const saveNotifications = async () => {
-        setSaving(true);
-        try {
-            await userService.updateProfile({ notificationPrefs: notifs });
-            showToast('Notification preferences saved!');
-        } catch {
-            showToast('Failed to save notifications.', 'error');
         } finally {
             setSaving(false);
         }
@@ -246,15 +163,12 @@ export default function InstructorSettings() {
         sectionTitle: { margin: 0, fontSize: 20, fontWeight: 800, color: c.text },
         subText: { margin: '6px 0 0', color: c.textMuted, fontSize: 14, lineHeight: 1.6 },
         gap: (n = 20) => ({ display: 'grid', gap: n }),
-        toggleRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${c.border}` },
         chip: { padding: '6px 14px', borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontSize: 13, fontWeight: 600 },
     };
 
     const tabs = [
         { key: 'profile', label: '◉ Profile' },
         { key: 'security', label: '▣ Security' },
-        { key: 'preferences', label: '◆ Preferences' },
-        { key: 'notifications', label: '◈ Notifications' },
         { key: 'subscription', label: '◈ Subscription' },
     ];
 
@@ -265,7 +179,7 @@ export default function InstructorSettings() {
                 {/* Header */}
                 <div style={{ marginBottom: 28 }}>
                     <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: c.text }}>◈️ Profile & Account Settings</h1>
-                    <p style={{ margin: '6px 0 0', color: c.textMuted }}>Manage your instructor profile, preferences, security and notifications.</p>
+                    <p style={{ margin: '6px 0 0', color: c.textMuted }}>Manage your instructor profile, security and subscription.</p>
                 </div>
 
                 <Toast message={toast.message} type={toast.type} />
@@ -464,50 +378,11 @@ export default function InstructorSettings() {
                             </div>
                         </div>
 
-                        {/* 2FA + Login Controls */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-                            <div style={s.card}>
-                                <h3 style={{ ...s.sectionTitle, fontSize: 17 }}>Two-Factor Authentication</h3>
-                                <p style={s.subText}>Add an extra layer of security to your account.</p>
-                                <div style={{ ...s.toggleRow, marginTop: 20, borderBottom: 'none' }}>
-                                    <div>
-                                        <div style={{ fontWeight: 700, color: c.text }}>Enable 2FA</div>
-                                        <div style={{ color: c.textMuted, fontSize: 13 }}>Google Authenticator or SMS</div>
-                                    </div>
-                                    <Toggle checked={security.is2FAEnabled} onChange={v => updateSecurity('is2FAEnabled', v)} />
-                                </div>
-                                {security.is2FAEnabled && (
-                                    <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                                        <div style={{ fontSize: 13, color: '#15803d', fontWeight: 600 }}> 2FA is active. Your account is protected.</div>
-                                        <button style={{ ...s.btn('ghost'), marginTop: 12, fontSize: 13, padding: '8px 16px' }}>Setup New App →</button>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div style={s.card}>
-                                <h3 style={{ ...s.sectionTitle, fontSize: 17 }}>Login Notifications</h3>
-                                <p style={s.subText}>Get alerted when someone logs into your account.</p>
-                                <div style={{ ...s.gap(14), marginTop: 20 }}>
-                                    <div style={s.toggleRow}>
-                                        <span style={{ color: c.text, fontWeight: 600 }}> Email Alerts</span>
-                                        <Toggle checked={security.loginNotifEmail} onChange={v => updateSecurity('loginNotifEmail', v)} />
-                                    </div>
-                                    <div style={{ ...s.toggleRow, borderBottom: 'none' }}>
-                                        <span style={{ color: c.text, fontWeight: 600 }}>▢ SMS Alerts</span>
-                                        <Toggle checked={security.loginNotifSMS} onChange={v => updateSecurity('loginNotifSMS', v)} />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         {/* Danger Zone */}
                         <div style={{ ...s.card, border: '1px solid #fca5a5' }}>
                             <h3 style={{ ...s.sectionTitle, fontSize: 17, color: '#ef4444' }}>️ Danger Zone</h3>
                             <p style={s.subText}>These actions are irreversible. Please proceed with caution.</p>
                             <div style={{ display: 'flex', gap: 14, marginTop: 18, flexWrap: 'wrap' }}>
-                                <button style={s.btn('ghost')} onClick={() => showToast('Account data export requested. You will receive it by email within 24 hours.')}>
-                                    ▤ Export My Data (PDF/JSON)
-                                </button>
                                 <button style={s.btn('danger')} onClick={() => {
                                     if (window.confirm('Are you sure you want to permanently delete your account? This cannot be undone.')) {
                                         showToast('Account deletion request submitted. You will receive a confirmation email.', 'error');
@@ -516,190 +391,6 @@ export default function InstructorSettings() {
                                     ️ Delete Account
                                 </button>
                             </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* ── PREFERENCES TAB ──────────────────────────── */}
-                {active === 'preferences' && (
-                    <div style={s.gap(24)}>
-                        {/* Theme */}
-                        <div style={s.card}>
-                            <h2 style={s.sectionTitle}>◆ Display & Appearance</h2>
-                            <p style={s.subText}>Customize your workspace theme, language and time preferences.</p>
-                            <div style={{ ...s.gap(20), marginTop: 20 }}>
-                                <div style={s.field}>
-                                    <label style={s.label}>Dashboard Theme</label>
-                                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                                        {[
-                                            { val: 'light', label: '️ Light Mode' },
-                                            { val: 'dark', label: ' Dark Mode' },
-                                        ].map(t => (
-                                            <button key={t.val} onClick={() => switchTheme(t.val)} style={{
-                                                padding: '12px 24px', borderRadius: 14, cursor: 'pointer', fontWeight: 700, fontSize: 14,
-                                                border: `2px solid ${prefs.theme === t.val ? '#16a34a' : c.border}`,
-                                                background: prefs.theme === t.val ? 'linear-gradient(135deg,#16a34a,#15803d)' : c.bg,
-                                                color: prefs.theme === t.val ? '#fff' : c.text,
-                                                transform: prefs.theme === t.val ? 'scale(1.04)' : 'scale(1)',
-                                                transition: 'all 0.2s',
-                                            }}>{t.label}</button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div style={s.row2}>
-                                    <div style={s.field}>
-                                        <label style={s.label}>Interface Language</label>
-                                        <select style={s.input} value={prefs.language} onChange={e => updatePrefs('language', e.target.value)}>
-                                            <option value="English (US)">English (US)</option>
-                                            <option value="English (UK)">English (UK)</option>
-                                            <option value="Amharic">አማርኛ (Amharic)</option>
-                                            <option value="Afaan Oromo">Afaan Oromo</option>
-                                            <option value="Tigrinya">ትግርኛ (Tigrinya)</option>
-                                        </select>
-                                    </div>
-                                    <div style={s.field}>
-                                        <label style={s.label}>Time Format</label>
-                                        <select style={s.input} value={prefs.timeFormat} onChange={e => updatePrefs('timeFormat', e.target.value)}>
-                                            <option value="12-hour">12-hour (AM/PM)</option>
-                                            <option value="24-hour">24-hour</option>
-                                        </select>
-                                    </div>
-                                    <div style={s.field}>
-                                        <label style={s.label}>Default Course View</label>
-                                        <select style={s.input} value={prefs.defaultView} onChange={e => updatePrefs('defaultView', e.target.value)}>
-                                            <option>Table</option>
-                                            <option>Grid</option>
-                                            <option>List</option>
-                                        </select>
-                                    </div>
-                                    <div style={s.field}>
-                                        <label style={s.label}>Default Grading System</label>
-                                        <select style={s.input} value={prefs.gradingSystem} onChange={e => updatePrefs('gradingSystem', e.target.value)}>
-                                            <option>Percentage</option>
-                                            <option>Letter Grade (A-F)</option>
-                                            <option>Pass/Fail</option>
-                                            <option>Points</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Communication Tools */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-                            <div style={s.card}>
-                                <h3 style={{ ...s.sectionTitle, fontSize: 17 }}>◈ Communication & Live Tools</h3>
-                                <div style={{ ...s.gap(14), marginTop: 20 }}>
-                                    <div style={s.field}>
-                                        <label style={s.label}>Preferred Communication Tool</label>
-                                        <select style={s.input} value={prefs.commTool} onChange={e => updatePrefs('commTool', e.target.value)}>
-                                            <option>Integrated Internal Messaging</option>
-                                            <option>External Email</option>
-                                            <option>Slack Integration</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label style={s.label}>Live Class Integrations</label>
-                                        <div style={{ ...s.gap(10), marginTop: 10 }}>
-                                            {[
-                                                { key: 'zoom', label: '▶ Zoom' },
-                                                { key: 'teams', label: '◈ Microsoft Teams' },
-                                                { key: 'meet', label: '▶ Google Meet' },
-                                            ].map(tool => (
-                                                <div key={tool.key} style={s.toggleRow}>
-                                                    <span style={{ color: c.text, fontWeight: 600 }}>{tool.label}</span>
-                                                    <Toggle checked={prefs[tool.key]} onChange={v => updatePrefs(tool.key, v)} />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style={s.card}>
-                                <h3 style={{ ...s.sectionTitle, fontSize: 17 }}>▤ Teaching Preferences</h3>
-                                <div style={{ ...s.gap(14), marginTop: 20 }}>
-                                    {[
-                                        { key: 'autoAccept', label: 'Auto-Accept Course Requests', desc: 'Automatically approve student enrollment requests' },
-                                        { key: 'showStudentProgress', label: 'Show Student Progress', desc: 'Display progress bars in student list' },
-                                        { key: 'showSuggestedContent', label: 'Show Suggested Content', desc: 'See AI course recommendations in dashboard' },
-                                        { key: 'hideArchived', label: 'Hide Archived Courses', desc: 'Keep dashboard clean by hiding old courses' },
-                                    ].map(item => (
-                                        <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '10px 0', borderBottom: `1px solid ${c.border}` }}>
-                                            <div>
-                                                <div style={{ fontWeight: 700, color: c.text, fontSize: 14 }}>{item.label}</div>
-                                                <div style={{ color: c.textMuted, fontSize: 12 }}>{item.desc}</div>
-                                            </div>
-                                            <Toggle checked={prefs[item.key]} onChange={v => updatePrefs(item.key, v)} />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: 12 }}>
-                            <button onClick={savePreferences} style={s.btn('primary')} disabled={saving}>
-                                {saving ? '⏳ Saving...' : '▣ Save Preferences'}
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* ── NOTIFICATIONS TAB ────────────────────────── */}
-                {active === 'notifications' && (
-                    <div style={s.gap(24)}>
-                        <div style={s.card}>
-                            <h2 style={s.sectionTitle}>◈ Notification Preferences</h2>
-                            <p style={s.subText}>Choose how you want to be notified about activity in your courses.</p>
-
-                            {/* Table header */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 120px', gap: 14, marginTop: 24, padding: '10px 0', borderBottom: `2px solid ${c.border}` }}>
-                                <div style={{ fontWeight: 700, color: c.textMuted, fontSize: 13 }}>Event</div>
-                                <div style={{ fontWeight: 700, color: c.textMuted, fontSize: 13, textAlign: 'center' }}> Email</div>
-                                <div style={{ fontWeight: 700, color: c.textMuted, fontSize: 13, textAlign: 'center' }}>▢ In-App</div>
-                            </div>
-
-                            {[
-                                { label: '◈ New Student Enrollment', desc: 'When a student enrolls in your course', emailKey: 'newEnrollEmail', appKey: 'newEnrollApp' },
-                                { label: '▤ Quiz Submission', desc: 'When a student submits a quiz', emailKey: 'quizEmail', appKey: 'quizApp' },
-                                { label: '▦ Assignment Deadlines', desc: 'Reminders 24h before assignments due', emailKey: 'assignEmail', appKey: 'assignApp' },
-                                { label: '◈ Student Messages', desc: 'New messages from enrolled students', emailKey: 'msgEmail', appKey: 'msgApp' },
-                            ].map(row => (
-                                <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '1fr 120px 120px', gap: 14, padding: '16px 0', borderBottom: `1px solid ${c.border}`, alignItems: 'center' }}>
-                                    <div>
-                                        <div style={{ fontWeight: 700, color: c.text }}>{row.label}</div>
-                                        <div style={{ color: c.textMuted, fontSize: 13 }}>{row.desc}</div>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                        <Toggle checked={notifs[row.emailKey]} onChange={v => updateNotif(row.emailKey, v)} />
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                        <Toggle checked={notifs[row.appKey]} onChange={v => updateNotif(row.appKey, v)} />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div style={s.card}>
-                            <h3 style={{ ...s.sectionTitle, fontSize: 17 }}>▥ Summary Delivery</h3>
-                            <p style={s.subText}>How often do you want a digest of your course activity?</p>
-                            <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
-                                {['Real-time', 'Daily Digest', 'Weekly Summary', 'Never'].map(opt => (
-                                    <button key={opt} onClick={() => updateNotif('summary', opt)} style={{
-                                        padding: '10px 20px', borderRadius: 12, cursor: 'pointer', fontWeight: 700, fontSize: 13,
-                                        border: `2px solid ${notifs.summary === opt ? '#16a34a' : c.border}`,
-                                        background: notifs.summary === opt ? '#f0fdf4' : c.bg,
-                                        color: notifs.summary === opt ? '#15803d' : c.text,
-                                        transition: 'all 0.2s'
-                                    }}>{opt}</button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: 12 }}>
-                            <button onClick={saveNotifications} style={s.btn('primary')} disabled={saving}>
-                                {saving ? '⏳ Saving...' : '▣ Save Notifications'}
-                            </button>
                         </div>
                     </div>
                 )}

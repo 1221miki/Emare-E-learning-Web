@@ -17,9 +17,7 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import InstructorOverview from '../../components/instructor/InstructorOverview';
 import StudentManagement from '../../components/instructor/StudentManagement';
-import AssignmentManagement from '../../components/instructor/assignments/AssignmentManagement';
 import InstructorSettings from '../../components/instructor/InstructorSettings';
-import QuizManagement from '../../components/instructor/QuizManagement';
 import {
     LayoutDashboard, BookOpen, NotebookPen, ClipboardList, FileQuestion, Video, Users, GraduationCap, Award, BarChart3, MessagesSquare, MessageCircle, Megaphone, CalendarDays, Star, Settings, Upload, UploadCloud, FilePen, FileText, Archive, PlusCircle, AlertTriangle, X, Link2, Trash2, ArrowUp, ArrowDown, Edit3, PauseCircle, Circle, Square, Eye, Play, Trash, FileVideo, Clock, RadioTower
 } from 'lucide-react';
@@ -1486,14 +1484,6 @@ export default function InstructorDashboard() {
         />
     );
 
-    const renderAssignments = () => (
-        <AssignmentManagement courses={courses} />
-    );
-
-    const renderQuizzes = () => (
-        <QuizManagement courses={courses} colors={colors} s={s} />
-    );
-
     const renderLiveClasses = () => (
         <InstructorLiveSessions courses={courses} />
     );
@@ -1740,8 +1730,6 @@ export default function InstructorDashboard() {
                 {activeTab === 'overview' && renderOverview()}
                 {activeTab === 'courses' && renderCourses()}
                 {activeTab === 'students' && renderStudents()}
-                {activeTab === 'assignments' && renderAssignments()}
-                {activeTab === 'quizzes' && renderQuizzes()}
                 {activeTab === 'live' && renderLiveClasses()}
                 {activeTab === 'analytics' && renderAnalytics()}
                 {activeTab === 'messages' && renderMessages()}
