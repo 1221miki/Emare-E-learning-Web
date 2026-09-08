@@ -140,8 +140,8 @@ export default function Navbar() {
             <nav style={s.navbar}>
                 <div style={s.logoBox}>
                     <Link to="/" className="emare-nav-logo-link" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <img src="/images/image.png" alt="Emare ICT Hub" className="emare-nav-logo-img" style={s.logoMark} />
-                        <span className="emare-nav-logo-text" style={s.logoText}>EMARE ICT HUB ELMS</span>
+                        <img src="/images/image.png" alt="Emare ICT Hub" className="emare-nav-logo-img notranslate" style={s.logoMark} />
+                        <span className="emare-nav-logo-text notranslate" style={s.logoText}>EMARE ICT HUB ELMS</span>
                     </Link>
                 </div>
                 
