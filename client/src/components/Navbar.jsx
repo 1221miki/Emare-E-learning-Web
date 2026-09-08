@@ -111,9 +111,9 @@ export default function Navbar() {
             borderBottom: `1px solid ${colors.border}`,
             zIndex: 1001
         },
-        logoBox: { display: 'flex', alignItems: 'center', gap: '12px' },
-        logoMark: { width: '180px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', objectFit: 'contain' },
-        logoText: { fontSize: '14px', fontWeight: '800', letterSpacing: '0.45px', color: colors.text, whiteSpace: 'nowrap' },
+        logoBox: { display: 'flex', alignItems: 'center' },
+        logoMark: { height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', objectFit: 'contain' },
+        logoText: { fontSize: '22px', fontWeight: '800', letterSpacing: '0.45px', color: colors.text, whiteSpace: 'nowrap', textTransform: 'uppercase' },
         navCenter: { display: 'flex', alignItems: 'center', gap: '6px' },
         navLink: { textDecoration: 'none', fontWeight: '600', fontSize: '14px', transition: 'color 0.15s ease, background 0.15s ease', color: colors.text, padding: '8px 12px', borderRadius: '8px' },
         navRight: { display: 'flex', alignItems: 'center', gap: '12px' },
@@ -139,7 +139,7 @@ export default function Navbar() {
 
             <nav style={s.navbar}>
                 <div style={s.logoBox}>
-                    <Link to="/" className="emare-nav-logo-link" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5cm' }}>
+                    <Link to="/" className="emare-nav-logo-link" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <img src="/images/image.png" alt="Emare ICT Hub" className="emare-nav-logo-img" style={s.logoMark} />
                         <span className="emare-nav-logo-text" style={s.logoText}>EMARE ICT HUB ELMS</span>
                     </Link>

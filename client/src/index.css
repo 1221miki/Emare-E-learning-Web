@@ -463,14 +463,14 @@ body.emare-sidebar-right main {
 
 /* ── Navbar logo scaling ─────────────────────────────────────── */
 @media (max-width: 767px) {
-  .emare-nav-logo-link { gap: 10px !important; }
-  .emare-nav-logo-img { width: 120px !important; height: 34px !important; }
-  .emare-nav-logo-text { font-size: 12px !important; letter-spacing: 0.3px !important; }
+  .emare-nav-logo-link { gap: 8px !important; }
+  .emare-nav-logo-img { height: 34px !important; }
+  .emare-nav-logo-text { font-size: 18px !important; letter-spacing: 0.3px !important; }
 }
 
 @media (max-width: 380px) {
-  .emare-nav-logo-img { width: 96px !important; height: 28px !important; }
-  .emare-nav-logo-text { display: none !important; }
+  .emare-nav-logo-img { height: 28px !important; }
+  .emare-nav-logo-text { font-size: 15px !important; }
 }
 
 /* ── Hero ────────────────────────────────────────────────────── */

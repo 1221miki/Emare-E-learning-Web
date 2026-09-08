@@ -82,14 +82,11 @@ export default function CourseCatalog() {
                 
                 const coursesData = resCourses.data.data.map(c => {
                     const thumbUrl = c.thumbnailUrl && c.thumbnailUrl.trim() ? c.thumbnailUrl : null;
-                    console.log(`[CourseCatalog] ${c.courseTitle}: ${thumbUrl ? '✓ Has thumbnail' : '✗ NO thumbnail'}`);
                     return {
                         ...c,
                         thumbnailUrl: thumbUrl
                     };
                 });
-                
-                console.log(`[CourseCatalog] Loaded ${coursesData.length} courses. With thumbnails: ${coursesData.filter(c => c.thumbnailUrl).length}`);
                 
                 // Force React to re-render by creating a new array
                 setCourses([...coursesData]);
@@ -103,7 +100,6 @@ export default function CourseCatalog() {
         
         // Also listen for the window focus event to refresh data when tab comes back to focus
         const handleFocus = () => {
-            console.log('[CourseCatalog] Window focused - refreshing data');
             fetchData();
         };
         
@@ -272,10 +268,8 @@ export default function CourseCatalog() {
                                 display: 'block'
                             }}
                             onLoad={e => {
-                                console.log('✓ Thumbnail loaded:', course.courseTitle, course.thumbnailUrl);
                             }}
                             onError={e => {
-                                console.warn('✗ Thumbnail failed to load:', course.courseTitle, course.thumbnailUrl);
                                 setImgError(true);
                             }} 
                         />

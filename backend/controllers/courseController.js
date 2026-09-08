@@ -60,13 +60,6 @@ const getPublishedCourses = async (req, res, next) => {
         }));
 
         console.log(`[${new Date().toISOString()}] getPublishedCourses: Returning ${coursesWithThumbnails.length} courses`);
-        coursesWithThumbnails.forEach(c => {
-            if (c.thumbnailUrl) {
-                console.log(`  ✓ ${c.courseTitle}: ${c.thumbnailUrl}`);
-            } else {
-                console.warn(`  ✗ ${c.courseTitle}: NO THUMBNAIL`);
-            }
-        });
 
         res.status(200).json({ success: true, count: coursesWithThumbnails.length, data: coursesWithThumbnails });
     } catch (err) {
@@ -94,13 +87,6 @@ const getAllCourses = async (req, res, next) => {
         }));
 
         console.log('getAllCourses: Returning', coursesWithThumbnails.length, 'courses with thumbnails');
-        if (coursesWithThumbnails.length > 0) {
-            console.log('Sample course:', {
-                title: coursesWithThumbnails[0].courseTitle,
-                thumbnailUrl: coursesWithThumbnails[0].thumbnailUrl,
-                hasThumb: !!coursesWithThumbnails[0].thumbnailUrl
-            });
-        }
 
         res.status(200).json({ success: true, count: coursesWithThumbnails.length, data: coursesWithThumbnails });
     } catch (err) {

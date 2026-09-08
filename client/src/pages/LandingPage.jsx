@@ -154,12 +154,13 @@ export default function LandingPage() {
     // Fetch published events so admin-created events appear on the homepage
     useEffect(() => {
         let isMounted = true;
-        eventService.getAll()
+        eventService.getPublished()
             .then(res => {
                 if (!isMounted) return;
                 const events = (res.data?.data || [])
+                    .map(ev => ({ ...ev, startDate: ev.startDate || ev.date, status: ev.status || 'APPROVED' }))
                     .filter(ev => ev.status !== 'CANCELLED')
-                    .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+                    .sort((a, b) => new Date(a.startDate || 0) - new Date(b.startDate || 0));
                 setPublicEvents(events);
             })
             .catch(() => { /* events section stays empty on failure */ });
@@ -980,8 +981,8 @@ export default function LandingPage() {
                                     : (start ? start.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '');
                                 return (
                                     <Link
-                                        key={ev._id}
-                                        to={`/events/${ev._id}`}
+                                        key={ev.id || ev._id}
+                                        to={`/events/${ev.id || ev._id}`}
                                         style={{
                                             display: 'flex', flexDirection: 'column', textDecoration: 'none',
                                             background: colors.bgCard, border: `1px solid ${colors.border}`,
@@ -1006,9 +1007,9 @@ export default function LandingPage() {
                                                 📅 {dateLabel}{timeLabel ? ` · ${timeLabel}` : ''}
                                             </div>
                                             <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: colors.text, lineHeight: 1.35 }}>{ev.title}</h3>
-                                            {(ev.venue || ev.eventType) && (
+                                            {(ev.venue || ev.location || ev.eventType) && (
                                                 <div style={{ color: colors.textMuted, fontSize: '13px' }}>
-                                                    📍 {ev.venue || ev.eventType}
+                                                    📍 {ev.venue || ev.location || ev.eventType}
                                                 </div>
                                             )}
                                             <div style={{ marginTop: 'auto', paddingTop: '10px', color: colors.primary, fontWeight: '700', fontSize: '14px' }}>

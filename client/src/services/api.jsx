@@ -495,6 +495,7 @@ export const calendarService = {
 
 // ── Event Management API Calls (Admin) ─────────────────────
 export const eventService = {
+    getPublished: () => API.get('/events/published'),
     getAll: (params) => API.get('/events/admin/all', { params }),
     getStats: () => API.get('/admin/events/stats'),
     getById: (id) => API.get(`/admin/events/${id}`),
