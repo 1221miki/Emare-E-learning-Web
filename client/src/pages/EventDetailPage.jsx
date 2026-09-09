@@ -512,7 +512,7 @@ export default function EventDetailPage() {
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <div className="group relative overflow-hidden rounded-3xl border border-green-600/20 sm:row-span-2">
-                            <img src={eventGallery[0].src} alt={eventGallery[0].label} className="h-full min-h-[420px] w-full object-cover transition duration-500 group-hover:scale-105" />
+                            <img src={eventGallery[0].src} alt="" className="h-full min-h-[420px] w-full object-cover transition duration-500 group-hover:scale-105" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-70 transition group-hover:opacity-100" />
                             <span className="absolute bottom-4 left-4 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
                                 <Camera className="h-3.5 w-3.5 text-green-500" /> {eventGallery[0].label}
@@ -520,7 +520,7 @@ export default function EventDetailPage() {
                         </div>
                         {eventGallery.slice(1).map((g) => (
                             <div key={g.label} className="group relative overflow-hidden rounded-3xl border border-green-600/20">
-                                <img src={g.src} alt={g.label} className="h-48 w-full object-cover transition duration-500 group-hover:scale-105" />
+                                <img src={g.src} alt="" className="h-48 w-full object-cover transition duration-500 group-hover:scale-105" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-70 transition group-hover:opacity-100" />
                                 <span className="absolute bottom-4 left-4 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
                                     <Camera className="h-3.5 w-3.5 text-green-500" /> {g.label}

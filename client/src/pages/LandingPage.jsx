@@ -908,49 +908,6 @@ export default function LandingPage() {
                 )}
             </section>
 
-            {/* 14. Upcoming Live Classes */}
-            <section className="emare-section" style={{ ...p.section, background: colors.bgCard }}>
-                <div style={p.sectionHeader}>
-                    <span style={p.sectionBadge}>Live Interaction</span>
-                    <h2 style={p.sectionTitle}>Upcoming Live Classes</h2>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '900px', margin: '0 auto' }}>
-                    {upcomingSessions.length === 0 ? (
-                        <div style={{ textAlign: 'center', color: colors.textMuted, padding: '40px 16px', fontSize: '16px' }}>
-                            No upcoming live classes scheduled at the moment. Check back soon!
-                        </div>
-                    ) : (
-                        upcomingSessions.map((live) => {
-                            const isReserved = Boolean(live.isReserved);
-                            const isReserving = reservingId === live._id;
-                            return (
-                                <div key={live._id} className="emare-live-card" style={p.liveCard}>
-                                    <div>
-                                        <h3 style={{ margin: '0 0 8px', color: colors.text, fontSize: '18px' }}>{live.title}</h3>
-                                        <p style={{ margin: 0, color: colors.textMuted, fontSize: '14px' }}>
-                                            Instructor: {live.instructorRef?.fullName || 'TBD'}
-                                        </p>
-                                        <p style={{ margin: '6px 0 0', color: colors.textMuted, fontSize: '13px' }}>
-                                            {live.reservations?.length || 0} reserved
-                                        </p>
-                                    </div>
-                                    <div className="emare-live-card-right" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                                        <div style={{ color: colors.primary, fontWeight: '700' }}>▦ {formatLiveDate(live.startTime)}</div>
-                                        <button
-                                            onClick={() => handleReserveSeat(live._id)}
-                                            disabled={isReserved || isReserving}
-                                            style={{ ...p.primaryBtn, opacity: isReserved ? 0.65 : 1, cursor: isReserved || isReserving ? 'not-allowed' : 'pointer' }}
-                                        >
-                                            {isReserved ? '✓ Reserved' : isReserving ? 'Reserving...' : 'Reserve Seat'}
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
-            </section>
-
             {/* 15. Upcoming Events (created from the admin event form) */}
             <section className="emare-section" style={{ ...p.section }}>
                 <div style={p.sectionHeader}>
