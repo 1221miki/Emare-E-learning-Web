@@ -464,7 +464,6 @@ export default function StudentDashboard() {
             company,
             githubUrl,
             socialMediaLinks: { website, linkedin: linkedInUrl },
-            twoFactorEnabled,
             avatarUrl,
             preferredLanguage: prefLanguage,
             timeZone,

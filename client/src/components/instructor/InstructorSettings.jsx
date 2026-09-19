@@ -7,7 +7,9 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { userService, uploadService } from '../../services/api';
+import TwoFactorSection from '../dashboard/tabs/TwoFactorSection';
 
 // ── Reusable Toggle switch ───────────────────────────────────────
 function Toggle({ checked, onChange, color = '#22c55e', ariaLabel = '' }) {
@@ -283,7 +285,7 @@ function ProfileTab({ user, onSaved, updateUser }) {
 // ════════════════════════════════════════════════════════════════
 // TAB 2 — Security & Account
 // ════════════════════════════════════════════════════════════════
-function SecurityTab({ user }) {
+function SecurityTab({ user, twoFactorEnabled, setTwoFactorEnabled, t, colors }) {
     const [currPwd, setCurrPwd]   = useState('');
     const [newPwd, setNewPwd]     = useState('');
     const [confPwd, setConfPwd]   = useState('');
@@ -369,6 +371,34 @@ function SecurityTab({ user }) {
                 <button style={T.dangerBtn}><AlertTriangle size={14} /> Deactivate Account</button>
             </Section>
 
+            {/* Two-Factor Authentication */}
+            <Section title={t('section_2fa') || 'Two-Factor Authentication (2FA)'} icon={<Shield />}>
+                <TwoFactorSection
+                    user={user}
+                    twoFactorEnabled={twoFactorEnabled}
+                    setTwoFactorEnabled={setTwoFactorEnabled}
+                    colors={colors}
+                    styles={{
+                        successAlert: { background: '#d1fae5', border: '1px solid #a7f3d0', color: '#065f46', padding: '12px 16px', borderRadius: '10px', fontSize: '13px' },
+                        formGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
+                        label: { color: colors.textMuted, fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' },
+                        input: { background: colors.bgInput, border: `2px solid ${colors.border}`, color: colors.text, padding: '10px 14px', borderRadius: '10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' },
+                    }}
+                    t={(key) => {
+                        const map = {
+                            section_2fa: 'Two-Factor Authentication (2FA)',
+                            twofa_status_enabled: 'ENABLED',
+                            twofa_status_disabled: 'DISABLED',
+                            twofa_desc: 'Require an extra security verification code when signing into your instructor account.',
+                            btn_enable_2fa: 'Enable 2FA',
+                            btn_disable_2fa: 'Disable 2FA',
+                            lbl_current_pw: 'Current Password',
+                        };
+                        return map[key] || key;
+                    }}
+                />
+            </Section>
+
             {msg && <div style={{ background: msg.includes('saved') ? '#d1fae5' : '#fee2e2', border: `2px solid ${msg.includes('saved') ? '#6ee7b7' : '#fecaca'}`, color: msg.includes('saved') ? '#065f46' : '#991b1b', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', marginBottom: '14px' }}>{msg}</div>}
             <div style={{ display: 'flex', gap: '12px' }}>
                 <button onClick={handleSave} disabled={saving} style={{ ...T.primaryBtn, opacity: saving ? 0.7 : 1 }}><Check size={15} /> {saving ? 'Saving…' : 'Save Changes'}</button>
@@ -439,7 +469,9 @@ const TABS = [
 export default function InstructorSettings({ user }) {
     const { colors, theme } = useTheme();
     const { updateUser } = useAuth();
+    const { t } = useLanguage();
     const [activeTab, setActiveTab] = useState('profile');
+    const [twoFactorEnabled, setTwoFactorEnabled] = useState(user?.twoFactorEnabled || false);
 
     // ── Dynamic design tokens based on theme ────
     const T = {
@@ -495,7 +527,7 @@ export default function InstructorSettings({ user }) {
 
             {/* Tab content */}
             {activeTab === 'profile'       && <ProfileTab       user={user} updateUser={updateUser} />}
-            {activeTab === 'security'      && <SecurityTab      user={user} />}
+            {activeTab === 'security'      && <SecurityTab      user={user} twoFactorEnabled={twoFactorEnabled} setTwoFactorEnabled={setTwoFactorEnabled} t={t} colors={colors} />}
             {activeTab === 'subscription'  && <SubscriptionTab />}
         </div>
     );

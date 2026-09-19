@@ -124,6 +124,11 @@ const UserSchema = new mongoose.Schema({
     // Account Settings & Preferences
     requirePasswordChange: { type: Boolean, default: false },
     twoFactorEnabled: { type: Boolean, default: false },
+    twoFactorMethod: { type: String, enum: ['authenticator', 'sms', ''], default: '' },
+    twoFactorSecret: { type: String, select: false },
+    twoFactorTempSecret: { type: String, select: false },
+    twoFactorCodeHash: { type: String, select: false },
+    twoFactorCodeExpire: { type: Date, select: false },
     preferredLanguage: { type: String, default: 'English' },
     timeZone: { type: String, default: 'UTC+3 (East Africa Time)' },
     notificationPreferences: {

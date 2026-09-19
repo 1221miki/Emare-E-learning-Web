@@ -285,7 +285,10 @@ const updateUser = async (req, res, next) => {
             user.socialMediaLinks.website = website;
         }
 
-        if (typeof twoFactorEnabled === 'boolean') user.twoFactorEnabled = twoFactorEnabled;
+        // Two-factor authentication is security-sensitive: users may only change it
+        // through the verified /api/auth/2fa/* endpoints (password + one-time code).
+        // Admins editing another user via PATCH /api/users/:id may still override it.
+        if (typeof twoFactorEnabled === 'boolean' && !req.isSelfProfileUpdate) user.twoFactorEnabled = twoFactorEnabled;
         if (preferredLanguage !== undefined) user.preferredLanguage = preferredLanguage;
         if (timeZone !== undefined) user.timeZone = timeZone;
         if (notificationPreferences) user.notificationPreferences = { ...user.notificationPreferences, ...notificationPreferences };

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { User, ShieldCheck, Settings, Camera, Sun, Moon, KeyRound, Smartphone, Lock, Save, Eye, EyeOff } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { userService } from '../../../services/api';
+import TwoFactorSection from './TwoFactorSection';
 
 const WARN = '#f59e0b';
 const DANGER = '#ef4444';
@@ -288,35 +289,14 @@ export default function SettingsTab(dash) {
                             </div>
 
                             <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', margin: '24px 0 8px' }}>{t('section_2fa')}</h3>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, flexWrap: 'wrap', gap: '12px' }}>
-                                <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <span style={{ fontSize: '14px', fontWeight: '700', color: colors.text }}>{t('section_2fa')}</span>
-                                        <span style={{ background: twoFactorEnabled ? `${colors.success}15` : `${DANGER}15`, color: twoFactorEnabled ? colors.success : DANGER, padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '800' }}>
-                                            {twoFactorEnabled ? t('twofa_status_enabled') : t('twofa_status_disabled')}
-                                        </span>
-                                    </div>
-                                    <span style={{ fontSize: '12px', color: colors.textMuted, display: 'block', marginTop: '4px' }}>
-                                        {t('twofa_desc')}
-                                    </span>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
-                                    style={{
-                                        background: twoFactorEnabled ? colors.success : colors.primary,
-                                        color: '#fff',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        padding: '10px 18px',
-                                        fontWeight: '700',
-                                        fontSize: '13px',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    {twoFactorEnabled ? t('btn_disable_2fa') : t('btn_enable_2fa')}
-                                </button>
-                            </div>
+                            <TwoFactorSection
+                                user={user}
+                                twoFactorEnabled={twoFactorEnabled}
+                                setTwoFactorEnabled={setTwoFactorEnabled}
+                                colors={colors}
+                                styles={styles}
+                                t={t}
+                            />
 
                             <h3 style={{ ...styles.panelCardTitle, fontSize: '16px', margin: '24px 0 8px' }}>{t('section_tips')}</h3>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>

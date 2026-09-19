@@ -1,18 +1,26 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const qrcode = require('qrcode');
 const { 
     sendPasswordResetEmail, 
     sendPasswordResetConfirmationEmail,
     sendAdminPasswordResetEmail,
     sendAccountCreatedEmail,
     sendEmailVerification,
+    sendTwoFactorCodeEmail,
     sanitizeEmailError,
     isRateLimitError,
     resetEmailDailyCounter,
-    getEmailCounterStatus
+    getEmailCounterStatus,
+    testSmtpConnection
 } = require('../services/emailService');
 const { audit, resolveIp } = require('../utils/auditLogger');
+const {
+    generateSecret,
+    verifyTOTP,
+    createOtpAuthUrl
+} = require('../utils/totp');
 
 // Helper: Generate a fresh 6-digit verification code, its SHA-256 hash, and a
 // 15-minute expiry. Only the hash is persisted so a leaked DB never exposes
@@ -57,6 +65,49 @@ const sendTokenResponse = (user, statusCode, res) => {
                 socialProvider: user.socialProvider
             }
         });
+};
+
+// Helper: Short-lived JWT issued after a successful password check when the
+// account has 2FA enabled. It grants NO session — it only authorizes the
+// follow-up verification step, and expires after 10 minutes.
+const createPendingTwoFactorToken = (user) => {
+    return jwt.sign(
+        { id: user._id, purpose: '2fa' },
+        process.env.JWT_SECRET,
+        { expiresIn: '10m' }
+    );
+};
+
+// Helper: Generate a 6-digit SMS-style code and persist only its SHA-256 hash
+// with a 10-minute expiry. Returns the delivery result — callers must only
+// persist the hash AFTER the code was actually delivered to the user.
+const issueTwoFactorCode = async (user, req, reason = 'authentication') => {
+    const code = crypto.randomInt(100000, 1000000).toString();
+    const delivery = await sendTwoFactorCodeEmail(user, code);
+    if (!delivery.success) {
+        return { success: false, error: delivery.error };
+    }
+    user.twoFactorCodeHash = crypto.createHash('sha256').update(code).digest('hex');
+    user.twoFactorCodeExpire = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save({ validateBeforeSave: false });
+    return { success: true, messageId: delivery.messageId };
+};
+
+// Helper: Verify a user-provided code against the active 2FA method.
+// Returns true only for a currently-valid, unexpired code.
+const isTwoFactorCodeValid = (user, code) => {
+    const input = String(code || '').replace(/\s+/g, '');
+    if (!input) return false;
+    if (user.twoFactorMethod === 'authenticator') {
+        return user.twoFactorSecret ? verifyTOTP(user.twoFactorSecret, input) : false;
+    }
+    if (user.twoFactorMethod === 'sms') {
+        if (!user.twoFactorCodeHash || !user.twoFactorCodeExpire) return false;
+        if (user.twoFactorCodeExpire.getTime() < Date.now()) return false;
+        const hashedCode = crypto.createHash('sha256').update(input).digest('hex');
+        return hashedCode === user.twoFactorCodeHash;
+    }
+    return false;
 };
 
 // ─────────────────────────────────────────────
@@ -174,8 +225,9 @@ const login = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Please provide both email and password.' });
         }
 
-        // Find user and include password field (excluded by default via 'select: false')
-        const user = await User.findOne({ accountEmail: normalizedEmail }).select('+securedPassword');
+        // Find user and include password + 2FA code fields (excluded by default via 'select: false')
+        const user = await User.findOne({ accountEmail: normalizedEmail })
+            .select('+securedPassword +twoFactorCodeHash +twoFactorCodeExpire');
 
         if (!user) {
             // Audit: login attempt for non-existent account
@@ -213,6 +265,33 @@ const login = async (req, res, next) => {
                 description: `Login blocked for non-admin account (${normalizedEmail}) because ALLOW_ONLY_ADMIN_LOGIN is enabled.`,
                 targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
             return res.status(403).json({ success: false, message: 'Login disabled for non-admin users.' });
+        }
+
+        // Two-Factor Authentication step: password matched, but the account has
+        // 2FA enabled. Do NOT issue the session cookie yet — hand back a short-lived
+        // pending token so the client can complete the second factor at
+        // POST /api/auth/2fa/verify-login. lastLoginTimestamp stays untouched until
+        // the full login succeeds so old sessions remain valid.
+        if (user.twoFactorEnabled && user.twoFactorMethod) {
+            audit.security({ req, user, action: 'LOGIN_2FA_REQUIRED', severity: 'info',
+                description: `User (${user.accountEmail}) entered correct password; awaiting 2FA verification (method: ${user.twoFactorMethod}).`,
+                targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
+
+            // Auto-send the 2FA code via email for the "sms" method so the user
+            // doesn't have to click "Resend code" before entering anything.
+            // Fire-and-forget: delivery failure is logged but does not block login.
+            if (user.twoFactorMethod === 'sms') {
+                issueTwoFactorCode(user, req, '2fa-login')
+                    .catch(err => console.error(`❌ Auto-send 2FA code failed for ${user.accountEmail}:`, err.message));
+            }
+
+            return res.status(200).json({
+                success: true,
+                twoFactorRequired: true,
+                twoFactorMethod: user.twoFactorMethod,
+                pendingToken: createPendingTwoFactorToken(user),
+                message: 'Two-factor authentication is required to complete sign in.'
+            });
         }
 
         // Update last login timestamp
@@ -616,5 +695,421 @@ const resetEmailCounter = (req, res) => {
     });
 };
 
-module.exports = { register, login, logout, getMe, socialLogin, forgotPassword, resetPassword, verifyEmail, resendVerificationCode, resetEmailCounter };
+// ─────────────────────────────────────────────
+// @desc    Get current 2FA status
+// @route   GET /api/auth/2fa/status
+// @access  Private
+// ─────────────────────────────────────────────
+const getTwoFactorStatus = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.user.id).select('twoFactorEnabled twoFactorMethod');
+        // Legacy accounts may carry twoFactorEnabled=true from the old single-toggle
+        // UI without a configured method — treat those as disabled (they are not
+        // actually enforced at login).
+        const enabled = !!(user && user.twoFactorEnabled && user.twoFactorMethod);
+        res.status(200).json({
+            success: true,
+            data: {
+                twoFactorEnabled: enabled,
+                twoFactorMethod: enabled ? user.twoFactorMethod : ''
+            }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Begin 2FA setup (authenticator QR / sms code)
+// @route   POST /api/auth/2fa/setup
+// @access  Private
+// ─────────────────────────────────────────────
+const setupTwoFactor = async (req, res, next) => {
+    try {
+        const { method, currentPassword } = req.body;
+
+        if (!['authenticator', 'sms'].includes(method)) {
+            return res.status(400).json({ success: false, message: 'Invalid 2FA method. Choose "authenticator" or "sms".', field: 'method' });
+        }
+        if (!currentPassword) {
+            return res.status(400).json({ success: false, message: 'Your current password is required to enable two-factor authentication.', field: 'currentPassword' });
+        }
+
+        const user = await User.findById(req.user.id).select('+securedPassword +twoFactorTempSecret +twoFactorCodeHash +twoFactorCodeExpire');
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'User not found.' });
+        }
+
+        const isMatch = await user.comparePassword(currentPassword);
+        if (!isMatch) {
+            audit.security({ req, user, action: 'TWO_FACTOR_SETUP_FAILED', severity: 'warning',
+                description: `2FA setup attempt failed for (${user.accountEmail}) — wrong current password.`,
+                targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
+            return res.status(400).json({ success: false, message: 'Current password is incorrect.', field: 'currentPassword' });
+        }
+
+        if (user.twoFactorEnabled) {
+            return res.status(400).json({ success: false, message: 'Two-factor authentication is already enabled on this account.' });
+        }
+
+        if (method === 'authenticator') {
+            // Generate a fresh TOTP secret, provisioning URI and QR data URL.
+            // Only the temp secret is stored — it is promoted to the real secret
+            // in verifyTwoFactorSetup once the user proves they scanned it.
+            const secret = generateSecret();
+            const issuer = process.env.TWO_FA_ISSUER || 'Emare ELMS';
+            const otpauthUrl = createOtpAuthUrl(secret, user.accountEmail, issuer);
+            const qrDataUrl = await qrcode.toDataURL(otpauthUrl);
+
+            user.twoFactorTempSecret = secret;
+            await user.save({ validateBeforeSave: false });
+
+            return res.status(200).json({
+                success: true,
+                data: {
+                    method: 'authenticator',
+                    secret,
+                    otpauthUrl,
+                    qrDataUrl,
+                    codeSent: false
+                }
+            });
+        }
+
+        // Method: sms — deliver a code; only persist its hash after successful delivery.
+        const delivery = await issueTwoFactorCode(user, req, '2fa-setup');
+        if (!delivery.success) {
+            const friendlyMessage = sanitizeEmailError(delivery.error);
+            const rateLimited = isRateLimitError(delivery.error);
+            return res.status(rateLimited ? 429 : 502).json({
+                success: false,
+                message: friendlyMessage,
+                rateLimited,
+                retryAfterSeconds: rateLimited ? 60 : 30
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: { method: 'sms', codeSent: true, expiresInMinutes: 10 }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Confirm 2FA setup with one-time code, enabling 2FA
+// @route   POST /api/auth/2fa/verify-setup
+// @access  Private
+// ─────────────────────────────────────────────
+const verifyTwoFactorSetup = async (req, res, next) => {
+    try {
+        const { method, code, currentPassword } = req.body;
+
+        if (!['authenticator', 'sms'].includes(method)) {
+            return res.status(400).json({ success: false, message: 'Invalid 2FA method.', field: 'method' });
+        }
+        const inputCode = String(code || '').replace(/\s+/g, '');
+        if (!inputCode) {
+            return res.status(400).json({ success: false, message: 'Please enter the verification code.', field: 'code' });
+        }
+        if (!currentPassword) {
+            return res.status(400).json({ success: false, message: 'Your current password is required to enable two-factor authentication.', field: 'currentPassword' });
+        }
+
+        const user = await User.findById(req.user.id).select('+securedPassword +twoFactorTempSecret +twoFactorCodeHash +twoFactorCodeExpire');
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'User not found.' });
+        }
+
+        const isMatch = await user.comparePassword(currentPassword);
+        if (!isMatch) {
+            return res.status(400).json({ success: false, message: 'Current password is incorrect.', field: 'currentPassword' });
+        }
+
+        if (user.twoFactorEnabled) {
+            return res.status(400).json({ success: false, message: 'Two-factor authentication is already enabled on this account.' });
+        }
+
+        if (method === 'authenticator') {
+            if (!user.twoFactorTempSecret) {
+                return res.status(400).json({ success: false, message: '2FA setup was not started. Please begin setup again.' });
+            }
+            if (!verifyTOTP(user.twoFactorTempSecret, inputCode)) {
+                return res.status(400).json({ success: false, message: 'The verification code is invalid or has expired.' });
+            }
+            user.twoFactorSecret = user.twoFactorTempSecret;
+            user.twoFactorTempSecret = undefined;
+            user.twoFactorMethod = 'authenticator';
+            user.twoFactorEnabled = true;
+        } else {
+            if (!user.twoFactorCodeHash || !user.twoFactorCodeExpire) {
+                return res.status(400).json({ success: false, message: 'No verification code was sent. Please request a new one.' });
+            }
+            if (user.twoFactorCodeExpire.getTime() < Date.now()) {
+                return res.status(400).json({ success: false, message: 'The verification code has expired. Please request a new one.' });
+            }
+            const hashedCode = crypto.createHash('sha256').update(inputCode).digest('hex');
+            if (hashedCode !== user.twoFactorCodeHash) {
+                return res.status(400).json({ success: false, message: 'The verification code is invalid or has expired.' });
+            }
+            user.twoFactorCodeHash = undefined;
+            user.twoFactorCodeExpire = undefined;
+            user.twoFactorMethod = 'sms';
+            user.twoFactorEnabled = true;
+        }
+
+        await user.save({ validateBeforeSave: false });
+
+        audit.security({ req, user, action: 'TWO_FACTOR_ENABLED', severity: 'warning',
+            description: `Two-factor authentication enabled for (${user.accountEmail}) via ${method}.`,
+            targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
+
+        res.status(200).json({
+            success: true,
+            message: 'Two-factor authentication has been enabled.',
+            data: { twoFactorEnabled: true, twoFactorMethod: method }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Send a fresh management code to the logged-in user (SMS method)
+// @route   POST /api/auth/2fa/send-management-code
+// @access  Private
+// ─────────────────────────────────────────────
+const sendManagementCode = async (req, res, next) => {
+    try {
+        const { currentPassword } = req.body;
+        if (!currentPassword) {
+            return res.status(400).json({ success: false, message: 'Your current password is required.', field: 'currentPassword' });
+        }
+
+        const user = await User.findById(req.user.id).select('+securedPassword +twoFactorCodeHash +twoFactorCodeExpire');
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'User not found.' });
+        }
+        if (!user.twoFactorEnabled || user.twoFactorMethod !== 'sms') {
+            return res.status(400).json({ success: false, message: 'SMS two-factor authentication is not enabled on this account.' });
+        }
+
+        const isMatch = await user.comparePassword(currentPassword);
+        if (!isMatch) {
+            return res.status(400).json({ success: false, message: 'Current password is incorrect.', field: 'currentPassword' });
+        }
+
+        const delivery = await issueTwoFactorCode(user, req, '2fa-management');
+        if (!delivery.success) {
+            const friendlyMessage = sanitizeEmailError(delivery.error);
+            const rateLimited = isRateLimitError(delivery.error);
+            return res.status(rateLimited ? 429 : 502).json({
+                success: false,
+                message: friendlyMessage,
+                rateLimited,
+                retryAfterSeconds: rateLimited ? 60 : 30
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'A new verification code has been sent to your email.',
+            data: { codeSent: true, expiresInMinutes: 10 }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Disable 2FA (requires password + current code)
+// @route   POST /api/auth/2fa/disable
+// @access  Private
+// ─────────────────────────────────────────────
+const disableTwoFactor = async (req, res, next) => {
+    try {
+        const { currentPassword, code } = req.body;
+        if (!currentPassword) {
+            return res.status(400).json({ success: false, message: 'Your current password is required to disable two-factor authentication.', field: 'currentPassword' });
+        }
+
+        const user = await User.findById(req.user.id).select('+securedPassword +twoFactorSecret +twoFactorCodeHash +twoFactorCodeExpire +twoFactorMethod');
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'User not found.' });
+        }
+        if (!user.twoFactorEnabled) {
+            return res.status(400).json({ success: false, message: 'Two-factor authentication is not enabled on this account.' });
+        }
+
+        const isMatch = await user.comparePassword(currentPassword);
+        if (!isMatch) {
+            audit.security({ req, user, action: 'TWO_FACTOR_DISABLE_FAILED', severity: 'warning',
+                description: `2FA disable attempt failed for (${user.accountEmail}) — wrong current password.`,
+                targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
+            return res.status(400).json({ success: false, message: 'Current password is incorrect.', field: 'currentPassword' });
+        }
+
+        // A configured method requires a valid current code. Legacy accounts with
+        // only the old boolean toggle (no method) may be cleaned up with password.
+        if (user.twoFactorMethod) {
+            if (!code) {
+                return res.status(400).json({ success: false, message: 'Please enter your current verification code.', field: 'code' });
+            }
+            if (!isTwoFactorCodeValid(user, code)) {
+                audit.security({ req, user, action: 'TWO_FACTOR_DISABLE_FAILED', severity: 'warning',
+                    description: `2FA disable attempt failed for (${user.accountEmail}) — invalid/expired verification code.`,
+                    targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
+                return res.status(400).json({ success: false, message: 'The verification code is invalid or has expired.' });
+            }
+        }
+
+        user.twoFactorEnabled = false;
+        user.twoFactorMethod = '';
+        user.twoFactorSecret = undefined;
+        user.twoFactorTempSecret = undefined;
+        user.twoFactorCodeHash = undefined;
+        user.twoFactorCodeExpire = undefined;
+        await user.save({ validateBeforeSave: false });
+
+        audit.security({ req, user, action: 'TWO_FACTOR_DISABLED', severity: 'warning',
+            description: `Two-factor authentication disabled by the user for (${user.accountEmail}).`,
+            targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
+
+        res.status(200).json({
+            success: true,
+            message: 'Two-factor authentication has been disabled.',
+            data: { twoFactorEnabled: false, twoFactorMethod: '' }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Complete 2FA login step and issue the session cookie
+// @route   POST /api/auth/2fa/verify-login
+// @access  Public (requires valid pendingToken + code)
+// ─────────────────────────────────────────────
+const verifyTwoFactorLogin = async (req, res, next) => {
+    try {
+        const { pendingToken, code } = req.body;
+        const inputCode = String(code || '').replace(/\s+/g, '');
+
+        if (!pendingToken || !inputCode) {
+            return res.status(400).json({ success: false, message: 'Verification token and code are required.' });
+        }
+
+        // Verify the pending token (10-minute validity, purpose-locked).
+        let decoded;
+        try {
+            decoded = jwt.verify(pendingToken, process.env.JWT_SECRET);
+        } catch (err) {
+            return res.status(401).json({ success: false, message: 'Your verification session has expired. Please sign in again.' });
+        }
+        if (!decoded || decoded.purpose !== '2fa' || !decoded.id) {
+            return res.status(401).json({ success: false, message: 'Invalid verification token. Please sign in again.' });
+        }
+
+        const user = await User.findById(decoded.id).select('+securedPassword +twoFactorSecret +twoFactorCodeHash +twoFactorCodeExpire +twoFactorMethod +twoFactorEnabled');
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'Invalid verification token. Please sign in again.' });
+        }
+        if (!user.twoFactorEnabled || !user.twoFactorMethod) {
+            return res.status(400).json({ success: false, message: 'Two-factor authentication is not enabled on this account.' });
+        }
+
+        if (!isTwoFactorCodeValid(user, inputCode)) {
+            audit.security({ req, user, action: 'LOGIN_FAILED_2FA', severity: 'warning',
+                description: `2FA login failed for (${user.accountEmail}) — invalid/expired code from IP ${resolveIp(req)}.`,
+                targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
+            return res.status(401).json({ success: false, message: 'The verification code is incorrect or has expired. Please try again.' });
+        }
+
+        // One-time-use: consume the SMS code on success so it cannot be reused.
+        if (user.twoFactorMethod === 'sms') {
+            user.twoFactorCodeHash = undefined;
+            user.twoFactorCodeExpire = undefined;
+        }
+        user.lastLoginTimestamp = Date.now();
+        await user.save({ validateBeforeSave: false });
+
+        audit.security({ req, user, action: 'LOGIN_SUCCESS', severity: 'info',
+            description: `${user.assignedRole} user (${user.accountEmail}) logged in successfully after 2FA from IP ${resolveIp(req)}.`,
+            targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
+
+        sendTokenResponse(user, 200, res);
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Resend the SMS login code during the 2FA login step
+// @route   POST /api/auth/2fa/resend-login-code
+// @access  Public (requires valid pendingToken)
+// ─────────────────────────────────────────────
+const resendTwoFactorLoginCode = async (req, res, next) => {
+    try {
+        const { pendingToken } = req.body;
+        if (!pendingToken) {
+            return res.status(400).json({ success: false, message: 'Verification token is required.' });
+        }
+
+        let decoded;
+        try {
+            decoded = jwt.verify(pendingToken, process.env.JWT_SECRET);
+        } catch (err) {
+            return res.status(401).json({ success: false, message: 'Your verification session has expired. Please sign in again.' });
+        }
+        if (!decoded || decoded.purpose !== '2fa' || !decoded.id) {
+            return res.status(401).json({ success: false, message: 'Invalid verification token. Please sign in again.' });
+        }
+
+        const user = await User.findById(decoded.id).select('+twoFactorCodeHash +twoFactorCodeExpire +twoFactorMethod +twoFactorEnabled');
+        if (!user || !user.twoFactorEnabled || user.twoFactorMethod !== 'sms') {
+            return res.status(400).json({ success: false, message: 'SMS two-factor authentication is not enabled on this account.' });
+        }
+
+        const delivery = await issueTwoFactorCode(user, req, '2fa-login-resend');
+        if (!delivery.success) {
+            const friendlyMessage = sanitizeEmailError(delivery.error);
+            const rateLimited = isRateLimitError(delivery.error);
+            return res.status(rateLimited ? 429 : 502).json({
+                success: false,
+                message: friendlyMessage,
+                rateLimited,
+                retryAfterSeconds: rateLimited ? 60 : 30
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'A new verification code has been sent to your email.',
+            data: { codeSent: true, expiresInMinutes: 10 }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ─────────────────────────────────────────────
+// @desc    Test email / SMTP connectivity (admin diagnostic)
+// @route   POST /api/auth/test-email
+// @access  Private (Admin)
+// ─────────────────────────────────────────────
+const testEmail = async (req, res, next) => {
+    try {
+        const result = await testSmtpConnection();
+        if (result.success) {
+            return res.status(200).json({ success: true, message: 'SMTP connection verified. Emails should work.', data: result });
+        }
+        return res.status(502).json({ success: false, message: result.hint || result.errorMessage || 'SMTP connection failed.', data: result });
+    } catch (err) {
+        next(err);
+    }
+};
+
+module.exports = { register, login, logout, getMe, socialLogin, forgotPassword, resetPassword, verifyEmail, resendVerificationCode, resetEmailCounter, getTwoFactorStatus, setupTwoFactor, verifyTwoFactorSetup, sendManagementCode, disableTwoFactor, verifyTwoFactorLogin, resendTwoFactorLoginCode, testEmail };
 

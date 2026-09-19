@@ -68,7 +68,16 @@ export const authService = {
     forgotPassword: (data) => API.post('/auth/forgot-password', data),
     resetPassword: (data) => API.post('/auth/reset-password', data),
     verifyEmail: (data) => API.post('/auth/verify-email', data),
-    resendVerification: (data) => API.post('/auth/resend-verification', data)
+    resendVerification: (data) => API.post('/auth/resend-verification', data),
+    // Two-Factor Authentication
+    verifyLoginTwoFactor: (data) => API.post('/auth/2fa/verify-login', data),
+    resendLoginTwoFactor: (data) => API.post('/auth/2fa/resend-login-code', data),
+    getTwoFactorStatus: () => API.get('/auth/2fa/status'),
+    setupTwoFactor: (data) => API.post('/auth/2fa/setup', data),
+    verifyTwoFactorSetup: (data) => API.post('/auth/2fa/verify-setup', data),
+    sendTwoFactorManagementCode: (data) => API.post('/auth/2fa/send-management-code', data),
+    disableTwoFactor: (data) => API.post('/auth/2fa/disable', data),
+    testEmail: () => API.post('/auth/test-email')
 };
 
 // ── Course API Calls ───────────────────────────────────────

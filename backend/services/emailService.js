@@ -54,10 +54,12 @@ if (unsupportedProvider) {
 // ── Provider 2: SMTP via Nodemailer (dev / fallback) ───────────────────────
 // Reads EMAIL_* vars with SMTP_* aliases so conventional production configs
 // (SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_FROM) work out of the box.
-const smtpHost = process.env.EMAIL_HOST || process.env.SMTP_HOST || '';
-const smtpUser = process.env.EMAIL_USER || process.env.SMTP_USER || '';
-const smtpPass = process.env.EMAIL_PASSWORD || process.env.SMTP_PASS || '';
-const smtpFrom = process.env.EMAIL_FROM || process.env.SMTP_FROM || smtpUser;
+// Trim whitespace from all values — trailing newlines or spaces in .env files
+// cause Gmail 535 authentication failures that are hard to diagnose.
+const smtpHost = (process.env.EMAIL_HOST || process.env.SMTP_HOST || '').trim();
+const smtpUser = (process.env.EMAIL_USER || process.env.SMTP_USER || '').trim();
+const smtpPass = (process.env.EMAIL_PASSWORD || process.env.SMTP_PASS || '').trim();
+const smtpFrom = (process.env.EMAIL_FROM || process.env.SMTP_FROM || smtpUser).trim();
 const smtpConfigured = !!(smtpHost && smtpUser && smtpPass);
 const smtpPort = Number(process.env.EMAIL_PORT || process.env.SMTP_PORT) || 587;
 const smtpTransport = smtpConfigured
@@ -384,6 +386,57 @@ const logEmailTransportStatus = () => {
 // Non-blocking startup log
 setTimeout(logEmailTransportStatus, 100);
 
+// Non-blocking SMTP connection validation — logs a warning if credentials are
+// wrong so operators see it immediately in the console instead of discovering it
+// when the first email fails. Does NOT block server startup.
+if (smtpConfigured) {
+    setTimeout(() => {
+        console.log(`📧 SMTP: verifying connection to ${smtpHost}:${smtpPort} as ${smtpUser}...`);
+        smtpTransport.verify()
+            .then(() => console.log('✅ SMTP connection verified successfully.'))
+            .catch(err => {
+                console.error('❌ SMTP connection verification FAILED:');
+                console.error('   Error code:', err.code || 'N/A');
+                console.error('   Error message:', err.message);
+                if (err.code === 'EAUTH') {
+                    console.error('   → SMTP authentication failed. Check SMTP_USER and SMTP_PASS in .env.');
+                }
+                console.error('   Config used:', { host: smtpHost, port: smtpPort, user: smtpUser, passLength: smtpPass.length });
+            });
+    }, 200); // small delay so the server starts listening first
+}
+
+/**
+ * Diagnostic: test the SMTP connection and return detailed result.
+ * Used by the /api/auth/test-email endpoint so admins can verify credentials
+ * from the browser without checking server logs.
+ */
+const testSmtpConnection = async () => {
+    if (!smtpConfigured) {
+        return { success: false, provider: 'none', message: 'No email provider configured. Set EMAIL_SERVICE and SMTP_* or RESEND_API_KEY in .env.' };
+    }
+    try {
+        await smtpTransport.verify();
+        return { success: true, provider: 'smtp', host: smtpHost, port: smtpPort, user: smtpUser };
+    } catch (err) {
+        const detail = {
+            success: false,
+            provider: 'smtp',
+            host: smtpHost,
+            port: smtpPort,
+            user: smtpUser,
+            errorCode: err.code || null,
+            errorMessage: err.message || 'Unknown error'
+        };
+        if (err.code === 'EAUTH') {
+            detail.hint = 'SMTP authentication failed. Check SMTP_USER and SMTP_PASS in .env.';
+        } else if (err.code === 'ECONNECTION' || err.code === 'ETIMEDOUT') {
+            detail.hint = 'Cannot reach the SMTP server. Check SMTP_HOST and SMTP_PORT, or ensure outbound port 587 is not blocked.';
+        }
+        return detail;
+    }
+};
+
 /**
  * Send Password Reset Email with Reset Link
  * User receives a secure link to reset their password
@@ -642,6 +695,84 @@ const sendEmailVerification = async (user, verificationCode) => {
         return { success: true, messageId: data && data.id || null };
     } catch (error) {
         console.error(`❌ Failed to send verification email to ${user.accountEmail}:`, error.message);
+        return { success: false, error: error.message || 'Unknown email delivery error.' };
+    }
+};
+
+/**
+ * Send Two-Factor Authentication (2FA) Verification Code
+ * Used when the account has 2FA enabled with the "sms" method, so a one-time
+ * 6-digit code is delivered to the account email (falls back gracefully to the
+ * account email when no phone is stored). The code is never echoed back in the
+ * API response — only its SHA-256 hash + expiry are persisted.
+ */
+const sendTwoFactorCodeEmail = async (user, code) => {
+    const expiryStr = '10 minutes';
+    const htmlTemplate = `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body { font-family: Arial, sans-serif; background: #f4f4f4; }
+          .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 8px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .logo { font-size: 32px; color: #6366f1; font-weight: bold; }
+          .content { line-height: 1.6; color: #333; }
+          .code-box { background: #f9fafb; border: 1px solid #d1d5db; padding: 20px; border-radius: 8px; text-align: center; font-size: 28px; letter-spacing: 6px; font-weight: 700; color: #1f2937; }
+          .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
+          .footer { text-align: center; color: #999; font-size: 12px; margin-top: 30px; }
+          .preheader { display: none; max-height: 0; overflow: hidden; mso-hide: all; }
+        </style>
+      </head>
+      <body>
+        <div class="preheader">Your Emare ELMS two-factor authentication code is ${code}. It expires in ${expiryStr}.</div>
+        <div class="container">
+          <div class="header">
+            <div class="logo">Emare ELMS</div>
+            <p style="color: #666; margin: 10px 0;">E-Learning Management System</p>
+          </div>
+
+          <div class="content">
+            <p>Hi ${user.fullName || user.accountEmail},</p>
+            <p>Enter the code below to finish signing in to your Emare ELMS account:</p>
+
+            <div class="code-box">${code}</div>
+
+            <div class="warning">
+              <strong>⏰ This code expires in ${expiryStr}.</strong> Do not share it with anyone.
+            </div>
+
+            <p>If you did not attempt to sign in, your password may be compromised — please change it immediately.</p>
+
+            <p style="margin-top: 30px;">
+              Best regards,<br>
+              <strong>The Emare ELMS Team</strong>
+            </p>
+          </div>
+
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Emare ICT Hub. All rights reserved.</p>
+            <p>Do not reply to this email. This is an automated message.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+    `;
+
+    try {
+        const data = await sendEmail({
+            to: user.accountEmail,
+            subject: '🔐 Your Emare ELMS Two-Factor Authentication Code',
+            html: htmlTemplate,
+            text: `Hi ${user.fullName || user.accountEmail},\n\nYour two-factor authentication code is: ${code}\n\nThis code expires in ${expiryStr}. Enter it on the sign-in page to continue.\n\nIf you did not attempt to sign in, please change your password immediately.\n\nBest regards,\nThe Emare ELMS Team`
+        });
+
+        console.log(`✅ 2FA code email sent to ${user.accountEmail} (Message ID: ${data && data.id || 'n/a'})`);
+        return { success: true, messageId: data && data.id || null };
+    } catch (error) {
+        console.error(`❌ Failed to send 2FA code email to ${user.accountEmail}:`, error.message);
         return { success: false, error: error.message || 'Unknown email delivery error.' };
     }
 };
@@ -1092,9 +1223,11 @@ module.exports = {
     sendEmailVerification,
     sendCourseEnrollmentEmail,
     sendDiscountEmail,
+    sendTwoFactorCodeEmail,
     isEmailConfigured: () => emailConfigured,
     sanitizeEmailError,
     isRateLimitError,
     resetEmailDailyCounter,
-    getEmailCounterStatus
+    getEmailCounterStatus,
+    testSmtpConnection
 };

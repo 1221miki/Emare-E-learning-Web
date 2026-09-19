@@ -3,10 +3,10 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useGoogleLogin } from '@react-oauth/google';
-import { FaEye, FaEyeSlash, FaGoogle, FaArrowLeft } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaGoogle, FaArrowLeft, FaShieldAlt } from 'react-icons/fa';
 
 export default function LoginPage() {
-    const { login, socialAuth, requestPasswordReset, resetPassword } = useAuth();
+    const { login, verifyTwoFactorLogin, resendTwoFactorLoginCode, socialAuth, requestPasswordReset, resetPassword } = useAuth();
     const { theme, colors } = useTheme();
     const isDark = theme === 'dark';
     const navigate = useNavigate();
@@ -18,6 +18,26 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [socialLoading, setSocialLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+
+    // Two-Factor Authentication step state (hydrated from sessionStorage so a
+    // page refresh mid-verification doesn't force the user to re-enter creds).
+    const [twoFactor, setTwoFactor] = useState(() => {
+        try {
+            const saved = sessionStorage.getItem('elms_2fa_pending');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed?.pendingToken) {
+                    return { required: true, method: parsed.method || '', pendingToken: parsed.pendingToken };
+                }
+            }
+        } catch { /* ignore */ }
+        return { required: false, method: '', pendingToken: '' };
+    });
+    const [twoFactorCode, setTwoFactorCode] = useState('');
+    const [twoFactorError, setTwoFactorError] = useState('');
+    const [twoFactorInfo, setTwoFactorInfo] = useState('');
+    const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+    const [resendingCode, setResendingCode] = useState(false);
 
     // Forgot Password Modal state
     const [showForgotModal, setShowForgotModal] = useState(false);
@@ -51,14 +71,74 @@ export default function LoginPage() {
         setLoading(true);
         try {
             const normalizedEmail = form.accountEmail.trim().toLowerCase();
-            const user = await login(normalizedEmail, form.securedPassword);
-            handleRedirect(user);
+            const result = await login(normalizedEmail, form.securedPassword);
+            // 2FA-enabled accounts: the session is withheld until the code step.
+            if (result?.twoFactorRequired) {
+                const next = { required: true, method: result.twoFactorMethod || '', pendingToken: result.pendingToken };
+                setTwoFactor(next);
+                setTwoFactorCode('');
+                setTwoFactorError('');
+                setTwoFactorInfo(result.twoFactorMethod === 'sms'
+                    ? 'We sent a verification code to your account email.'
+                    : 'Open your authenticator app and enter the 6-digit code.');
+                try {
+                    sessionStorage.setItem('elms_2fa_pending', JSON.stringify({ method: next.method, pendingToken: next.pendingToken }));
+                } catch { /* ignore */ }
+                return;
+            }
+            handleRedirect(result.data);
         } catch (err) {
             console.error('Login error:', err);
             const serverMsg = err.response?.data?.message || err.response?.data?.error || (err.response && JSON.stringify(err.response.data)) || err.message || 'Login failed. Please try again.';
             setError(serverMsg);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const clearTwoFactor = () => {
+        setTwoFactor({ required: false, method: '', pendingToken: '' });
+        setTwoFactorCode('');
+        setTwoFactorError('');
+        setTwoFactorInfo('');
+        try { sessionStorage.removeItem('elms_2fa_pending'); } catch { /* ignore */ }
+    };
+
+    const handleTwoFactorSubmit = async (e) => {
+        e.preventDefault();
+        setTwoFactorError('');
+        if (!twoFactorCode.trim()) {
+            setTwoFactorError('Please enter the 6-digit verification code.');
+            return;
+        }
+        setTwoFactorLoading(true);
+        try {
+            const user = await verifyTwoFactorLogin(twoFactor.pendingToken, twoFactorCode.trim());
+            clearTwoFactor();
+            handleRedirect(user);
+        } catch (err) {
+            const serverMsg = err.response?.data?.message || err.message || 'Verification failed. Please try again.';
+            setTwoFactorError(serverMsg);
+            // Expired/invalid pending token — send the user back to the password step.
+            if (err.response?.status === 401 && /sign in again|expired|invalid verification token/i.test(serverMsg)) {
+                clearTwoFactor();
+            }
+        } finally {
+            setTwoFactorLoading(false);
+        }
+    };
+
+    const handleResendTwoFactorCode = async () => {
+        setTwoFactorError('');
+        setTwoFactorInfo('');
+        setResendingCode(true);
+        try {
+            await resendTwoFactorLoginCode(twoFactor.pendingToken);
+            setTwoFactorInfo('A new verification code has been sent to your email.');
+        } catch (err) {
+            setTwoFactorError(err.response?.data?.message || 'Could not resend the code. Please try again.');
+        } finally {
+            setResendingCode(false);
         }
     };
 
@@ -159,6 +239,60 @@ export default function LoginPage() {
                 {success && <div style={styles.successBox}>{success}</div>}
                 {error && <div style={styles.errorBox}>{error}</div>}
 
+                {twoFactor.required && (
+                    <form onSubmit={handleTwoFactorSubmit} style={styles.form}>
+                        <div style={{ textAlign: 'center', marginBottom: '4px' }}>
+                            <div style={{ ...styles.twoFactorIcon, color: colors.primary }}><FaShieldAlt /></div>
+                            <h3 style={{ margin: '10px 0 4px', color: colors.text, fontSize: '17px', fontWeight: '800' }}>Two-Factor Verification</h3>
+                            <p style={{ margin: 0, color: colors.textMuted, fontSize: '13px' }}>
+                                Enter the verification code to finish signing in.
+                            </p>
+                        </div>
+
+                        {twoFactorError && <div style={styles.errorBox}>{twoFactorError}</div>}
+                        {!twoFactorError && twoFactorInfo && <div style={styles.infoBox}>{twoFactorInfo}</div>}
+
+                        <div style={styles.fieldGroup}>
+                            <label style={styles.label}>Verification Code</label>
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                autoComplete="one-time-code"
+                                maxLength={6}
+                                autoFocus
+                                placeholder="000000"
+                                value={twoFactorCode}
+                                onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                style={{ ...inputStyle, letterSpacing: '8px', textAlign: 'center', fontSize: '20px', fontWeight: '700' }}
+                            />
+                        </div>
+
+                        <button type="submit" style={twoFactorLoading ? { ...styles.btn, opacity: 0.7 } : styles.btn} disabled={twoFactorLoading}>
+                            {twoFactorLoading ? 'Verifying...' : 'Verify & Sign In'}
+                        </button>
+
+                        {twoFactor.method === 'sms' && (
+                            <button
+                                type="button"
+                                onClick={handleResendTwoFactorCode}
+                                disabled={resendingCode}
+                                style={{ ...styles.link, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '13px' }}
+                            >
+                                {resendingCode ? 'Sending...' : 'Resend code'}
+                            </button>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={() => { clearTwoFactor(); setError(''); }}
+                            style={{ ...styles.link, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '13px', color: colors.textMuted }}
+                        >
+                            ← Use a different account
+                        </button>
+                    </form>
+                )}
+
+                {!twoFactor.required && (
                 <form onSubmit={handleSubmit} style={styles.form}>
                     <div style={styles.fieldGroup}>
                         <label style={styles.label}>Email Address</label>
@@ -207,7 +341,10 @@ export default function LoginPage() {
                         {loading ? 'Signing In...' : 'Sign In'}
                     </button>
                 </form>
+                )}
 
+                {!twoFactor.required && (
+                <>
                 {/* Social Login Buttons — real OAuth */}
                 <div style={styles.socialContainer}>
                     <p style={{ ...styles.socialText, color: colors.textMuted }}>Or continue with</p>
@@ -231,6 +368,8 @@ export default function LoginPage() {
                 <p style={{ ...styles.footerText, color: colors.textMuted }}>
                     Don't have an account? <Link to="/register" style={{ ...styles.link, color: colors.primary }}>Register here</Link>
                 </p>
+                </>
+                )}
             </div>
 
             {/* Forgot Password Modal */}
@@ -315,6 +454,8 @@ const styles = {
     subtitle: { color: '#94a3b8', fontSize: '14px', margin: 0 },
     errorBox: { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', padding: '12px 16px', borderRadius: '10px', fontSize: '14px', marginBottom: '20px' },
     successBox: { background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)', color: '#86efac', padding: '12px 16px', borderRadius: '10px', fontSize: '14px', marginBottom: '20px' },
+    infoBox: { background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.4)', color: '#93c5fd', padding: '12px 16px', borderRadius: '10px', fontSize: '13px', marginBottom: '20px' },
+    twoFactorIcon: { fontSize: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto' },
     form: { display: 'flex', flexDirection: 'column', gap: '18px' },
     fieldGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
     label: { color: '#cbd5e1', fontSize: '13px', fontWeight: '600', letterSpacing: '0.5px' },

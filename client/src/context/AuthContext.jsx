@@ -43,10 +43,29 @@ export const AuthProvider = ({ children }) => {
     const login = useCallback(async (accountEmail, securedPassword) => {
         const normalizedEmail = accountEmail?.trim().toLowerCase();
         const { data } = await authService.login({ accountEmail: normalizedEmail, securedPassword });
+        // 2FA gate: the server withheld the session until the second factor is
+        // verified. Return the body (with twoFactorRequired + pendingToken) and
+        // let the login page drive the verification step.
+        if (data?.twoFactorRequired) {
+            return data;
+        }
+        localStorage.setItem('elms_token', data.token);
+        localStorage.setItem('elms_user', JSON.stringify(data.data));
+        setUser(data.data);
+        return data;
+    }, []);
+
+    const verifyTwoFactorLogin = useCallback(async (pendingToken, code) => {
+        const { data } = await authService.verifyLoginTwoFactor({ pendingToken, code });
         localStorage.setItem('elms_token', data.token);
         localStorage.setItem('elms_user', JSON.stringify(data.data));
         setUser(data.data);
         return data.data;
+    }, []);
+
+    const resendTwoFactorLoginCode = useCallback(async (pendingToken) => {
+        const { data } = await authService.resendLoginTwoFactor({ pendingToken });
+        return data;
     }, []);
 
     const register = useCallback(async (formData) => {
@@ -86,7 +105,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const logout = useCallback(async () => {
-        try { await authService.logout(); } catch {}
+        try { await authService.logout(); } catch { /* ignore network errors on logout */ }
         localStorage.removeItem('elms_token');
         localStorage.removeItem('elms_user');
         setUser(null);
@@ -104,6 +123,8 @@ export const AuthProvider = ({ children }) => {
         user,
         loading,
         login,
+        verifyTwoFactorLogin,
+        resendTwoFactorLoginCode,
         register,
         verifyEmail,
         resendVerification,

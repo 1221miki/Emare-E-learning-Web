@@ -2,7 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { userService, uploadService } from '../../services/api';
+import TwoFactorSection from '../../components/dashboard/tabs/TwoFactorSection';
 
 // ── Status Toast ───────────────────────────────────────────
 function Toast({ message, type }) {
@@ -20,9 +22,11 @@ function Toast({ message, type }) {
 export default function InstructorSettings() {
     const { colors } = useTheme();
     const { user, updateUser } = useAuth();
+    const { t } = useLanguage();
     const [active, setActive] = useState('profile');
     const [toast, setToast] = useState({ message: '', type: 'success' });
     const [saving, setSaving] = useState(false);
+    const [twoFactorEnabled, setTwoFactorEnabled] = useState(user?.twoFactorEnabled || false);
     const photoInputRef = useRef();
 
     const showToast = (message, type = 'success') => {
@@ -376,6 +380,34 @@ export default function InstructorSettings() {
                                     {saving ? '⏳ Updating...' : '▣ Update Password'}
                                 </button>
                             </div>
+                        </div>
+
+                        {/* Two-Factor Authentication */}
+                        <div style={s.card}>
+                            <TwoFactorSection
+                                user={user}
+                                twoFactorEnabled={twoFactorEnabled}
+                                setTwoFactorEnabled={setTwoFactorEnabled}
+                                colors={c}
+                                styles={{
+                                    successAlert: { background: '#d1fae5', border: '1px solid #a7f3d0', color: '#065f46', padding: '12px 16px', borderRadius: '10px', fontSize: '13px' },
+                                    formGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
+                                    label: { fontSize: '13px', fontWeight: '700', color: c.text },
+                                    input: { padding: '10px 14px', borderRadius: '10px', border: `1px solid ${c.border}`, background: c.bgInput || c.bg, color: c.text, fontSize: '14px', outline: 'none', width: '100%', boxSizing: 'border-box' },
+                                }}
+                                t={(key) => {
+                                    const map = {
+                                        section_2fa: 'Two-Factor Authentication (2FA)',
+                                        twofa_status_enabled: 'ENABLED',
+                                        twofa_status_disabled: 'DISABLED',
+                                        twofa_desc: 'Require an extra security verification code when signing into your instructor account.',
+                                        btn_enable_2fa: 'Enable 2FA',
+                                        btn_disable_2fa: 'Disable 2FA',
+                                        lbl_current_pw: 'Current Password',
+                                    };
+                                    return map[key] || key;
+                                }}
+                            />
                         </div>
 
                         {/* Danger Zone */}

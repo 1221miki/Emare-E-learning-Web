@@ -24,6 +24,7 @@ router.get('/stats/public', getPublicStats);
 // ── User Self Profile Management (Student/Instructor/Admin) ──
 router.patch('/profile', protect, (req, res, next) => {
     req.params.id = req.user.id;
+    req.isSelfProfileUpdate = true;
     updateUser(req, res, next);
 });
 

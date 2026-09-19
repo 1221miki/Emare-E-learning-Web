@@ -209,11 +209,11 @@ CLOUDINARY_CLOUD_NAME=...
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
 
-# Email (Nodemailer)
-EMAIL_SERVICE=gmail
-EMAIL_USER=your@gmail.com
-EMAIL_PASSWORD=app-password
-EMAIL_FROM=noreply@emare.com
+# Email (Brevo API)
+EMAIL_SERVICE=brevo
+BREVO_API_KEY=your_brevo_api_key
+BREVO_FROM="Emare ICT HUB <asamnagiz2@gmail.com>"
+EMAIL_FROM=asamnagiz2@gmail.com
 
 # Frontend URL
 FRONTEND_URL=http://localhost:5173
