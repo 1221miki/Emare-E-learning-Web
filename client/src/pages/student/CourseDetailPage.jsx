@@ -144,7 +144,7 @@ export default function CourseDetailPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                             <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: colors.border, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
                                 {course.creatorRef?.avatarUrl ? (
-                                    <img src={course.creatorRef.avatarUrl} alt={course.creatorRef.fullName} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                                    <img src={course.creatorRef.avatarUrl} alt={course.creatorRef.fullName} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} crossOrigin="anonymous" />
                                 ) : (
                                     course.creatorRef?.fullName?.[0]
                                 )}

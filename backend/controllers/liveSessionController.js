@@ -5,7 +5,7 @@ const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const meetingService = require('../services/meetingService');
-const { uploadVideo } = require('../services/bunnyService');
+const { uploadVideo } = require('../services/localStorageService');
 
 const generateJitsiLink = (title) => {
     const slug = `${(title || 'emare-live-session')
@@ -122,20 +122,41 @@ exports.generateSessionMeetingLink = async (req, res) => {
                     message: `Zoom is not configured on this server. Missing backend/.env settings: ${missing.join(', ')}. An administrator must add the Zoom Server-to-Server OAuth credentials and restart the server.`
                 });
             }
-            const result = await meetingService.generateMeetingUrl({
-                provider: 'zoom',
-                title,
-                startDate: start ? start.toISOString() : undefined,
-                endDate: end ? end.toISOString() : undefined,
-                allowFallback: false
-            });
-            if (!result.url || !/^https:\/\/(us\w*\.)?zoom\.us\//.test(result.url)) {
-                throw new Error('Zoom did not return a valid meeting link.');
+            try {
+                const result = await meetingService.generateMeetingUrl({
+                    provider: 'zoom',
+                    title,
+                    startDate: start ? start.toISOString() : undefined,
+                    endDate: end ? end.toISOString() : undefined,
+                    allowFallback: false
+                });
+                if (!result.url || !/^https:\/\/(us\w*\.)?zoom\.us\//.test(result.url)) {
+                    throw new Error('Zoom did not return a valid meeting link.');
+                }
+                return res.status(200).json({
+                    success: true,
+                    data: { url: result.url, provider: 'zoom', generated: true }
+                });
+            } catch (zoomErr) {
+                // Handle Zoom API errors specifically - return 503 with clear message instead of 502
+                console.error('Zoom API error:', zoomErr?.message);
+                const isConfigError = zoomErr?.code === 'PROVIDER_NOT_CONFIGURED' || zoomErr?.message?.includes('not configured') || zoomErr?.message?.includes('credentials');
+                if (isConfigError) {
+                    const missing = missingZoomEnv();
+                    return res.status(400).json({ 
+                        success: false, 
+                        code: 'ZOOM_NOT_CONFIGURED', 
+                        missing, 
+                        message: `Zoom is not configured on this server. Missing backend/.env settings: ${missing.join(', ')}.` 
+                    });
+                }
+                // Network/API error - return 503 (service unavailable) with clear message
+                return res.status(503).json({
+                    success: false,
+                    code: 'ZOOM_API_ERROR',
+                    message: 'Zoom service is temporarily unavailable. Please try again later, or use Jitsi Meet instead.'
+                });
             }
-            return res.status(200).json({
-                success: true,
-                data: { url: result.url, provider: 'zoom', generated: true }
-            });
         }
     } catch (err) {
         if (err.code === 'PROVIDER_NOT_CONFIGURED') {
@@ -143,7 +164,7 @@ exports.generateSessionMeetingLink = async (req, res) => {
             return res.status(400).json({ success: false, code: 'ZOOM_NOT_CONFIGURED', missing, message: `Zoom is not configured on this server. Missing backend/.env settings: ${missing.join(', ')}.` });
         }
         console.error('Live session meeting link generation error:', err && err.message);
-        return res.status(502).json({
+        return res.status(500).json({
             success: false,
             message: (err && err.userMessage) ||
                 'The meeting provider failed to create a link. Please try again, or paste an existing meeting link manually.'
@@ -504,75 +525,84 @@ exports.endLiveSession = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Only the instructor can end the meeting' });
         }
 
+        // If already ended, return existing session with recording (handle duplicate requests safely)
         if (session.status === 'ended') {
-            return res.status(400).json({ success: false, message: 'Session has already ended' });
+            let recording = session.recording?.recordingId
+                ? await LiveRecording.findById(session.recording.recordingId)
+                : null;
+            
+            return res.status(200).json({
+                success: true,
+                data: session,
+                recording: recording || null,
+                message: 'Session already ended.'
+            });
         }
+
+        const wasRecording = session.recordingStatus === 'recording';
 
         session.status = 'ended';
         session.isLive = false;
         session.actualEndTime = new Date();
-        session.recordingStatus = 'available';
+        session.recordingStatus = 'processing';
         await session.save();
 
-        // ── Auto-create & publish recording immediately on session end ────
-        // Re-use existing recording if one was already created (e.g. from a
-        // previous upload), otherwise create a new one using the meeting link
-        // so students can watch the live replay directly.
+        // ── Auto-create / update recording on session end ─────────────
         let recording = session.recording?.recordingId
             ? await LiveRecording.findById(session.recording.recordingId)
             : null;
 
         if (!recording) {
-            // No file upload needed — use the meeting link as the video URL.
-            // The platform (Jitsi/Zoom/etc.) retains the meeting replay at this URL.
             recording = await LiveRecording.create({
                 liveSession: session._id,
                 course: session.courseRef._id,
                 instructor: session.instructorRef._id,
                 title: session.title,
                 description: session.description || '',
-                videoUrl: session.meetingLink,   // replay link = meeting link
+                videoUrl: '',
                 thumbnailUrl: session.courseRef?.thumbnailUrl || '',
-                storageProvider: session.meetingProvider || 'other',
+                storageProvider: 'local',
                 fileName: '',
                 fileSize: 0,
                 duration: session.durationMinutes ? session.durationMinutes * 60 : 0,
-                status: 'available',
+                status: 'processing',
                 isPublished: true,
                 publishedAt: new Date(),
                 recordingStartTime: session.actualStartTime,
                 recordingEndTime: new Date()
             });
 
-            // Link back to session
             session.recording = {
                 recordingId: recording._id,
-                recordingUrl: recording.videoUrl,
+                recordingUrl: '',
                 thumbnailUrl: recording.thumbnailUrl,
                 fileName: '',
                 fileSize: 0,
                 duration: recording.duration,
-                storageProvider: recording.storageProvider,
-                uploadStatus: 'completed',
+                storageProvider: 'local',
+                uploadStatus: 'pending',
                 recordingStartTime: recording.recordingStartTime,
                 recordingEndTime: recording.recordingEndTime
             };
             await session.save();
-        } else if (!recording.isPublished) {
-            // Existing recording — just auto-publish it
+        }
+
+        // Auto-publish if recording already has a video file
+        if (recording.videoUrl && recording.status === 'available' && !recording.isPublished) {
             recording.isPublished = true;
             recording.publishedAt = new Date();
-            recording.status = 'available';
             await recording.save();
+            session.recordingStatus = 'available';
+            await session.save();
         }
 
         // Notify enrolled students
         await notifyEnrolledStudents(session.courseRef._id, {
             type: 'event',
-            title: 'Live Class Recording Available',
-            message: `The recording for "${session.title}" is now available to watch.`,
-            link: `/recordings/${recording._id}`,
-            metadata: { recordingId: recording._id, courseId: session.courseRef._id, action: 'watch' }
+            title: 'Live Session Ended',
+            message: `The session "${session.title}" has ended. The recording is now available.`,
+            link: `/student/dashboard?tab=live`,
+            metadata: { sessionId: session._id, courseId: session.courseRef._id, action: 'session-ended' }
         });
 
         emitToCourse(session.courseRef._id, 'liveSessionEnded', {
@@ -580,16 +610,11 @@ exports.endLiveSession = async (req, res) => {
             courseId: session.courseRef._id
         });
 
-        emitToCourse(session.courseRef._id, 'recordingPublished', {
-            recordingId: recording._id,
-            courseId: session.courseRef._id,
-            title: recording.title
-        });
-
         res.status(200).json({
             success: true,
             data: session,
-            message: 'Live session ended — recording is now available to students.'
+            recording: recording,
+            message: 'Live session ended.'
         });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
@@ -702,36 +727,56 @@ exports.uploadRecording = async (req, res) => {
         await session.save();
 
         const fileName = req.file.originalname || `recording-${session._id}.mp4`;
-        const bunnyResult = await uploadVideo(req.file.buffer, fileName, req.file.mimetype || 'video/mp4');
+        const result = await uploadVideo(req.file.buffer, fileName, req.file.mimetype || 'video/mp4');
 
-        const recording = await LiveRecording.create({
-            liveSession: session._id,
-            course: session.courseRef._id,
-            instructor: req.user.id,
-            title: req.body.title || session.title,
-            description: req.body.description || '',
-            videoUrl: bunnyResult.embedUrl || bunnyResult.url || bunnyResult.publicUrl,
-            thumbnailUrl: bunnyResult.thumbnailUrl || '',
-            storageProvider: 'bunny',
-            fileName: fileName,
-            fileSize: req.file.size,
-            duration: 0,
-            status: 'available',
-            isPublished: true,           // auto-publish immediately on upload
-            publishedAt: new Date(),
-            recordingStartTime: session.recording.recordingStartTime,
-            recordingEndTime: session.recording.recordingEndTime
-        });
+        // Check if a placeholder recording already exists for this session
+        let recording = session.recording?.recordingId
+            ? await LiveRecording.findById(session.recording.recordingId)
+            : null;
+
+        if (recording) {
+            // Update the existing placeholder recording with the uploaded file
+            recording.videoUrl = result.url;
+            recording.fileName = fileName;
+            recording.fileSize = req.file.size;
+            recording.storageProvider = 'local';
+            recording.status = 'available';
+            recording.isPublished = true;
+            recording.publishedAt = new Date();
+            if (req.body.title) recording.title = req.body.title;
+            if (req.body.description) recording.description = req.body.description;
+            await recording.save();
+        } else {
+            // Create a new recording
+            recording = await LiveRecording.create({
+                liveSession: session._id,
+                course: session.courseRef._id,
+                instructor: req.user.id,
+                title: req.body.title || session.title,
+                description: req.body.description || '',
+                videoUrl: result.url,
+                thumbnailUrl: '',
+                storageProvider: 'local',
+                fileName: fileName,
+                fileSize: req.file.size,
+                duration: 0,
+                status: 'available',
+                isPublished: true,
+                publishedAt: new Date(),
+                recordingStartTime: session.recording?.recordingStartTime,
+                recordingEndTime: session.recording?.recordingEndTime
+            });
+        }
 
         session.recording = {
             ...session.recording,
             recordingId: recording._id,
             recordingUrl: recording.videoUrl,
-            thumbnailUrl: recording.thumbnailUrl,
+            thumbnailUrl: recording.thumbnailUrl || '',
             fileName: recording.fileName,
             fileSize: recording.fileSize,
             duration: recording.duration,
-            storageProvider: 'bunny',
+            storageProvider: 'local',
             uploadStatus: 'completed'
         };
         session.recordingStatus = 'available';
@@ -742,7 +787,7 @@ exports.uploadRecording = async (req, res) => {
             type: 'event',
             title: 'Recording Available',
             message: `The recording for "${recording.title}" is now available to watch.`,
-            link: `/recordings/${recording._id}`,
+            link: `/student/dashboard?tab=live`,
             metadata: { recordingId: recording._id, courseId: session.courseRef._id, action: 'watch' }
         });
 

@@ -1073,7 +1073,15 @@ export default function InstructorDashboard() {
         if (!window.confirm('End this live session?')) return;
         try {
             const res = await liveSessionService.endSession(id);
-            setInstructorSessions(prev => prev.map(s => s._id === id ? res.data.data : s));
+            const updatedSession = res.data.data;
+            const newRecording = res.data.recording;
+            setInstructorSessions(prev => prev.map(s => s._id === id ? updatedSession : s));
+            if (newRecording) {
+                setInstructorRecordings(prev => {
+                    const exists = prev.find(r => r._id === newRecording._id);
+                    return exists ? prev : [newRecording, ...prev];
+                });
+            }
             alert('Live session ended successfully!');
         } catch (err) {
             alert(err.response?.data?.message || 'Failed to end session');
@@ -1721,7 +1729,7 @@ export default function InstructorDashboard() {
                         <p style={s.subGreeting}>Empower learners through quality content</p>
                     </div>
                     {user?.avatarUrl ? (
-                        <img src={user.avatarUrl} alt={user?.fullName} style={{ ...s.avatar, objectFit: 'cover' }} />
+                        <img src={user.avatarUrl} alt={user?.fullName} style={{ ...s.avatar, objectFit: 'cover' }} crossOrigin="anonymous" />
                     ) : (
                         <div style={s.avatar}>{user?.fullName?.[0]?.toUpperCase()}</div>
                     )}

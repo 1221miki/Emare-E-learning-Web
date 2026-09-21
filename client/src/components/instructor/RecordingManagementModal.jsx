@@ -26,7 +26,7 @@ export default function RecordingManagementModal({ session, recording, onSuccess
         videoUrl: recording?.videoUrl || '',
     });
     const [file, setFile] = useState(null);
-    const [uploadMode, setUploadMode] = useState(isExisting ? 'url' : 'file'); // 'file' | 'url'
+    const [uploadMode, setUploadMode] = useState('file'); // 'file' | 'url'
     const [uploading, setUploading] = useState(false);
     const [msg, setMsg] = useState(null);
     const [progress, setProgress] = useState(0);
@@ -53,7 +53,7 @@ export default function RecordingManagementModal({ session, recording, onSuccess
         setProgress(0);
 
         try {
-            if (uploadMode === 'file' && session) {
+            if (uploadMode === 'file' && file && session) {
                 // Upload file via multipart
                 const fd = new FormData();
                 fd.append('recording', file);
@@ -69,8 +69,16 @@ export default function RecordingManagementModal({ session, recording, onSuccess
                 clearInterval(progressInterval);
                 setProgress(100);
                 setMsg({ type: 'success', text: 'Recording uploaded successfully!' });
-            } else if (isExisting) {
-                // Update existing recording metadata
+            } else if (uploadMode === 'url' && form.videoUrl.trim() && isExisting) {
+                // Update existing recording with URL
+                await liveSessionService.updateRecording(recording._id, {
+                    title: form.title,
+                    description: form.description,
+                    videoUrl: form.videoUrl,
+                });
+                setMsg({ type: 'success', text: 'Recording updated.' });
+            } else if (isExisting && !file && !form.videoUrl.trim()) {
+                // Update existing recording metadata only
                 await liveSessionService.updateRecording(recording._id, {
                     title: form.title,
                     description: form.description,
@@ -170,20 +178,18 @@ export default function RecordingManagementModal({ session, recording, onSuccess
                         </div>
                     )}
 
-                    {/* Upload mode toggle (only for new uploads) */}
-                    {!isExisting && (
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            {['file', 'url'].map(mode => (
-                                <button key={mode} type="button" onClick={() => setUploadMode(mode)}
-                                    style={{ flex: 1, padding: '8px', borderRadius: '8px', border: `1px solid ${uploadMode === mode ? '#22c55e' : c.border}`, background: uploadMode === mode ? 'rgba(34,197,94,0.12)' : 'transparent', color: uploadMode === mode ? '#4ade80' : c.textMuted, fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
-                                    {mode === 'file' ? '📁 Upload File' : '🔗 Paste URL'}
-                                </button>
-                            ))}
-                        </div>
-                    )}
+                    {/* Upload mode toggle */}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        {['file', 'url'].map(mode => (
+                            <button key={mode} type="button" onClick={() => setUploadMode(mode)}
+                                style={{ flex: 1, padding: '8px', borderRadius: '8px', border: `1px solid ${uploadMode === mode ? '#22c55e' : c.border}`, background: uploadMode === mode ? 'rgba(34,197,94,0.12)' : 'transparent', color: uploadMode === mode ? '#4ade80' : c.textMuted, fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
+                                {mode === 'file' ? '📁 Upload File' : '🔗 Paste URL'}
+                            </button>
+                        ))}
+                    </div>
 
                     {/* File upload */}
-                    {!isExisting && uploadMode === 'file' && (
+                    {uploadMode === 'file' && (
                         <div>
                             <label style={lbl}>Recording File (MP4, MOV, WebM)</label>
                             <input type="file" accept="video/*" onChange={e => setFile(e.target.files[0] || null)}
@@ -193,10 +199,10 @@ export default function RecordingManagementModal({ session, recording, onSuccess
                     )}
 
                     {/* URL input */}
-                    {!isExisting && uploadMode === 'url' && (
+                    {uploadMode === 'url' && (
                         <div>
-                            <label style={lbl}>Recording URL (Bunny Stream embed, YouTube, etc.)</label>
-                            <input style={inp} value={form.videoUrl} onChange={e => setF('videoUrl', e.target.value)} placeholder="https://iframe.mediadelivery.net/embed/…" />
+                            <label style={lbl}>Recording URL (YouTube, Vimeo, or local file)</label>
+                            <input style={inp} value={form.videoUrl} onChange={e => setF('videoUrl', e.target.value)} placeholder="https://www.youtube.com/watch?v=..." />
                         </div>
                     )}
 

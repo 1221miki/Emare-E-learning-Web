@@ -1,7 +1,7 @@
 /**
  * Adds extra video lessons (with in-video quiz checkpoints) to any course
- * that has fewer than 3 lessons, using already-uploaded & processed Bunny
- * Stream videos from library 735143.
+ * that has fewer than 3 lessons, using locally stored videos from
+ * backend/uploads/videos/.
  *
  * Run:  node scripts/addLessonsChain.js
  */
@@ -10,7 +10,7 @@ const { ObjectId } = require('mongodb');
 
 const MONGO_URI = 'mongodb+srv://asamnagiz2_db_user:Ayuman2123%40%23@emareelearning.dxok7bt.mongodb.net/emare?retryWrites=true&w=majority&appName=EmareElearning';
 
-// Unused, fully processed videos (guid -> duration seconds), verified via Bunny API
+// Unused spare videos (guid -> duration seconds)
 const SPARE_VIDEOS = [
     { guid: 'e26cbca8-a88b-4843-8257-eb03f05c29d7', dur: 111 },
     { guid: '25b8978b-1e1f-435f-bc9e-e43a4dc0bbf9', dur: 111 },
@@ -59,7 +59,7 @@ const mkCps = (dur) => {
             const lesson = {
                 _id: new ObjectId(),
                 lessonTitle: `Lesson ${num} - Video Concept Training`,
-                videoUrl: `https://iframe.mediadelivery.net/embed/735143/${v.guid}`,
+                videoUrl: `/api/local-storage/videos/${v.guid}.mp4`,
                 durationMinutes: Math.max(1, Math.round(v.dur / 60)),
                 isFreePreview: false,
                 quizCheckpoints: mkCps(v.dur)

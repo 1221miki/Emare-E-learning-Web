@@ -1,5 +1,13 @@
+/**
+ * DEPRECATED — External video URL diagnostics have been removed.
+ * All videos now use local server storage.
+ *
+ * This script previously resolved external embed URLs to direct MP4
+ * playback URLs. It is no longer needed.
+ *
+ * Run:  node scripts/diagnoseVideoUrls.js (will exit immediately)
+ */
 const mongoose = require('mongoose');
-const axios = require('axios');
 require('dotenv').config({ path: require('path').join(__dirname, '..', '..', '.env') });
 
 const Course = require('../models/Course');
@@ -21,26 +29,12 @@ const Course = require('../models/Course');
     }
     console.log(`Found ${heads.length} distinct lesson video URLs\n`);
 
-    for (const h of heads.slice(0, 8)) {
-        const m = String(h.url).match(/mediadelivery\.net\/embed\/(\d+)\/([a-f0-9-]{36})/i);
-        console.log(`COURSE: ${h.course}`);
-        console.log(`  raw: ${h.url}`);
-        if (!m) { console.log('  -> NOT a bunny embed (external/direct)\n'); continue; }
-        const [, lib, guid] = m;
-        // Try both known pull zones at multiple qualities
-        for (const host of ['vz-4bc99530-632.b-cdn.net', 'vz-ece4d3e6-807.b-cdn.net']) {
-            for (const q of ['play_720p.mp4', 'play_480p.mp4', 'play_360p.mp4']) {
-                const u = `https://${host}/${guid}/${q}`;
-                let status = '?';
-                try {
-                    const r = await axios.head(u, { timeout: 8000, validateStatus: () => true });
-                    status = r.status;
-                } catch (e) { status = 'ERR ' + e.message.slice(0, 40); }
-                if (status === 200) console.log(`  OK   ${host} ${q}`);
-                else if (String(status).startsWith('ERR')) console.log(`  ${status} ${host} ${q}`);
-            }
-        }
-        console.log('');
+    for (const h of heads) {
+        const isLocal = /\/api\/local-storage\//i.test(h.url);
+        const isYouTube = /youtube\.com\/|youtu\.be\//i.test(h.url);
+        const type = isLocal ? 'LOCAL' : isYouTube ? 'YOUTUBE' : 'EXTERNAL';
+        console.log(`[${type}] ${h.course}: ${h.url}`);
     }
+
     await mongoose.disconnect();
 })().catch(e => { console.error(e.message); process.exit(1); });

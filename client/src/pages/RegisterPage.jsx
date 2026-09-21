@@ -285,7 +285,7 @@ export default function RegisterPage() {
                     <div style={styles.fieldGroup}>
                         <label style={labelStyle}>Password</label>
                         <div style={styles.passwordWrapper}>
-                            <input name="securedPassword" type={showPassword ? 'text' : 'password'} required placeholder="••••••••" value={form.securedPassword} onChange={handleChange} style={{ ...fieldStyle('securedPassword'), width: '100%', paddingRight: '40px', boxSizing: 'border-box' }} />
+                            <input name="securedPassword" type={showPassword ? 'text' : 'password'} required autoComplete="new-password" placeholder="••••••••" value={form.securedPassword} onChange={handleChange} style={{ ...fieldStyle('securedPassword'), width: '100%', paddingRight: '40px', boxSizing: 'border-box' }} />
                             <button type="button" onClick={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
                                 {showPassword ? <FaEyeSlash /> : <FaEye />}
                             </button>
@@ -294,7 +294,7 @@ export default function RegisterPage() {
                     <div style={styles.fieldGroup}>
                         <label style={labelStyle}>Confirm Password</label>
                         <div style={styles.passwordWrapper}>
-                            <input name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} required placeholder="••••••••" value={form.confirmPassword} onChange={handleChange} style={{ ...fieldStyle('confirmPassword'), width: '100%', paddingRight: '40px', boxSizing: 'border-box' }} />
+                            <input name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} required autoComplete="new-password" placeholder="••••••••" value={form.confirmPassword} onChange={handleChange} style={{ ...fieldStyle('confirmPassword'), width: '100%', paddingRight: '40px', boxSizing: 'border-box' }} />
                             <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
                                 {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                             </button>

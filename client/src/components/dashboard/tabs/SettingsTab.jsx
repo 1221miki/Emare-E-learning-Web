@@ -114,7 +114,7 @@ export default function SettingsTab(dash) {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '24px', padding: '20px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, flexWrap: 'wrap' }}>
                                 <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: '800', overflow: 'hidden' }}>
                                     {avatarUrl ? (
-                                        <img src={avatarUrl} alt="Profile Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <img src={avatarUrl} alt="Profile Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} crossOrigin="anonymous" />
                                     ) : (
                                         firstName?.[0]?.toUpperCase() || user?.fullName?.[0]?.toUpperCase() || 'S'
                                     )}

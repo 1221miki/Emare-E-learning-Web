@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 mongoose.connect('mongodb+srv://asamnagiz2_db_user:Ayuman2123%40%23@emareelearning.dxok7bt.mongodb.net/emare?retryWrites=true&w=majority&appName=EmareElearning').then(async () => {
     const db = mongoose.connection.db;
 
-    // Real video durations from Bunny Stream API (seconds)
+    // Video durations (seconds) for checkpoint seeding
     const durations = {
         '8da59e68-22e1-4fbf-93fb-ab974cedec69': 77,
         'cde29097-d4a7-4078-97e5-372e149258e5': 233,

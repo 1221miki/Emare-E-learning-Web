@@ -1,28 +1,15 @@
 /**
- * Resolves and STORES a direct MP4 playback URL into every lesson document
- * that has quiz checkpoints. The student player falls back to this stored
- * URL whenever the checkpoint API's live resolution returns null — making
- * checkpoint mode work regardless of backend deployment state.
+ * DEPRECATED — Direct MP4 URL resolution has been removed.
+ * All videos now use local server storage and are served via /api/local-storage/.
  *
- * Run:  node scripts/storeDirectVideoUrls.js
+ * This script previously resolved external embed URLs to direct CDN MP4
+ * URLs for checkpoint playback. It is no longer needed.
+ *
+ * Run:  node scripts/storeDirectVideoUrls.js (will exit immediately)
  */
 const mongoose = require('mongoose');
-const axios = require('axios');
 
-const MONGO_URI = 'mongodb+srv://asamnagiz2_db_user:Ayuman2123%40%23@emareelearning.dxok7bt.mongodb.net/emare?retryWrites=true&w=majority&appName=EmareElearning';
-const HOST = 'vz-ece4d3e6-807.b-cdn.net';   // verified pull-zone for library 735143
-const QUALITIES = ['480p', '360p', '720p', '240p'];
-// Bunny hotlink protection rejects Referer-less requests
-const HEADERS = { Referer: process.env.FRONTEND_URL || 'http://localhost:5173' };
-
-async function headOk(url) {
-    try {
-        const r = await axios.head(url, { timeout: 8000, validateStatus: () => true, headers: HEADERS });
-        return r.status >= 200 && r.status < 400;
-    } catch {
-        return false;
-    }
-}
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb+srv://asamnagiz2_db_user:Ayuman2123%40%23@emareelearning.dxok7bt.mongodb.net/emare?retryWrites=true&w=majority&appName=EmareElearning';
 
 (async () => {
     await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 25000 });
@@ -34,22 +21,12 @@ async function headOk(url) {
         let changed = false;
         for (const ch of c.curriculumTree || []) {
             for (const l of ch.lessons || []) {
-                if (!(l.quizCheckpoints || []).length) continue;
-                const g = (String(l.videoUrl || '').match(/mediadelivery\.net\/embed\/(\d+)\/([a-f0-9-]{36})/i) || [])[2];
-                if (!g) continue;
-
-                let resolved = null;
-                for (const q of QUALITIES) {
-                    const u = `https://${HOST}/${g}/play_${q}.mp4`;
-                    if (await headOk(u)) { resolved = u; break; }
-                }
-                if (resolved && l.directVideoUrl !== resolved) {
-                    l.directVideoUrl = resolved;
+                // Clear any legacy directVideoUrl fields
+                if (l.directVideoUrl) {
+                    delete l.directVideoUrl;
                     changed = true;
                     updated++;
-                    console.log(`✓ ${String(c.courseTitle).slice(0, 26)} | ${String(l.lessonTitle).slice(0, 30)} -> ${resolved}`);
-                } else if (!resolved) {
-                    console.log(`✗ ${String(c.courseTitle).slice(0, 26)} | ${String(l.lessonTitle).slice(0, 30)} -> could not verify (still processing?)`);
+                    console.log(`Cleared directVideoUrl from: ${String(l.lessonTitle).slice(0, 40)}`);
                 }
             }
         }
@@ -60,7 +37,7 @@ async function headOk(url) {
             );
         }
     }
-    console.log(`DONE - ${updated} lesson(s) updated`);
+    console.log(`DONE - ${updated} lesson(s) cleaned`);
     await mongoose.disconnect();
     process.exit(0);
 })().catch(e => { console.error('FAILED:', e.code || e.message); process.exit(1); });

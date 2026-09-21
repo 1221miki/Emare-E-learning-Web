@@ -53,7 +53,7 @@ export default function LeaderboardTab(dash) {
                                 <Medal size={28} color={podiumMedalColors[i]} aria-label={MEDAL_LABELS[i]} />
                                 <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '18px' }}>
                                     {entry.avatarUrl ? (
-                                        <img src={entry.avatarUrl} alt={entry.fullName} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                                        <img src={entry.avatarUrl} alt={entry.fullName} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} crossOrigin="anonymous" />
                                     ) : (
                                         entry.fullName?.[0]?.toUpperCase()
                                     )}
@@ -97,7 +97,7 @@ export default function LeaderboardTab(dash) {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '14px', flexShrink: 0 }}>
                                                     {entry.avatarUrl ? (
-                                                        <img src={entry.avatarUrl} alt={entry.fullName} style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />
+                                                        <img src={entry.avatarUrl} alt={entry.fullName} style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} crossOrigin="anonymous" />
                                                     ) : (
                                                         entry.fullName?.[0]?.toUpperCase()
                                                     )}

@@ -445,7 +445,7 @@ export default function AdminAuditLogs() {
                                             fontSize: 13, fontWeight: 800, color: '#fff'
                                         }}>
                                             {log.actorSnapshot?.avatarUrl ? (
-                                                <img src={log.actorSnapshot.avatarUrl} alt={log.actorSnapshot?.fullName || 'Actor'} style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />
+                                                <img src={log.actorSnapshot.avatarUrl} alt={log.actorSnapshot?.fullName || 'Actor'} style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} crossOrigin="anonymous" />
                                             ) : (
                                                 (log.actorSnapshot?.fullName?.[0] || 'S').toUpperCase()
                                             )}

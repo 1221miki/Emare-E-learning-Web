@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RadioTower, CalendarDays, Clock, User, Video, Film } from 'lucide-react';
 import { liveSessionService } from '../../services/api';
+import JitsiMeetingModal from '../JitsiMeetingModal';
+import RecordingPlayerModal from '../RecordingPlayerModal';
+import { isMeetingUrl } from '../../utils/videoPlayer';
 
 const fmtDate = (d) => new Date(d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 const fmtTime = (d) => new Date(d).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
@@ -14,6 +17,8 @@ const fmtTime = (d) => new Date(d).toLocaleTimeString(undefined, { hour: '2-digi
 export default function CourseLiveSessions({ sessions = [], colors }) {
     const navigate = useNavigate();
     const c = colors;
+    const [activeMeeting, setActiveMeeting] = useState(null);
+    const [activeRecording, setActiveRecording] = useState(null);
 
     if (!sessions || sessions.length === 0) return null;
 
@@ -21,9 +26,21 @@ export default function CourseLiveSessions({ sessions = [], colors }) {
         try {
             const res = await liveSessionService.joinSession(session._id);
             const link = res.data?.data?.meetingLink || session.meetingLink;
-            if (link) window.open(link, '_blank', 'noopener,noreferrer');
+            if (link) {
+                if (isMeetingUrl(link)) {
+                    window.open(link, '_blank', 'noopener,noreferrer');
+                } else {
+                    setActiveMeeting(link);
+                }
+            }
         } catch {
-            if (session.meetingLink) window.open(session.meetingLink, '_blank', 'noopener,noreferrer');
+            if (session.meetingLink) {
+                if (isMeetingUrl(session.meetingLink)) {
+                    window.open(session.meetingLink, '_blank', 'noopener,noreferrer');
+                } else {
+                    setActiveMeeting(session.meetingLink);
+                }
+            }
         }
     };
 
@@ -103,16 +120,22 @@ export default function CourseLiveSessions({ sessions = [], colors }) {
                                         Upcoming
                                     </span>
                                 )}
-                                {isEnded && session.recordingStatus === 'available' && (
+                                {isEnded && (
                                     <button
-                                        onClick={() => navigate('/student/dashboard?tab=live')}
+                                        onClick={async () => {
+                                            try {
+                                                const res = await liveSessionService.getStudentRecordings();
+                                                const recs = res.data?.data || [];
+                                                const rec = recs.find(r =>
+                                                    (r.liveSession === session._id || r.liveSession?._id === session._id) && r.isPublished
+                                                );
+                                                if (rec) setActiveRecording(rec);
+                                            } catch (e) { console.error('[CourseLiveSessions] Failed to fetch recordings:', e); }
+                                        }}
                                         style={{ background: 'rgba(99,102,241,0.12)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '8px', padding: '8px 14px', fontWeight: '700', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
                                     >
                                         <Film size={13} /> View Recording
                                     </button>
-                                )}
-                                {isEnded && session.recordingStatus !== 'available' && (
-                                    <span style={{ color: c.textMuted, fontSize: '12px' }}>Session ended</span>
                                 )}
                             </div>
                         </div>
@@ -120,6 +143,22 @@ export default function CourseLiveSessions({ sessions = [], colors }) {
                 })}
             </div>
             <style>{`@keyframes clsPulse{0%,100%{opacity:1}50%{opacity:.35}}`}</style>
+
+            {/* Jitsi Meeting Modal */}
+            {activeMeeting && (
+                <JitsiMeetingModal
+                    meetingUrl={activeMeeting}
+                    onClose={() => setActiveMeeting(null)}
+                />
+            )}
+
+            {/* Recording Player Modal */}
+            {activeRecording && (
+                <RecordingPlayerModal
+                    recording={activeRecording}
+                    onClose={() => setActiveRecording(null)}
+                />
+            )}
         </section>
     );
 }

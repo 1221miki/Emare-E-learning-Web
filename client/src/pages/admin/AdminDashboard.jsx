@@ -5055,7 +5055,7 @@ const resetCalendarForm = () => {
                                     >
                                         <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: '#f0fdf4', color: '#16a34a', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                                             {user.avatarUrl ? (
-                                                <img src={user.avatarUrl} alt={user.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                <img src={user.avatarUrl} alt={user.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} crossOrigin="anonymous" />
                                             ) : (
                                                 user.fullName?.charAt(0) || 'U'
                                             )}
@@ -5078,7 +5078,7 @@ const resetCalendarForm = () => {
                         <div style={{ padding: '16px', borderRadius: '12px', background: colors.bg, border: `1px solid ${colors.border}`, display: 'flex', gap: '14px', alignItems: 'center' }}>
                             <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#dcfce7', color: '#15803d', fontWeight: '800', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #22c55e', flexShrink: 0, overflow: 'hidden' }}>
                                 {selectedInstructorObj.avatarUrl ? (
-                                    <img src={selectedInstructorObj.avatarUrl} alt={selectedInstructorObj.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <img src={selectedInstructorObj.avatarUrl} alt={selectedInstructorObj.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} crossOrigin="anonymous" />
                                 ) : (
                                     selectedInstructorObj.fullName?.charAt(0) || 'I'
                                 )}

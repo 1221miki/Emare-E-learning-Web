@@ -208,7 +208,7 @@ export default function InstructorSettings() {
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
                                 <div style={{ width: 140, height: 140, borderRadius: 20, overflow: 'hidden', border: `3px solid ${c.border}`, background: '#f0fdf4' }}>
                                     {profile.avatarUrl
-                                        ? <img src={profile.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ? <img src={profile.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} crossOrigin="anonymous" />
                                         : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, background: 'linear-gradient(135deg,#16a34a,#15803d)', color: '#fff' }}>
                                             {(profile.fullName || 'I')[0].toUpperCase()}
                                         </div>
@@ -312,18 +312,14 @@ export default function InstructorSettings() {
                             <div style={{ ...s.gap(16), marginTop: 20, maxWidth: 480 }}>
                                 <div style={s.field}>
                                     <label style={s.label}>Current Password</label>
-                                    <div style={{ position: 'relative' }}>
-                                        <input
-                                            style={s.input}
-                                            type={security.showCurrent ? 'text' : 'password'}
-                                            value={security.currentPassword}
-                                            onChange={e => updateSecurity('currentPassword', e.target.value)}
-                                            placeholder="••••••••"
-                                        />
-                                        <button onClick={() => updateSecurity('showCurrent', !security.showCurrent)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, fontSize: 16 }}>
-                                            {security.showCurrent ? '◎' : '◎️'}
-                                        </button>
-                                    </div>
+                                    <input
+                                        style={s.input}
+                                        type="password"
+                                        autoComplete="current-password"
+                                        value={security.currentPassword}
+                                        onChange={e => updateSecurity('currentPassword', e.target.value)}
+                                        placeholder="••••••••"
+                                    />
                                 </div>
                                 <div style={s.field}>
                                     <label style={s.label}>New Password</label>
@@ -331,6 +327,7 @@ export default function InstructorSettings() {
                                         <input
                                             style={s.input}
                                             type={security.showNew ? 'text' : 'password'}
+                                            autoComplete="new-password"
                                             value={security.newPassword}
                                             onChange={e => updateSecurity('newPassword', e.target.value)}
                                             placeholder="Min. 8 chars"
@@ -368,6 +365,7 @@ export default function InstructorSettings() {
                                     <input
                                         style={{ ...s.input, borderColor: security.confirmPassword && security.newPassword !== security.confirmPassword ? '#ef4444' : c.border }}
                                         type="password"
+                                        autoComplete="new-password"
                                         value={security.confirmPassword}
                                         onChange={e => updateSecurity('confirmPassword', e.target.value)}
                                         placeholder="Repeat password"

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Smartphone, KeyRound, Copy, Check, X } from 'lucide-react';
+import { ShieldCheck, Smartphone, KeyRound, Copy, Check, X, Eye, EyeOff } from 'lucide-react';
 import { authService } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -18,6 +18,7 @@ export default function TwoFactorSection({ user, twoFactorEnabled, setTwoFactorE
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [copied, setCopied] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
         let active = true;
@@ -233,15 +234,20 @@ export default function TwoFactorSection({ user, twoFactorEnabled, setTwoFactorE
 
                     <div style={styles.formGroup}>
                         <label style={styles.label}>{t('lbl_current_pw')}</label>
-                        <input
-                            type="password"
-                            style={styles.input}
-                            value={currentPassword}
-                            onChange={(e) => setCurrentPassword(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); startSetup(); } }}
-                            placeholder="••••••••"
-                            autoComplete="current-password"
-                        />
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                style={{ ...styles.input, paddingRight: '40px' }}
+                                value={currentPassword}
+                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); startSetup(); } }}
+                                placeholder="••••••••"
+                                autoComplete="current-password"
+                            />
+                            <button type="button" onClick={() => setShowPassword(v => !v)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: colors.textMuted, padding: '2px', display: 'flex', alignItems: 'center' }} tabIndex={-1} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                        </div>
                     </div>
 
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -280,7 +286,12 @@ export default function TwoFactorSection({ user, twoFactorEnabled, setTwoFactorE
 
                     <div style={styles.formGroup}>
                         <label style={styles.label}>{t('lbl_current_pw')}</label>
-                        <input type="password" style={styles.input} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmSetup(); } }} placeholder="••••••••" autoComplete="current-password" />
+                        <div style={{ position: 'relative' }}>
+                            <input type={showPassword ? 'text' : 'password'} style={{ ...styles.input, paddingRight: '40px' }} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmSetup(); } }} placeholder="••••••••" autoComplete="current-password" />
+                            <button type="button" onClick={() => setShowPassword(v => !v)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: colors.textMuted, padding: '2px', display: 'flex', alignItems: 'center' }} tabIndex={-1} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                        </div>
                     </div>
 
                     <div style={styles.formGroup}>
@@ -321,7 +332,12 @@ export default function TwoFactorSection({ user, twoFactorEnabled, setTwoFactorE
 
                     <div style={styles.formGroup}>
                         <label style={styles.label}>{t('lbl_current_pw')}</label>
-                        <input type="password" style={styles.input} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmDisable(); } }} placeholder="••••••••" autoComplete="current-password" />
+                        <div style={{ position: 'relative' }}>
+                            <input type={showPassword ? 'text' : 'password'} style={{ ...styles.input, paddingRight: '40px' }} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmDisable(); } }} placeholder="••••••••" autoComplete="current-password" />
+                            <button type="button" onClick={() => setShowPassword(v => !v)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: colors.textMuted, padding: '2px', display: 'flex', alignItems: 'center' }} tabIndex={-1} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                        </div>
                     </div>
 
                     <div style={styles.formGroup}>

@@ -66,6 +66,27 @@ const connectDB = async () => {
         }
 
         await seedDefaultData();
+
+        // Drop the legacy unique index on courseTitle so different instructors
+        // can create courses with the same title but different content.
+        // Runs once on startup — once dropped, subsequent starts are no-ops.
+        try {
+            const collections = await mongoose.connection.db.listCollections({ name: 'courses' }).toArray();
+            if (collections.length) {
+                const indexes = await mongoose.connection.db.collection('courses').listIndexes().toArray();
+                const hasUnique = indexes.find(idx =>
+                    idx.key && idx.key.courseTitle === 1 && idx.unique
+                );
+                if (hasUnique) {
+                    await mongoose.connection.db.collection('courses').dropIndex(hasUnique.name);
+                    console.log(`✅ Dropped unique index "${hasUnique.name}" on courseTitle`);
+                }
+            }
+        } catch (idxErr) {
+            // Safe to ignore — index may already be dropped
+            console.warn(`⚠️  courseTitle index cleanup: ${idxErr.message}`);
+        }
+
         return;
     } catch (err) {
         if (err.message !== 'READ_ONLY_ENDPOINT') {

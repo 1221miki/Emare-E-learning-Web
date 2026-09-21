@@ -211,7 +211,7 @@ export default function Navbar() {
                             onMouseLeave={e => e.currentTarget.style.borderColor = colors.border}
                         >
                             {user?.avatarUrl ? (
-                                <img src={user.avatarUrl} alt={user?.fullName} style={s.avatarImg} />
+                                <img src={user.avatarUrl} alt={user?.fullName} style={s.avatarImg} crossOrigin="anonymous" />
                             ) : (
                                 <span style={s.avatarInitial}>{user?.fullName?.[0]?.toUpperCase() || 'U'}</span>
                             )}
@@ -245,7 +245,7 @@ export default function Navbar() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0' }}>
                                 <div style={{ ...s.avatarBtn, width: '36px', height: '36px' }}>
                                     {user?.avatarUrl ? (
-                                        <img src={user.avatarUrl} alt={user?.fullName} style={s.avatarImg} />
+                                        <img src={user.avatarUrl} alt={user?.fullName} style={s.avatarImg} crossOrigin="anonymous" />
                                     ) : (
                                         <span style={s.avatarInitial}>{user?.fullName?.[0]?.toUpperCase() || 'U'}</span>
                                     )}

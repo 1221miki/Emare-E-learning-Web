@@ -7,7 +7,7 @@ import { assignmentService } from '../../../services/api';
 import { card, ghostBtn, primaryBtn, successBtn, dangerBtn, SUB_STATUS, C } from './assignmentStyles';
 
 function Avatar({ student }) {
-    if (student?.avatarUrl) return <img src={student.avatarUrl} alt={student.fullName} style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(34,197,94,0.3)' }} />;
+    if (student?.avatarUrl) return <img src={student.avatarUrl} alt={student.fullName} style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(34,197,94,0.3)' }} crossOrigin="anonymous" />;
     const colors = [C.blue, C.purple, C.green, C.orange, C.pink, C.cyan];
     const c = colors[((student?.fullName || 'U').charCodeAt(0)) % colors.length];
     return (

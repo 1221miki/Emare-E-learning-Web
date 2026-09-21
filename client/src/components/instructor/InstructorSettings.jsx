@@ -156,7 +156,7 @@ function ProfileTab({ user, onSaved, updateUser }) {
                         {/* Avatar */}
                         <div style={{ position: 'relative', flexShrink: 0 }}>
                             {avatar
-                                ? <img src={avatar} alt="Profile" style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #4ade80' }} />
+                                ? <img src={avatar} alt="Profile" style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #4ade80' }} crossOrigin="anonymous" />
                                 : <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: `${avatarColor}22`, border: `3px solid ${avatarColor}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: avatarColor, fontSize: '36px', fontWeight: '800' }}>
                                     {(form.fullName || 'I').charAt(0).toUpperCase()}
                                   </div>
@@ -311,15 +311,17 @@ function SecurityTab({ user, twoFactorEnabled, setTwoFactorEnabled, t, colors })
             <div style={{ position: 'relative' }}>
                 <input
                     type={show[key] ? 'text' : 'password'}
-                    style={{ ...T.input, paddingRight: '40px' }}
+                    style={{ ...T.input, paddingRight: key === 'curr' ? '14px' : '40px' }}
                     value={val}
                     onChange={e => setter(e.target.value)}
                     placeholder="••••••••"
                     autoComplete="new-password"
                 />
-                <button onClick={() => setShow(s => ({ ...s, [key]: !s[key] }))} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#475569', cursor: 'pointer' }} aria-label={show[key] ? 'Hide password' : 'Show password'}>
-                    {show[key] ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
+                {key !== 'curr' && (
+                    <button onClick={() => setShow(s => ({ ...s, [key]: !s[key] }))} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#475569', cursor: 'pointer' }} aria-label={show[key] ? 'Hide password' : 'Show password'}>
+                        {show[key] ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                )}
             </div>
         </Field>
     );

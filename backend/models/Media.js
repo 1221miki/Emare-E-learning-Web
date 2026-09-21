@@ -3,8 +3,7 @@ const mongoose = require('mongoose');
 const MediaSchema = new mongoose.Schema({
   filename: { type: String },
   mimeType: { type: String },
-  source: { type: String, enum: ['bunny', 'cloudinary', 'local'], default: 'bunny' },
-  bunnyType: { type: String, enum: ['video', 'storage'], required: false },
+  source: { type: String, enum: ['local', 'cloudinary'], default: 'local' },
   url: { type: String },
   storagePath: { type: String },
   guid: { type: String },

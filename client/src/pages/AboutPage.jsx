@@ -65,6 +65,7 @@ export default function AboutPage() {
                                 src={galleryImages.one}
                                 alt="Emare ICT Hub team"
                                 loading="lazy"
+                                crossOrigin="anonymous"
                                 className="w-full h-[380px] object-cover transition-transform duration-500 group-hover:scale-105"
                             />
                         </div>
@@ -77,6 +78,7 @@ export default function AboutPage() {
                                         src={src}
                                         alt={`Gallery photo ${i + 2}`}
                                         loading="lazy"
+                                        crossOrigin="anonymous"
                                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                     />
                                 </div>
@@ -89,6 +91,7 @@ export default function AboutPage() {
                                 src={galleryImages.six}
                                 alt="PD session portrait"
                                 loading="lazy"
+                                crossOrigin="anonymous"
                                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                             />
                             {/* Overlay label */}
@@ -103,6 +106,7 @@ export default function AboutPage() {
                                 src={galleryImages.one}
                                 alt="Team wide banner"
                                 loading="lazy"
+                                crossOrigin="anonymous"
                                 className="w-full h-[220px] object-cover transition-transform duration-500 group-hover:scale-105"
                             />
                         </div>
@@ -111,6 +115,7 @@ export default function AboutPage() {
                                 src={galleryImages.six}
                                 alt="Portrait wide banner"
                                 loading="lazy"
+                                crossOrigin="anonymous"
                                 className="w-full h-[220px] object-cover transition-transform duration-500 group-hover:scale-105"
                             />
                         </div>

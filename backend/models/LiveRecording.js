@@ -29,7 +29,8 @@ const LiveRecordingSchema = new mongoose.Schema({
     },
     videoUrl: {
         type: String,
-        required: true
+        required: false,
+        default: ''
     },
     thumbnailUrl: {
         type: String,
@@ -37,8 +38,8 @@ const LiveRecordingSchema = new mongoose.Schema({
     },
     storageProvider: {
         type: String,
-        enum: ['bunny', 'cloudinary', 'zoom', 'googleMeet', 'other'],
-        default: 'bunny'
+        enum: ['local', 'cloudinary', 'zoom', 'googleMeet', 'other'],
+        default: 'local'
     },
     fileName: {
         type: String,

@@ -39,7 +39,7 @@ before(async () => {
             chapterTitle: 'Chapter 1',
             lessons: [{
                 lessonTitle: 'Lesson with checkpoints',
-                videoUrl: 'https://iframe.mediadelivery.net/embed/735143/123e4567-e89b-12d3-a456-426614174000',
+                videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
                 quizCheckpoints: [
                     {
                         checkpointId: 'cp_aaa',
@@ -170,34 +170,24 @@ test('attempt status reflects passes across both checkpoints', async () => {
     assert.strictEqual(res.body.data.allCheckpointsPassed, true);
 });
 
-test('playback URL resolver normalizes size (480p preferred) and verifies renditions', async () => {
-    const axios = require('axios');
-    process.env.BUNNY_VIDEO_LIBRARY_ID = '9999';
-    process.env.BUNNY_STORAGE_DOMAIN = 'cdn.test.b-cdn.net';
-
+test('playback URL resolver handles local storage and YouTube URLs', async () => {
     const { resolveDirectVideoUrl } = require('../controllers/inVideoQuizController');
 
-    const origGet = axios.get;
-    axios.get = async (url) => {
-        if (url.includes('/videos/')) return { data: { availableResolutions: '240p,360p,480p,720p' } };
-        return { data: {} };
-    };
+    // Local storage URL → returned as-is
+    const localUrl = await resolveDirectVideoUrl('/api/local-storage/videos/test_123.mp4');
+    assert.strictEqual(localUrl, '/api/local-storage/videos/test_123.mp4');
 
-    const requested = [];
-    controllerModule._setHeadVerifier(async (url) => { requested.push(url); return url.includes('play_480p.mp4'); });
+    // Direct MP4 URL → returned as-is
+    const directUrl = await resolveDirectVideoUrl('https://example.com/video.mp4');
+    assert.strictEqual(directUrl, 'https://example.com/video.mp4');
 
-    try {
-        const url = await resolveDirectVideoUrl('https://iframe.mediadelivery.net/embed/9999/123e4567-e89b-12d3-a456-426614174009');
-        assert.ok(url && url.endsWith('/play_480p.mp4'), `expected normalized 480p URL, got ${url}`);
-        assert.ok(url.startsWith('https://cdn.test.b-cdn.net/'), `expected configured CDN host, got ${url}`);
-        // 720p must NOT be tried before 480p (size normalization)
-        assert.strictEqual(requested[0].includes('720p'), false);
-        // Cached second call returns immediately
-        const url2 = await resolveDirectVideoUrl('https://iframe.mediadelivery.net/embed/9999/123e4567-e89b-12d3-a456-426614174009');
-        assert.strictEqual(url2, url);
-    } finally {
-        axios.get = origGet;
-    }
+    // YouTube URL → null (uses iframe embed instead)
+    const ytUrl = await resolveDirectVideoUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    assert.strictEqual(ytUrl, null);
+
+    // Empty URL → null
+    const emptyUrl = await resolveDirectVideoUrl('');
+    assert.strictEqual(emptyUrl, null);
 });
 
 test('lesson completion requires real watch-through of the video', async () => {

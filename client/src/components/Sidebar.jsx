@@ -160,7 +160,9 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                             ? (theme === 'dark' ? 'rgba(34,197,94,0.15)' : 'rgba(34,197,94,0.1)') 
                             : (theme === 'dark' ? 'rgba(30,41,59,0.2)' : 'rgba(241,245,249,0.5)'),
                         fontWeight: isActive ? '600' : '500',
-                        border: `1px solid ${colors.border}`,
+                        borderTop: `1px solid ${colors.border}`,
+                        borderRight: `1px solid ${colors.border}`,
+                        borderBottom: `1px solid ${colors.border}`,
                         borderLeft: isActive ? `4px solid ${colors.primary}` : `1px solid ${colors.border}`
                     };
                     const labelContent = (
@@ -212,7 +214,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                 >
                     <div style={styles.userAvatar}>
                         {user?.avatarUrl ? (
-                            <img src={user.avatarUrl} alt="Profile Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                            <img src={user.avatarUrl} alt="Profile Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} crossOrigin="anonymous" />
                         ) : (
                             user?.fullName?.[0]?.toUpperCase()
                         )}

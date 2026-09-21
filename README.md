@@ -5,7 +5,7 @@
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green.svg)](https://mongodb.com)
 [![Express](https://img.shields.io/badge/Express-4.x-lightgrey.svg)](https://expressjs.com)
 
-A full-stack Learning Management System built for Ethiopian tech education. Instructors create and publish courses with Bunny Stream video lectures and Bunny Storage PDF resources. Students enroll, learn, and earn verifiable certificates.
+A full-stack Learning Management System built for Ethiopian tech education. Instructors create and publish courses with locally stored video lectures and PDF resources. Students enroll, learn, and earn verifiable certificates.
 
 ---
 
@@ -56,7 +56,7 @@ Emare ELMS
 │   ├── middleware/   Auth (JWT), upload, rate-limit
 │   ├── models/       Mongoose schemas
 │   ├── routes/       API route definitions
-│   └── services/     Bunny CDN, email, certificates
+│   └── services/     Local storage, email, certificates
 │
 └── client/           React 18 + Vite SPA
     ├── src/
@@ -72,12 +72,10 @@ Emare ELMS
 
 | Content Type | Storage          | URL Pattern                                        |
 |--------------|------------------|----------------------------------------------------|
-| Videos       | Bunny Stream     | `https://iframe.mediadelivery.net/embed/LIB/GUID`  |
-| PDFs / Files | Bunny Storage    | Served via backend proxy `/api/pdf-proxy/*`        |
+| Videos       | Local Server     | `/api/local-storage/videos/...`                    |
+| PDFs / Files | Local Server     | `/api/local-storage/files/...` or `/api/pdf-proxy/*` |
 | Images       | Cloudinary       | `https://res.cloudinary.com/...`                   |
 | Avatars      | Cloudinary       | `https://res.cloudinary.com/...`                   |
-
-> **PDF CDN note:** PDFs are proxied through the backend (`GET /api/pdf-proxy/path/to/file.pdf`) to avoid reliance on the Bunny Pull Zone CDN hostname. Files are streamed directly from Bunny Storage.
 
 ---
 
@@ -174,7 +172,7 @@ POST /api/subscriptions/discount            Subscribe for discount coupon
 ### PDF Proxy
 
 ```
-GET /api/pdf-proxy/*path    Stream PDF from Bunny Storage (authenticated)
+GET /api/pdf-proxy/*path    Stream PDF from local storage (authenticated)
 ```
 
 ---
@@ -194,15 +192,6 @@ MONGODB_URI=mongodb+srv://...
 # Auth
 JWT_SECRET=your-jwt-secret
 JWT_EXPIRE=7d
-
-# Bunny Stream (video)
-BUNNY_API_KEY=...
-BUNNY_VIDEO_LIBRARY_ID=724054
-
-# Bunny Storage (PDFs)
-BUNNY_STORAGE_API_KEY=...
-BUNNY_STORAGE_ZONE_NAME=emare-elms-ict-hub
-BUNNY_STORAGE_DOMAIN=emare-elms-ict-hub.b-cdn.net
 
 # Cloudinary (images)
 CLOUDINARY_CLOUD_NAME=...
@@ -259,7 +248,7 @@ npm run preview      # Preview production build
 | Coupon              | Discount coupon codes                          |
 | Transaction         | Payment transactions (Chapa)                   |
 | Payment             | Payment records                                |
-| Media               | Uploaded file metadata (Bunny/Cloudinary)      |
+| Media               | Uploaded file metadata (local/Cloudinary)       |
 
 ---
 
@@ -302,7 +291,7 @@ backend/
 │   ├── pdfProxyRoutes.js
 │   └── subscriptionRoutes.js
 └── services/
-    ├── bunnyService.js        Bunny Stream + Bunny Storage upload
+    ├── localStorageService.js  Local video + PDF storage
     ├── certificateService.js  generateCertificateId() + PDF generator
     └── emailService.js        Nodemailer + discount email
 
@@ -319,7 +308,7 @@ client/src/
 ├── services/
 │   └── api.jsx                certificateService, subscriptionService, getPdfUrl
 └── utils/
-    └── videoPlayer.js         Bunny-only video validation
+    └── videoPlayer.js         Video validation + URL resolution
 ```
 
 ---

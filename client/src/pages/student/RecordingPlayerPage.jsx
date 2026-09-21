@@ -29,9 +29,8 @@ const fmtDur = (sec) => {
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 const RESUME_KEY = (id) => `rec_progress_${id}`;
 
-// Detect if a URL is an embeddable iframe (Bunny, YouTube, Vimeo, Zoom, etc.)
+// Detect if a URL is an embeddable iframe (YouTube, Vimeo, Zoom, etc.)
 const isEmbedUrl = (url = '') =>
-    url.includes('iframe.mediadelivery.net') ||
     url.includes('youtube.com/embed') ||
     url.includes('youtu.be') ||
     url.includes('player.vimeo.com') ||
@@ -278,14 +277,13 @@ export default function RecordingPlayerPage() {
                     onMouseMove={showControlsTemporarily}
                     style={{ background: '#000', borderRadius: '16px', overflow: 'hidden', marginBottom: '28px', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', position: 'relative' }}
                 >
-                    {/* ── IFRAME embed (Bunny Stream / YouTube / Vimeo / Zoom replay) ── */}
+                    {/* ── IFRAME embed (YouTube / Vimeo / Zoom replay) ── */}
                     {useEmbed && (
                         <div style={{ position: 'relative', paddingTop: '56.25%' }}>
                             <iframe
                                 src={videoUrl}
                                 title={recording.title}
                                 allow="autoplay; fullscreen; picture-in-picture"
-                                allowFullScreen
                                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
                             />
                         </div>
@@ -405,9 +403,14 @@ export default function RecordingPlayerPage() {
 
                     {/* ── No video URL at all ────────────────────────────────────────── */}
                     {!videoUrl && (
-                        <div style={{ padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', background: '#0f172a' }}>
-                            <Film size={48} color="#475569" />
-                            <p style={{ color: '#475569', margin: 0, fontWeight: '600' }}>Recording video is not available yet.</p>
+                        <div style={{ padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', background: '#0f172a', textAlign: 'center' }}>
+                            <Film size={56} color="#475569" />
+                            <div>
+                                <p style={{ color: '#e2e8f0', margin: '0 0 8px', fontWeight: '700', fontSize: '18px' }}>Recording Not Available Yet</p>
+                                <p style={{ color: '#94a3b8', margin: 0, fontSize: '14px', maxWidth: '400px', lineHeight: 1.6 }}>
+                                    The instructor is still processing this recording. Please check back later.
+                                </p>
+                            </div>
                         </div>
                     )}
                 </div>

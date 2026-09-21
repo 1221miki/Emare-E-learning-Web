@@ -1,7 +1,7 @@
 const fs   = require('fs');
 const path = require('path');
 const { uploadBuffer } = require('../services/cloudinaryService');
-const { uploadVideo, uploadFileToStorage } = require('../services/bunnyService');
+const { uploadVideo, uploadFileToStorage } = require('../services/localStorageService');
 const Media = require('../models/Media');
 const streamifier = require('streamifier');
 const pdfParse = require('pdf-parse');
@@ -126,7 +126,7 @@ exports.uploadFile = async (req, res) => {
             return /\.(mp4|mov|m4v|mkv|webm|avi|wmv|flv|mpeg|mpg|3gp|3g2)$/i.test(fileName);
         };
 
-        // Route video uploads to Bunny Stream
+        // Route video uploads to local storage
         if (isVideoFile(req.file.mimetype, req.file.originalname)) {
             const tempFilePath = req.file.path || null; // disk storage path
             const cleanupTemp = () => {
@@ -136,24 +136,23 @@ exports.uploadFile = async (req, res) => {
             };
             try {
                 const fileName = req.file.originalname || 'emare-upload-video.mp4';
-                // Use disk path if available (disk storage), otherwise buffer (memory storage)
-                const bunnyPayload = req.file.path ? req.file.path : req.file.buffer;
-                const bunnyResult = await uploadVideo(bunnyPayload, fileName, req.file.mimetype || 'video/mp4');
+                const filePayload = req.file.path ? req.file.path : req.file.buffer;
+                const result = await uploadVideo(filePayload, fileName, req.file.mimetype || 'video/mp4');
                 cleanupTemp();
 
                 try {
                     const mediaDoc = new Media({
                         filename: fileName,
                         mimeType: req.file.mimetype || 'video/mp4',
-                        source: 'bunny',
-                        bunnyType: bunnyResult.bunnyType || 'video',
-                        url: bunnyResult.embedUrl || bunnyResult.url || bunnyResult.publicUrl,
-                        storagePath: bunnyResult.storagePath,
-                        meta: bunnyResult.response || {}
+                        source: 'local',
+
+                        url: result.url,
+                        storagePath: result.storagePath,
+                        meta: { size: result.size }
                     });
                     if (req.user && req.user._id) mediaDoc.uploadedBy = req.user._id;
                     await mediaDoc.save();
-                    bunnyResult.dbId = mediaDoc._id;
+                    result.dbId = mediaDoc._id;
                 } catch (saveErr) {
                     console.warn('Warning: could not save media metadata to DB:', saveErr.message || saveErr);
                 }
@@ -161,34 +160,31 @@ exports.uploadFile = async (req, res) => {
                 return res.status(200).json({
                     success: true,
                     data: {
-                        // embedUrl is the Bunny Stream iframe embed URL — store this as lesson.videoUrl
-                        url: bunnyResult.embedUrl || bunnyResult.url || bunnyResult.publicUrl,
-                        embedUrl: bunnyResult.embedUrl,
-                        directUrl: bunnyResult.directUrl,
-                        storagePath: bunnyResult.storagePath,
-                        response: bunnyResult.response,
-                        dbId: bunnyResult.dbId
+                        url: result.url,
+                        embedUrl: result.url,
+                        directUrl: result.directUrl,
+                        storagePath: result.storagePath,
+                        response: { size: result.size },
+                        dbId: result.dbId
                     }
                 });
-            } catch (bunnyErr) {
+            } catch (uploadErr) {
                 cleanupTemp();
-                const bunnyErrorMessage = bunnyErr?.response?.data?.Message || bunnyErr?.response?.data || bunnyErr?.message || 'Unknown Bunny upload error';
-                const clientError = typeof bunnyErrorMessage === 'string' ? bunnyErrorMessage : JSON.stringify(bunnyErrorMessage);
-                console.error('Bunny.net video upload failed:', bunnyErr?.response?.data || bunnyErr);
+                console.error('Local video upload failed:', uploadErr);
                 return res.status(500).json({
                     success: false,
                     message: 'Video upload failed. Please try again.',
-                    error: clientError
+                    error: uploadErr?.message || 'Unknown upload error'
                 });
             }
         }
 
-        // Route PDF uploads to Bunny Storage
+        // Route PDF uploads to local storage
         if (req.file.mimetype === 'application/pdf' || /\.pdf$/i.test(req.file.originalname || '')) {
             try {
                 const fileName = req.file.originalname || 'document.pdf';
                 const folder = 'courses/pdfs';
-                const bunnyResult = await uploadFileToStorage(req.file.buffer, fileName, 'application/pdf', folder);
+                const result = await uploadFileToStorage(req.file.buffer, fileName, 'application/pdf', folder);
 
                 let pdfText = '';
                 try { pdfText = await extractPdfText(req.file.buffer); } catch {}
@@ -197,11 +193,11 @@ exports.uploadFile = async (req, res) => {
                     const mediaDoc = new Media({
                         filename: fileName,
                         mimeType: 'application/pdf',
-                        source: 'bunny',
-                        bunnyType: 'storage',
-                        url: bunnyResult.storageUrl,
-                        storagePath: bunnyResult.storagePath,
-                        meta: bunnyResult.response || {}
+                        source: 'local',
+
+                        url: result.url,
+                        storagePath: result.storagePath,
+                        meta: { size: result.size }
                     });
                     if (req.user && req.user._id) mediaDoc.uploadedBy = req.user._id;
                     await mediaDoc.save();
@@ -212,13 +208,13 @@ exports.uploadFile = async (req, res) => {
                 return res.status(200).json({
                     success: true,
                     data: {
-                        url: bunnyResult.storageUrl,
-                        storagePath: bunnyResult.storagePath,
+                        url: result.url,
+                        storagePath: result.storagePath,
                         pdfText
                     }
                 });
-            } catch (bunnyErr) {
-                console.warn('Bunny Storage PDF upload failed, falling through to Cloudinary:', bunnyErr.message);
+            } catch (pdfErr) {
+                console.error('Local PDF upload failed:', pdfErr);
                 // Fall through to Cloudinary as backup
             }
         }

@@ -5,6 +5,9 @@ import {
     BookOpen, Play, Tv, Eye, Wifi, WifiOff, RefreshCw, ExternalLink
 } from 'lucide-react';
 import { liveSessionService } from '../../../services/api';
+import RecordingPlayerModal from '../../RecordingPlayerModal';
+import JitsiMeetingModal from '../../JitsiMeetingModal';
+import { isMeetingUrl } from '../../../utils/videoPlayer';
 
 // ── helpers ───────────────────────────────────────────────
 const fmtDate = (d) =>
@@ -41,22 +44,32 @@ export default function LiveSessionsTab(dash) {
     const [recLoading, setRecLoading] = useState(true);
     const [section, setSection] = useState('sessions'); // 'sessions' | 'recordings'
     const [refreshing, setRefreshing] = useState(false);
+    const [activeRecording, setActiveRecording] = useState(null);
+    const [activeMeeting, setActiveMeeting] = useState(null);
     const pollRef = useRef(null);
 
-    // ── Fetch recordings once ──────────────────────────────
+    // ── Fetch recordings ───────────────────────────────────
+    const fetchRecordings = async () => {
+        try {
+            const res = await liveSessionService.getStudentRecordings();
+            setRecordings(res.data?.data || []);
+        } catch { setRecordings([]); }
+    };
+
     useEffect(() => {
-        liveSessionService.getStudentRecordings()
-            .then(res => setRecordings(res.data?.data || []))
-            .catch(() => setRecordings([]))
-            .finally(() => setRecLoading(false));
+        fetchRecordings().finally(() => setRecLoading(false));
     }, []);
 
     // ── Poll for live status every 30 s ───────────────────
     const refresh = async (silent = false) => {
         if (!silent) setRefreshing(true);
         try {
-            const res = await liveSessionService.getMySessions();
-            setAllLiveSessions(res.data?.data || []);
+            const [sessRes, recRes] = await Promise.all([
+                liveSessionService.getMySessions(),
+                liveSessionService.getStudentRecordings(),
+            ]);
+            setAllLiveSessions(sessRes.data?.data || []);
+            setRecordings(recRes.data?.data || []);
         } catch {/* best-effort */} finally {
             setRefreshing(false);
         }
@@ -81,11 +94,24 @@ export default function LiveSessionsTab(dash) {
         try {
             const res = await liveSessionService.joinSession(session._id);
             const link = res.data?.data?.meetingLink || session.meetingLink;
-            if (link) window.open(link, '_blank', 'noopener,noreferrer');
+            if (link) {
+                if (isMeetingUrl(link)) {
+                    window.open(link, '_blank', 'noopener,noreferrer');
+                } else {
+                    setActiveMeeting(link);
+                }
+            }
         } catch (err) {
             const link = session.meetingLink;
-            if (link) window.open(link, '_blank', 'noopener,noreferrer');
-            else alert(err?.response?.data?.message || 'Could not join. Please try again.');
+            if (link) {
+                if (isMeetingUrl(link)) {
+                    window.open(link, '_blank', 'noopener,noreferrer');
+                } else {
+                    setActiveMeeting(link);
+                }
+            } else {
+                alert(err?.response?.data?.message || 'Could not join. Please try again.');
+            }
         }
     };
 
@@ -171,13 +197,19 @@ export default function LiveSessionsTab(dash) {
                                 Starts at {fmtTime(session.startTime)}
                             </div>
                         )}
-                        {session.status === 'ended' && session.recordingStatus === 'available' && (
+                        {session.status === 'ended' && recordings.some(r => 
+                            (r.liveSession === session._id || r.liveSession?._id === session._id) && r.isPublished
+                        ) && (
                             <button
-                                onClick={() => {
-                                    const rec = recordings.find(r =>
-                                        (r.liveSession === session._id || r.liveSession?._id === session._id) && r.isPublished
-                                    );
-                                    if (rec) navigate(`/recordings/${rec._id}`);
+                                onClick={async () => {
+                                    try {
+                                        const res = await liveSessionService.getStudentRecordings();
+                                        const recs = res.data?.data || [];
+                                        const rec = recs.find(r =>
+                                            (r.liveSession === session._id || r.liveSession?._id === session._id) && r.isPublished
+                                        );
+                                        if (rec) setActiveRecording(rec);
+                                    } catch (e) { console.error('[LiveSessionsTab] Failed to fetch recordings:', e); }
                                 }}
                                 style={{ background: 'rgba(99,102,241,0.12)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '8px', padding: '9px 16px', fontWeight: '700', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                             >
@@ -231,7 +263,7 @@ export default function LiveSessionsTab(dash) {
             {/* Watch button */}
             <div style={{ flexShrink: 0 }}>
                 <button
-                    onClick={() => navigate(`/recordings/${rec._id}`)}
+                    onClick={() => setActiveRecording(rec)}
                     style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 20px', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '7px', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}
                 >
                     <Play size={14} fill="#fff" /> Watch Recording
@@ -285,7 +317,7 @@ export default function LiveSessionsTab(dash) {
                 ].map(tab => (
                     <button
                         key={tab.key}
-                        onClick={() => setSection(tab.key)}
+                        onClick={() => { setSection(tab.key); if (tab.key === 'recordings') fetchRecordings(); }}
                         style={{
                             background: 'transparent', border: 'none',
                             borderBottom: section === tab.key ? '2px solid #22c55e' : '2px solid transparent',
@@ -380,6 +412,22 @@ export default function LiveSessionsTab(dash) {
                 @keyframes lsPulse{0%,100%{opacity:1}50%{opacity:.35}}
                 @keyframes lsSpin{to{transform:rotate(360deg)}}
             `}</style>
+
+            {/* Recording Player Modal */}
+            {activeRecording && (
+                <RecordingPlayerModal
+                    recording={activeRecording}
+                    onClose={() => setActiveRecording(null)}
+                />
+            )}
+
+            {/* Jitsi Meeting Modal */}
+            {activeMeeting && (
+                <JitsiMeetingModal
+                    meetingUrl={activeMeeting}
+                    onClose={() => setActiveMeeting(null)}
+                />
+            )}
         </div>
     );
 }

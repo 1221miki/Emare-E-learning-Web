@@ -168,7 +168,7 @@ export default function InstructorProfilePage() {
                             >
                                 <div style={s.courseImg}>
                                     {course.thumbnailUrl
-                                        ? <img src={course.thumbnailUrl} alt={course.courseTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ? <img src={course.thumbnailUrl} alt={course.courseTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} crossOrigin="anonymous" />
                                         : '◈'}
                                 </div>
                                 <div style={s.courseBody}>

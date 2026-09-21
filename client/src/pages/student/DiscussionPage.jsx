@@ -332,7 +332,7 @@ export default function DiscussionPage() {
                                                             <div key={idx} style={{ display: 'flex', gap: '12px', padding: '14px', borderRadius: '12px', border: `1px solid ${isBest ? colors.primary : colors.border}`, background: isBest ? 'rgba(34,197,94,0.06)' : 'transparent' }}>
                                                                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: reply.authorRef?.assignedRole === 'Instructor' ? colors.accent : colors.textMuted, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', flexShrink: 0 }}>
                                                                     {reply.authorRef?.avatarUrl ? (
-                                                                        <img src={reply.authorRef.avatarUrl} alt={reply.authorRef.fullName} style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />
+                                                                        <img src={reply.authorRef.avatarUrl} alt={reply.authorRef.fullName} style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} crossOrigin="anonymous" />
                                                                     ) : (
                                                                         reply.authorRef?.fullName?.[0]
                                                                     )}

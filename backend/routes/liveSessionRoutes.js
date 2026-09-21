@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { protect, optionalProtect, authorizeRoles, denySuspendedActions } = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const { uploadVideo } = require('../middleware/upload');
 const { 
     getUpcomingSessions, 
     getCourseSessions, 
@@ -58,7 +59,7 @@ router.post('/:id/join', joinLiveSession);
 
 router.post('/:id/recording/start', denySuspendedActions, authorizeRoles('Instructor', 'Admin'), startRecording);
 router.post('/:id/recording/stop', denySuspendedActions, authorizeRoles('Instructor', 'Admin'), stopRecording);
-router.post('/:id/recording/upload', denySuspendedActions, authorizeRoles('Instructor', 'Admin'), upload.single('recording'), uploadRecording);
+router.post('/:id/recording/upload', denySuspendedActions, authorizeRoles('Instructor', 'Admin'), uploadVideo.single('recording'), uploadRecording);
 router.get('/:id/recording', getSessionRecording);
 
 router.get('/recordings/course/:courseId', getRecordingsByCourse);

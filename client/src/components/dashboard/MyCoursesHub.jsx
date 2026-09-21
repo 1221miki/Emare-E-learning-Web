@@ -139,7 +139,7 @@ export default function MyCoursesHub({
                 <div style={s.resumeBanner}>
                     <div style={s.resumeImgBox}>
                         {primaryActive.courseRef?.thumbnailUrl ? (
-                            <img src={primaryActive.courseRef.thumbnailUrl} alt="Thumbnail" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                            <img src={primaryActive.courseRef.thumbnailUrl} alt="Thumbnail" style={{width: '100%', height: '100%', objectFit: 'cover'}} crossOrigin="anonymous" />
                         ) : <GraduationCap size={40} color={colors.primary} aria-hidden="true" />}
                     </div>
                     <div style={s.resumeContent}>

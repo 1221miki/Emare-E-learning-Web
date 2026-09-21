@@ -261,6 +261,7 @@ export default function CourseCatalog() {
                             key={`img-${course._id}-${course.thumbnailUrl}`}
                             src={course.thumbnailUrl + `?v=${Date.now()}`}
                             alt={course.courseTitle} 
+                            crossOrigin="anonymous"
                             style={{ 
                                 width: '100%', 
                                 height: '100%', 

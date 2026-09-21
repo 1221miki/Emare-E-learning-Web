@@ -790,7 +790,7 @@ export default function StudentDashboard() {
                         <p style={styles.subGreeting}>{t('header_sub')}</p>
                     </div>
                     {user?.avatarUrl ? (
-                        <img src={user.avatarUrl} alt={user?.fullName} style={{ ...styles.avatar, objectFit: 'cover' }} />
+                        <img src={user.avatarUrl} alt={user?.fullName} style={{ ...styles.avatar, objectFit: 'cover' }} crossOrigin="anonymous" />
                     ) : (
                         <div style={styles.avatar}>{user?.fullName?.[0]?.toUpperCase() || 'S'}</div>
                     )}

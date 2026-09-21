@@ -277,7 +277,7 @@ export default function SearchPage() {
                                                 onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
                                                 <div style={s.courseImg}>
                                                     {c.thumbnailUrl
-                                                        ? <img src={c.thumbnailUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        ? <img src={c.thumbnailUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} crossOrigin="anonymous" />
                                                         : '◈'}
                                                 </div>
                                                 <div style={s.courseBody}>

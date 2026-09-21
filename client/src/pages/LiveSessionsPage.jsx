@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { liveSessionService, courseService, calendarService } from '../services/api';
 import Sidebar from '../components/Sidebar';
+import JitsiMeetingModal from '../components/JitsiMeetingModal';
 
 export default function LiveSessionsPage() {
     const { user } = useAuth();
@@ -11,6 +12,7 @@ export default function LiveSessionsPage() {
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [sessions, setSessions] = useState([]);
     const [showAllSessions, setShowAllSessions] = useState(false);
+    const [activeMeeting, setActiveMeeting] = useState(null);
     
     // Admin/Instructor state
     const [showForm, setShowForm] = useState(false);
@@ -483,7 +485,7 @@ export default function LiveSessionsPage() {
                         <div style={{ color: colors.textMuted }}>No upcoming sessions for this course.</div>
                     ) : (
                         sessions.map(s => {
-                            const isLive = new Date() >= new Date(s.startTime) && new Date() <= new Date(new Date(s.startTime).getTime() + s.durationMinutes * 60000);
+                            const isLive = s.status === 'live' || (s.status !== 'ended' && s.status !== 'cancelled' && new Date() >= new Date(s.startTime) && new Date() <= new Date(new Date(s.startTime).getTime() + s.durationMinutes * 60000));
                             
                             return (
                                 <div key={s._id} style={{ background: colors.bgCard, border: isLive ? `2px solid ${colors.primary}` : `1px solid ${colors.border}`, borderRadius: '16px', padding: '24px', position: 'relative' }}>
@@ -520,9 +522,12 @@ export default function LiveSessionsPage() {
 
                                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                                         {isValidMeetingLink(s.meetingLink) || s.platform === 'Jitsi Meet' ? (
-                                            <a href={isValidMeetingLink(s.meetingLink) ? s.meetingLink : getDefaultMeetingLink(s.platform, s.title)} target="_blank" rel="noopener noreferrer" style={{ flex: 1, minWidth: '140px', textDecoration: 'none', background: colors.primary, color: '#fff', padding: '12px', borderRadius: '8px', textAlign: 'center', fontWeight: '700', fontSize: '14px' }}>
+                                            <button
+                                                onClick={() => setActiveMeeting(isValidMeetingLink(s.meetingLink) ? s.meetingLink : getDefaultMeetingLink(s.platform, s.title))}
+                                                style={{ flex: 1, minWidth: '140px', textDecoration: 'none', background: colors.primary, color: '#fff', padding: '12px', borderRadius: '8px', textAlign: 'center', fontWeight: '700', fontSize: '14px', border: 'none', cursor: 'pointer' }}
+                                            >
                                                 Open Meeting
-                                            </a>
+                                            </button>
                                         ) : null}
                                         {user?.assignedRole === 'Student' && (
                                             <button onClick={() => handleMarkAttendance(s._id)} style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a', border: 'none', padding: '0 14px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' }}>
@@ -541,6 +546,14 @@ export default function LiveSessionsPage() {
                     )}
                 </div>
             </main>
+
+            {/* Jitsi Meeting Modal */}
+            {activeMeeting && (
+                <JitsiMeetingModal
+                    meetingUrl={activeMeeting}
+                    onClose={() => setActiveMeeting(null)}
+                />
+            )}
         </div>
     );
 }

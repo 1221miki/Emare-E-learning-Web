@@ -19,7 +19,7 @@ import { getPdfUrl } from '../../services/api.jsx';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import AiAssistant from '../../components/AiAssistant';
-import { getLessonVideoUrl, getVideoEmbedUrl, getVideoRenderMode, getVideoErrorReason } from '../../utils/videoPlayer';
+import { getLessonVideoUrl, getVideoEmbedUrl, getVideoRenderMode, getVideoErrorReason, isYouTubeUrl, getYouTubeWatchUrl, extractYouTubeVideoId, isMeetingUrl } from '../../utils/videoPlayer';
 import CheckpointTimeline from '../../components/student/CheckpointTimeline';
 import LessonQuiz from '../../components/student/LessonQuiz';
 import LessonAssignment from '../../components/student/LessonAssignment';
@@ -31,8 +31,9 @@ const IconPdf   = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="cu
 const IconLink  = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>;
 const IconLock  = () => <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>;
 const IconMenu  = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>;
-const IconSun   = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 11H1v2h3v-2zm9-9h-2v2.99h2V2zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 11v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z"/></svg>;
+const IconSun   = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 11H1v2h3v-2zm9-9h-2v2.99h2V2zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 11v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6-6-2.69-6-6-6zm-1 16.95h2V19h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8zM20 11v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6-6-2.69-6-6-6zm-1 16.95h2V19h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z"/></svg>;
 const IconMoon  = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>;
+const IconExternalLink = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>;
 
 // ── Helper: flatten curriculum into an ordered list of lesson refs ────────────
 function flattenLessons(curriculumTree = []) {
@@ -203,9 +204,13 @@ export default function LearningWorkspace() {
     const [videoUrl,        setVideoUrl]        = useState('');
     const [videoError,      setVideoError]      = useState('');
     const [videoLoading,    setVideoLoading]    = useState(false);
+    const [isYouTubeVideo,  setIsYouTubeVideo]  = useState(false);
 
     // ── In-video quiz checkpoints ─────────────────────────────────────────────
     const videoRef                 = useRef(null);
+    const ytContainerRef           = useRef(null);   // DOM node for YouTube iframe API mount
+    const ytPlayerRef              = useRef(null);   // YT.Player instance (YouTube only)
+    const ytSeekTargetRef          = useRef(null);   // Seek target after YouTube player init
     const playerContainerRef       = useRef(null);   // fullscreen target for checkpoint player
     const playbackTimeRef          = useRef(0);
     const firedCheckpointsRef      = useRef(new Set());   // checkpointIds already popped this session
@@ -314,7 +319,7 @@ export default function LearningWorkspace() {
     const downloadPdf = async (rawUrl, label = 'document.pdf') => {
         const proxyUrl = getPdfUrl(rawUrl);
         if (!proxyUrl) return;
-        // Non-Bunny URLs (Google Drive, etc.) — open normally
+        // Non-local/non-video URLs (Google Drive, etc.) — open normally
         if (proxyUrl === rawUrl || !proxyUrl.includes('/api/pdf-proxy/')) {
             window.open(proxyUrl, '_blank', 'noopener,noreferrer');
             return;
@@ -466,6 +471,7 @@ export default function LearningWorkspace() {
         setCheckpointDirectFailed(false);
 
         const raw = getLessonVideoUrl(activeLesson);
+        const isYouTube = activeLesson?.videoSource === 'youtube' || isYouTubeUrl(raw);
         if (!raw) { setVideoUrl(''); setVideoError('No video available for this lesson.'); devLog('Lesson → no videoUrl on lesson; video area shows notice.'); return; }
         setVideoLoading(true);
         setVideoError('');
@@ -476,10 +482,12 @@ export default function LearningWorkspace() {
             devLog('Lesson → videoUrl not playable:', raw.slice(0, 120));
         }
         setVideoLoading(false);
+        setIsYouTubeVideo(isYouTube);
         setTab('overview');
 
-        // Fetch in-video quiz checkpoints — when present, swap to the direct
-        // MP4 URL so we can control playback (pause at checkpoints, block skips)
+        // Fetch in-video quiz checkpoints for BOTH YouTube and uploaded videos.
+        // For YouTube: the YouTube IFrame API handles pause/seek/play via polling.
+        // For uploaded: the direct MP4 + HTML5 <video> element handles it.
         let cancelled = false;
         devLog('Lesson →', `GET /in-video-quiz/${courseId}/${activeLesson._id.toString()} (checkpoints)`);
         inVideoQuizService.getLessonCheckpoints(courseId, activeLesson._id.toString())
@@ -488,70 +496,57 @@ export default function LearningWorkspace() {
                 devLog('  in-video-quiz →', res.status, `checkpoints=${res.data?.data?.checkpoints?.length || 0}`);
                 const data = res.data?.data || null;
                 setCheckpointsData(data);
-                // Prefer the API's live-resolved URL; fall back to the direct MP4
-                // stored on the lesson document (resolved & persisted at upload /
-                // by maintenance script) so checkpoint mode survives backend-side
-                // transient failures.
-                const storedDirect = data?.directVideoUrl || activeLesson.directVideoUrl;
-                if (data?.checkpoints?.length > 0 && storedDirect) {
-                    setVideoUrl(storedDirect);
+                const storedItem = progressItems.find(
+                    item => item.lessonId?.toString() === activeLesson._id?.toString()
+                );
+                if (storedItem?.watchedSeconds > 0) {
+                    watchedSecondsRef.current = storedItem.watchedSeconds;
+                }
+                const lastPos = storedItem?.lastWatchedPosition ?? 0;
 
-                    // ── Restore progress from previous session ─────────────────────
-                    // Use stored lastWatchedPosition to resume where the student left off.
-                    // Priority:
-                    //  1. If lastWatchedPosition falls inside a pending concept's window
-                    //     → resume from lastWatchedPosition (mid-concept resume)
-                    //  2. Otherwise → resume from the first uncompleted concept's startSeconds
-                    const storedItem = progressItems.find(
-                        item => item.lessonId?.toString() === activeLesson._id?.toString()
-                    );
-                    // Restore accumulated watched time so the 85% gate continues correctly
-                    if (storedItem?.watchedSeconds > 0) {
-                        watchedSecondsRef.current = storedItem.watchedSeconds;
-                    }
-
-                    const lastPos = storedItem?.lastWatchedPosition ?? 0;
-                    const firstPending = data.checkpoints.find(cp =>
-                        !(data.attemptStatus?.[cp.checkpointId]?.passed)
-                    );
-
-                    let seekTo = 0;
-                    if (firstPending) {
-                        const cStart = firstPending.startSeconds ?? 0;
-                        const cEnd   = firstPending.timestampSeconds;
-                        // If the stored position is inside this concept's window, resume there
-                        if (lastPos > cStart && lastPos < cEnd) {
-                            seekTo = lastPos;
+                if (data?.checkpoints?.length > 0) {
+                    if (isYouTube) {
+                        // YouTube: no direct MP4 needed — the YouTube IFrame API
+                        // handles pause/seek/play. Restore position after player init.
+                        const firstPending = data.checkpoints.find(cp =>
+                            !(data.attemptStatus?.[cp.checkpointId]?.passed)
+                        );
+                        let seekToTime = 0;
+                        if (firstPending) {
+                            const cStart = firstPending.startSeconds ?? 0;
+                            const cEnd   = firstPending.timestampSeconds;
+                            seekToTime = (lastPos > cStart && lastPos < cEnd) ? lastPos : cStart;
+                        }
+                        // Store seek target for the YouTube player init effect
+                        ytSeekTargetRef.current = seekToTime > 0 ? seekToTime : null;
+                    } else {
+                        // Uploaded video: swap to direct MP4 for checkpoint mode
+                        const storedDirect = data?.directVideoUrl || activeLesson.directVideoUrl;
+                        if (storedDirect) {
+                            setVideoUrl(storedDirect);
+                            const firstPending = data.checkpoints.find(cp =>
+                                !(data.attemptStatus?.[cp.checkpointId]?.passed)
+                            );
+                            let seekToTime = 0;
+                            if (firstPending) {
+                                const cStart = firstPending.startSeconds ?? 0;
+                                const cEnd   = firstPending.timestampSeconds;
+                                seekToTime = (lastPos > cStart && lastPos < cEnd) ? lastPos : cStart;
+                            }
+                            if (seekToTime > 0) {
+                                setTimeout(() => {
+                                    if (videoRef.current) videoRef.current.currentTime = seekToTime;
+                                }, 600);
+                            }
                         } else {
-                            seekTo = cStart;
+                            setCheckpointDirectFailed(true);
                         }
                     }
-
-                    if (seekTo > 0) {
-                        setTimeout(() => {
-                            if (videoRef.current) {
-                                videoRef.current.currentTime = seekTo;
-                            }
-                        }, 600);
-                    }
-                } else if (data?.checkpoints?.length > 0 && !storedDirect) {
-                    // Checkpoints exist but NO direct MP4 could be found anywhere —
-                    // quiz popups cannot run on the iframe embed. Warn clearly.
-                    setCheckpointDirectFailed(true);
-                } else if (!data?.checkpoints?.length) {
+                } else {
                     // No checkpoints — restore last watched position for regular videos
-                    const storedItem = progressItems.find(
-                        item => item.lessonId?.toString() === activeLesson._id?.toString()
-                    );
-                    if (storedItem?.watchedSeconds > 0) {
-                        watchedSecondsRef.current = storedItem.watchedSeconds;
-                    }
-                    const lastPos = storedItem?.lastWatchedPosition ?? 0;
-                    if (lastPos > 5) {
+                    if (!isYouTube && lastPos > 5) {
                         setTimeout(() => {
-                            if (videoRef.current) {
-                                videoRef.current.currentTime = lastPos;
-                            }
+                            if (videoRef.current) videoRef.current.currentTime = lastPos;
                         }, 600);
                     }
                 }
@@ -560,6 +555,149 @@ export default function LearningWorkspace() {
         return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeFlatIdx, activeLesson]);
+
+    // ── YouTube IFrame API — load SDK and create player for checkpoint mode ──
+    // When a YouTube lesson has in-video quiz checkpoints, we use the YouTube
+    const hasCheckpoints = !!(checkpointsData?.checkpoints?.length > 0);
+
+    // IFrame API to programmatically control playback (pause at timestamps,
+    // resume after quiz pass, track watched time). This effect:
+    //   1. Loads the YT IFrame API script (once, globally)
+    //   2. Creates a YT.Player inside ytContainerRef
+    //   3. Sets up polling to track currentTime and fire checkpoints
+    //   4. Provides pauseVideo/playVideo/seekTo/duration via ytPlayerRef
+    useEffect(() => {
+        if (!isYouTubeVideo || !hasCheckpoints || !ytContainerRef.current) return;
+
+        let destroyed = false;
+        let pollId = null;
+
+        const videoId = extractYouTubeVideoId(getLessonVideoUrl(activeLesson));
+        if (!videoId) return;
+
+        const YT_PLAYER_ID = 'yt-checkpoint-player';
+
+        const initPlayer = () => {
+            if (destroyed || !ytContainerRef.current) return;
+            // Avoid double-init
+            if (ytPlayerRef.current) return;
+
+            // Ensure container has an iframe target div
+            let targetEl = document.getElementById(YT_PLAYER_ID);
+            if (!targetEl) {
+                targetEl = document.createElement('div');
+                targetEl.id = YT_PLAYER_ID;
+                ytContainerRef.current.innerHTML = '';
+                ytContainerRef.current.appendChild(targetEl);
+            }
+
+            ytPlayerRef.current = new window.YT.Player(YT_PLAYER_ID, {
+                videoId,
+                playerVars: {
+                    autoplay: 1,
+                    controls: 1,
+                    modestbranding: 1,
+                    rel: 0,
+                    fs: 1
+                },
+                events: {
+                    onReady: (e) => {
+                        if (destroyed) return;
+                        const dur = e.target.getDuration?.() || 0;
+                        if (dur > 0) setVideoDuration(dur);
+
+                        // Restore position
+                        if (ytSeekTargetRef.current) {
+                            e.target.seekTo(ytSeekTargetRef.current, true);
+                            ytSeekTargetRef.current = null;
+                        }
+
+                        e.target.playVideo?.();
+                    },
+                    onStateChange: (e) => {
+                        if (destroyed) return;
+                        if (e.data === window.YT.PlayerState.PLAYING) setIsPlaying(true);
+                        else if (e.data === window.YT.PlayerState.PAUSED) setIsPlaying(false);
+                        else if (e.data === window.YT.PlayerState.ENDED) {
+                            setIsPlaying(false);
+                            tryAutoCompleteAndAdvance();
+                        }
+                    }
+                }
+            });
+
+            // ── Polling: track time and fire checkpoints every 250ms ──
+            pollId = setInterval(() => {
+                if (destroyed) return;
+                const player = ytPlayerRef.current;
+                if (!player || typeof player.getCurrentTime !== 'function') return;
+
+                const t = player.getCurrentTime();
+                const dur = player.getDuration?.() || 0;
+                if (dur > 0) setVideoDuration(dur);
+                setUiTime(t);
+                playbackTimeRef.current = t;
+
+                // Accumulate real watched seconds (delta-based, seek-immune)
+                const dt = t - lastTickRef.current;
+                if (dt > 0 && dt < 1.5) watchedSecondsRef.current += dt;
+                lastTickRef.current = t;
+
+                // Heartbeat progress every ~30s
+                const now = Date.now();
+                if (activeLesson && now - lastHeartbeatRef.current > 30000 && watchedSecondsRef.current > 5) {
+                    lastHeartbeatRef.current = now;
+                    learningProgressService.saveLessonProgress(courseId, activeLesson._id.toString(), {
+                        completed: false,
+                        currentTime: Math.round(t),
+                        watchedSeconds: Math.round(watchedSecondsRef.current),
+                        videoDurationSeconds: Math.round(dur)
+                    }).catch(() => {});
+                }
+
+                // Fire checkpoint if playhead reached a quiz timestamp
+                if (!activeCheckpoint) {
+                    let nearest = null;
+                    for (const cp of checkpointsData?.checkpoints || []) {
+                        if (firedCheckpointsRef.current.has(cp.checkpointId)) continue;
+                        if (isCheckpointPassed(cp)) { firedCheckpointsRef.current.add(cp.checkpointId); continue; }
+                        if (!nearest || cp.timestampSeconds < nearest.timestampSeconds) nearest = cp;
+                    }
+                    if (nearest && t >= nearest.timestampSeconds - 0.25) {
+                        player.pauseVideo?.();
+                        firedCheckpointsRef.current.add(nearest.checkpointId);
+                        setActiveCheckpoint(nearest);
+                        setCheckpointAnswers({});
+                        setCheckpointResult(null);
+                        setCheckpointError('');
+                    }
+                }
+            }, 250);
+        };
+
+        // Load the YouTube IFrame API script
+        if (!window.YT || !window.YT.Player) {
+            const tag = document.createElement('script');
+            tag.src = 'https://www.youtube.com/iframe_api';
+            tag.onload = () => {
+                // YT API calls onYouTubeIframeAPIReady() which sets window.YT
+                // Small delay to ensure the global is ready
+                setTimeout(initPlayer, 100);
+            };
+            document.head.appendChild(tag);
+        } else {
+            initPlayer();
+        }
+
+        return () => {
+            destroyed = true;
+            if (pollId) clearInterval(pollId);
+            // Destroy the YouTube player instance
+            try { ytPlayerRef.current?.destroy?.(); } catch (e) { console.error('[YouTube] destroy error:', e); }
+            ytPlayerRef.current = null;
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isYouTubeVideo, hasCheckpoints, activeFlatIdx, activeLesson, checkpointsData]);
 
     // ── Fetch requirement status whenever the active lesson changes ───────────
     // We only call the API if the lesson actually has requirements AND isn't done yet.
@@ -581,7 +719,6 @@ export default function LearningWorkspace() {
     }, [activeFlatIdx, activeLesson, isCurrentDone, lessonHasRequirements]);
 
     // ── In-video checkpoint logic ─────────────────────────────────────────────
-    const hasCheckpoints = !!(checkpointsData?.checkpoints?.length > 0);
     const isCheckpointPassed = useCallback((cp) => {
         const status = checkpointsData?.attemptStatus?.[cp.checkpointId];
         return !!status?.passed;
@@ -609,11 +746,14 @@ export default function LearningWorkspace() {
     }, [hasCheckpoints, activeCheckpoint, sortedCheckpoints, isCheckpointPassed]);
 
     const seekTo = useCallback((target) => {
-        if (!videoRef.current || !Number.isFinite(target)) return;
         const clamped = Math.max(0, clampSeekTarget(target));
-        videoRef.current.currentTime = clamped;
+        if (isYouTubeVideo && ytPlayerRef.current) {
+            ytPlayerRef.current.seekTo(clamped, true);
+        } else if (videoRef.current) {
+            videoRef.current.currentTime = clamped;
+        }
         setUiTime(clamped);
-    }, [clampSeekTarget]);
+    }, [clampSeekTarget, isYouTubeVideo]);
 
     // Core mid-video quiz trigger — pauses playback and opens the checkpoint's
     // quiz overlay the instant the playhead reaches the concept end timestamp.
@@ -644,20 +784,25 @@ export default function LearningWorkspace() {
     // covers programmatic play() races and browser autoplay quirks.
     useEffect(() => {
         if (activeCheckpoint) {
-            const v = videoRef.current;
-            if (v && !v.paused) v.pause();
+            if (isYouTubeVideo && ytPlayerRef.current) {
+                const state = ytPlayerRef.current.getPlayerState?.();
+                if (state === window.YT?.PlayerState?.PLAYING) ytPlayerRef.current.pauseVideo?.();
+            } else if (videoRef.current && !videoRef.current.paused) {
+                videoRef.current.pause();
+            }
         }
-    }, [activeCheckpoint]);
+    }, [activeCheckpoint, isYouTubeVideo]);
 
     // Watchdog: checks the playhead every 500ms independent of timeupdate.
+    // For uploaded videos only — YouTube polling already handles this.
     useEffect(() => {
-        if (!hasCheckpoints) return;
+        if (!hasCheckpoints || isYouTubeVideo) return;
         const id = setInterval(() => {
             const v = videoRef.current;
             if (v && !v.paused && !v.ended) fireCheckpointIfReached(v, v.currentTime);
         }, 500);
         return () => clearInterval(id);
-    }, [hasCheckpoints, fireCheckpointIfReached]);
+    }, [hasCheckpoints, isYouTubeVideo, fireCheckpointIfReached]);
 
     // Accumulates REAL watched seconds, heartbeats progress to the backend,
     // and hands off to the shared quiz trigger.
@@ -767,7 +912,10 @@ export default function LearningWorkspace() {
                 ? true
                 : (checkpointsData?.attemptStatus?.[cp.checkpointId]?.passed || false));
         if (allPassed && lessonHasRequirements) refreshReqStatus();
-        if (videoRef.current) {
+        if (isYouTubeVideo && ytPlayerRef.current) {
+            ytPlayerRef.current.seekTo(resumeAt, true);
+            ytPlayerRef.current.playVideo?.();
+        } else if (videoRef.current) {
             videoRef.current.currentTime = resumeAt;
             videoRef.current.play().catch(() => {});
         }
@@ -875,20 +1023,23 @@ export default function LearningWorkspace() {
     const jumpToNextCheckpoint = useCallback(() => {
         setShowBlocker(false);
         window.scrollTo(0, 0);
-        if (!videoRef.current) return;
         let target = Math.max(0, playbackTimeRef.current - 2);
         if (hasCheckpoints) {
             const pending = (checkpointsData.checkpoints || []).filter(cp => !isCheckpointPassed(cp));
             if (pending.length === 0) { refreshReqStatus(); return; }
-            // Jump to the start of the first pending concept
             const firstPending = pending.reduce((a, b) =>
                 (a.startSeconds ?? a.timestampSeconds) < (b.startSeconds ?? b.timestampSeconds) ? a : b
             );
             target = Math.max(0, firstPending.startSeconds ?? 0);
         }
-        videoRef.current.currentTime = target;
-        videoRef.current.play().catch(() => {});
-    }, [hasCheckpoints, checkpointsData, isCheckpointPassed, refreshReqStatus]);
+        if (isYouTubeVideo && ytPlayerRef.current) {
+            ytPlayerRef.current.seekTo(target, true);
+            ytPlayerRef.current.playVideo?.();
+        } else if (videoRef.current) {
+            videoRef.current.currentTime = target;
+            videoRef.current.play().catch(() => {});
+        }
+    }, [hasCheckpoints, checkpointsData, isCheckpointPassed, refreshReqStatus, isYouTubeVideo]);
 
     // ── Navigate to a flat lesson index ──────────────────────────────────────
     const goToFlatIdx = useCallback((idx) => {
@@ -1160,7 +1311,47 @@ export default function LearningWorkspace() {
                                 )}
                             </div>
                         ) : videoUrl ? (
-                            (getVideoRenderMode(videoUrl) === 'video' || hasCheckpoints) && getVideoRenderMode(videoUrl) !== 'iframe' ? (
+                            isYouTubeUrl(videoUrl) ? (
+                                hasCheckpoints ? (
+                                    /* ── YouTube IFrame API player — checkpoint mode ── */
+                                    /* The YT.Player API is loaded and managed by the
+                                       YouTube IFrame API useEffect above. This container
+                                       is the mount point for the programmatically created
+                                       player. */
+                                    <div ref={ytContainerRef} style={{ width: '100%', height: '100%' }} />
+                                ) : (
+                                /* ── YouTube embed (no checkpoints) ── */
+                                <>
+                                    <iframe
+                                        key={videoUrl}
+                                        src={videoUrl}
+                                        title={activeLesson?.lessonTitle || 'YouTube video'}
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                                        style={{ width: '100%', height: '100%', border: 'none' }}
+                                    />
+                                    {/* Watch on YouTube button */}
+                                    <a
+                                        href={getYouTubeWatchUrl(videoUrl) || videoUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        style={{
+                                            position: 'absolute', bottom: 12, right: 12, zIndex: 5,
+                                            display: 'flex', alignItems: 'center', gap: 6,
+                                            background: 'rgba(0,0,0,0.8)', color: '#fff',
+                                            border: 'none', borderRadius: 8, padding: '8px 14px',
+                                            fontWeight: 700, fontSize: 12, cursor: 'pointer',
+                                            textDecoration: 'none', transition: 'background 0.15s'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.9)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.8)'}
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                                        Watch on YouTube
+                                    </a>
+                                </>
+                                )
+                            ) : (getVideoRenderMode(videoUrl) === 'video' || hasCheckpoints) && getVideoRenderMode(videoUrl) !== 'iframe' ? (
                                 playbackFailed ? (
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: 30, textAlign: 'center' }}>
                                         <div style={{ fontSize: 30 }}>⚠️</div>
@@ -1260,8 +1451,25 @@ export default function LearningWorkspace() {
                                         )}
                                     </>
                                 )
+                            ) : isMeetingUrl(videoUrl) ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', padding: '32px', textAlign: 'center' }}>
+                                    <IconExternalLink style={{ width: 56, height: 56, color: '#a5b4fc' }} />
+                                    <div>
+                                        <p style={{ color: '#fff', fontWeight: '700', fontSize: '16px', margin: '0 0 8px' }}>
+                                            This meeting link opens in a new tab.
+                                        </p>
+                                        <a
+                                            href={videoUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', borderRadius: '12px', padding: '14px 32px', fontWeight: '800', fontSize: '15px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '10px', boxShadow: '0 8px 24px rgba(34,197,94,0.3)' }}
+                                        >
+                                            <IconExternalLink style={{ width: 18, height: 18 }} /> Open Meeting
+                                        </a>
+                                    </div>
+                                </div>
                             ) : (
-                                <iframe key={videoUrl} src={videoUrl} title={activeLesson?.lessonTitle || 'Lesson video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen style={{ width: '100%', height: '100%', border: 'none' }} />
+                                <iframe key={videoUrl} src={videoUrl} title={activeLesson?.lessonTitle || 'Lesson video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" style={{ width: '100%', height: '100%', border: 'none' }} />
                             )
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
@@ -1348,6 +1556,24 @@ export default function LearningWorkspace() {
                         </h1>
                         {activeLesson?.durationMinutes > 0 && (
                             <p style={{ margin: '6px 0 0', fontSize: 13, color: muted }}>{activeLesson.durationMinutes} min</p>
+                        )}
+                        {(activeLesson?.videoSource === 'youtube' || isYouTubeUrl(getLessonVideoUrl(activeLesson))) && (
+                            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                                <a
+                                    href={getYouTubeWatchUrl(getLessonVideoUrl(activeLesson)) || '#'}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                                        background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+                                        borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 700,
+                                        color: '#ef4444', textDecoration: 'none'
+                                    }}
+                                >
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                                    YouTube Video
+                                </a>
+                            </div>
                         )}
 
                         {/* ── Completion requirement indicator ──────────────────── */}
@@ -1720,6 +1946,7 @@ export default function LearningWorkspace() {
                                                         {locked && <span style={{ fontSize: 10, color: muted }}>Complete previous lesson first</span>}
                                                         {isDone && !locked && <span style={{ fontSize: 10, color: green, fontWeight: 600 }}>✓ Done</span>}
                                                         {lesson.isFreePreview && !locked && <span style={{ fontSize: 10, background: `${accent}20`, color: accent, borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>Free</span>}
+                                                        {(lesson.videoSource === 'youtube' || isYouTubeUrl(lesson.videoUrl)) && !locked && <span style={{ fontSize: 10, background: 'rgba(239,68,68,0.12)', color: '#ef4444', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>YouTube</span>}
                                                         {/* Requirement badges in sidebar — live status derived from the server sequence */}
                                                         {!isDone && hasQuizReq && (
                                                             <span style={{ fontSize: 10, background: entry?.quizStatus?.passed ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)', color: entry?.quizStatus?.passed ? '#10b981' : '#f59e0b', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>

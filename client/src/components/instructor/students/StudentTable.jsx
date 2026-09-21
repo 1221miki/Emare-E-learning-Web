@@ -31,6 +31,7 @@ function Avatar({ student }) {
                 src={student.avatar}
                 alt={student.name}
                 style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #dcfce7' }}
+                crossOrigin="anonymous"
             />
         );
     }

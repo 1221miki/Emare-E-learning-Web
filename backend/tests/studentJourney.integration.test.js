@@ -47,7 +47,7 @@ before(async () => {
                 lessons: [
                     {
                         lessonTitle: 'Lesson 1 (has checkpoints)',
-                        videoUrl: 'https://vz-x.b-cdn.net/guid/play_480p.mp4',
+                        videoUrl: '/api/local-storage/videos/lesson1_sample.mp4',
                         quizCheckpoints: [
                             { checkpointId: 'cp_1a', title: 'Segment A', timestampSeconds: 60, passingScorePercent: 60,
                               questions: [{ questionText: 'Q1?', options: ['a', 'b'], correctAnswerIndex: 0 }] },
@@ -55,7 +55,7 @@ before(async () => {
                               questions: [{ questionText: 'Q2?', options: ['x', 'y'], correctAnswerIndex: 1 }] }
                         ]
                     },
-                    { lessonTitle: 'Lesson 2 (plain video)', videoUrl: 'https://vz-x.b-cdn.net/guid2/play_480p.mp4' }
+                    { lessonTitle: 'Lesson 2 (plain video)', videoUrl: '/api/local-storage/videos/lesson2_sample.mp4' }
                 ]
             }
         ]

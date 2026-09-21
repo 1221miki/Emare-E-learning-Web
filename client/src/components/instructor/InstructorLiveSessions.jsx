@@ -5,9 +5,13 @@ import { liveSessionService } from '../../services/api';
 import {
     Video, Plus, Play, Square, Link2, RadioTower,
     Clock, CalendarDays, User, CheckCircle, AlertCircle,
-    Film, BookOpen, RefreshCw, Edit3, Trash2
+    Film, BookOpen, RefreshCw, Edit3, Trash2, Upload
 } from 'lucide-react';
 import LiveSessionFormModal from './LiveSessionFormModal';
+import RecordingPlayerModal from '../RecordingPlayerModal';
+import JitsiMeetingModal from '../JitsiMeetingModal';
+import RecordingManagementModal from './RecordingManagementModal';
+import { isMeetingUrl } from '../../utils/videoPlayer';
 
 // ── Status badge ───────────────────────────────────────────
 const SESSION_STATUS = {
@@ -46,6 +50,9 @@ export default function InstructorLiveSessions({ courses = [] }) {
     const [editingSession, setEditingSession] = useState(null);
     const [actionMsg,     setActionMsg]     = useState(null);
     const [processingId,  setProcessingId]  = useState(null);
+    const [activeRecording, setActiveRecording] = useState(null);
+    const [activeMeeting, setActiveMeeting] = useState(null);
+    const [recordingModal, setRecordingModal] = useState({ show: false, session: null, recording: null });
 
     const flash = (type, text) => {
         setActionMsg({ type, text });
@@ -79,19 +86,33 @@ export default function InstructorLiveSessions({ courses = [] }) {
             const res = await liveSessionService.startSession(session._id);
             setSessions(prev => prev.map(s => s._id === session._id ? res.data.data : s));
             flash('success', 'Session started — students have been notified.');
-            if (session.meetingLink) window.open(session.meetingLink, '_blank');
+            if (session.meetingLink) {
+                if (isMeetingUrl(session.meetingLink)) {
+                    window.open(session.meetingLink, '_blank', 'noopener,noreferrer');
+                } else {
+                    setActiveMeeting(session.meetingLink);
+                }
+            }
         } catch (err) {
             flash('error', err.response?.data?.message || 'Failed to start session.');
         } finally { setProcessingId(null); }
     };
 
     const handleEnd = async (session) => {
-        if (!window.confirm(`End "${session.title}"?\n\nThe recording will be automatically available to students.`)) return;
+        if (!window.confirm(`End "${session.title}"?`)) return;
         setProcessingId(session._id + '_end');
         try {
             const res = await liveSessionService.endSession(session._id);
-            setSessions(prev => prev.map(s => s._id === session._id ? res.data.data : s));
-            flash('success', 'Session ended — recording is now visible to students.');
+            const updatedSession = res.data.data;
+            const newRecording = res.data.recording;
+            setSessions(prev => prev.map(s => s._id === session._id ? updatedSession : s));
+            if (newRecording) {
+                setRecordings(prev => {
+                    const exists = prev.find(r => r._id === newRecording._id);
+                    return exists ? prev : [newRecording, ...prev];
+                });
+            }
+            flash('success', 'Session ended.');
             // Refresh recordings list
             liveSessionService.getInstructorRecordings()
                 .then(r => setRecordings(r.data?.data || []))
@@ -123,6 +144,25 @@ export default function InstructorLiveSessions({ courses = [] }) {
         } catch (err) {
             flash('error', err.response?.data?.message || 'Failed to delete recording.');
         } finally { setProcessingId(null); }
+    };
+
+    const openRecordingModal = (session, recording = null) => {
+        setRecordingModal({ show: true, session, recording });
+    };
+
+    const handleRecordingModalSuccess = () => {
+        setRecordingModal({ show: false, session: null, recording: null });
+        // Refresh both sessions and recordings
+        liveSessionService.getInstructorSessions()
+            .then(r => setSessions(r.data?.data || []))
+            .catch(() => {});
+        liveSessionService.getInstructorRecordings()
+            .then(r => setRecordings(r.data?.data || []))
+            .catch(() => {});
+    };
+
+    const handleRecordingModalClose = () => {
+        setRecordingModal({ show: false, session: null, recording: null });
     };
 
     // ── Form callbacks ─────────────────────────────────────
@@ -262,18 +302,23 @@ export default function InstructorLiveSessions({ courses = [] }) {
                                                             <Play size={14} /> {busy('_start') ? 'Starting…' : 'Start Meeting'}
                                                         </button>
                                                     )}
-                                                    {isLive && (
-                                                        <>
-                                                            {session.meetingLink && (
-                                                                <a href={session.meetingLink} target="_blank" rel="noopener noreferrer" style={{ ...btn('rgba(34,197,94,0.15)', '#4ade80'), border: '1px solid rgba(34,197,94,0.4)', textDecoration: 'none' }}>
-                                                                    <Link2 size={13} /> Open Meeting
-                                                                </a>
-                                                            )}
-                                                            <button onClick={() => handleEnd(session)} disabled={busy('_end')} style={{ ...dangerBtn, border: '1px solid rgba(239,68,68,0.35)' }}>
-                                                                <Square size={13} fill="#f87171" /> {busy('_end') ? 'Ending…' : 'End Meeting'}
+{isLive && (
+                                                            <>
+                                                                {session.meetingLink && (
+                                                                    <a href={session.meetingLink} target="_blank" rel="noopener noreferrer" style={{ ...btn('rgba(34,197,94,0.15)', '#4ade80'), border: '1px solid rgba(34,197,94,0.4)', textDecoration: 'none' }}>
+                                                                        <Link2 size={13} /> Open Meeting
+                                                                    </a>
+                                                                )}
+                                                                <button onClick={() => handleEnd(session)} disabled={busy('_end')} style={{ ...dangerBtn, border: '1px solid rgba(239,68,68,0.35)' }}>
+                                                                    <Square size={13} fill="#f87171" /> {busy('_end') ? 'Ending…' : 'End Meeting'}
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        {isEnded && !(rec?.isPublished && rec?.videoUrl) && (
+                                                            <button onClick={() => openRecordingModal(session, rec)} disabled={busy('_upload')} style={{ ...btn('linear-gradient(135deg,#6366f1,#4f46e5)', '#fff'), fontSize: '11px', padding: '5px 12px' }}>
+                                                                <Upload size={12} /> {busy('_upload') ? 'Uploading…' : 'Upload Recording'}
                                                             </button>
-                                                        </>
-                                                    )}
+                                                        )}
                                                 </div>
 
                                                 {/* Edit / Delete */}
@@ -290,14 +335,12 @@ export default function InstructorLiveSessions({ courses = [] }) {
                                             </div>
                                         </div>
 
-                                        {/* Ended: recording auto-available notice */}
-                                        {isEnded && (
-                                            <div style={{ marginTop: '12px', padding: '10px 14px', background: rec?.isPublished ? 'rgba(34,197,94,0.07)' : 'rgba(100,116,139,0.07)', borderRadius: '8px', border: `1px solid ${rec?.isPublished ? 'rgba(34,197,94,0.2)' : c.border}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <Film size={14} color={rec?.isPublished ? '#4ade80' : c.textMuted} />
-                                                <span style={{ color: rec?.isPublished ? '#4ade80' : c.textMuted, fontSize: '13px', fontWeight: '600' }}>
-                                                    {rec?.isPublished
-                                                        ? 'Recording is live — students can watch it now ✓'
-                                                        : 'Session ended — recording will appear shortly'}
+                                        {/* Ended: recording status */}
+                                        {isEnded && rec?.isPublished && rec?.videoUrl && (
+                                            <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(34,197,94,0.07)', borderRadius: '8px', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <Film size={14} color="#4ade80" />
+                                                <span style={{ color: '#4ade80', fontSize: '13px', fontWeight: '600' }}>
+                                                    Recording is live — students can watch it now
                                                 </span>
                                             </div>
                                         )}
@@ -349,7 +392,7 @@ export default function InstructorLiveSessions({ courses = [] }) {
                                     {/* Play + Delete */}
                                     <div style={{ display: 'flex', gap: '8px', flexShrink: 0, alignItems: 'center' }}>
                                         <button
-                                            onClick={() => navigate(`/recordings/${rec._id}`)}
+                                            onClick={() => setActiveRecording(rec)}
                                             style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: '800', fontSize: '12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', boxShadow: '0 3px 10px rgba(34,197,94,0.3)' }}
                                         >
                                             <Play size={13} fill="#fff" /> Play Recording
@@ -376,6 +419,32 @@ export default function InstructorLiveSessions({ courses = [] }) {
             )}
 
             <style>{`@keyframes ilsPulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
+
+            {/* Recording Player Modal */}
+            {activeRecording && (
+                <RecordingPlayerModal
+                    recording={activeRecording}
+                    onClose={() => setActiveRecording(null)}
+                />
+            )}
+
+            {/* Jitsi Meeting Modal */}
+            {activeMeeting && (
+                <JitsiMeetingModal
+                    meetingUrl={activeMeeting}
+                    onClose={() => setActiveMeeting(null)}
+                />
+            )}
+
+            {/* Recording Upload/Manage Modal */}
+            {recordingModal.show && (
+                <RecordingManagementModal
+                    session={recordingModal.session}
+                    recording={recordingModal.recording}
+                    onSuccess={handleRecordingModalSuccess}
+                    onClose={handleRecordingModalClose}
+                />
+            )}
         </div>
     );
 }

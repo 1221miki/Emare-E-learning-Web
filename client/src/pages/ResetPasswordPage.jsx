@@ -145,6 +145,7 @@ export default function ResetPasswordPage() {
                         <div style={s.pwdWrap}>
                             <input
                                 type={showPassword ? 'text' : 'password'}
+                                autoComplete="new-password"
                                 placeholder="Enter your new password"
                                 value={newPassword}
                                 onChange={e => setNewPassword(e.target.value)}
@@ -172,6 +173,7 @@ export default function ResetPasswordPage() {
                         <div style={s.pwdWrap}>
                             <input
                                 type={showConfirmPwd ? 'text' : 'password'}
+                                autoComplete="new-password"
                                 placeholder="Confirm your new password"
                                 value={confirmPassword}
                                 onChange={e => setConfirmPassword(e.target.value)}

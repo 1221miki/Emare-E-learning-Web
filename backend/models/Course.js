@@ -15,8 +15,16 @@ const LessonSchema = new mongoose.Schema({
         trim: true
     },
     videoUrl: {
-        type: String, // Bunny Stream embed URL: https://iframe.mediadelivery.net/embed/LIBRARY_ID/VIDEO_GUID
+        type: String, // Local storage video URL or YouTube URL
         required: true
+    },
+    // videoSource: distinguishes between uploaded video files and YouTube links.
+    // 'upload' = local storage (videoUrl is a local storage path)
+    // 'youtube' = YouTube (videoUrl is the original YouTube URL)
+    videoSource: {
+        type: String,
+        enum: ['upload', 'youtube'],
+        default: 'upload'
     },
     durationMinutes: {
         type: Number,
@@ -120,7 +128,6 @@ const CourseSchema = new mongoose.Schema({
     courseTitle: {
         type: String,
         required: [true, 'Course title is required'],
-        unique: true,
         trim: true,
         minlength: [5, 'Title must be at least 5 characters'],
         maxlength: [150, 'Title cannot exceed 150 characters']

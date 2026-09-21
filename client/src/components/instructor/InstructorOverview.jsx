@@ -167,7 +167,7 @@ export default function InstructorOverview({ user, analytics = {}, courses = [],
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
                             <div style={{ ...styles.avatar, boxShadow: `0 8px 24px ${colors.primary}40` }}>
                                 {user?.avatarUrl ? (
-                                    <img src={user.avatarUrl} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                                    <img src={user.avatarUrl} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} crossOrigin="anonymous" />
                                 ) : (
                                     user?.fullName?.charAt(0)?.toUpperCase() || 'I'
                                 )}

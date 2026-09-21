@@ -1,11 +1,6 @@
 const Course = require('../models/Course');
 const InVideoQuizAttempt = require('../models/InVideoQuizAttempt');
-const axios = require('axios');
-const {
-    getBunnyStorageDomain,
-    getBunnyApiKey,
-    getBunnyLibraryId
-} = require('../services/bunnyService');
+const { resolveLocalPath } = require('../services/localStorageService');
 
 const getUserId = (req) => req.user?.id || req.user?._id;
 
@@ -20,120 +15,21 @@ const findLesson = (course, lessonId) => {
 };
 
 // ── Direct playback URL resolution ──────────────────────────────────────────
-// Bunny Stream embed URLs must be converted to direct MP4 files so the client
-// can use an HTML5 <video> element (needed to pause at checkpoints and block
-// seeking). Resolution strategy:
-//   1. Parse { libraryId, guid } out of the embed URL
-//   2. Resolve the correct CDN host per library (env domain for the current
-//      library, Bunny API lookup for older libraries)
-//   3. Pick a NORMALIZED quality (480p preferred — keeps file size small while
-//      staying watchable) from the video's actually-available renditions
-//   4. HEAD-verify the chosen URL before returning it, falling back through
-//      qualities if needed. Results are cached per video.
-const PLAYBACK_QUALITY_ORDER = ['480p', '360p', '720p', '240p', '1080p'];
-
-const libraryHostCache = new Map();     // libraryId -> CDN hostname
-const playbackUrlCache = new Map();     // guid -> resolved direct URL | null
-
-// Fetch the pull-zone hostname for a Bunny Stream library (cached forever —
-// pull zone names are stable unless the account is reconfigured).
-const resolveLibraryHost = async (libraryId) => {
-    if (libraryHostCache.has(libraryId)) return libraryHostCache.get(libraryId);
-
-    // Current upload library → use configured storage/pull domain directly
-    if (String(libraryId) === String(getBunnyLibraryId())) {
-        const host = getBunnyStorageDomain();
-        if (host) { libraryHostCache.set(libraryId, host); return host; }
-    }
-
-    try {
-        const apiKey = getBunnyApiKey();
-        if (!apiKey) return null;
-        const res = await axios.get(`https://video.bunnycdn.com/library/${libraryId}`, {
-            headers: { AccessKey: apiKey },
-            timeout: 10000
-        });
-        const name = res.data?.PullZoneName;
-        const host = name ? `${name}.b-cdn.net` : null;
-        libraryHostCache.set(libraryId, host);
-        return host;
-    } catch {
-        libraryHostCache.set(libraryId, null);
-        return null;
-    }
-};
-
-// Ask Bunny which renditions actually exist for this video (e.g. "240p,360p,480p")
-const fetchAvailableQualities = async (libraryId, guid) => {
-    try {
-        const apiKey = getBunnyApiKey();
-        if (!apiKey) return null;
-        const res = await axios.get(`https://video.bunnycdn.com/library/${libraryId}/videos/${guid}`, {
-            headers: { AccessKey: apiKey },
-            timeout: 10000
-        });
-        const raw = res.data?.availableResolutions || '';
-        return String(raw).split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-    } catch {
-        return null;
-    }
-};
-
-let headVerify = async (url) => {
-    try {
-        const res = await axios.head(url, {
-            timeout: 8000,
-            validateStatus: () => true,
-            // Bunny Stream hotlink protection rejects requests WITHOUT a
-            // Referer header (HTTP 403) even when playback is otherwise
-            // allowed. Real browsers always send one for <video> playback,
-            // so mimic that here or every HEAD check would wrongly fail.
-            headers: { Referer: process.env.FRONTEND_URL || 'http://localhost:5173' }
-        });
-        return res.status >= 200 && res.status < 400;
-    } catch {
-        return false;
-    }
-};
-
-// Convert any lesson videoUrl into a verified, size-normalized direct MP4 URL.
-// Returns null when no reliable direct playback URL can be produced.
+// For local storage, the videoUrl is already a direct path. For YouTube videos,
+// return null so the frontend uses the YouTube iframe embed instead.
 const resolveDirectVideoUrl = async (videoUrl) => {
     try {
         const raw = String(videoUrl || '');
+        if (!raw) return null;
 
-        // Already a direct MP4 on the CDN → normalize quality not possible
-        // without knowing the GUID; accept as-is.
-        if (/\.mp4($|\?)/i.test(raw) && !raw.includes('mediadelivery')) return raw;
+        // YouTube videos — no direct MP4 resolution
+        if (/youtube\.com\/|youtu\.be\//i.test(raw) || /iframe\.mediadelivery\.net/i.test(raw)) return null;
 
-        const match = raw.match(/mediadelivery\.net\/embed\/(\d+)\/([a-f0-9-]{36})/i);
-        if (!match) return null;
-        const [, libraryId, guid] = match;
+        // Already a direct MP4 URL (local storage path like /api/local-storage/videos/...)
+        if (/\.mp4($|\?)/i.test(raw) || raw.startsWith('/api/local-storage/')) return raw;
 
-        // Only SUCCESSFUL resolutions are cached. Failures are NOT cached —
-        // a transient Bunny/CDN hiccup (timeout, 5xx, processing lag) must
-        // never poison the cache and permanently disable checkpoint mode.
-        if (playbackUrlCache.has(guid)) return playbackUrlCache.get(guid);
-
-        const host = await resolveLibraryHost(libraryId);
-        if (!host) return null;
-
-        let candidates = PLAYBACK_QUALITY_ORDER.map(q => `https://${host}/${guid}/play_${q}.mp4`);
-
-        // Prefer qualities the video actually has, keeping our normalized order
-        const available = await fetchAvailableQualities(libraryId, guid);
-        if (available && available.length > 0) {
-            const ranked = PLAYBACK_QUALITY_ORDER.filter(q => available.includes(q));
-            const extras = available.filter(q => !PLAYBACK_QUALITY_ORDER.includes(q));
-            candidates = [...ranked, ...extras].map(q => `https://${host}/${guid}/play_${q}.mp4`);
-        }
-
-        for (const url of candidates) {
-            if (await headVerify(url)) {
-                playbackUrlCache.set(guid, url);
-                return url;
-            }
-        }
+        // Local file path starting with /uploads/ or similar
+        if (raw.startsWith('/uploads/') || raw.startsWith('uploads/')) return raw;
 
         return null;
     } catch {
@@ -195,13 +91,18 @@ exports.getLessonCheckpoints = async (req, res, next) => {
             } : { passed: false, attemptsUsed: 0 };
         }
 
+        // YouTube videos cannot be resolved to direct MP4 URLs — return null
+        // so the frontend uses the YouTube iframe embed instead.
+        const isYouTube = lesson.videoSource === 'youtube' ||
+            /youtube\.com\/|youtu\.be\//i.test(String(lesson.videoUrl || ''));
+
         res.json({
             success: true,
             data: {
                 checkpoints,
                 attemptStatus,
                 allCheckpointsPassed: checkpoints.length === 0 || Object.values(attemptStatus).every(s => s.passed),
-                directVideoUrl: await resolveDirectVideoUrl(lesson.videoUrl)
+                directVideoUrl: isYouTube ? null : await resolveDirectVideoUrl(lesson.videoUrl)
             }
         });
     } catch (err) {

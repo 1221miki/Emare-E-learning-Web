@@ -89,7 +89,7 @@ export default function StudentProfileModal({ student, grades = [], assignments 
                         {/* Avatar + name */}
                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                             {student.avatar
-                                ? <img src={student.avatar} alt={student.name} style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${colors.primary}` }} />
+                                ? <img src={student.avatar} alt={student.name} style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${colors.primary}` }} crossOrigin="anonymous" />
                                 : <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: colors.bgInput, border: `2px solid ${colors.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.primary, fontWeight: '800', fontSize: '24px' }}>
                                     {student.initials}
                                   </div>

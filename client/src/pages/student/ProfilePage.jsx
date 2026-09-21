@@ -77,6 +77,7 @@ export default function ProfilePage() {
                                 src={profile?.avatarUrl || user.avatarUrl}
                                 alt="Avatar"
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                crossOrigin="anonymous"
                                 onError={() => setAvatarError(true)}
                             />
                         ) : (

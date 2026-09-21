@@ -190,7 +190,7 @@ export default function ProfessionalCourseCard({ enrollment, course }) {
         >
             <div style={s.imageContainer}>
                 {courseData.thumbnailUrl ? (
-                    <img src={courseData.thumbnailUrl} alt={title} style={s.image} />
+                    <img src={courseData.thumbnailUrl} alt={title} style={s.image} crossOrigin="anonymous" />
                 ) : (
                     <BookOpen size={48} color={colors.primary} aria-hidden="true" />
                 )}

@@ -32,14 +32,35 @@ const getDatabaseMetrics = async () => {
         }
     }
 
-    const adminStats = await db.admin().stats();
+    let dataSizeBytes = 0;
+    let indexSizeBytes = 0;
+    let objects = 0;
+    let databaseName = 'unknown';
+
+    try {
+        const adminStats = await db.admin().stats();
+        databaseName = adminStats.db || 'unknown';
+        dataSizeBytes = adminStats.dataSize || 0;
+        indexSizeBytes = adminStats.indexSize || 0;
+        objects = adminStats.objects || 0;
+    } catch {
+        // dbStats not supported (e.g. MongoDB Atlas free tier M0)
+        // Fall back to aggregating from individual collection stats
+        for (const m of collectionMetrics) {
+            dataSizeBytes += m.sizeBytes || 0;
+            indexSizeBytes += m.indexSizeBytes || 0;
+            objects += m.documentCount || 0;
+        }
+        try { databaseName = db.databaseName || 'unknown'; } catch { /* ignore */ }
+    }
+
     return {
-        databaseName: adminStats.db || 'unknown',
+        databaseName,
         collections: collectionMetrics,
-        dataSizeBytes: adminStats.dataSize || 0,
-        indexSizeBytes: adminStats.indexSize || 0,
-        storageSizeBytes: (adminStats.dataSize || 0) + (adminStats.indexSize || 0),
-        objects: adminStats.objects || 0
+        dataSizeBytes,
+        indexSizeBytes,
+        storageSizeBytes: dataSizeBytes + indexSizeBytes,
+        objects
     };
 };
 

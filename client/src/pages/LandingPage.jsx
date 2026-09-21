@@ -384,7 +384,7 @@ export default function LandingPage() {
                 e.currentTarget.style.borderColor = colors.border;
             }}>
             <div style={p.courseImage}>
-                {course.thumbnailUrl ? <img src={course.thumbnailUrl} alt={course.courseTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '48px' }}>◈</span>}
+                {course.thumbnailUrl ? <img src={course.thumbnailUrl} alt={course.courseTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} crossOrigin="anonymous" /> : <span style={{ fontSize: '48px' }}>◈</span>}
             </div>
             <div style={p.courseBody}>
                 <span style={{...p.courseBadge, color: tagColor, background: `${tagColor}15`}}>{tag}</span>

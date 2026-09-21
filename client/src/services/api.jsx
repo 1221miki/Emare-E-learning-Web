@@ -429,32 +429,20 @@ export const uploadService = {
 
 /**
  * getPdfUrl
- * Converts any Bunny CDN PDF URL to the backend proxy URL.
- * This bypasses the suspended CDN hostname (emare-elms-ict-hub.b-cdn.net)
- * and streams the file through the backend from Bunny Storage directly.
+ * Resolves a PDF/file URL for display.
  *
- * Input:  https://emare-elms-ict-hub.b-cdn.net/courses/pdfs/notes.pdf
- * Output: http://localhost:5000/api/pdf-proxy/courses/pdfs/notes.pdf
- *
- * Non-Bunny CDN URLs (Google Drive, Cloudinary, etc.) are returned as-is.
+ * Local storage URLs (/api/local-storage/files/...) are returned as-is.
+ * Other URLs (Cloudinary, etc.) are returned as-is.
  */
 export const getPdfUrl = (rawUrl = '') => {
     if (!rawUrl) return '';
     const trimmed = String(rawUrl).trim();
 
-    // Only proxy Bunny CDN URLs — other URLs work fine as-is
-    const bunnyPattern = /^https?:\/\/[^/]+\.b-cdn\.net\//i;
-    if (!bunnyPattern.test(trimmed)) return trimmed;
+    // Already a local storage URL — pass through
+    if (/\/api\/local-storage\//i.test(trimmed)) return trimmed;
 
-    // Extract the path after the hostname
-    try {
-        const url = new URL(trimmed);
-        const storagePath = url.pathname.replace(/^\//, ''); // e.g. courses/pdfs/notes.pdf
-        const base = API_BASE_URL.replace(/\/api$/, '');
-        return `${base}/api/pdf-proxy/${storagePath}`;
-    } catch {
-        return trimmed; // fallback: return original if URL parsing fails
-    }
+    // Other URLs (Cloudinary, etc.) — return as-is
+    return trimmed;
 };
 
 // ── Payment Gateway API Calls (Phase 6) ────────────────────

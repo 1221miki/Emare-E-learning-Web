@@ -33,15 +33,24 @@ const errorHandler = (err, req, res, next) => {
     if (err.code === 11000) {
         const keyField = (err.keyValue && Object.keys(err.keyValue)[0]) ||
                          (err.keyPattern && Object.keys(err.keyPattern)[0]);
-        const fieldMessages = {
-            accountEmail: 'An account with this email already exists.',
-            username: 'Username already taken.',
-            instructorId: 'Instructor ID already in use.',
-            administratorId: 'Administrator ID already in use.'
-        };
-        statusCode = 409;
-        field = keyField || null;
-        message = fieldMessages[keyField] || `A record with that ${keyField} already exists.`;
+        // courseTitle uniqueness is intentionally allowed (different instructors
+        // may create courses with the same title) — the legacy index is being
+        // phased out. Treat this as a non-blocking informational response.
+        if (keyField === 'courseTitle') {
+            statusCode = 409;
+            field = keyField || null;
+            message = 'A course with this title already exists. Consider using a different title to avoid confusion.';
+        } else {
+            const fieldMessages = {
+                accountEmail: 'An account with this email already exists.',
+                username: 'Username already taken.',
+                instructorId: 'Instructor ID already in use.',
+                administratorId: 'Administrator ID already in use.'
+            };
+            statusCode = 409;
+            field = keyField || null;
+            message = fieldMessages[keyField] || `A record with that ${keyField} already exists.`;
+        }
     }
 
     // ── 3. Mongoose schema validation → 400 (attach first offending field) ──
@@ -67,11 +76,15 @@ const errorHandler = (err, req, res, next) => {
     // Covers Mongoose wrapper errors AND native Mongo driver errors
     // (MongoNotConnectedError, MongoServerSelectionError, MongoNetworkError,
     // MongoTimeoutError, MongoError ...) plus raw network error codes.
+    // NOTE: err.code === 11000 (duplicate key) is already handled above as 409,
+    // so we must not let section 5 overwrite it to 503.
     const isDbUnavailable =
-        err.name === 'MongooseError' ||
-        err.name === 'MongooseServerSelectionError' ||
-        (typeof err.name === 'string' && err.name.startsWith('Mongo')) ||
-        ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EHOSTUNREACH', 'EAI_AGAIN'].includes(err.code);
+        err.code !== 11000 && (
+            err.name === 'MongooseError' ||
+            err.name === 'MongooseServerSelectionError' ||
+            (typeof err.name === 'string' && err.name.startsWith('Mongo')) ||
+            ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EHOSTUNREACH', 'EAI_AGAIN'].includes(err.code)
+        );
     if (isDbUnavailable) {
         statusCode = 503;
         message = 'Database is unavailable. Please try again later.';

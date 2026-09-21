@@ -18,6 +18,7 @@ import {
     ArrowLeft, ArrowRight, CheckCircle, ClipboardList,
     FileText, ImagePlus, PlayCircle, Plus, Trash2, Video
 } from 'lucide-react';
+import { isYouTubeUrl, validateYouTubeUrl, extractYouTubeVideoId } from '../../utils/videoPlayer';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,7 @@ const newLesson = () => ({
     _id: uid(),
     lessonTitle: '',
     videoUrl: '',
+    videoSource: 'upload',
     notesPdfUrl: '',
     resourceLink: '',
     isFreePreview: false,
@@ -102,6 +104,10 @@ const newAssignment = () => ({
 const newDraft = () => ({
     lessonTitle: '',
     videoUrl: '',
+    videoSource: 'upload',  // 'upload' | 'youtube'
+    youtubeUrl: '',         // raw YouTube URL entered by user (before validation)
+    youtubeValid: null,     // null = not checked, true = valid, false = invalid
+    youtubeError: '',       // validation error message for YouTube URL
     notesPdfUrl: '',
     isFreePreview: false,
     quizRequired: false,
@@ -175,21 +181,21 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
         updateCheckpointQuestion(cpIdx, qIdx, { options, correctAnswerIndex: Math.min(correctAnswerIndex, options.length - 1) });
     };
 
-    // ── Video upload (Bunny Stream) ──────────────────────────────────────────
+    // ── Video upload (local storage) ──────────────────────────────────────────
 
     const handleVideoUpload = useCallback(async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
         if (videoRef.current) videoRef.current.value = '';
 
-        setDraft(prev => ({ ...prev, videoProgress: 'uploading', uploading: true, videoUrl: '' }));
+        setDraft(prev => ({ ...prev, videoProgress: 'uploading', uploading: true, videoUrl: '', videoSource: 'upload', youtubeUrl: '', youtubeValid: null, youtubeError: '' }));
         try {
             const fd = new FormData();
             fd.append('file', file);
             fd.append('targetType', 'video');
             const res = await uploadService.uploadFile(fd);
             const embedUrl = res.data?.data?.embedUrl || res.data?.data?.url;
-            if (!embedUrl) throw new Error('No embed URL returned from Bunny.');
+            if (!embedUrl) throw new Error('No URL returned from upload server.');
             setDraft(prev => ({ ...prev, videoUrl: embedUrl, videoProgress: 'done', uploading: false }));
         } catch (err) {
             console.error('[ChapterCard] video upload error:', err);
@@ -197,7 +203,7 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
         }
     }, []);
 
-    // ── PDF upload (Bunny Storage) ───────────────────────────────────────────
+    // ── PDF upload (local storage) ───────────────────────────────────────────
 
     const handlePdfUpload = useCallback(async (e) => {
         const file = e.target.files?.[0];
@@ -211,7 +217,7 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
             fd.append('targetType', 'pdf');
             const res = await uploadService.uploadFile(fd);
             const url = res.data?.data?.url;
-            if (!url) throw new Error('No URL returned from Bunny Storage.');
+            if (!url) throw new Error('No URL returned from upload server.');
             setDraft(prev => ({ ...prev, notesPdfUrl: url, pdfProgress: 'done', uploading: false }));
         } catch (err) {
             console.error('[ChapterCard] PDF upload error:', err);
@@ -226,14 +232,33 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
             alert('Lesson title is required.');
             return;
         }
-        if (!draft.videoUrl.trim()) {
-            alert('Please upload a video or paste a Bunny embed URL before adding the lesson.');
-            return;
+
+        // Determine the video URL and source based on the selected video source
+        let finalVideoUrl = '';
+        let finalVideoSource = draft.videoSource || 'upload';
+
+        if (finalVideoSource === 'youtube') {
+            // Validate YouTube URL
+            const validation = validateYouTubeUrl(draft.youtubeUrl);
+            if (!validation.valid) {
+                setDraft(prev => ({ ...prev, youtubeValid: false, youtubeError: validation.error }));
+                return;
+            }
+            finalVideoUrl = draft.youtubeUrl.trim();
+        } else {
+            // Upload mode — use the videoUrl from upload
+            if (!draft.videoUrl.trim()) {
+                alert('Please upload a video or provide a valid video URL before adding the lesson.');
+                return;
+            }
+            finalVideoUrl = draft.videoUrl.trim();
         }
+
         const lesson = {
             _id: uid(),
             lessonTitle: draft.lessonTitle.trim(),
-            videoUrl:    draft.videoUrl.trim(),
+            videoUrl: finalVideoUrl,
+            videoSource: finalVideoSource,
             notesPdfUrl: draft.notesPdfUrl.trim(),
             resourceLink: draft.notesPdfUrl.trim(),
             isFreePreview: draft.isFreePreview,
@@ -465,27 +490,112 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                     )}
                 </div>
 
-                {/* Row 2: video field + status */}
+                {/* Row 2: Video Source Selector */}
                 <div style={styles.formGroup}>
-                    <label style={styles.label}>Lesson Video</label>
-                    <input
-                        style={{
-                            ...styles.input,
-                            color: draft.videoUrl.includes('mediadelivery') ? '#10b981' : undefined
-                        }}
-                        value={draft.videoUrl}
-                        onChange={e => { setDraftField('videoUrl', e.target.value); setDraftField('videoProgress', null); }}
-                        placeholder="Upload a video below, or paste Bunny embed URL"
-                        readOnly={draft.videoProgress === 'uploading'}
-                    />
-                    {draft.videoProgress === 'uploading' && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, color: '#4ade80', fontSize: 12, fontWeight: 600 }}>
-                            <span style={{ display: 'inline-block', width: 11, height: 11, border: '2px solid rgba(74,222,128,0.3)', borderTopColor: '#4ade80', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-                            Uploading to Bunny Stream… (may take a few minutes for large files)
-                        </div>
+                    <label style={styles.label}>Lesson Video *</label>
+                    {/* Source toggle: Upload File / YouTube Link */}
+                    <div style={{ display: 'flex', gap: 0, marginBottom: 10 }}>
+                        <button
+                            type="button"
+                            onClick={() => setDraft(prev => ({ ...prev, videoSource: 'upload', youtubeUrl: '', youtubeValid: null, youtubeError: '', videoUrl: prev.videoSource === 'youtube' ? '' : prev.videoUrl, videoProgress: prev.videoSource === 'youtube' ? null : prev.videoProgress }))}
+                            style={{
+                                flex: 1, padding: '10px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                                border: '1.5px solid', borderRadius: '10px 0 0 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                                background: draft.videoSource !== 'youtube' ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.04)',
+                                color: draft.videoSource !== 'youtube' ? '#10b981' : '#64748b',
+                                borderColor: draft.videoSource !== 'youtube' ? 'rgba(34,197,94,0.4)' : 'rgba(71,85,105,0.3)'
+                            }}
+                        >
+                            <Video size={14} /> Upload Video File
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setDraft(prev => ({ ...prev, videoSource: 'youtube', videoUrl: '', videoProgress: null }))}
+                            style={{
+                                flex: 1, padding: '10px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                                border: '1.5px solid', borderRadius: '0 10px 10px 0', borderLeft: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                                background: draft.videoSource === 'youtube' ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.04)',
+                                color: draft.videoSource === 'youtube' ? '#ef4444' : '#64748b',
+                                borderColor: draft.videoSource === 'youtube' ? 'rgba(239,68,68,0.35)' : 'rgba(71,85,105,0.3)'
+                            }}
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                            YouTube Video Link
+                        </button>
+                    </div>
+
+                    {/* ── Upload mode ── */}
+                    {draft.videoSource !== 'youtube' && (
+                        <>
+                            <input
+                                style={{
+                                    ...styles.input,
+                                    color: draft.videoUrl.includes('/api/local-storage/') ? '#10b981' : undefined
+                                }}
+                                value={draft.videoUrl}
+                                onChange={e => { setDraftField('videoUrl', e.target.value); setDraftField('videoProgress', null); }}
+                                placeholder="Upload a video file or paste a video URL"
+                                readOnly={draft.videoProgress === 'uploading'}
+                            />
+                            {draft.videoProgress === 'uploading' && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, color: '#4ade80', fontSize: 12, fontWeight: 600 }}>
+                                    <span style={{ display: 'inline-block', width: 11, height: 11, border: '2px solid rgba(74,222,128,0.3)', borderTopColor: '#4ade80', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                                    Uploading video… (may take a few minutes for large files)
+                                </div>
+                            )}
+                            {draft.videoProgress === 'done' && <div style={{ marginTop: 5, color: '#10b981', fontSize: 12, fontWeight: 600 }}>✓ Video uploaded successfully</div>}
+                            {draft.videoProgress === 'error' && <div style={{ marginTop: 5, color: '#ef4444', fontSize: 12, fontWeight: 600 }}>✗ Video upload failed — try again</div>}
+                        </>
                     )}
-                    {draft.videoProgress === 'done' && <div style={{ marginTop: 5, color: '#10b981', fontSize: 12, fontWeight: 600 }}>✓ Video uploaded to Bunny Stream</div>}
-                    {draft.videoProgress === 'error' && <div style={{ marginTop: 5, color: '#ef4444', fontSize: 12, fontWeight: 600 }}>✗ Video upload failed — try again</div>}
+
+                    {/* ── YouTube mode ── */}
+                    {draft.videoSource === 'youtube' && (
+                        <>
+                            <input
+                                style={{
+                                    ...styles.input,
+                                    borderColor: draft.youtubeValid === false ? 'rgba(239,68,68,0.5)' : draft.youtubeValid === true ? 'rgba(16,185,129,0.5)' : undefined,
+                                    color: draft.youtubeValid === true ? '#10b981' : draft.youtubeValid === false ? '#ef4444' : undefined
+                                }}
+                                value={draft.youtubeUrl}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    setDraft(prev => ({ ...prev, youtubeUrl: val, youtubeValid: null, youtubeError: '' }));
+                                }}
+                                onBlur={() => {
+                                    if (draft.youtubeUrl.trim()) {
+                                        const validation = validateYouTubeUrl(draft.youtubeUrl);
+                                        setDraft(prev => ({ ...prev, youtubeValid: validation.valid, youtubeError: validation.error || '' }));
+                                    }
+                                }}
+                                placeholder="Paste YouTube video URL (e.g. https://www.youtube.com/watch?v=VIDEO_ID)"
+                            />
+                            {draft.youtubeValid === true && (
+                                <div style={{ marginTop: 5, color: '#10b981', fontSize: 12, fontWeight: 600 }}>
+                                    ✓ Valid YouTube video — will be played via YouTube embed
+                                </div>
+                            )}
+                            {draft.youtubeValid === false && draft.youtubeError && (
+                                <div style={{ marginTop: 5, color: '#ef4444', fontSize: 12, fontWeight: 600 }}>
+                                    ✗ {draft.youtubeError}
+                                </div>
+                            )}
+                            {draft.youtubeValid === true && extractYouTubeVideoId(draft.youtubeUrl) && (
+                                <div style={{ marginTop: 8, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(239,68,68,0.2)', background: '#000' }}>
+                                    <iframe
+                                        src={`https://www.youtube.com/embed/${extractYouTubeVideoId(draft.youtubeUrl)}`}
+                                        title="YouTube preview"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                        style={{ width: '100%', aspectRatio: '16/9', border: 'none' }}
+                                    />
+                                </div>
+                            )}
+                            <p style={{ margin: '6px 0 0', fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
+                                Supported formats: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/embed/ID. The video will be embedded from YouTube.
+                            </p>
+                        </>
+                    )}
                 </div>
 
                 {/* Row 3: PDF field + status */}
@@ -498,16 +608,16 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                         }}
                         value={draft.notesPdfUrl}
                         onChange={e => { setDraftField('notesPdfUrl', e.target.value); setDraftField('pdfProgress', null); }}
-                        placeholder="Upload a PDF below, or paste Bunny CDN URL"
+                        placeholder="Upload a PDF file"
                         readOnly={draft.pdfProgress === 'uploading'}
                     />
                     {draft.pdfProgress === 'uploading' && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, color: '#10b981', fontSize: 12, fontWeight: 600 }}>
                             <span style={{ display: 'inline-block', width: 11, height: 11, border: '2px solid rgba(16,185,129,0.3)', borderTopColor: '#10b981', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-                            Uploading PDF to Bunny Storage…
+                            Uploading PDF…
                         </div>
                     )}
-                    {draft.pdfProgress === 'done' && <div style={{ marginTop: 5, color: '#10b981', fontSize: 12, fontWeight: 600 }}>✓ PDF uploaded to Bunny Storage</div>}
+                    {draft.pdfProgress === 'done' && <div style={{ marginTop: 5, color: '#10b981', fontSize: 12, fontWeight: 600 }}>✓ PDF uploaded successfully</div>}
                     {draft.pdfProgress === 'error' && <div style={{ marginTop: 5, color: '#ef4444', fontSize: 12, fontWeight: 600 }}>✗ PDF upload failed — try again</div>}
                 </div>
 
@@ -519,17 +629,18 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                                 🎬 Video Concepts
                             </p>
                             <p style={{ margin: '2px 0 0', fontSize: 11, color: '#4ade80' }}>
-                                Divide one uploaded video into multiple learning concepts
+                                Divide one video into multiple learning concepts
                             </p>
                         </div>
                         <button type="button" onClick={addCheckpoint} style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: '#16a34a', border: 'none', color: '#fff',
-                            borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer'
-                        }}>
-                            <Plus size={13} /> Add Concept
-                        </button>
+                                display: 'inline-flex', alignItems: 'center', gap: 6,
+                                background: '#16a34a', border: 'none', color: '#fff',
+                                borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer'
+                            }}>
+                                <Plus size={13} /> Add Concept
+                            </button>
                     </div>
+                    <>
                     <p style={{ margin: '0 0 12px', fontSize: 11, color: '#64748b', lineHeight: 1.6 }}>
                         Each concept defines a <strong>start time</strong> and <strong>end time</strong> in the video. At the end time, the video pauses and shows a required quiz for that concept. Students must pass the quiz to continue. Each quiz needs <strong>3–5 questions</strong>.
                     </p>
@@ -672,6 +783,7 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                             </div>
                         </div>
                     ))}
+                    </>
                 </div>
 
                 {/* Row 4: action buttons */}
@@ -711,7 +823,7 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                         <Video size={14} />
                         {draft.videoProgress === 'uploading' ? 'Uploading…'
                             : draft.videoProgress === 'done' ? 'Video ✓'
-                            : 'Upload Video → Bunny'}
+                            : 'Upload Video →'}
                     </button>
 
                     {/* Hidden PDF input — unique to THIS chapter */}
@@ -739,7 +851,7 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                         <FileText size={14} />
                         {draft.pdfProgress === 'uploading' ? 'Uploading…'
                             : draft.pdfProgress === 'done' ? 'PDF ✓'
-                            : 'Upload PDF → Bunny'}
+                            : 'Upload PDF →'}
                     </button>
                 </div>
             </div>
@@ -1005,6 +1117,7 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
                 clientId:           l._id,                            // stable handle for lesson↔assignment linking
                 lessonTitle:        l.lessonTitle.trim(),
                 videoUrl:           l.videoUrl.trim(),
+                videoSource:        l.videoSource || 'upload',
                 notesPdfUrl:        l.notesPdfUrl   ? l.notesPdfUrl.trim()   : '',
                 resourceLink:       l.resourceLink  ? l.resourceLink.trim()  : '',
                 isFreePreview:      l.isFreePreview,
@@ -1374,8 +1487,8 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
                         </div>
                         <div style={styles.card}>
                             <div style={styles.cardHeader}><PlayCircle size={20} /> <span style={styles.cardTitle}>Preview Video</span></div>
-                            <p style={styles.cardDescription}>Paste the Bunny Stream embed URL for your course preview video.</p>
-                            <input style={styles.input} value={form.previewVideoUrl} onChange={e => setForm(p => ({ ...p, previewVideoUrl: e.target.value }))} placeholder="https://iframe.mediadelivery.net/embed/LIBRARY_ID/VIDEO_GUID" />
+                            <p style={styles.cardDescription}>Paste a YouTube URL or upload a video for your course preview.</p>
+                            <input style={styles.input} value={form.previewVideoUrl} onChange={e => setForm(p => ({ ...p, previewVideoUrl: e.target.value }))} placeholder="https://www.youtube.com/watch?v=..." />
                             {form.previewVideoUrl && <div style={styles.preview}>✓ Preview video URL saved.</div>}
                         </div>
                         <div style={{ ...styles.card, gridColumn: '1 / -1' }}>
