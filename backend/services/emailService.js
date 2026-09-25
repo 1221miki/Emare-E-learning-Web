@@ -2,6 +2,102 @@ const { Resend } = require('resend');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 
+const normalizePhoneNumber = (phone) => {
+    if (!phone) return '';
+
+    const digits = String(phone).replace(/\D/g, '');
+    if (!digits) return '';
+
+    if (digits.startsWith('+')) return digits.startsWith('+251') ? digits : `+${digits.replace(/^\+/, '')}`;
+    if (digits.startsWith('251') && digits.length === 12) return `+${digits}`;
+    if (digits.startsWith('0') && digits.length === 10) return `+251${digits.slice(1)}`;
+    if (digits.startsWith('9') && digits.length === 9) return `+251${digits}`;
+
+    return `+${digits}`;
+};
+
+const getSmsProviderConfig = () => {
+    const provider = (process.env.SMS_PROVIDER || process.env.SMS_GATEWAY || '').toLowerCase();
+    return {
+        provider,
+        twilioAccountSid: (process.env.TWILIO_ACCOUNT_SID || '').trim(),
+        twilioAuthToken: (process.env.TWILIO_AUTH_TOKEN || '').trim(),
+        twilioPhoneNumber: (process.env.TWILIO_PHONE_NUMBER || '').trim(),
+        textbeltApiKey: (process.env.TEXTBELT_API_KEY || '').trim(),
+        smsFrom: (process.env.SMS_FROM || process.env.TWILIO_PHONE_NUMBER || '').trim()
+    };
+};
+
+const sendPhoneVerificationCode = async (user, verificationCode) => {
+    const phone = normalizePhoneNumber(user?.contactPhone || user?.phoneNumber || user?.phone || '');
+    if (!phone) {
+        return { success: false, skipped: true, provider: 'none', message: 'No phone number is stored for this account.' };
+    }
+
+    const { provider, twilioAccountSid, twilioAuthToken, twilioPhoneNumber, textbeltApiKey } = getSmsProviderConfig();
+
+    if (provider === 'twilio' || (twilioAccountSid && twilioAuthToken && twilioPhoneNumber)) {
+        try {
+            const auth = Buffer.from(`${twilioAccountSid}:${twilioAuthToken}`).toString('base64');
+            const params = new URLSearchParams({
+                To: phone,
+                From: twilioPhoneNumber,
+                Body: `Your Emare verification code is ${verificationCode}. It expires in 15 minutes.`
+            });
+
+            const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Basic ${auth}`,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params.toString()
+            });
+
+            const responseText = await response.text();
+            if (!response.ok) {
+                throw new Error(responseText || 'Twilio SMS delivery failed.');
+            }
+
+            return { success: true, provider: 'twilio', message: `Verification SMS sent to ${phone}.` };
+        } catch (error) {
+            console.error('❌ Twilio SMS verification delivery failed:', error.message || error);
+            return { success: false, provider: 'twilio', message: error.message || 'Twilio SMS failed to send.' };
+        }
+    }
+
+    if (provider === 'textbelt' || textbeltApiKey) {
+        try {
+            const response = await fetch('https://api.textbelt.com/text', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    phone: phone.replace(/^\+/, ''),
+                    message: `Your Emare verification code is ${verificationCode}. It expires in 15 minutes.`,
+                    key: textbeltApiKey
+                })
+            });
+
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || payload?.success === false) {
+                throw new Error(payload?.message || 'Textbelt SMS delivery failed.');
+            }
+
+            return { success: true, provider: 'textbelt', message: `Verification SMS sent to ${phone}.` };
+        } catch (error) {
+            console.error('❌ Textbelt SMS verification delivery failed:', error.message || error);
+            return { success: false, provider: 'textbelt', message: error.message || 'Textbelt SMS failed to send.' };
+        }
+    }
+
+    return {
+        success: false,
+        skipped: true,
+        provider: 'none',
+        message: 'No SMS provider is configured. The verification code remains available through email and the app notification feed.'
+    };
+};
+
 /**
  * Email Service - Handles all transactional emails
  *
@@ -16,8 +112,6 @@ const crypto = require('crypto');
  *               500/day cap, with a minimum 1s gap between sends.
  *   aws-ses / mailgun — selected but unsupported SDK present: warns and falls
  *               back to SMTP so delivery never silently drops.
- *
- * If no provider is configured at all: DEV MODE — log only.
  */
 
 const emailService = (process.env.EMAIL_SERVICE || 'smtp').toLowerCase().trim();
@@ -56,33 +150,66 @@ if (unsupportedProvider) {
 // (SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_FROM) work out of the box.
 // Trim whitespace from all values — trailing newlines or spaces in .env files
 // cause Gmail 535 authentication failures that are hard to diagnose.
-const smtpHost = (process.env.EMAIL_HOST || process.env.SMTP_HOST || '').trim();
+const smtpHost = (
+    process.env.EMAIL_HOST ||
+    process.env.SMTP_HOST ||
+    (emailService === 'gmail' ? 'smtp.gmail.com' : '')
+).trim();
 const smtpUser = (process.env.EMAIL_USER || process.env.SMTP_USER || '').trim();
-const smtpPass = (process.env.EMAIL_PASSWORD || process.env.SMTP_PASS || '').trim();
+const rawSmtpPass = (process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS || process.env.SMTP_PASS || '').trim();
+const smtpPass = emailService === 'gmail' ? rawSmtpPass.replace(/\s+/g, '') : rawSmtpPass;
 const smtpFrom = (process.env.EMAIL_FROM || process.env.SMTP_FROM || smtpUser).trim();
-const smtpConfigured = !!(smtpHost && smtpUser && smtpPass);
+const smtpFromAddress = (String(smtpFrom).match(/<\s*([^>]+)\s*>/)?.[1] || smtpUser).trim();
 const smtpPort = Number(process.env.EMAIL_PORT || process.env.SMTP_PORT) || 587;
+const smtpSecure = smtpPort === 465;
+const smtpConfigured = !!(smtpHost && smtpUser && smtpPass && smtpFromAddress);
 const smtpTransport = smtpConfigured
     ? nodemailer.createTransport({
           host: smtpHost,
           port: smtpPort,
-          secure: smtpPort === 465,
-          // Gmail requires STARTTLS on port 587 — force the upgrade so auth never
-          // silently fails over a plaintext connection.
-          requireTLS: true,
+          secure: smtpSecure,
+          requireTLS: !smtpSecure,
           auth: { user: smtpUser, pass: smtpPass },
           connectionTimeout: 15000,
           socketTimeout: 20000,
-          // family: 4 avoids ENETUNREACH / IPv6 resolution issues seen with some hosts.
           connectionOptions: { family: 4 }
       })
     : null;
 
 const emailConfigured = resendConfigured || sendgridConfigured || brevoConfigured || smtpConfigured;
 
-// Reply-To address: replies from recipients go here (defaults to the sender so
-// providers that reject reply-less mail stay deliverable).
 const replyTo = process.env.EMAIL_REPLY_TO || process.env.SMTP_FROM || process.env.EMAIL_FROM || smtpUser || '';
+
+let smtpVerificationPromise = null;
+const logSmtpError = (context, error) => {
+    const code = error?.code || 'N/A';
+    console.error(`[Email SMTP] ${context} failed`, {
+        code,
+        message: error?.message || String(error),
+        host: smtpHost,
+        port: smtpPort
+    });
+    if (code === 'EAUTH') {
+        console.error('[Email SMTP] Check EMAIL_USER and EMAIL_PASSWORD/EMAIL_PASS in .env.');
+    }
+};
+const verifySmtpTransport = (force = false) => {
+    if (!smtpTransport) {
+        return Promise.reject(Object.assign(new Error('SMTP transport is not configured.'), { code: 'ESMTP' }));
+    }
+    if (force) smtpVerificationPromise = null;
+    if (!smtpVerificationPromise) {
+        smtpVerificationPromise = smtpTransport.verify().catch((error) => {
+            smtpVerificationPromise = null;
+            throw error;
+        });
+    }
+    return smtpVerificationPromise;
+};
+
+if (smtpTransport) {
+    smtpTransport.on('error', (error) => logSmtpError('transport event', error));
+}
 
 // ── Rate limiting ──────────────────────────────────────────────────────────
 // Guards the daily quota (critical for Gmail's 500/day free cap) and spaces
@@ -198,7 +325,7 @@ const buildAntiSpamHeaders = () => ({
     'X-Entity-Ref-ID': crypto.randomBytes(16).toString('hex'),
     'Precedence': 'Bulk',
     'X-Auto-Response-Suppress': 'OOF, AutoReply, RN, NDR, NRN',
-    'List-Unsubscribe': `<mailto:${smtpFrom || process.env.EMAIL_USER || ''}?subject=unsubscribe>`,
+    'List-Unsubscribe': `<mailto:${smtpFromAddress || process.env.EMAIL_USER || ''}?subject=unsubscribe>`,
     'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
 });
 
@@ -215,13 +342,9 @@ const buildAntiSpamHeaders = () => ({
 const sendEmail = async ({ to, subject, html, text }) => {
     const recipients = Array.isArray(to) ? to : [to];
 
-    // DEV MODE: log email content when no provider is configured, so registration
-    // can still proceed while warning that real delivery is unavailable.
     if (!emailConfigured) {
-        console.warn('📧 [DEV MODE] No email provider configured (EMAIL_SERVICE=resend + EMAIL_API_KEY, or EMAIL_* SMTP). Email not sent.');
-        console.warn(`   To: ${recipients.join(', ')}`);
-        console.warn(`   Subject: ${subject}`);
-        return { id: `dev_${Date.now()}`, devMode: true };
+        console.error('[Email] No email provider is configured. Email was not sent.');
+        throw new Error('No email provider is configured.');
     }
 
     const failures = [];
@@ -336,6 +459,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
         for (let attempt = 1; attempt <= attempts; attempt++) {
             try {
                 await enforceRateLimit('smtp');
+                await verifySmtpTransport();
                 const info = await smtpTransport.sendMail({
                     from: smtpFrom,
                     to: recipients,
@@ -347,15 +471,16 @@ const sendEmail = async ({ to, subject, html, text }) => {
                     ...(replyTo ? { replyTo } : {}),
                     text,
                     headers: buildAntiSpamHeaders(),
-                    envelope: { from: smtpFrom, to: recipients }
+                    envelope: { from: smtpFromAddress, to: recipients }
                 });
                 return { id: info.messageId };
             } catch (error) {
+                smtpVerificationPromise = null;
                 const isDailyLimit = error.message && error.message.startsWith('EMAIL_DAILY_LIMIT');
                 failures.push(isDailyLimit
                     ? 'SMTP: daily sending limit reached'
                     : `SMTP (attempt ${attempt}): ${error.message}`);
-                console.error(`SMTP Email API Error (attempt ${attempt}/${attempts}):`, error.message || error);
+                logSmtpError(`send attempt ${attempt}/${attempts}`, error);
                 if (!isDailyLimit && attempt < attempts) {
                     await new Promise((resolve) => setTimeout(resolve, 1000));
                 }
@@ -374,12 +499,13 @@ const logEmailTransportStatus = () => {
     } else if (brevoConfigured) {
         console.log(`📧 Email service configured: Brevo HTTP API (from: ${brevoFromEmail}) — rate-limited to ${getDailyLimit('brevo')} emails/day.`);
     } else if (smtpConfigured) {
-        console.log(`📧 Email service configured: SMTP (${smtpHost}:${smtpPort}) — rate-limited to ${getDailyLimit('smtp')} emails/day.`);
+        const providerName = emailService === 'gmail' ? 'Gmail SMTP' : 'SMTP';
+        console.log(`📧 Email service configured: ${providerName} (${smtpHost}:${smtpPort}) — rate-limited to ${getDailyLimit('smtp')} emails/day.`);
         if (process.env.NODE_ENV === 'production') {
             console.warn('⚠️  SMTP is configured in production. SMTP relays (e.g. Gmail) enforce daily quotas and are not recommended — set EMAIL_SERVICE=resend + EMAIL_API_KEY or EMAIL_SERVICE=sendgrid + SENDGRID_API_KEY for reliable production delivery.');
         }
     } else {
-        console.warn('📧 Email service running in fallback/dev mode (set EMAIL_SERVICE=resend|sendgrid + API key, or SMTP_* credentials).');
+        console.warn('📧 Email service is not configured. Set EMAIL_SERVICE=gmail, EMAIL_USER, and EMAIL_PASSWORD (or EMAIL_PASS).');
     }
 };
 
@@ -391,18 +517,10 @@ setTimeout(logEmailTransportStatus, 100);
 // when the first email fails. Does NOT block server startup.
 if (smtpConfigured) {
     setTimeout(() => {
-        console.log(`📧 SMTP: verifying connection to ${smtpHost}:${smtpPort} as ${smtpUser}...`);
-        smtpTransport.verify()
+        console.log(`📧 SMTP: verifying connection to ${smtpHost}:${smtpPort}...`);
+        verifySmtpTransport()
             .then(() => console.log('✅ SMTP connection verified successfully.'))
-            .catch(err => {
-                console.error('❌ SMTP connection verification FAILED:');
-                console.error('   Error code:', err.code || 'N/A');
-                console.error('   Error message:', err.message);
-                if (err.code === 'EAUTH') {
-                    console.error('   → SMTP authentication failed. Check SMTP_USER and SMTP_PASS in .env.');
-                }
-                console.error('   Config used:', { host: smtpHost, port: smtpPort, user: smtpUser, passLength: smtpPass.length });
-            });
+            .catch((error) => logSmtpError('startup verification', error));
     }, 200); // small delay so the server starts listening first
 }
 
@@ -413,25 +531,25 @@ if (smtpConfigured) {
  */
 const testSmtpConnection = async () => {
     if (!smtpConfigured) {
-        return { success: false, provider: 'none', message: 'No email provider configured. Set EMAIL_SERVICE and SMTP_* or RESEND_API_KEY in .env.' };
+        return { success: false, provider: 'none', message: 'No SMTP provider configured. Set EMAIL_SERVICE=gmail, EMAIL_USER, and EMAIL_PASSWORD (or EMAIL_PASS) in .env.' };
     }
     try {
-        await smtpTransport.verify();
-        return { success: true, provider: 'smtp', host: smtpHost, port: smtpPort, user: smtpUser };
+        await verifySmtpTransport(true);
+        return { success: true, provider: emailService === 'gmail' ? 'gmail' : 'smtp', host: smtpHost, port: smtpPort };
     } catch (err) {
+        logSmtpError('manual verification', err);
         const detail = {
             success: false,
-            provider: 'smtp',
+            provider: emailService === 'gmail' ? 'gmail' : 'smtp',
             host: smtpHost,
             port: smtpPort,
-            user: smtpUser,
             errorCode: err.code || null,
             errorMessage: err.message || 'Unknown error'
         };
         if (err.code === 'EAUTH') {
-            detail.hint = 'SMTP authentication failed. Check SMTP_USER and SMTP_PASS in .env.';
+            detail.hint = 'SMTP authentication failed. Check EMAIL_USER and EMAIL_PASSWORD/EMAIL_PASS in .env.';
         } else if (err.code === 'ECONNECTION' || err.code === 'ETIMEDOUT') {
-            detail.hint = 'Cannot reach the SMTP server. Check SMTP_HOST and SMTP_PORT, or ensure outbound port 587 is not blocked.';
+            detail.hint = 'Cannot reach the SMTP server. Check EMAIL_HOST/EMAIL_PORT, or ensure outbound port 587 is not blocked.';
         }
         return detail;
     }
@@ -707,6 +825,17 @@ const sendEmailVerification = async (user, verificationCode) => {
  * API response — only its SHA-256 hash + expiry are persisted.
  */
 const sendTwoFactorCodeEmail = async (user, code) => {
+    const phoneNumber = normalizePhoneNumber(user?.contactPhone || user?.phoneNumber || user?.phone || '');
+    const smsConfig = getSmsProviderConfig();
+
+    if (phoneNumber && (smsConfig.provider === 'twilio' || smsConfig.provider === 'textbelt' || smsConfig.twilioAccountSid || smsConfig.textbeltApiKey)) {
+        const smsResult = await sendPhoneVerificationCode(user, code);
+        if (smsResult.success) {
+            return { success: true, messageId: `sms_${phoneNumber}` };
+        }
+        return { success: false, error: smsResult.message || 'SMS delivery failed.' };
+    }
+
     const expiryStr = '10 minutes';
     const htmlTemplate = `
     <!DOCTYPE html>
@@ -1215,6 +1344,8 @@ const sendDiscountEmail = async (toEmail, couponCode, expiresAt) => {
 };
 
 module.exports = {
+    normalizePhoneNumber,
+    sendPhoneVerificationCode,
     sendEmail,
     sendPasswordResetEmail,
     sendPasswordResetConfirmationEmail,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -134,7 +134,17 @@ export default function RegisterPage() {
                 fullName: `${form.firstName} ${form.middleName ? form.middleName + ' ' : ''}${form.lastName}`.trim()
             };
             const response = await register(payload);
-            navigate(`/verify-email?email=${encodeURIComponent(form.accountEmail.trim().toLowerCase())}`);
+            if (!response?.success) {
+                setError(response?.message || 'Unable to complete registration. Please try again.');
+                return;
+            }
+            const normalizedEmail = form.accountEmail.trim().toLowerCase();
+            navigate(`/verify-email?email=${encodeURIComponent(normalizedEmail)}`, {
+                state: {
+                    email: normalizedEmail,
+                    success: response.message || 'Verification code sent to your email.'
+                }
+            });
         } catch (err) {
             console.error('[Register] Registration failed:', err?.response?.data || err?.message || err);
             setError(getErrorMessage(err));
@@ -203,8 +213,6 @@ export default function RegisterPage() {
     const titleStyle = { ...styles.title, color: colors.text };
     const subtitleStyle = { ...styles.subtitle, color: colors.textMuted };
     const sectionHeaderStyle = { ...styles.sectionHeader, color: colors.text };
-    const footerTextStyle = { ...styles.footerText, color: colors.textMuted };
-    const linkStyle = { ...styles.link, color: colors.primary };
 
     const inputStyle = {
         ...styles.input,
@@ -226,12 +234,6 @@ export default function RegisterPage() {
     const fieldStyle = (name) => {
         const target = FIELD_MAP[name] || name;
         return fieldErrors[target] ? { ...inputStyle, border: '1px solid #ef4444' } : inputStyle;
-    };
-
-    const modalStyle = {
-        ...styles.modalContent,
-        background: colors.bgCard,
-        border: `1px solid ${colors.border}`
     };
 
     return (

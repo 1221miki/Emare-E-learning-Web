@@ -127,7 +127,7 @@ const createUser = async (req, res, next) => {
         const administratorId = assignedRole === 'Admin' ? `ADM-${Date.now()}-${randomSuffix}` : undefined;
 
         // Generate email verification OTP
-        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const verificationCode = crypto.randomInt(100000, 1000000).toString();
         const hashedVerificationCode = crypto.createHash('sha256').update(verificationCode).digest('hex');
         const verificationExpire = Date.now() + 15 * 60 * 1000; // 15 minutes — matches email template + resend flow
 

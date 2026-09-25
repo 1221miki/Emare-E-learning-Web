@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FaArrowLeft, FaCheckCircle, FaExclamationCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
@@ -82,14 +82,14 @@ export default function VerifyEmailPage() {
     const [resendError, setResendError] = useState('');
     const [resendSuccess, setResendSuccess] = useState('');
     const [showCode, setShowCode] = useState(false);
-    const [secondsRemaining, setSecondsRemaining] = useState(0);
+    const [resendSecondsRemaining, setResendSecondsRemaining] = useState(0);
 
     useEffect(() => {
         if (!email) {
             setError('Email is required to verify your account. Please use the link from your email.');
             return;
         }
-        setSecondsRemaining(30);
+        setResendSecondsRemaining(30);
     }, [email]);
 
     // Keep the (disabled) email input in sync if the query param changes while mounted.
@@ -98,14 +98,23 @@ export default function VerifyEmailPage() {
     }, [email]);
 
     useEffect(() => {
-        if (secondsRemaining <= 0) return;
+        if (resendSecondsRemaining <= 0) return;
         const timer = window.setInterval(() => {
-            setSecondsRemaining((prev) => Math.max(prev - 1, 0));
+            setResendSecondsRemaining((prev) => Math.max(prev - 1, 0));
         }, 1000);
         return () => window.clearInterval(timer);
-    }, [secondsRemaining]);
+    }, [resendSecondsRemaining]);
 
-    const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const handleChange = (e) => {
+        const value = e.target.name === 'verificationCode'
+            ? e.target.value.replace(/\D/g, '').slice(0, 6)
+            : e.target.value;
+        setForm(prev => ({ ...prev, [e.target.name]: value }));
+        if (e.target.name === 'verificationCode') {
+            setError('');
+            setSuccess('');
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -117,9 +126,18 @@ export default function VerifyEmailPage() {
             return;
         }
 
+        if (!/^\d{6}$/.test(form.verificationCode.trim())) {
+            setError('Enter a valid 6-digit verification code.');
+            return;
+        }
+
         setLoading(true);
         try {
             const response = await verifyEmail({ accountEmail: form.accountEmail.trim().toLowerCase(), verificationCode: form.verificationCode.trim() });
+            if (!response?.success) {
+                setError(response?.message || 'Unable to verify email. Please try again.');
+                return;
+            }
             setSuccess(response.message || 'Email verified successfully. Redirecting to login...');
             setTimeout(() => navigate('/login', { state: { success: response.message || 'Email verified successfully. Please log in.' } }), 1300);
         } catch (err) {
@@ -143,24 +161,15 @@ export default function VerifyEmailPage() {
         try {
             const response = await resendVerification({ accountEmail: normalizeEmail(currentEmail) });
 
-            // Defensive: the server should signal failures via non-2xx, but if it
-            // ever replies 200 with success:false, surface the message instead of
-            // claiming success.
-            if (response && response.success === false) {
-                setResendError(response.message || 'Failed to resend verification code.');
+            if (!response?.success) {
+                setResendError(response?.message || 'Unable to send a new verification code.');
                 return;
             }
 
-            const successMessage = response?.message || 'A new verification code has been sent.';
+            const successMessage = response.message || 'A new verification code has been sent.';
+            setError('');
             setResendSuccess(successMessage);
-
-            // Dev-mode convenience: auto-fill the returned code so testing is friction-free.
-            if (response?.verificationCode && import.meta.env.DEV) {
-                console.log('Dev Verification Code:', response.verificationCode);
-                setForm(prev => ({ ...prev, verificationCode: response.verificationCode }));
-            }
-
-            setSecondsRemaining(30);
+            setResendSecondsRemaining(30);
         } catch (err) {
             setResendError(extractErrorMessage(err, 'Failed to resend verification code.'));
         } finally {
@@ -195,9 +204,9 @@ export default function VerifyEmailPage() {
                     </div>
                 )}
 
-                {secondsRemaining > 0 && !success && (
+                {resendSecondsRemaining > 0 && !success && (
                     <div style={styles.expiryNotice}>
-                        Your verification code expires in <strong>{secondsRemaining}s</strong>. You can resend a new code when the timer reaches zero.
+                        You can request a new verification code in <strong>{resendSecondsRemaining}s</strong>.
                     </div>
                 )}
 
@@ -222,6 +231,10 @@ export default function VerifyEmailPage() {
                                 name="verificationCode"
                                 value={form.verificationCode}
                                 onChange={handleChange}
+                                inputMode="numeric"
+                                autoComplete="one-time-code"
+                                maxLength={6}
+                                pattern="[0-9]{6}"
                                 placeholder="Enter 6-digit code"
                                 style={{ ...styles.input, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }}
                             />
@@ -231,7 +244,7 @@ export default function VerifyEmailPage() {
                         </div>
                     </div>
 
-                    <button type="submit" style={loading ? { ...styles.btn, opacity: 0.7 } : styles.btn} disabled={loading || !!error}>
+                    <button type="submit" style={loading ? { ...styles.btn, opacity: 0.7 } : styles.btn} disabled={loading || !form.accountEmail}>
                         {loading ? 'Verifying...' : 'Verify Email'}
                     </button>
                 </form>
@@ -240,11 +253,11 @@ export default function VerifyEmailPage() {
                     <p style={styles.resendText}>Didn't receive the code?</p>
                     <button
                         type="button"
-                        style={secondsRemaining > 0 || resendLoading ? { ...styles.resendBtn, opacity: 0.6, cursor: 'not-allowed' } : styles.resendBtn}
+                        style={resendSecondsRemaining > 0 || resendLoading ? { ...styles.resendBtn, opacity: 0.6, cursor: 'not-allowed' } : styles.resendBtn}
                         onClick={handleResend}
-                        disabled={secondsRemaining > 0 || resendLoading || !!error}
+                        disabled={resendSecondsRemaining > 0 || resendLoading || !form.accountEmail}
                     >
-                        {resendLoading ? 'Resending...' : secondsRemaining > 0 ? `Resend code in ${secondsRemaining}s` : 'Resend code'}
+                        {resendLoading ? 'Resending...' : resendSecondsRemaining > 0 ? `Resend code in ${resendSecondsRemaining}s` : 'Resend code'}
                     </button>
                 </div>
 

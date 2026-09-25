@@ -161,6 +161,29 @@ textarea {
   font: inherit;
 }
 
+input,
+select,
+textarea {
+  border: 1px solid var(--emare-border);
+  background: var(--emare-bg-card);
+  color: var(--emare-text);
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: rgba(21, 128, 61, 0.42);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--emare-primary);
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.16);
+  outline: none;
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;
@@ -210,6 +233,27 @@ option {
   background-color: #1e293b !important;
   color: #ffffff !important;
   padding: 8px 12px;
+}
+
+[data-theme='dark'] input,
+[data-theme='dark'] select,
+[data-theme='dark'] textarea,
+.dark input,
+.dark select,
+.dark textarea {
+  color-scheme: dark;
+  background-color: var(--emare-bg-card);
+}
+
+[data-theme='dark'] input:-webkit-autofill,
+[data-theme='dark'] input:-webkit-autofill:hover,
+[data-theme='dark'] input:-webkit-autofill:focus,
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #172235 inset !important;
+  -webkit-text-fill-color: #dbe2f0 !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 [data-theme='light'] select,

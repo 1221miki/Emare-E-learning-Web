@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const qrcode = require('qrcode');
@@ -9,6 +10,7 @@ const {
     sendAccountCreatedEmail,
     sendEmailVerification,
     sendTwoFactorCodeEmail,
+    sendPhoneVerificationCode,
     sanitizeEmailError,
     isRateLimitError,
     resetEmailDailyCounter,
@@ -117,8 +119,9 @@ const isTwoFactorCodeValid = (user, code) => {
 // ─────────────────────────────────────────────
 const register = async (req, res, next) => {
     try {
-        const { fullName, accountEmail, email, securedPassword, password, assignedRole, username } = req.body;
+        const { fullName, accountEmail, email, securedPassword, password, assignedRole, username, phoneNumber, contactPhone } = req.body;
         const normalizedEmail = (accountEmail || email || '').trim().toLowerCase();
+        const normalizedPhone = (phoneNumber || contactPhone || '').toString().replace(/[-\s]/g, '').trim();
         const newPassword = securedPassword || password;
 
         // ── 1. Required-field validation → 400 ─────────────────────────────
@@ -130,6 +133,14 @@ const register = async (req, res, next) => {
                     ? 'Please provide full name, email, and password.'
                     : `Please provide ${missing}.`,
                 field: missing
+            });
+        }
+
+        if (normalizedPhone && !/^(09|07)\d{8}$/.test(normalizedPhone)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Phone number must start with 09 or 07 and contain exactly 10 digits.',
+                field: 'phoneNumber'
             });
         }
 
@@ -148,9 +159,11 @@ const register = async (req, res, next) => {
             }
         }
 
-        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const hashedVerificationCode = crypto.createHash('sha256').update(verificationCode).digest('hex');
-        const verificationExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
+        const {
+            code: verificationCode,
+            token: hashedVerificationCode,
+            expiresAt: verificationExpire
+        } = createEmailVerification();
 
         // ── 4. Create user (password is hashed in the pre-save hook) ───────
         //     Explicitly catch duplicate-key races (two concurrent signups with
@@ -163,6 +176,7 @@ const register = async (req, res, next) => {
                 securedPassword: newPassword,
                 assignedRole: assignedRole || 'Student',
                 username: username || undefined,
+                contactPhone: normalizedPhone || undefined,
                 isEmailVerified: false,
                 emailVerificationToken: hashedVerificationCode,
                 emailVerificationExpire: verificationExpire
@@ -186,19 +200,38 @@ const register = async (req, res, next) => {
             targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
 
         // ── 6. Build success payload ──────────────────────────────────────
-        // No fallback OTP is ever returned — codes are delivered ONLY through
-        // the email provider so they can never leak into an API response.
+        // Email OTP is the required registration verification path; the code is
+        // delivered only through the user's email inbox and never returned in the API response.
         const responsePayload = {
             success: true,
-            message: 'Registration successful. Please verify your email with the OTP sent to your inbox.'
+            message: 'Registration successful. Verification code sent to your email.'
         };
 
-        // ── 7. Verification email — roll back on failure so retries work ──
+        // ── 7. Registration notification — available to the app / notification feed ──
+        try {
+            await Notification.create({
+                recipientRef: user._id,
+                type: 'system',
+                title: 'Welcome to Emare',
+                message: 'Your student account was created successfully. Please verify your email to activate your profile.',
+                link: '/verify-email',
+                metadata: { source: 'registration', phoneNumber: normalizedPhone || '' }
+            });
+        } catch (notificationErr) {
+            console.error(`⚠️ Failed to create registration notification for ${user.accountEmail}:`, notificationErr?.message || notificationErr);
+        }
+
+        // ── 8. Verification email — required registration verification path ──
         const emailResult = await sendEmailVerification(user, verificationCode);
         if (!emailResult.success) {
             console.error(`❌ Failed to send verification email to ${user.accountEmail}: ${emailResult.error}`);
+            await Notification.deleteMany({ recipientRef: user._id }).catch(() => {});
             await User.findByIdAndDelete(user._id).catch(() => {});
-            return res.status(500).json({ success: false, message: 'Failed to send email', field: 'accountEmail' });
+            return res.status(502).json({
+                success: false,
+                message: 'Unable to send verification email. Please try again.',
+                field: 'accountEmail'
+            });
         }
         console.log(`✅ Verification email sent to ${user.accountEmail}`);
 
@@ -465,18 +498,8 @@ const resendVerificationCode = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'This email is already verified. You can proceed to sign in.' });
         }
 
-        // Generate a fresh 6-digit code; persist only its SHA-256 hash + 15-minute
-        // expiry so a leaked DB never exposes usable codes. A new code is saved on
-        // every resend, invalidating any previously issued (possibly consumed) code.
         const { code: verificationCode, token, expiresAt } = createEmailVerification();
-        user.emailVerificationToken = token;
-        user.emailVerificationExpire = expiresAt;
-        await user.save({ validateBeforeSave: false });
 
-        // Attempt delivery; sendEmailVerification already swallows transport
-        // failures and returns { success: false, error } instead of throwing.
-        // The defensive try/catch guards against an unexpected throw so the API
-        // ALWAYS replies with a clean JSON error payload — never an HTML 500.
         let emailResult;
         try {
             emailResult = await sendEmailVerification(user, verificationCode);
@@ -486,13 +509,10 @@ const resendVerificationCode = async (req, res, next) => {
         }
 
         if (!emailResult.success) {
-            console.error(`❌ Failed to resend verification email to ${user.accountEmail}:`, emailResult.error);
+            const errorText = emailResult.error || 'Unknown delivery error.';
+            const friendlyMessage = sanitizeEmailError(errorText);
+            const rateLimited = isRateLimitError(errorText);
 
-            const friendlyMessage = sanitizeEmailError(emailResult.error);
-            const rateLimited = isRateLimitError(emailResult.error);
-
-            // Report the failure cleanly — no raw SMTP traces, no fallback codes.
-            // A clear error lets the UI keep the 30s cooldown and offer Retry.
             return res.status(rateLimited ? 429 : 502).json({
                 success: false,
                 message: friendlyMessage,
@@ -501,7 +521,11 @@ const resendVerificationCode = async (req, res, next) => {
             });
         }
 
-        console.log(`✅ Resend verification email sent successfully to ${user.accountEmail}`);
+        user.emailVerificationToken = token;
+        user.emailVerificationExpire = expiresAt;
+        await user.save({ validateBeforeSave: false });
+
+        console.log(`✅ Resend verification code sent successfully to ${user.accountEmail}`);
         return res.status(200).json({
             success: true,
             message: 'A new verification code was sent to your email. It expires in 15 minutes.'
@@ -520,6 +544,10 @@ const verifyEmail = async (req, res, next) => {
 
         if (!normalizedEmail || !code) {
             return res.status(400).json({ success: false, message: 'Email and verification code are required.' });
+        }
+
+        if (!/^\d{6}$/.test(code)) {
+            return res.status(400).json({ success: false, message: 'Invalid verification code.' });
         }
 
         const user = await User.findOne({ accountEmail: normalizedEmail })

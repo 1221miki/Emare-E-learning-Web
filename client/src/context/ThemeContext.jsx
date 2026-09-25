@@ -26,7 +26,7 @@ const DARK = {
     // Surfaces — one coherent slate ramp (bg < card < elevated)
     bg: '#0b1120',
     bgCard: '#111a2e',
-    bgInput: 'rgba(148,163,184,0.10)',
+    bgInput: '#172235',
     bgDarker: 'rgba(10,15,28,0.72)',
     bgDarkest: 'rgba(7,11,22,0.85)',
     border: '#24304d',
