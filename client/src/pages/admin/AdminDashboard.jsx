@@ -3815,7 +3815,7 @@ const resetCalendarForm = () => {
             </div>
 
             {/* -"?-"? Create / Edit Event Modal -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"? */}
-            <Modal isOpen={isEventModalOpen} onClose={resetCalendarForm} title={calendarEditingId ? 'Edit Event' : 'Create Event'} maxWidth="680px" scrollable>
+            <Modal isOpen={isEventModalOpen} onClose={resetCalendarForm} title={calendarEditingId ? 'Edit Event' : 'Create Event'} maxWidth="680px" scrollable closeOnBackdrop={false}>
                 <form onSubmit={handleSaveCalendarEvent} style={{ display: 'grid', gap: 16 }}>
                     {formError && (
                         <div style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: `1px solid ${colors.danger}`, color: colors.danger, fontSize: 13, fontWeight: 600 }}>{formError}</div>

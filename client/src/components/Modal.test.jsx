@@ -59,4 +59,18 @@ describe('Modal scrollable mode', () => {
         expect(scrollableBody(container)).toBeNull();
         expect(container.querySelector('[style*="100vh"]')).toBeNull();
     });
+
+    it('does not close when the backdrop is clicked if closeOnBackdrop is disabled', () => {
+        const onClose = vi.fn();
+        const { container } = render(
+            <Modal isOpen onClose={onClose} title="Create Event" closeOnBackdrop={false}>
+                <form>
+                    <input name="title" placeholder="Event title" />
+                </form>
+            </Modal>
+        );
+
+        fireEvent.click(container.firstChild);
+        expect(onClose).not.toHaveBeenCalled();
+    });
 });

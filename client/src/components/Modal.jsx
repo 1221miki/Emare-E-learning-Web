@@ -14,10 +14,11 @@ import { useEffect, useRef } from 'react';
  *   and the body scrolls vertically while the header stays fixed (default: false)
  * @param {string} maxHeight - Optional max height override when scrollable
  *   (default: calc(100vh - 80px))
+ * @param {boolean} closeOnBackdrop - Whether clicking the backdrop closes the modal
  * @param {string} backdrop - Backdrop style: 'default' (dark + blur, default) or
  *   'clear' (light overlay, no blur, keeps the underlying page clearly visible)
  */
-export default function Modal({ isOpen, onClose, title, children, maxWidth = '480px', scrollable = false, maxHeight, backdrop = 'default' }) {
+export default function Modal({ isOpen, onClose, title, children, maxWidth = '480px', scrollable = false, maxHeight, closeOnBackdrop = true, backdrop = 'default' }) {
     const modalRef = useRef(null);
 
     // Close on Escape key press
@@ -42,7 +43,10 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = '48
     if (!isOpen) return null;
 
     return (
-        <div style={backdrop === 'clear' ? styles.backdropClear : styles.backdrop} onClick={onClose}>
+        <div
+            style={backdrop === 'clear' ? styles.backdropClear : styles.backdrop}
+            onClick={closeOnBackdrop ? onClose : undefined}
+        >
             <div
                 ref={modalRef}
                 style={{

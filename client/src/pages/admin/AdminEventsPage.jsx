@@ -1223,7 +1223,7 @@ export default function AdminEventsPage() {
             {/* ── Create Event Modal ────────────────────────────── */}
             {createOpen && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
-                    <div className="absolute inset-0 bg-black/20" onClick={resetCreateForm} />
+                    <div className="absolute inset-0 bg-black/20" />
                     <div className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-green-600/25 bg-[#12131A] shadow-[0_24px_80px_rgba(2,6,23,0.6)]">
                         {/* Dark header */}
                         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#12131A] px-6 py-4">
