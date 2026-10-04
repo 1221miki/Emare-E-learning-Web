@@ -1,0 +1,20 @@
+{
+  "watch": [
+    "server.js",
+    "config",
+    "controllers",
+    "middleware",
+    "models",
+    "routes",
+    "scripts",
+    "services",
+    "utils"
+  ],
+  "ignore": [
+    "public/uploads/**",
+    "public/temp/**",
+    "tmp/**",
+    "uploads/**",
+    "*.log"
+  ]
+}

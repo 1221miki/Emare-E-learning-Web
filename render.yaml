@@ -1,0 +1,55 @@
+services:
+  - type: web
+    name: emare-elms-backend
+    env: node
+    region: oregon
+    # Build: Install dependencies and build React SPA with proper error handling
+    # Exit immediately if any step fails (set -e)
+    buildCommand: |
+      bash -c 'set -e
+      echo "📦 Installing root dependencies..."
+      npm install --omit=dev
+      echo "📦 Installing backend dependencies..."
+      npm --prefix backend install --omit=dev
+      echo "📦 Installing client dependencies..."
+      npm --prefix client install --omit=dev
+      echo "🔨 Building React SPA with Vite..."
+      npm --prefix client run build
+      echo "✅ Verifying build output..."
+      test -f client/dist/index.html || (echo "❌ ERROR: client/dist/index.html not found!" && exit 1)
+      echo "✅ BUILD SUCCESSFUL - SPA is ready to serve"'
+    startCommand: node backend/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRE
+        value: 120m
+      # The ACTIVE website that serves the React SPA (and its /verify-certificate/:id page).
+      # Certificates' QR codes point here. asamenew.onrender.com is API-only (no SPA) — it
+      # must NOT be used as FRONTEND_URL or scanning a QR returns a 404 "not found" page.
+      - key: FRONTEND_URL
+        value: https://asamnew-emare-elearning.vercel.app
+      - key: APP_BASE_URL
+        value: https://asamenew.onrender.com
+      - key: GOOGLE_REDIRECT_URI
+        value: https://asamenew.onrender.com/api/calendar/google/callback
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+      - key: ZOOM_ACCOUNT_ID
+        sync: false
+      - key: ZOOM_CLIENT_ID
+        sync: false
+      - key: ZOOM_CLIENT_SECRET
+        sync: false

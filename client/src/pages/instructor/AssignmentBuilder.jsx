@@ -1,0 +1,130 @@
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import { courseService, assignmentService, uploadService } from '../../services/api';
+
+export default function AssignmentBuilder() {
+    const { colors } = useTheme();
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const { search } = useLocation();
+    const params = new URLSearchParams(search);
+    const preCourse = params.get('course') || '';
+
+    const [courses, setCourses] = useState([]);
+    const [form, setForm] = useState({
+        courseRef: preCourse,
+        title: '',
+        description: '',
+        instructions: '',
+        maxScore: 100,
+        aiTutorEnabled: true,
+        attachment: null,
+        attachmentPreview: ''
+    });
+    const [msg, setMsg] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const res = await courseService.getInstructorCourses();
+                setCourses(res.data.data || []);
+                if (!form.courseRef && res.data.data?.length > 0) setForm(prev => ({ ...prev, courseRef: res.data.data[0]._id }));
+            } catch (err) {
+                console.error('Failed to load courses', err);
+            }
+        };
+        load();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const onFile = (e) => {
+        const f = e.target.files?.[0] || null;
+        setForm(prev => ({ ...prev, attachment: f, attachmentPreview: f ? f.name : '' }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!form.courseRef) return setMsg('Select a course');
+        if (!form.title.trim()) return setMsg('Provide a title');
+        setSubmitting(true); setMsg('');
+        try {
+            const payload = {
+                courseRef: form.courseRef,
+                title: form.title,
+                description: form.description,
+                instructions: form.instructions,
+                maxScore: Number(form.maxScore),
+                aiTutorEnabled: form.aiTutorEnabled !== false,
+                published: false
+            };
+
+            if (form.attachment) {
+                const fd = new FormData();
+                fd.append('file', form.attachment);
+                const up = await uploadService.uploadFile(fd);
+                if (up.data?.success) {
+                    payload.attachments = [{ filename: form.attachment.name, url: up.data.data.url, mimeType: form.attachment.type, size: form.attachment.size }];
+                }
+            }
+
+            const res = await assignmentService.create(payload);
+            setMsg('Assignment created. You can publish it from the dashboard.');
+            setSubmitting(false);
+            // navigate back to dashboard and show the content tab
+            navigate('/instructor/dashboard');
+        } catch (err) {
+            setMsg(err.response?.data?.message || 'Failed to create assignment');
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <div style={{ padding: 28 }}>
+            <div style={{ maxWidth: 920, margin: '0 auto' }}>
+                <h2 style={{ color: colors.text, marginBottom: 6 }}>Add Assignment</h2>
+                <p style={{ color: colors.textMuted, marginTop: 0 }}>Create an assignment with optional PDF/Word/Video attachment. Students complete it at their own pace when they reach the lesson.</p>
+                <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 12, marginTop: 20 }}>
+                    <div>
+                        <label style={{ color: colors.textMuted, fontSize: 13 }}>Course</label>
+                        <select value={form.courseRef} onChange={e => setForm({ ...form, courseRef: e.target.value })} style={{ display: 'block', width: '100%', padding: '10px', borderRadius: 8, background: colors.bgInput, color: colors.text }}>
+                            <option value="">Choose a course</option>
+                            {courses.map(c => <option key={c._id} value={c._id}>{c.courseTitle}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label style={{ color: colors.textMuted, fontSize: 13 }}>Title</label>
+                        <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: 8, background: colors.bgInput, color: colors.text }} required />
+                    </div>
+                    <div>
+                        <label style={{ color: colors.textMuted, fontSize: 13 }}>Description</label>
+                        <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} style={{ width: '100%', minHeight: 80, padding: '10px', borderRadius: 8, background: colors.bgInput, color: colors.text }} />
+                    </div>
+                    <div>
+                        <label style={{ color: colors.textMuted, fontSize: 13 }}>Instructions</label>
+                        <textarea value={form.instructions} onChange={e => setForm({ ...form, instructions: e.target.value })} style={{ width: '100%', minHeight: 120, padding: '10px', borderRadius: 8, background: colors.bgInput, color: colors.text }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: '12px 14px', borderRadius: 8, border: `1px solid ${form.aiTutorEnabled !== false ? '#a7f3d0' : '#fecaca'}`, background: form.aiTutorEnabled !== false ? '#f0fdf4' : '#fef2f2' }}>
+                        <label style={{ margin: 0, fontWeight: 700, fontSize: 13, color: colors.text }}>⊡ Emare AI Tutor</label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700, color: form.aiTutorEnabled !== false ? '#059669' : '#dc2626' }}>
+                            <input type="checkbox" checked={form.aiTutorEnabled !== false} onChange={e => setForm({ ...form, aiTutorEnabled: e.target.checked })} style={{ accentColor: form.aiTutorEnabled !== false ? '#10b981' : '#ef4444', width: 16, height: 16 }} />
+                            {form.aiTutorEnabled !== false ? 'Enabled' : 'Disabled'}
+                        </label>
+                    </div>
+                    <div>
+                        <label style={{ color: colors.textMuted, fontSize: 13 }}>Attachment (PDF / Word / Video)</label>
+                        <input type="file" accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,video/*" onChange={onFile} style={{ display: 'block', marginTop: 8 }} />
+                        {form.attachmentPreview && <div style={{ color: colors.textMuted, marginTop: 8 }}>{form.attachmentPreview}</div>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                        <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)', color: '#fff', padding: '10px 14px', borderRadius: 8, border: 'none' }}>{submitting ? 'Creating...' : 'Create Assignment'}</button>
+                        <button type="button" onClick={() => navigate('/instructor/dashboard')} style={{ background: 'transparent', border: '1px solid rgba(149,157,165,0.12)', color: colors.text, padding: '10px 14px', borderRadius: 8 }}>Cancel</button>
+                    </div>
+                    {msg && <div style={{ color: '#fff' }}>{msg}</div>}
+                </form>
+            </div>
+        </div>
+    );
+}

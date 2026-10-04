@@ -1,0 +1,1077 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import {
+    AlertTriangle,
+    ArrowLeft,
+    ArrowRight,
+    BadgeCheck,
+    Calendar,
+    CalendarDays,
+    Camera,
+    CheckCircle2,
+    Clock,
+    Loader2,
+    MapPin,
+    ShieldCheck,
+    Sparkles,
+    Tag,
+    Users,
+    Video,
+    X,
+} from 'lucide-react';
+import Navbar from '../components/Navbar';
+import EventFooter from '../components/events/EventFooter';
+import EventCalendar from '../components/events/EventCalendar';
+import {
+    RegistrationStatusBar,
+    resolveRegistrationState,
+    REGISTRATION_STATE
+} from '../components/events/RegistrationStatus';
+import { eventGallery, formatISODate, formatLongDate } from '../data/events';
+import { publicEventService } from '../services/api';
+import { getLiveStatus, LIVE_STATUS_META } from '../utils/eventStatus';
+
+const TIME_SLOTS = ['15:00', '17:00', '19:00'];
+
+const PENDING_REG_KEY = 'event_pending_registration';
+
+const toISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const padCount = (n) => String(n).padStart(2, '0');
+
+const FALLBACK_COUNTDOWN_TARGET = new Date(Date.now() + 86400000);
+
+function useCountdown(target) {
+    const diff = () => {
+        const ms = Math.max(0, target.getTime() - Date.now());
+        return {
+            days: Math.floor(ms / 86400000),
+            hours: Math.floor((ms % 86400000) / 3600000),
+            minutes: Math.floor((ms % 3600000) / 60000),
+            seconds: Math.floor((ms % 60000) / 1000),
+        };
+    };
+    const [t, setT] = useState(diff);
+    useEffect(() => {
+        const id = setInterval(() => setT(diff()), 1000);
+        return () => clearInterval(id);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [target]);
+    return t;
+}
+
+export default function EventDetailPage() {
+    const { eventId } = useParams();
+    const [searchParams] = useSearchParams();
+    const paidSuccess = searchParams.get('paid') === '1';
+    const paidBookingRef = searchParams.get('booking') || '';
+    const [apiEvent, setApiEvent] = useState(null);
+    const [apiEvents, setApiEvents] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [registration, setRegistration] = useState(null);
+    const [registrationLoading, setRegistrationLoading] = useState(false);
+    const [access, setAccess] = useState(null);
+    const [accessLoading, setAccessLoading] = useState(false);
+    const [actionError, setActionError] = useState('');
+    const [cancelling, setCancelling] = useState(false);
+
+    const { isAuthenticated, user } = useAuth();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
+        setRegistration(null);
+        setAccess(null);
+        publicEventService
+            .getBySlug(eventId)
+            .then((res) => {
+                if (cancelled) return;
+                const payload = res.data?.data || null;
+                setApiEvent(payload ? { ...payload, date: payload.date ? new Date(payload.date) : null } : null);
+                // The public payload carries the viewer's state when a session
+                // exists; the dedicated endpoint below is still authoritative.
+                if (payload?.myRegistration) setRegistration(payload.myRegistration);
+            })
+            .catch(() => { if (!cancelled) setApiEvent(null); })
+            .finally(() => { if (!cancelled) setLoading(false); });
+        publicEventService
+            .getAll()
+            .then((res) => {
+                if (cancelled) return;
+                setApiEvents((res.data?.data || []).map((e) => ({ ...e, date: e.date ? new Date(e.date) : null })));
+            })
+            .catch(() => { if (!cancelled) setApiEvents([]); });
+        return () => { cancelled = true; };
+    }, [eventId]);
+
+    // Own registration state. Also self-heals a payment Chapa already settled,
+    // so a refresh right after the gateway returns always shows the truth.
+    const loadRegistration = useCallback(async () => {
+        if (!isAuthenticated) {
+            setRegistration(null);
+            return null;
+        }
+        setRegistrationLoading(true);
+        try {
+            const res = await publicEventService.getMyRegistration(eventId);
+            const payload = res.data?.data?.registration || null;
+            setRegistration(payload);
+            return payload;
+        } catch {
+            setRegistration(null);
+            return null;
+        } finally {
+            setRegistrationLoading(false);
+        }
+    }, [isAuthenticated, eventId]);
+
+    useEffect(() => { loadRegistration(); }, [loadRegistration]);
+
+    // The meeting link exists ONLY in this protected response, and only for
+    // attendees the backend confirmed (registration + settled payment).
+    const loadAccess = useCallback(async () => {
+        if (!isAuthenticated) {
+            setAccess(null);
+            return null;
+        }
+        setAccessLoading(true);
+        setActionError('');
+        try {
+            const res = await publicEventService.getAccess(eventId);
+            const payload = res.data?.data || null;
+            setAccess(payload);
+            return payload;
+        } catch (err) {
+            setAccess(null);
+            // 403/401 is the expected answer for an unpaid attendee: stay quiet.
+            if (err?.response?.status !== 403 && err?.response?.status !== 401) {
+                setActionError(err?.response?.data?.message || 'Could not load your event access.');
+            }
+            return null;
+        } finally {
+            setAccessLoading(false);
+        }
+    }, [isAuthenticated, eventId]);
+
+    const event = apiEvent;
+    const eventDate = event ? new Date(event.date) : null;
+    const countdown = useCountdown(eventDate ?? FALLBACK_COUNTDOWN_TARGET);
+
+    const liveStatus = event
+        ? (event.liveStatus || getLiveStatus({ startDate: event.date, endDate: event.endDate, status: event.status }) || 'upcoming')
+        : 'upcoming';
+    const statusMeta = LIVE_STATUS_META[liveStatus] || LIVE_STATUS_META.upcoming;
+    const isLive = liveStatus === 'live';
+    const isCancelled = liveStatus === 'cancelled';
+    const isCompleted = liveStatus === 'completed';
+    const joinUrl = access?.access?.joinUrl || '';
+    const meetingPassword = access?.access?.meetingPassword || '';
+    const hasAccess = Boolean(access?.granted);
+    const registrationState = resolveRegistrationState(registration, event);
+    const isAwaitingPayment = registrationState === REGISTRATION_STATE.PENDING_PAYMENT;
+    // Server decides whether money is owed — never re-derive it from the
+    // free-text price shown in the UI.
+    const isEventPaid = Boolean(event?.requiresPayment);
+    const bookingFlowStep = hasAccess
+        ? 4
+        : (isAwaitingPayment || registrationState === REGISTRATION_STATE.FAILED)
+            ? 3
+            : isAuthenticated
+                ? 2
+                : 1;
+    const bookingFlow = [
+        { label: 'Account', detail: 'Sign in or create an account' },
+        { label: 'Registration', detail: 'Reserve your event seat' },
+        {
+            label: isEventPaid ? 'Chapa payment' : 'Payment',
+            detail: isEventPaid ? 'Complete secure checkout' : 'No payment required'
+        },
+        { label: 'Event access', detail: 'Join after confirmation' }
+    ];
+
+    const otherEvents = useMemo(
+        () => (apiEvents || []).filter((e) => e.id !== event?.id).slice(0, 2),
+        [apiEvents, event]
+    );
+
+    const [selectedDate, setSelectedDate] = useState(() => {
+        const t = new Date();
+        return { year: t.getFullYear(), month: t.getMonth(), day: t.getDate() };
+    });
+    const [selectedSlot, setSelectedSlot] = useState(TIME_SLOTS[0]);
+    const [form, setForm] = useState({ name: '', phone: '', email: '', city: '' });
+    const [modal, setModal] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
+    const [bookingRef, setBookingRef] = useState(() => `EMR-${Math.random().toString(36).slice(2, 8).toUpperCase()}`);
+
+    // Registration requires an account: send the visitor to login and remember
+    // exactly what they were filling in so we can resume afterwards.
+    const requireLogin = useCallback(() => {
+        sessionStorage.setItem(PENDING_REG_KEY, JSON.stringify({
+            eventSlug: eventId,
+            selectedSlot,
+            selectedDate: `${selectedDate.year}-${padCount(selectedDate.month + 1)}-${padCount(selectedDate.day)}`,
+            form
+        }));
+        const currentPath = window.location.pathname + window.location.search;
+        navigate(`/login?redirect=${encodeURIComponent(currentPath)}`);
+    }, [eventId, form, navigate, selectedDate, selectedSlot]);
+
+    // Returning from login: restore the interrupted registration.
+    useEffect(() => {
+        const raw = sessionStorage.getItem(PENDING_REG_KEY);
+        if (!raw || !isAuthenticated) return;
+        let pending = null;
+        try {
+            pending = JSON.parse(raw);
+        } catch {
+            sessionStorage.removeItem(PENDING_REG_KEY);
+            return;
+        }
+        sessionStorage.removeItem(PENDING_REG_KEY);
+        if (!pending || (pending.eventSlug && pending.eventSlug !== eventId)) return;
+        if (pending.selectedSlot) setSelectedSlot(pending.selectedSlot);
+        if (pending.form) setForm((prev) => ({ ...prev, ...pending.form }));
+        if (pending.selectedDate) {
+            const [y, m, d] = pending.selectedDate.split('-').map(Number);
+            if (y && m && d) setSelectedDate({ year: y, month: m - 1, day: d });
+        }
+        setModal({ view: 'resumed' });
+    }, [isAuthenticated, eventId]);
+
+    // Returning from the gateway: always re-check with the server, and only
+    // celebrate a confirmed booking when it actually confirms access.
+    useEffect(() => {
+        if (!paidSuccess || !apiEvent) return;
+        if (paidBookingRef) setBookingRef(paidBookingRef);
+        loadRegistration().then((reg) => {
+            if (reg?.accessGranted) setModal({ view: 'success' });
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [paidSuccess, apiEvent, paidBookingRef]);
+
+    // Fetch the meeting link as soon as the server says access is granted.
+    useEffect(() => {
+        if (registrationState === REGISTRATION_STATE.PAID && !access && !accessLoading) {
+            loadAccess();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [registrationState]);
+
+    // Pre-fill form with user data when authenticated
+    useEffect(() => {
+        if (user) {
+            setForm(prev => ({
+                ...prev,
+                name: prev.name || user.fullName || user.name || '',
+                email: prev.email || user.accountEmail || user.email || '',
+                phone: prev.phone || user.phone || '',
+                city: prev.city || user.city || ''
+            }));
+        }
+    }, [user]);
+
+    // Save form to localStorage before login redirect
+    useEffect(() => {
+        if (form.name || form.phone || form.email || form.city) {
+            localStorage.setItem('event_registration_form', JSON.stringify(form));
+        }
+    }, [form]);
+
+    // Restore form from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem('event_registration_form');
+        if (saved) {
+            try {
+                setForm(JSON.parse(saved));
+            } catch {
+                localStorage.removeItem('event_registration_form');
+            }
+        }
+    }, []);
+
+    const copyMeetingLink = async () => {
+        if (!joinUrl) return;
+        try {
+            await navigator.clipboard.writeText(joinUrl);
+            setModal({ view: 'linkCopied' });
+        } catch {
+            setModal({ view: 'linkCopied' });
+        }
+    };
+
+    const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+    const closeModal = () => setModal(null);
+
+    const validatePhone = (phone) => {
+        const cleaned = phone.replace(/\D/g, '');
+        return /^0[79]\d{8}$/.test(cleaned);
+    };
+
+    const handleConfirm = async () => {
+        if (!validatePhone(form.phone)) {
+            setActionError('Enter a valid phone number: 09 or 07 followed by 8 digits.');
+            return;
+        }
+        // An account is required for every registration — log in first, then we
+        // resume this exact form.
+        if (!isAuthenticated) {
+            requireLogin();
+            return;
+        }
+
+        setSubmitting(true);
+        setActionError('');
+        try {
+            const res = await publicEventService.register(eventId, {
+                fullName: form.name,
+                phone: form.phone,
+                email: form.email,
+                city: form.city,
+                selectedDate: `${selectedDate.year}-${padCount(selectedDate.month + 1)}-${padCount(selectedDate.day)}`,
+                selectedSlot,
+            });
+            const responseBody = res.data || {};
+            const payload = responseBody.data || {};
+            const registrationRef = payload.registration?.bookingRef || payload.bookingRef;
+            if (registrationRef) setBookingRef(registrationRef);
+
+            const paymentRequired = responseBody.requiresPayment ?? payload.requiresPayment ?? isEventPaid;
+            const paymentUrl = payload.paymentUrl || responseBody.paymentUrl;
+            if (paymentRequired) {
+                if (!paymentUrl) {
+                    setActionError(
+                        responseBody.message
+                        || 'Chapa did not return a checkout link. Please check the payment configuration and try again.'
+                    );
+                    return;
+                }
+                // Paid event: seat is held, access stays locked until Chapa
+                // confirms on the server.
+                window.location.assign(paymentUrl);
+                return;
+            }
+
+            const reg = await loadRegistration();
+            if (reg?.bookingRef) setBookingRef(reg.bookingRef);
+            setModal({ view: 'success' });
+        } catch (err) {
+            const apiError = err?.response?.data;
+            if (err?.response?.status === 401) {
+                // Token expired mid-flow — restart the login handshake.
+                requireLogin();
+                return;
+            }
+            if (apiError?.alreadyRegistered) {
+                // Server told us a booking already exists (free event retry).
+                if (apiError?.data?.bookingRef) setBookingRef(apiError.data.bookingRef);
+                const reg = await loadRegistration();
+                setModal({
+                    view: 'success',
+                    alreadyRegistered: true,
+                    message: reg?.accessGranted
+                        ? 'You have already registered for this event and your access is active.'
+                        : (apiError.message || 'You already have a registration in progress for this event.')
+                });
+                return;
+            }
+            setActionError(
+                apiError?.message
+                || (!err?.response
+                    ? 'Network error. Please check your connection and try again.'
+                    : 'Registration could not be saved. Please try again.')
+            );
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleCancel = async () => {
+        setCancelling(true);
+        setActionError('');
+        try {
+            await publicEventService.cancelRegistration(eventId);
+            setModal(null);
+            await loadRegistration();
+        } catch (err) {
+            setActionError(err?.response?.data?.message || 'Could not cancel your registration.');
+        } finally {
+            setCancelling(false);
+        }
+    };
+
+    const handleJoin = async () => {
+        if (access?.granted && joinUrl) {
+            window.open(joinUrl, '_blank', 'noopener');
+            return;
+        }
+        const loaded = await loadAccess();
+        if (loaded?.access?.joinUrl) {
+            window.open(loaded.access.joinUrl, '_blank', 'noopener');
+        }
+    };
+
+    const scrollToSecureSpot = () => {
+        if (!isAuthenticated) {
+            requireLogin();
+            return;
+        }
+        const el = document.getElementById('secure-your-spot');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    const shell = (children) => (
+        <div className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(135deg,#0B0C10_0%,#14141F_45%,#1F1F2E_100%)] text-white">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] bg-[size:26px_26px]" />
+            <div className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[720px] -translate-x-1/2 rounded-full bg-green-600/10 blur-[120px]" />
+            <Navbar />
+            {children}
+            <EventFooter />
+        </div>
+    );
+
+    if (!event) {
+        return shell(
+            <main className="relative z-10 mx-auto flex max-w-7xl flex-col items-center justify-center px-4 pb-24 pt-40 text-center sm:px-6">
+                {loading ? (
+                    <>
+                        <Loader2 className="h-12 w-12 animate-spin text-green-500" />
+                        <h1 className="mt-6 text-2xl font-black text-white">Loading Event…</h1>
+                        <p className="mt-3 max-w-md text-sm text-[#9CA3AF]">
+                            Fetching the latest event details, please wait a moment.
+                        </p>
+                    </>
+                ) : (
+                    <>
+                        <span className="text-6xl">🔍</span>
+                        <h1 className="mt-6 text-3xl font-black text-white">Event Not Found</h1>
+                        <p className="mt-3 max-w-md text-sm text-[#9CA3AF]">
+                            The event you are looking for does not exist or has been removed.
+                        </p>
+                    </>
+                )}
+                <Link
+                    to="/events"
+                    className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-black shadow-[0_0_25px_rgba(74,222,128,0.4)] transition hover:brightness-110"
+                >
+                    <ArrowLeft className="h-4 w-4" /> Back to Events
+                </Link>
+            </main>
+        );
+    }
+
+    const eventDateISO = formatISODate(eventDate);
+
+    return shell(
+        <>
+            <main className="relative z-10 mx-auto max-w-7xl px-4 pt-24 sm:px-6 sm:pt-28">
+                {/* Back to Events */}
+                <Link
+                    to="/events"
+                    className="inline-flex items-center gap-2 text-sm font-bold text-gray-300 transition hover:text-green-500"
+                >
+                    <ArrowLeft className="h-4 w-4" /> Back to Events
+                </Link>
+
+                {/* ── Hero / Banner ──────────────────────────────────────── */}
+                <section className="relative mt-6 overflow-hidden rounded-3xl border border-green-600/20">
+                    <img src={event.image} alt={event.title} className="absolute inset-0 h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B0C10]/95 via-[#0B0C10]/70 to-[#0B0C10]/35" />
+                    <div className="relative flex min-h-[320px] flex-col justify-end gap-5 px-6 py-10 sm:min-h-[380px] sm:px-12 sm:py-12">
+                        <span className={`inline-flex w-fit items-center gap-2 rounded-full px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.2em] ${isCancelled ? 'bg-red-500/20 text-red-300' : isLive ? 'bg-emerald-400 text-black shadow-[0_0_20px_rgba(52,211,153,0.4)]' : isCompleted ? 'bg-white/10 text-gray-300' : 'bg-green-500 text-black shadow-[0_0_20px_rgba(74,222,128,0.4)]'}`}>
+                            <Sparkles className="h-3.5 w-3.5" /> {isLive ? 'Live Now' : isCancelled ? 'Cancelled' : isCompleted ? 'Completed' : 'Upcoming Event'}
+                        </span>
+                        <h1 className="max-w-3xl text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl">{event.title}</h1>
+                        <p className="max-w-xl text-sm text-gray-300 sm:text-base">{event.tagline}</p>
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-gray-200">
+                            <span className="flex items-center gap-2"><Calendar className="h-4 w-4 text-green-500" /> {eventDateISO}</span>
+                            <span className="flex items-center gap-2"><Clock className="h-4 w-4 text-green-500" /> {event.time}</span>
+                            <span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-green-500" /> {event.location}</span>
+                        </div>
+
+                        <div className="flex flex-wrap gap-3">
+                            {[
+                                { label: 'Days', value: countdown.days },
+                                { label: 'Hours', value: countdown.hours },
+                                { label: 'Min', value: countdown.minutes },
+                                { label: 'Sec', value: countdown.seconds },
+                            ].map((b) => (
+                                <div key={b.label} className="flex min-w-[76px] flex-col items-center rounded-2xl border border-green-600/25 bg-black/40 px-4 py-3 backdrop-blur">
+                                    <span className="text-2xl font-black tabular-nums text-white">{padCount(b.value)}</span>
+                                    <span className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.2em] text-green-500">{b.label}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex flex-col gap-4 border-t border-white/10 pt-5 sm:flex-row sm:items-end sm:justify-between">
+                            {isCancelled ? (
+                                <div className="flex w-fit items-center gap-3 rounded-2xl border border-red-400/40 bg-red-500/15 px-6 py-4 text-sm font-bold text-red-200">
+                                    <AlertTriangle className="h-5 w-5 shrink-0 text-red-400" />
+                                    This event has been cancelled by the organizer.
+                                </div>
+                            ) : isCompleted ? (
+                                <div className="flex w-fit items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-sm font-bold text-gray-300">
+                                    <CheckCircle2 className="h-5 w-5 shrink-0 text-gray-400" />
+                                    This event has ended.
+                                </div>
+                            ) : hasAccess && joinUrl ? (
+                                <button
+                                    onClick={handleJoin}
+                                    disabled={accessLoading}
+                                    className="inline-flex w-fit items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black shadow-[0_0_30px_rgba(16,185,129,0.45)] transition hover:shadow-[0_0_45px_rgba(16,185,129,0.6)] disabled:opacity-60"
+                                >
+                                    {accessLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />} Join Event Now
+                                </button>
+                            ) : isAwaitingPayment ? (
+                                <button
+                                    onClick={() => scrollToSecureSpot()}
+                                    className="inline-flex w-fit items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black shadow-[0_0_30px_rgba(245,158,11,0.35)] transition hover:brightness-110"
+                                >
+                                    Complete Your Payment <ArrowRight className="h-4 w-4" />
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={scrollToSecureSpot}
+                                    className="inline-flex w-fit items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black shadow-[0_0_30px_rgba(74,222,128,0.45)] transition hover:shadow-[0_0_45px_rgba(74,222,128,0.6)]"
+                                >
+                                    {isEventPaid ? `Pay ${event.price} & Register` : 'Register Now'} <ArrowRight className="h-4 w-4" />
+                                </button>
+                            )}
+                            <div className="w-full sm:w-52">
+                                <span className="inline-flex items-center gap-2 text-xs font-semibold text-green-300">
+                                    👥 {event.slotsLeft} Slots Left
+                                </span>
+                                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
+                                    <div
+                                        className="h-full rounded-full bg-gradient-to-r from-green-500 to-green-600"
+                                        style={{ width: `${Math.round(((event.totalSlots - event.slotsLeft) / event.totalSlots) * 100)}%` }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* ── About + Sidebar ───────────────────────────────────── */}
+                <section className="mt-16 grid gap-8 lg:grid-cols-3">
+                    <div className="lg:col-span-2">
+                        <div className="mb-4 flex items-center gap-3">
+                            <span className="text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">About The Event</span>
+                            <span className="h-px flex-1 bg-gradient-to-r from-green-500/50 to-transparent" />
+                        </div>
+                        <h2 className="text-2xl font-extrabold text-white sm:text-3xl">{event.tagline}</h2>
+                        {(Array.isArray(event.description) ? event.description : [event.description]).filter(Boolean).map((p, i) => (
+                            <p key={i} className="mt-4 leading-relaxed text-[#9CA3AF]">{p}</p>
+                        ))}
+
+                        <div className="mt-6 rounded-2xl border border-green-600/20 bg-[#12131A] p-5">
+                            <p className="text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">Localized Schedule</p>
+                            <ul className="mt-3 space-y-1.5 text-sm text-[#9CA3AF]">
+                                <li><span className="font-semibold text-gray-200">Date:</span> {formatLongDate(eventDate)}</li>
+                                <li><span className="font-semibold text-gray-200">Time:</span> {event.time} (EAT) — Local Time</li>
+                                <li><span className="font-semibold text-gray-200">Location:</span> {event.location} · {event.city} &amp; Online Live Stream</li>
+                            </ul>
+                        </div>
+
+                        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                            <div className="flex items-center gap-3 rounded-2xl border border-green-600/20 bg-[#12131A] p-4">
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500/10 text-green-500"><CalendarDays className="h-5 w-5" /></span>
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Date</p>
+                                    <p className="text-sm font-semibold text-white">{formatLongDate(eventDate)}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 rounded-2xl border border-green-600/20 bg-[#12131A] p-4">
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500/10 text-green-500"><Clock className="h-5 w-5" /></span>
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Time (LT)</p>
+                                    <p className="text-sm font-semibold text-white">{event.time} EAT</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 rounded-2xl border border-green-600/20 bg-[#12131A] p-4 sm:col-span-2">
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500/10 text-green-500"><MapPin className="h-5 w-5" /></span>
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Location</p>
+                                    <p className="text-sm font-semibold text-white">{event.location} · {event.city}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {event.speaker && (
+                            <div className="mt-8 rounded-3xl border border-green-600/20 bg-[#12131A] p-6">
+                                <span className="text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">Organizer / Speaker</span>
+                                <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center">
+                                    <img src={event.speaker.avatar} alt={event.speaker.name} className="h-16 w-16 shrink-0 rounded-2xl border border-green-600/20 object-cover" />
+                                    <div>
+                                        <p className="flex items-center gap-2 text-lg font-extrabold text-white">
+                                            <BadgeCheck className="h-5 w-5 text-green-500" /> {event.speaker.name}
+                                        </p>
+                                        <p className="text-xs font-bold uppercase tracking-wider text-green-300">{event.speaker.role}</p>
+                                        <p className="mt-2 text-sm leading-relaxed text-[#9CA3AF]">{event.speaker.bio}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <aside className="flex flex-col gap-6">
+                        <div className="rounded-3xl border border-green-600/20 bg-[#12131A] p-6">
+                            <h3 className="mb-5 text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">Event Info</h3>
+                            <div className="space-y-4 text-sm">
+                                <div className="flex items-center gap-3">
+                                    <CalendarDays className="h-4 w-4 shrink-0 text-green-500" />
+                                    <span className="text-gray-200">{formatLongDate(eventDate)}</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Clock className="h-4 w-4 shrink-0 text-green-500" />
+                                    <span className="text-gray-200">{event.time} (EAT)</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <MapPin className="h-4 w-4 shrink-0 text-green-500" />
+                                    <span className="text-gray-200">{event.location}</span>
+                                </div>
+                                <div className="flex items-center justify-between rounded-2xl border border-green-600/20 bg-[#1A1B23] px-4 py-3">
+                                    <span className="flex items-center gap-2 font-semibold text-gray-200"><Tag className="h-4 w-4 text-green-500" /> Price</span>
+                                    <span className="rounded-full bg-green-500 px-3 py-1 text-xs font-extrabold text-black">{event.price}</span>
+                                </div>
+                                <div className="flex items-center justify-between rounded-2xl border border-green-600/20 bg-[#1A1B23] px-4 py-3">
+                                    <span className="flex items-center gap-2 font-semibold text-gray-200"><Users className="h-4 w-4 text-green-500" /> Remaining</span>
+                                    <span className="text-xs font-extrabold text-green-300">{event.slotsLeft} spots</span>
+                                </div>
+                            </div>
+                            {isCancelled ? (
+                                <div className="mt-6 w-full rounded-xl border border-red-400/40 bg-red-500/15 py-3 text-center text-xs font-extrabold uppercase tracking-wide text-red-200">Event Cancelled</div>
+                            ) : isCompleted ? (
+                                <div className="mt-6 w-full rounded-xl border border-white/10 bg-white/5 py-3 text-center text-xs font-extrabold uppercase tracking-wide text-gray-300">Event Ended</div>
+                            ) : hasAccess ? (
+                                <div className="mt-6 flex w-full flex-col gap-2">
+                                    <button onClick={handleJoin} disabled={accessLoading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-emerald-500 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110 disabled:opacity-60">
+                                        {accessLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />} Join Event
+                                    </button>
+                                    <button onClick={copyMeetingLink} disabled={!joinUrl} className="flex w-full items-center justify-center gap-2 rounded-xl border border-green-500/40 bg-green-500/10 py-2.5 text-xs font-bold uppercase tracking-wide text-green-300 transition hover:bg-green-500/20 disabled:opacity-50">
+                                        Copy Meeting Link
+                                    </button>
+                                    {meetingPassword && (
+                                        <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-center text-xs text-gray-300">
+                                            Meeting password: <span className="font-mono font-bold text-green-300">{meetingPassword}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={scrollToSecureSpot}
+                                    className="mt-6 w-full rounded-xl bg-gradient-to-r from-green-500 to-green-600 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110"
+                                >
+                                    {isEventPaid ? `Pay ${event.price} & Register` : 'Register Now'}
+                                </button>
+                            )}
+                            {isAuthenticated && registration && (
+                                <div className="mt-3">
+                                    <RegistrationStatusBar
+                                        state={registrationState}
+                                        registration={registration}
+                                        requiresPayment={isEventPaid}
+                                        busy={cancelling}
+                                        onAction={handleCancel}
+                                        actionLabel="Cancel Registration"
+                                    />
+                                </div>
+                            )}
+                            {actionError && (
+                                <p className="mt-3 rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2 text-center text-xs font-semibold text-red-200">{actionError}</p>
+                            )}
+                        </div>
+
+                        <div className="rounded-3xl border border-green-600/20 bg-[#12131A] p-6">
+                            <h3 className="mb-5 text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">Upcoming Events</h3>
+                            <div className="space-y-4">
+                                {otherEvents.map((e) => (
+                                        <Link
+                                            key={e.id}
+                                            to={`/events/${e.id}`}
+                                            className="group flex items-center gap-4 rounded-2xl border border-white/5 bg-[#1A1B23] p-3 transition hover:border-green-500/40"
+                                        >
+                                            <img src={e.image} alt={e.title} className="h-14 w-14 shrink-0 rounded-xl border border-green-600/20 object-cover" />
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-sm font-bold text-white group-hover:text-green-300">{e.title}</p>
+                                                <p className="mt-1 text-xs text-gray-400">{formatISODate(e.date)} · {e.time}</p>
+                                            </div>
+                                            <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider text-green-500 transition group-hover:gap-2">
+                                                View Page <ArrowRight className="h-3.5 w-3.5" />
+                                            </span>
+                                        </Link>
+                                    ))}
+                            </div>
+                        </div>
+                    </aside>
+                </section>
+
+                {/* ── Gallery ──────────────────────────────────────────── */}
+                <section className="mt-20">
+                    <div className="mb-6 flex items-center gap-3">
+                        <span className="text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">Moments From Our Events</span>
+                        <span className="h-px flex-1 bg-gradient-to-r from-green-500/50 to-transparent" />
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="group relative overflow-hidden rounded-3xl border border-green-600/20 sm:row-span-2">
+                            <img src={eventGallery[0].src} alt="" className="h-full min-h-[420px] w-full object-cover transition duration-500 group-hover:scale-105" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-70 transition group-hover:opacity-100" />
+                            <span className="absolute bottom-4 left-4 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
+                                <Camera className="h-3.5 w-3.5 text-green-500" /> {eventGallery[0].label}
+                            </span>
+                        </div>
+                        {eventGallery.slice(1).map((g) => (
+                            <div key={g.label} className="group relative overflow-hidden rounded-3xl border border-green-600/20">
+                                <img src={g.src} alt="" className="h-48 w-full object-cover transition duration-500 group-hover:scale-105" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-70 transition group-hover:opacity-100" />
+                                <span className="absolute bottom-4 left-4 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
+                                    <Camera className="h-3.5 w-3.5 text-green-500" /> {g.label}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* ── Registration / Booking ────────────────────────────── */}
+                <section id="secure-your-spot" className="mt-20 scroll-mt-28">
+                    <div className="mb-2 text-center">
+                        <span className="text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">Secure Your Spot</span>
+                    </div>
+                    <h2 className="text-center text-2xl font-extrabold text-white sm:text-3xl">Reserve your place today</h2>
+                    <p className="mx-auto mt-2 max-w-xl text-center text-sm text-[#9CA3AF]">
+                        {isEventPaid
+                            ? `Select your preferred date and complete payment of ${event.price}. Seats are limited and filling up fast.`
+                            : 'Select your preferred date and complete the registration. Seats are limited and filling up fast.'}
+                    </p>
+                    <ol aria-label="Event registration and payment steps" className="mx-auto mt-6 grid max-w-4xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        {bookingFlow.map((step, index) => {
+                            const stepNumber = index + 1;
+                            const completed = hasAccess || stepNumber < bookingFlowStep;
+                            const current = !hasAccess && stepNumber === bookingFlowStep;
+                            return (
+                                <li
+                                    key={step.label}
+                                    aria-current={current ? 'step' : undefined}
+                                    className={`flex items-start gap-3 rounded-2xl border px-4 py-3 text-left ${
+                                        completed
+                                            ? 'border-emerald-400/30 bg-emerald-500/10'
+                                            : current
+                                                ? 'border-green-500/40 bg-green-500/10'
+                                                : 'border-white/10 bg-white/[0.03]'
+                                    }`}
+                                >
+                                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${
+                                        completed
+                                            ? 'bg-emerald-400/20 text-emerald-300'
+                                            : current
+                                                ? 'bg-green-500 text-black'
+                                                : 'bg-white/10 text-gray-400'
+                                    }`}>
+                                        {completed ? <CheckCircle2 className="h-4 w-4" /> : stepNumber}
+                                    </span>
+                                    <span>
+                                        <span className={`block text-xs font-extrabold ${completed || current ? 'text-white' : 'text-gray-400'}`}>
+                                            {step.label}
+                                        </span>
+                                        <span className="mt-1 block text-[11px] leading-relaxed text-gray-500">
+                                            {step.detail}
+                                        </span>
+                                    </span>
+                                </li>
+                            );
+                        })}
+                    </ol>
+
+                    {isCancelled || isCompleted ? (
+                        <div className="mt-10 overflow-hidden rounded-3xl border border-green-600/20 bg-[#12131A] p-10 text-center shadow-[0_0_40px_rgba(74,222,128,0.07)]">
+                            <span className="text-5xl">{isCancelled ? '🚫' : '✅'}</span>
+                            <h3 className="mt-4 text-xl font-extrabold text-white">{isCancelled ? 'Registration Closed' : 'Event Completed'}</h3>
+                            <p className="mx-auto mt-2 max-w-md text-sm text-[#9CA3AF]">
+                                {isCancelled
+                                    ? 'This event was cancelled by the organizer and is no longer accepting registrations.'
+                                    : 'This event has ended. Thank you for your interest — check the events page for upcoming sessions.'}
+                            </p>
+                            <Link to="/events" className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110">
+                                Browse Upcoming Events <ArrowRight className="h-4 w-4" />
+                            </Link>
+                        </div>
+                    ) : hasAccess ? (
+                        <div className="mt-10 overflow-hidden rounded-3xl border border-emerald-400/25 bg-[#12131A] p-10 text-center shadow-[0_0_40px_rgba(16,185,129,0.08)]">
+                            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15">
+                                <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+                            </div>
+                            <h3 className="mt-4 text-xl font-extrabold text-white">You are registered for this event</h3>
+                            <p className="mx-auto mt-2 max-w-md text-sm text-[#9CA3AF]">
+                                Payment is confirmed and your access is active. The meeting link is available in the
+                                Event Info panel.
+                            </p>
+                            <button
+                                onClick={handleJoin}
+                                disabled={accessLoading}
+                                className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110 disabled:opacity-60"
+                            >
+                                {accessLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />} Join Event
+                            </button>
+                            <button
+                                onClick={handleCancel}
+                                disabled={cancelling}
+                                className="mx-auto mt-3 block text-xs font-semibold text-gray-400 underline underline-offset-4 transition hover:text-red-300 disabled:opacity-60"
+                            >
+                                {cancelling ? 'Cancelling…' : 'Cancel my registration'}
+                            </button>
+                        </div>
+                    ) : (
+                    <div className="mt-10 overflow-hidden rounded-3xl border border-green-600/20 bg-[#12131A] shadow-[0_0_40px_rgba(74,222,128,0.07)]">
+                        <div className="h-1.5 w-full bg-gradient-to-r from-green-600 via-green-600 to-green-600" />
+
+                        {!isAuthenticated && (
+                            <div className="flex items-start gap-3 border-b border-amber-400/30 bg-amber-500/10 px-6 py-4 text-sm text-amber-100 sm:px-8">
+                                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+                                <p className="leading-relaxed">
+                                    You need an Emare account to register. Fill in your details, then continue — we
+                                    will save them and bring you right back here after you log in.
+                                </p>
+                            </div>
+                        )}
+
+                        {isAuthenticated && isAwaitingPayment && (
+                            <div className="border-b border-white/10 px-6 py-5 sm:px-8">
+                                <RegistrationStatusBar
+                                    state={registrationState}
+                                    registration={registration}
+                                    requiresPayment={isEventPaid}
+                                    busy={registrationLoading}
+                                    onAction={handleCancel}
+                                    actionLabel="Cancel & Start Over"
+                                />
+                            </div>
+                        )}
+
+                        {actionError && (
+                            <p className="mx-6 mt-5 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200 sm:mx-8">
+                                {actionError}
+                            </p>
+                        )}
+
+                        <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_1.1fr]">
+                            <EventCalendar selected={selectedDate} onSelect={setSelectedDate} />
+
+                            <div className="flex flex-col">
+                            <h3 className="text-lg font-extrabold text-white">Registration Details</h3>
+                            <p className="mt-1 text-xs text-gray-400">
+                                {eventDateISO} · {selectedSlot} · {event.location}
+                            </p>
+
+                            <p className="mt-6 mb-2 text-xs font-bold uppercase tracking-widest text-green-300">Time Slot</p>
+                            <div className="flex flex-wrap gap-2.5">
+                                {TIME_SLOTS.map((t) => (
+                                    <button
+                                        key={t}
+                                        onClick={() => setSelectedSlot(t)}
+                                        className={`rounded-xl px-5 py-2.5 text-sm font-bold transition ${
+                                            selectedSlot === t
+                                                ? 'bg-gradient-to-r from-green-500 to-green-600 text-black shadow-[0_0_18px_rgba(74,222,128,0.4)]'
+                                                : 'border border-white/10 text-gray-300 hover:border-green-500/50 hover:text-green-300'
+                                        }`}
+                                    >
+                                        {t}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <p className="mt-6 mb-3 text-xs font-bold uppercase tracking-widest text-green-300">Personal Details</p>
+
+                            <form className="grid gap-4 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); handleConfirm(); }}>
+                                <div className="sm:col-span-2">
+                                    <label className="mb-1.5 block text-xs font-semibold text-gray-400">Full Name</label>
+                                    <input
+                                        value={form.name}
+                                        onChange={setField('name')}
+                                        required
+                                        placeholder="Abebe Kebede"
+                                        className="w-full rounded-xl border border-green-600/20 bg-[#1A1B23] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="mb-1.5 block text-xs font-semibold text-gray-400">Phone Number</label>
+                                    <input
+                                        value={form.phone}
+                                        onChange={(e) => {
+                                            const cleaned = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                            setForm(prev => ({ ...prev, phone: cleaned }));
+                                        }}
+                                        required
+                                        placeholder="09XX XXX XXX"
+                                        maxLength={10}
+                                        className="w-full rounded-xl border border-green-600/20 bg-[#1A1B23] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+                                    />
+                                    <p className="mt-1 text-xs text-gray-500">Must start with 09 or 07, exactly 10 digits</p>
+                                </div>
+                                <div>
+                                    <label className="mb-1.5 block text-xs font-semibold text-gray-400">Email Address</label>
+                                    <input
+                                        type="email"
+                                        value={form.email}
+                                        onChange={setField('email')}
+                                        required
+                                        placeholder="you@email.com"
+                                        className="w-full rounded-xl border border-green-600/20 bg-[#1A1B23] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+                                    />
+                                </div>
+                                <div className="sm:col-span-2">
+                                    <label className="mb-1.5 block text-xs font-semibold text-gray-400">City / Location</label>
+                                    <input
+                                        value={form.city}
+                                        onChange={setField('city')}
+                                        required
+                                        placeholder="Addis Ababa"
+                                        className="w-full rounded-xl border border-green-600/20 bg-[#1A1B23] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={submitting}
+                                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 py-4 text-sm font-extrabold uppercase tracking-wide text-black shadow-[0_0_30px_rgba(74,222,128,0.4)] transition hover:shadow-[0_0_45px_rgba(74,222,128,0.6)] disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2"
+                                >
+                                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                                    {!submitting && !isAuthenticated ? 'Continue to Login' : null}
+                                    {!submitting && isAuthenticated && isAwaitingPayment && isEventPaid ? 'Retry Payment' : null}
+                                    {!submitting && isAuthenticated && isAwaitingPayment && !isEventPaid ? 'Retry Registration' : null}
+                                    {!submitting && isAuthenticated && !isAwaitingPayment && isEventPaid ? `Pay ${event.price} & Confirm` : null}
+                                    {!submitting && isAuthenticated && !isAwaitingPayment && !isEventPaid ? 'Confirm Registration' : null}
+                                    {!submitting && isAuthenticated && <ShieldCheck className="h-4 w-4" />}
+                                </button>
+                            </form>
+
+                            <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-[11px] text-gray-500">
+                                <ShieldCheck className="h-3.5 w-3.5 text-green-500" />
+                                Your details are secure &amp; never shared with third parties.
+                            </p>
+                            </div>
+                        </div>
+                    </div>
+                    )}
+                </section>
+            </main>
+
+            {/* ── Confirmation Modal ─────────────────────────────────────── */}
+            {modal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+                    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={closeModal} />
+                    <div className="relative w-full max-w-md rounded-3xl border border-green-600/25 bg-[#12131A] p-8 shadow-[0_0_60px_rgba(74,222,128,0.15)]">
+                        <button onClick={closeModal} aria-label="Close" className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-gray-400 transition hover:text-white">
+                            <X className="h-4 w-4" />
+                        </button>
+
+                        {modal.view === 'linkCopied' ? (
+                            <>
+                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/15 shadow-[0_0_35px_rgba(74,222,128,0.4)]">
+                                    <CheckCircle2 className="h-8 w-8 text-green-500" />
+                                </div>
+                                <h3 className="mt-5 text-center text-2xl font-extrabold text-white">Meeting Link Copied</h3>
+                                <p className="mt-2 break-all text-center text-sm text-[#9CA3AF]">{joinUrl}</p>
+                                <button
+                                    onClick={closeModal}
+                                    className="mt-6 w-full rounded-2xl border border-green-500/40 bg-green-500/10 py-3.5 text-sm font-extrabold uppercase tracking-wide text-green-300 transition hover:bg-green-500/20"
+                                >
+                                    Done
+                                </button>
+                            </>
+                        ) : modal.view === 'resumed' ? (
+                            <>
+                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/15 shadow-[0_0_35px_rgba(74,222,128,0.4)]">
+                                    <ShieldCheck className="h-8 w-8 text-green-500" />
+                                </div>
+                                <h3 className="mt-5 text-center text-2xl font-extrabold text-white">Welcome back!</h3>
+                                <p className="mt-2 text-center text-sm text-[#9CA3AF]">
+                                    You are logged in. We restored the details you entered — press the button below to
+                                    complete your registration.
+                                </p>
+                                <button
+                                    onClick={() => { closeModal(); document.getElementById('secure-your-spot')?.scrollIntoView({ behavior: 'smooth' }); }}
+                                    className="mt-6 w-full rounded-2xl bg-gradient-to-r from-green-500 to-green-600 py-3.5 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110"
+                                >
+                                    Continue Registration
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                        {modal.warning ? (
+                            <>
+                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/15 shadow-[0_0_35px_rgba(245,158,11,0.4)]">
+                                    <AlertTriangle className="h-8 w-8 text-amber-500" />
+                                </div>
+                                <h3 className="mt-5 text-center text-2xl font-extrabold text-white">Registration Issue</h3>
+                                <p className="mt-2 text-center text-sm text-[#9CA3AF]">
+                                    {modal.message || 'The platform could not confirm your registration right now — please contact us to finalize your spot.'}
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/15 shadow-[0_0_35px_rgba(74,222,128,0.4)]">
+                                    <CheckCircle2 className="h-8 w-8 text-green-500" />
+                                </div>
+                                <h3 className="mt-5 text-center text-2xl font-extrabold text-white">{modal.alreadyRegistered ? 'Already Registered ✓' : "You're in! 🎉"}</h3>
+                                <p className="mt-2 text-center text-sm text-[#9CA3AF]">
+                                    {modal.alreadyRegistered
+                                        ? `Your existing booking for ${event.title} is confirmed. No additional payment is needed.`
+                                        : `Your booking for ${event.title} is confirmed.`}
+                                </p>
+                                {modal.alreadyRegistered && (
+                                    <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-green-500/40 bg-green-500/10 p-4 text-sm text-green-200">
+                                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                                        <span>{modal.message}</span>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                        <div className="mt-6 space-y-3 rounded-2xl border border-white/5 bg-[#1A1B23] p-5 text-sm">
+                            <div className="flex items-center justify-between">
+                                <span className="text-gray-400">Booking Ref</span>
+                                <span className="font-mono font-bold text-green-300">{bookingRef}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-gray-400">Date</span>
+                                <span className="font-semibold text-white">{toISO(new Date(selectedDate.year, selectedDate.month, selectedDate.day))}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-gray-400">Time</span>
+                                <span className="font-semibold text-white">{selectedSlot}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-gray-400">Name</span>
+                                <span className="font-semibold text-white">{form.name || 'Guest'}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-gray-400">Phone</span>
+                                <span className="font-semibold text-white">{form.phone || '—'}</span>
+                            </div>
+                            {joinUrl && (
+                                <div className="mt-1 flex items-center justify-between gap-3 border-t border-white/5 pt-3">
+                                    <span className="flex items-center gap-1.5 text-gray-400"><Video className="h-3.5 w-3.5 text-green-500" /> Meeting Link</span>
+                                    <a href={joinUrl} target="_blank" rel="noopener noreferrer" className="max-w-[55%] truncate font-semibold text-green-300 underline decoration-green-500/40 underline-offset-2 hover:text-green-200">
+                                        {joinUrl}
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                        <p className="mt-4 text-center text-xs text-gray-500">
+                            A confirmation SMS &amp; email have been sent to your contact details.
+                        </p>
+                        <button
+                            onClick={closeModal}
+                            className="mt-6 w-full rounded-2xl border border-green-500/40 bg-green-500/10 py-3.5 text-sm font-extrabold uppercase tracking-wide text-green-300 transition hover:bg-green-500/20"
+                        >
+                            Done
+                        </button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+        </>
+    );
+}
