@@ -148,10 +148,9 @@ export default function Navbar() {
                 <button className="emare-mobile-menu-button" aria-label="Open navigation" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} style={s.mobileMenuButton}>☰</button>
 
                 <div className="emare-nav-center" style={s.navCenter}>
-                    <Link to="/" style={s.navLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>Home</Link>
                     <Link to="/about" style={s.navLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>About</Link>
-                    <Link to="/developers" style={s.navLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>Emare Developers</Link>
-                    <Link to="/courses" style={s.navLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>Course Catalogs</Link>
+                    <Link to="/developers" style={s.navLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>Developers</Link>
+                    <Link to="/courses" style={s.navLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>Courses</Link>
                     <Link to="/events" style={s.navLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>Events</Link>
                     <a href="#services" style={s.navLink} onMouseEnter={linkHover} onMouseLeave={linkLeave} onClick={e => { e.preventDefault(); goToSection('services'); }}>Services</a>
                     <a href="#contact" style={s.navLink} onMouseEnter={linkHover} onMouseLeave={linkLeave} onClick={e => { e.preventDefault(); goToSection('contact'); }}>Contact</a>
@@ -227,10 +226,9 @@ export default function Navbar() {
 
             {isMobileMenuOpen && (
                 <div className="emare-mobile-drawer">
-                    <Link to="/" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
                     <Link to="/about" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>About</Link>
-                    <Link to="/developers" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Emare Developers</Link>
-                    <Link to="/courses" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Course Catalogs</Link>
+                    <Link to="/developers" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Developers</Link>
+                    <Link to="/courses" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Courses</Link>
                     <Link to="/events" style={s.navLink} onClick={() => setIsMobileMenuOpen(false)}>Events</Link>
                     <a href="#services" style={s.navLink} onClick={e => { e.preventDefault(); setIsMobileMenuOpen(false); goToSection('services'); }}>Services</a>
                     <a href="#contact" style={s.navLink} onClick={e => { e.preventDefault(); setIsMobileMenuOpen(false); goToSection('contact'); }}>Contact</a>

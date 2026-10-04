@@ -136,8 +136,8 @@ export default function SiteFooter() {
                     <div>
                         <h4 style={s.footerTitle}>Quick Links</h4>
                         <Link to="/about" className="emare-footer-link" style={s.footerLink}>About</Link>
-                        <Link to="/developers" className="emare-footer-link" style={s.footerLink}>Emare Developers</Link>
-                        <Link to="/courses" className="emare-footer-link" style={s.footerLink}>Course Catalogs</Link>
+                        <Link to="/developers" className="emare-footer-link" style={s.footerLink}>Developers</Link>
+                        <Link to="/courses" className="emare-footer-link" style={s.footerLink}>Courses</Link>
                         <Link to="/events" className="emare-footer-link" style={s.footerLink}>Events</Link>
                         <a href="/#services" className="emare-footer-link" style={s.footerLink} onClick={scrollToHomeSection('services')}>Services</a>
                         <a href="/#contact" className="emare-footer-link" style={s.footerLink} onClick={scrollToHomeSection('contact')}>Contact</a>

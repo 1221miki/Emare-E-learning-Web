@@ -36,8 +36,14 @@ import {
 import Navbar from '../../components/Navbar';
 import EventFooter from '../../components/events/EventFooter';
 import Modal from '../../components/Modal';
+import { useTheme } from '../../context/ThemeContext';
 import { eventService, calendarService, uploadService } from '../../services/api';
 import { EVENT_CATEGORIES, getLiveStatus, isValidUrl } from '../../utils/eventStatus';
+
+const getInputCls = (isDark) =>
+    isDark
+        ? 'w-full rounded-xl border border-slate-600/40 bg-[#151a2c] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none'
+        : 'w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition focus:border-green-600 focus:bg-white focus:ring-2 focus:ring-green-500/30 focus:outline-none';
 
 // ── Status meta (badge colors) ─────────────────────────────
 const STATUS_META = {
@@ -237,6 +243,9 @@ const EMPTY_CREATE_FORM = {
 };
 
 export default function AdminEventsPage() {
+    const { theme, colors } = useTheme();
+    const isDark = theme === 'dark';
+    const inputCls = getInputCls(isDark);
     const location = useLocation();
     const [events, setEvents] = useState([]);
     const [stats, setStats] = useState(null);
@@ -751,25 +760,62 @@ export default function AdminEventsPage() {
 
     const pendingCount = stats?.pending ?? events.filter((e) => e.status === 'PENDING_REVIEW').length;
 
+    const fInp = {
+        width: '100%',
+        padding: '10px 14px',
+        borderRadius: 10,
+        border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #cbd5e1',
+        background: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff',
+        color: isDark ? '#fff' : '#0f172a',
+        fontSize: 14,
+        outline: 'none',
+        boxSizing: 'border-box'
+    };
+    const fSel = {
+        width: '100%',
+        padding: '10px 14px',
+        borderRadius: 10,
+        border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #cbd5e1',
+        background: isDark ? '#1e293b' : '#ffffff',
+        color: isDark ? '#fff' : '#0f172a',
+        fontSize: 14,
+        outline: 'none'
+    };
+    const fOpt = {
+        background: isDark ? '#1e293b' : '#ffffff',
+        color: isDark ? '#ffffff' : '#0f172a'
+    };
+    const fLbl = {
+        display: 'block',
+        fontSize: 13,
+        fontWeight: 600,
+        marginBottom: 6,
+        color: isDark ? '#9ca3af' : '#475569'
+    };
+    const fDiv = {
+        height: 1,
+        background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
+    };
+
     return (
-        <div className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(135deg,#0B0C10_0%,#14141F_45%,#1F1F2E_100%)] text-white">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] bg-[size:26px_26px]" />
+        <div className={`relative min-h-screen overflow-x-hidden ${isDark ? 'bg-[linear-gradient(135deg,#0B0C10_0%,#14141F_45%,#1F1F2E_100%)] text-white' : 'bg-[linear-gradient(135deg,#f8fafc_0%,#f1f5f9_45%,#e2e8f0_100%)] text-[#16213a]'}`}>
+            <div className={`pointer-events-none absolute inset-0 ${isDark ? 'bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)]' : 'bg-[radial-gradient(circle_at_1px_1px,rgba(15,23,42,0.06)_1px,transparent_0)]'} bg-[size:26px_26px]`} />
             <div className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[720px] -translate-x-1/2 rounded-full bg-green-600/10 blur-[120px]" />
             <Navbar />
 
             <main className="relative z-10 mx-auto max-w-7xl px-4 pt-24 sm:px-6 sm:pt-28">
-                <Link to="/admin/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-gray-300 transition hover:text-green-500">
+                <Link to="/admin/dashboard" className={`inline-flex items-center gap-2 text-sm font-bold transition ${isDark ? 'text-gray-300 hover:text-green-500' : 'text-slate-600 hover:text-green-600'}`}>
                     <ArrowLeft className="h-4 w-4" /> Admin Dashboard
                 </Link>
 
                 <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-black tracking-tight">Event Management</h1>
-                        <p className="mt-1 text-sm text-[#9CA3AF]">Validate, approve, reject, edit and publish instructor-submitted events.</p>
+                        <h1 className={`text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Event Management</h1>
+                        <p className={`mt-1 text-sm ${isDark ? 'text-[#9CA3AF]' : 'text-slate-600'}`}>Validate, approve, reject, edit and publish instructor-submitted events.</p>
                     </div>
                     <div className="flex items-center gap-3">
                         {pendingCount > 0 && (
-                            <span className="inline-flex items-center gap-2 rounded-full border border-green-500/40 bg-green-500/10 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-green-300">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-green-500/40 bg-green-500/10 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-green-600 dark:text-green-300">
                                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-[11px] font-black text-black">{pendingCount}</span>
                                 Need Review
                             </span>
@@ -782,7 +828,7 @@ export default function AdminEventsPage() {
                         </button>
                         <button
                             onClick={() => { loadEvents(); loadStats(); }}
-                            className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-2 text-sm font-bold text-gray-200 transition hover:border-green-500/50 hover:text-green-300"
+                            className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-bold transition ${isDark ? 'border-white/10 text-gray-200 hover:border-green-500/50 hover:text-green-300' : 'border-slate-300 text-slate-700 bg-white hover:border-green-600 hover:text-green-700 shadow-sm'}`}
                         >
                             <RefreshCw className="h-4 w-4" /> Refresh
                         </button>
@@ -792,15 +838,15 @@ export default function AdminEventsPage() {
                 {/* ── Overview Metrics Bar ─────────────────────────── */}
                 <section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {metrics.map((m) => (
-                        <div key={m.label} className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#12131A]/80 p-5">
+                        <div key={m.label} className={`relative overflow-hidden rounded-3xl border p-5 ${isDark ? 'border-white/10 bg-[#12131A]/80' : 'border-slate-200 bg-white shadow-sm'}`}>
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <p className="text-xs font-bold uppercase tracking-wider text-gray-400">{m.label}</p>
+                                    <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{m.label}</p>
                                     <p className={`mt-2 text-3xl font-black tabular-nums ${m.accent}`}>
                                         {statsLoading ? '—' : m.value}
                                     </p>
                                 </div>
-                                <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-green-600/20 bg-green-500/10 text-green-500">
+                                <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-green-600/20 bg-green-500/10 text-green-600 dark:text-green-500">
                                     <m.icon className="h-5 w-5" />
                                 </span>
                             </div>
@@ -823,7 +869,9 @@ export default function AdminEventsPage() {
                                 className={`rounded-full px-4 py-2 text-xs font-extrabold uppercase tracking-wider transition ${
                                     activeTab === t.key
                                         ? 'bg-gradient-to-r from-green-500 to-green-600 text-black shadow-[0_0_18px_rgba(74,222,128,0.35)]'
-                                        : 'border border-white/10 text-gray-300 hover:border-green-500/40 hover:text-green-300'
+                                        : isDark
+                                            ? 'border border-white/10 text-gray-300 hover:border-green-500/40 hover:text-green-300 bg-white/5'
+                                            : 'border border-slate-300 text-slate-700 hover:border-green-600 hover:text-green-700 bg-white shadow-sm'
                                 }`}
                             >
                                 {t.label}
@@ -835,40 +883,40 @@ export default function AdminEventsPage() {
                         <select
                             value={categoryFilter}
                             onChange={(e) => setCategoryFilter(e.target.value)}
-                            className="rounded-full border border-white/10 bg-[#12131A] px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-300 transition hover:border-green-500/40"
+                            className={`rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-wider transition ${isDark ? 'border-white/10 bg-[#12131A] text-gray-300 hover:border-green-500/40' : 'border-slate-300 bg-white text-slate-800 hover:border-green-600 shadow-sm'}`}
                         >
-                            <option value="all" className="bg-[#12131A]">All Categories</option>
+                            <option value="all" className={isDark ? 'bg-[#12131A] text-white' : 'bg-white text-slate-800'}>All Categories</option>
                             {EVENT_CATEGORIES.map((cat) => (
-                                <option key={cat} value={cat} className="bg-[#12131A]">{cat}</option>
+                                <option key={cat} value={cat} className={isDark ? 'bg-[#12131A] text-white' : 'bg-white text-slate-800'}>{cat}</option>
                             ))}
                         </select>
                         <select
                             value={visibilityFilter}
                             onChange={(e) => setVisibilityFilter(e.target.value)}
-                            className="rounded-full border border-white/10 bg-[#12131A] px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-300 transition hover:border-green-500/40"
+                            className={`rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-wider transition ${isDark ? 'border-white/10 bg-[#12131A] text-gray-300 hover:border-green-500/40' : 'border-slate-300 bg-white text-slate-800 hover:border-green-600 shadow-sm'}`}
                         >
-                            <option value="all" className="bg-[#12131A]">All Visibility</option>
-                            <option value="public" className="bg-[#12131A]">Public</option>
-                            <option value="internal" className="bg-[#12131A]">Internal</option>
+                            <option value="all" className={isDark ? 'bg-[#12131A] text-white' : 'bg-white text-slate-800'}>All Visibility</option>
+                            <option value="public" className={isDark ? 'bg-[#12131A] text-white' : 'bg-white text-slate-800'}>Public</option>
+                            <option value="internal" className={isDark ? 'bg-[#12131A] text-white' : 'bg-white text-slate-800'}>Internal</option>
                         </select>
                     </div>
                     <div className="relative w-full lg:w-80">
-                        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                        <Search className={`absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${isDark ? 'text-gray-500' : 'text-slate-400'}`} />
                         <input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder="Search event title or instructor…"
-                            className="w-full rounded-2xl border border-white/10 bg-[#12131A] py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 transition focus:border-green-500/60 focus:ring-2 focus:ring-green-500/20 focus:outline-none"
+                            className={`w-full rounded-2xl border py-2.5 pl-10 pr-4 text-sm transition focus:ring-2 focus:outline-none ${isDark ? 'border-white/10 bg-[#12131A] text-white placeholder-gray-500 focus:border-green-500/60 focus:ring-green-500/20' : 'border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:border-green-600 focus:ring-green-500/20 shadow-sm'}`}
                         />
                     </div>
                 </section>
 
                 {/* ── Data Table ───────────────────────────────────── */}
-                <section className="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-[#12131A]/80">
+                <section className={`mt-6 overflow-hidden rounded-3xl border ${isDark ? 'border-white/10 bg-[#12131A]/80' : 'border-slate-200 bg-white shadow-sm'}`}>
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[1180px] text-left text-sm">
                             <thead>
-                                <tr className="border-b border-white/10 text-[11px] font-extrabold uppercase tracking-wider text-gray-400">
+                                <tr className={`border-b text-[11px] font-extrabold uppercase tracking-wider ${isDark ? 'border-white/10 text-gray-400' : 'border-slate-200 text-slate-500 bg-slate-50/70'}`}>
                                     <th className="px-5 py-4">Event</th>
                                     <th className="px-5 py-4">Category</th>
                                     <th className="px-5 py-4">Date &amp; Time</th>
@@ -884,18 +932,18 @@ export default function AdminEventsPage() {
                                     <tr>
                                         <td colSpan={8} className="px-5 py-16 text-center">
                                             <Loader2 className="mx-auto h-6 w-6 animate-spin text-green-500" />
-                                            <p className="mt-3 text-xs text-gray-400">Loading events…</p>
+                                            <p className={`mt-3 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Loading events…</p>
                                         </td>
                                     </tr>
                                 ) : loadError ? (
                                     <tr>
                                         <td colSpan={8} className="px-5 py-16 text-center">
                                             <AlertTriangle className="mx-auto h-8 w-8 text-red-400" />
-                                            <p className="mt-3 text-sm font-bold text-white">Unable to load events</p>
-                                            <p className="mt-1 text-xs text-gray-400">Please try again.</p>
+                                            <p className={`mt-3 text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Unable to load events</p>
+                                            <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Please try again.</p>
                                             <button
                                                 onClick={() => { loadEvents(); loadStats(); }}
-                                                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/10 px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider text-gray-200 transition hover:border-green-500/50 hover:text-green-300"
+                                                className={`mt-4 inline-flex items-center gap-2 rounded-xl border px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider transition ${isDark ? 'border-white/10 text-gray-200 hover:border-green-500/50 hover:text-green-300' : 'border-slate-300 text-slate-700 bg-white hover:border-green-600 hover:text-green-700 shadow-sm'}`}
                                             >
                                                 <RefreshCw className="h-3.5 w-3.5" /> Retry
                                             </button>
@@ -904,9 +952,9 @@ export default function AdminEventsPage() {
                                 ) : events.length === 0 ? (
                                     <tr>
                                         <td colSpan={8} className="px-5 py-16 text-center">
-                                            <CalendarDays className="mx-auto h-10 w-10 text-gray-600" />
-                                            <p className="mt-4 text-lg font-black text-white">No events found</p>
-                                            <p className="mt-1 text-sm text-gray-400">Create your first event to see it here.</p>
+                                            <CalendarDays className={`mx-auto h-10 w-10 ${isDark ? 'text-gray-600' : 'text-slate-400'}`} />
+                                            <p className={`mt-4 text-lg font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>No events found</p>
+                                            <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Create your first event to see it here.</p>
                                             <button
                                                 onClick={() => { setCreateForm(EMPTY_CREATE_FORM); setCreateOpen(true); }}
                                                 className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider text-black shadow-[0_0_18px_rgba(74,222,128,0.3)] transition hover:brightness-110"
@@ -917,7 +965,7 @@ export default function AdminEventsPage() {
                                     </tr>
                                 ) : filtered.length === 0 ? (
                                     <tr>
-                                        <td colSpan={8} className="px-5 py-16 text-center text-sm text-gray-400">
+                                        <td colSpan={8} className={`px-5 py-16 text-center text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>
                                             No events match the current filter.
                                         </td>
                                     </tr>
@@ -928,17 +976,17 @@ export default function AdminEventsPage() {
                                         const total = event.totalSlots || 0;
                                         const fill = total > 0 ? Math.min(100, Math.round((registered / total) * 100)) : 0;
                                         return (
-                                            <tr key={event._id} className="border-b border-white/5 transition hover:bg-white/[0.03]">
+                                            <tr key={event._id} className={`border-b transition ${isDark ? 'border-white/5 hover:bg-white/[0.03]' : 'border-slate-100 hover:bg-slate-50/80'}`}>
                                                 <td className="px-5 py-4">
                                                     <div className="flex items-center gap-3">
-                                                        <img src={event.image || '/images/education-hero.jpg'} alt="" className="h-11 w-11 shrink-0 rounded-xl border border-white/10 object-cover" />
+                                                        <img src={event.image || '/images/education-hero.jpg'} alt="" className={`h-11 w-11 shrink-0 rounded-xl border object-cover ${isDark ? 'border-white/10' : 'border-slate-200'}`} />
                                                         <div className="min-w-0">
-                                                            <p className="max-w-[240px] truncate font-bold text-white">{event.title}</p>
-                                                            <span className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-300">
+                                                            <p className={`max-w-[240px] truncate font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{event.title}</p>
+                                                            <span className={`mt-1 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'border-white/10 bg-white/5 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-700'}`}>
                                                                 {event.eventType === 'Online' ? <Video className="h-3 w-3 text-green-500" /> : <MapPin className="h-3 w-3 text-green-500" />}
                                                                 {event.eventType}
                                                             </span>
-                                                            <p className="mt-1 flex items-center gap-1 text-xs text-gray-400">
+                                                            <p className={`mt-1 flex items-center gap-1 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>
                                                                 <Users className="h-3 w-3 text-green-500" />
                                                                 {event.submittedBy?.fullName || 'Platform Admin'}
                                                             </p>
@@ -946,20 +994,20 @@ export default function AdminEventsPage() {
                                                     </div>
                                                 </td>
                                                 <td className="px-5 py-4">
-                                                    <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-gray-200">{event.category || 'Masterclass'}</span>
+                                                    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${isDark ? 'border-white/10 bg-white/5 text-gray-200' : 'border-slate-200 bg-slate-100 text-slate-800'}`}>{event.category || 'Masterclass'}</span>
                                                 </td>
                                                 <td className="px-5 py-4">
-                                                    <p className="flex items-center gap-2 text-gray-200"><Calendar className="h-3.5 w-3.5 text-green-500" /> {fmtDate(event.startDate)}</p>
-                                                    <p className="mt-1 flex items-center gap-2 text-xs text-gray-400"><Clock className="h-3.5 w-3.5 text-green-500" /> {event.timeLabel || `${event.startTime} – ${event.endTime}`}</p>
+                                                    <p className={`flex items-center gap-2 ${isDark ? 'text-gray-200' : 'text-slate-800'}`}><Calendar className="h-3.5 w-3.5 text-green-500" /> {fmtDate(event.startDate)}</p>
+                                                    <p className={`mt-1 flex items-center gap-2 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}><Clock className="h-3.5 w-3.5 text-green-500" /> {event.timeLabel || `${event.startTime} – ${event.endTime}`}</p>
                                                 </td>
                                                 <td className="px-5 py-4">
                                                     {event.eventType === 'Physical' ? (
-                                                        <p className="max-w-[220px] truncate text-xs text-gray-400">{[event.venue, event.city].filter(Boolean).join(', ') || 'Physical venue'}</p>
+                                                        <p className={`max-w-[220px] truncate text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{[event.venue, event.city].filter(Boolean).join(', ') || 'Physical venue'}</p>
                                                     ) : event.eventType === 'Online' ? (
                                                         <>
-                                                            <p className="text-xs font-semibold text-gray-200">Online Live Stream</p>
+                                                            <p className={`text-xs font-semibold ${isDark ? 'text-gray-200' : 'text-slate-800'}`}>Online Live Stream</p>
                                                             {event.meetingUrl || event.streamUrl ? (
-                                                                <a href={event.meetingUrl || event.streamUrl} target="_blank" rel="noopener noreferrer" className="mt-1 flex max-w-[220px] items-center gap-1 truncate text-xs text-sky-400 hover:text-sky-300">
+                                                                <a href={event.meetingUrl || event.streamUrl} target="_blank" rel="noopener noreferrer" className="mt-1 flex max-w-[220px] items-center gap-1 truncate text-xs text-sky-500 hover:text-sky-600">
                                                                     <ExternalLink className="h-3 w-3 shrink-0" />
                                                                     <span className="truncate">{event.meetingUrl || event.streamUrl}</span>
                                                                 </a>
@@ -967,9 +1015,9 @@ export default function AdminEventsPage() {
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <p className="max-w-[220px] truncate text-xs text-gray-200">{[event.venue, event.city].filter(Boolean).join(', ') || 'Venue TBD'}</p>
+                                                            <p className={`max-w-[220px] truncate text-xs ${isDark ? 'text-gray-200' : 'text-slate-800'}`}>{[event.venue, event.city].filter(Boolean).join(', ') || 'Venue TBD'}</p>
                                                             {event.meetingUrl || event.streamUrl ? (
-                                                                <a href={event.meetingUrl || event.streamUrl} target="_blank" rel="noopener noreferrer" className="mt-1 flex max-w-[220px] items-center gap-1 truncate text-xs text-sky-400 hover:text-sky-300">
+                                                                <a href={event.meetingUrl || event.streamUrl} target="_blank" rel="noopener noreferrer" className="mt-1 flex max-w-[220px] items-center gap-1 truncate text-xs text-sky-500 hover:text-sky-600">
                                                                     <Video className="h-3 w-3 shrink-0" />
                                                                     <span className="truncate">{event.meetingUrl || event.streamUrl}</span>
                                                                 </a>
@@ -978,8 +1026,8 @@ export default function AdminEventsPage() {
                                                     )}
                                                 </td>
                                                 <td className="px-5 py-4">
-                                                    <p className="text-gray-200">{registered}<span className="text-gray-500"> / {total}</span></p>
-                                                    <div className="mt-1.5 h-1.5 w-24 overflow-hidden rounded-full bg-white/10">
+                                                    <p className={isDark ? 'text-gray-200' : 'text-slate-800'}>{registered}<span className={isDark ? 'text-gray-500' : 'text-slate-400'}> / {total}</span></p>
+                                                    <div className={`mt-1.5 h-1.5 w-24 overflow-hidden rounded-full ${isDark ? 'bg-white/10' : 'bg-slate-200'}`}>
                                                         <div className={`h-full rounded-full ${fill >= 100 ? 'bg-red-400' : 'bg-gradient-to-r from-green-500 to-green-600'}`} style={{ width: `${fill}%` }} />
                                                     </div>
                                                 </td>
@@ -996,7 +1044,7 @@ export default function AdminEventsPage() {
                                                     )}
                                                 </td>
                                                 <td className="px-5 py-4">
-                                                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider ${event.visibility === 'internal' ? 'border-white/10 bg-white/5 text-gray-300' : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300'}`}>
+                                                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider ${event.visibility === 'internal' ? (isDark ? 'border-white/10 bg-white/5 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-700') : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-600 dark:text-emerald-300'}`}>
                                                         {event.visibility === 'internal' ? <Lock className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
                                                         {event.visibility === 'internal' ? 'Internal' : 'Public'}
                                                     </span>
@@ -1006,7 +1054,7 @@ export default function AdminEventsPage() {
                                                         <button
                                                             onClick={() => openInspect(event)}
                                                             title="View event"
-                                                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-gray-300 transition hover:border-green-500/50 hover:text-green-300"
+                                                            className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border transition ${isDark ? 'border-white/10 text-gray-300 hover:border-green-500/50 hover:text-green-300' : 'border-slate-300 text-slate-600 bg-white hover:border-green-600 hover:text-green-600 shadow-xs'}`}
                                                         >
                                                             <Eye className="h-4 w-4" />
                                                         </button>
@@ -1015,7 +1063,7 @@ export default function AdminEventsPage() {
                                                                 onClick={() => handleApprove(event)}
                                                                 disabled={busy[event._id] === 'approve'}
                                                                 title="Approve & publish"
-                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-400/30 text-emerald-300 transition hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-400/30 text-emerald-400 transition hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-40"
                                                             >
                                                                 {busy[event._id] === 'approve' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                                                             </button>
@@ -1025,7 +1073,7 @@ export default function AdminEventsPage() {
                                                                 onClick={() => handleReject(event, event.reviewNote || '')}
                                                                 disabled={busy[event._id] === 'reject'}
                                                                 title="Reject & return to instructor"
-                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-red-400/30 text-red-300 transition hover:bg-red-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-red-400/30 text-red-400 transition hover:bg-red-400/10 disabled:cursor-not-allowed disabled:opacity-40"
                                                             >
                                                                 {busy[event._id] === 'reject' ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
                                                             </button>
@@ -1035,7 +1083,7 @@ export default function AdminEventsPage() {
                                                                 onClick={() => { setCancelTarget(event); setCancelReason(''); }}
                                                                 disabled={busy[event._id] === 'cancel'}
                                                                 title="Cancel event"
-                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-orange-400/30 text-orange-300 transition hover:bg-orange-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-orange-400/30 text-orange-400 transition hover:bg-orange-400/10 disabled:cursor-not-allowed disabled:opacity-40"
                                                             >
                                                                 {busy[event._id] === 'cancel' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
                                                             </button>
@@ -1043,7 +1091,7 @@ export default function AdminEventsPage() {
                                                         <button
                                                             onClick={() => openEdit(event)}
                                                             title="Edit details"
-                                                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-gray-300 transition hover:border-green-500/50 hover:text-green-300"
+                                                            className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border transition ${isDark ? 'border-white/10 text-gray-300 hover:border-green-500/50 hover:text-green-300' : 'border-slate-300 text-slate-600 bg-white hover:border-green-600 hover:text-green-600 shadow-xs'}`}
                                                         >
                                                             <Pencil className="h-4 w-4" />
                                                         </button>
@@ -1051,7 +1099,7 @@ export default function AdminEventsPage() {
                                                             onClick={() => setDeleteTarget(event)}
                                                             disabled={busy[event._id] === 'delete'}
                                                             title="Delete"
-                                                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-gray-300 transition hover:border-red-400/50 hover:text-red-300 disabled:opacity-40"
+                                                            className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border transition ${isDark ? 'border-white/10 text-gray-300 hover:border-red-400/50 hover:text-red-300' : 'border-slate-300 text-slate-600 bg-white hover:border-red-500 hover:text-red-600 shadow-xs'} disabled:opacity-40`}
                                                         >
                                                             {busy[event._id] === 'delete' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                                         </button>
@@ -1072,73 +1120,73 @@ export default function AdminEventsPage() {
             {/* ── Inspect & Validate Drawer ─────────────────────────── */}
             {drawerOpen && inspected && (
                 <div className="fixed inset-0 z-[60]">
-                    <div className="absolute inset-0 bg-black/20" onClick={() => setDrawerOpen(false)} />
-                    <div className="absolute inset-y-0 right-0 flex w-full max-w-5xl flex-col overflow-hidden border-l border-green-600/20 bg-[#10111A] shadow-2xl">
-                        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
+                    <div className={`absolute inset-y-0 right-0 flex w-full max-w-5xl flex-col overflow-hidden border-l shadow-2xl ${isDark ? 'border-green-600/20 bg-[#10111A]' : 'border-slate-200 bg-white'}`}>
+                        <div className={`flex items-center justify-between border-b px-6 py-4 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
                             <div className="flex items-center gap-3">
-                                <h2 className="text-lg font-black">Inspect &amp; Validate</h2>
+                                <h2 className={`text-lg font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>Inspect &amp; Validate</h2>
                                 <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider ${STATUS_META[inspected.status].pill}`}>
                                     <span className={`h-1.5 w-1.5 rounded-full ${STATUS_META[inspected.status].dot}`} />
                                     {STATUS_META[inspected.status].label}
                                 </span>
                             </div>
-                            <button onClick={() => setDrawerOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-gray-300 transition hover:text-white">
+                            <button onClick={() => setDrawerOpen(false)} className={`flex h-9 w-9 items-center justify-center rounded-xl border transition ${isDark ? 'border-white/10 text-gray-300 hover:text-white' : 'border-slate-200 text-slate-500 hover:text-slate-900'}`}>
                                 <X className="h-4 w-4" />
                             </button>
                         </div>
 
                         <div className="grid flex-1 gap-0 overflow-y-auto lg:grid-cols-2">
                             {/* Left — public preview */}
-                            <div className="border-b border-white/10 p-6 lg:border-b-0 lg:border-r">
-                                <p className="mb-4 text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">Public Preview</p>
-                                <div className="relative overflow-hidden rounded-3xl border border-green-600/20">
+                            <div className={`border-b p-6 lg:border-b-0 lg:border-r ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+                                <p className="mb-4 text-xs font-extrabold uppercase tracking-[0.25em] text-green-600 dark:text-green-500">Public Preview</p>
+                                <div className="relative overflow-hidden rounded-3xl border border-green-600/20 shadow-md">
                                     <img src={inspected.image || '/images/education-hero.jpg'} alt="" className="h-44 w-full object-cover" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                                     <div className="absolute bottom-4 left-4 right-4">
                                         <span className="inline-flex rounded-full bg-green-500 px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-black">Upcoming Event</span>
-                                        <h3 className="mt-2 text-xl font-black leading-tight">{inspected.title}</h3>
-                                        <p className="mt-1 text-xs text-gray-300">{inspected.tagline}</p>
+                                        <h3 className="mt-2 text-xl font-black leading-tight text-white">{inspected.title}</h3>
+                                        <p className="mt-1 text-xs text-gray-200">{inspected.tagline}</p>
                                     </div>
                                 </div>
 
                                 <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
-                                    <div className="rounded-2xl border border-white/10 bg-[#171823] p-3">
-                                        <Calendar className="h-4 w-4 text-green-500" />
-                                        <p className="mt-2 text-gray-300">{fmtDate(inspected.startDate)}</p>
+                                    <div className={`rounded-2xl border p-3 ${isDark ? 'border-white/10 bg-[#171823]' : 'border-slate-200 bg-slate-50'}`}>
+                                        <Calendar className="h-4 w-4 text-green-600 dark:text-green-500" />
+                                        <p className={`mt-2 font-semibold ${isDark ? 'text-gray-300' : 'text-slate-800'}`}>{fmtDate(inspected.startDate)}</p>
                                     </div>
-                                    <div className="rounded-2xl border border-white/10 bg-[#171823] p-3">
-                                        <Clock className="h-4 w-4 text-green-500" />
-                                        <p className="mt-2 text-gray-300">{inspected.timeLabel || `${inspected.startTime} – ${inspected.endTime}`}</p>
+                                    <div className={`rounded-2xl border p-3 ${isDark ? 'border-white/10 bg-[#171823]' : 'border-slate-200 bg-slate-50'}`}>
+                                        <Clock className="h-4 w-4 text-green-600 dark:text-green-500" />
+                                        <p className={`mt-2 font-semibold ${isDark ? 'text-gray-300' : 'text-slate-800'}`}>{inspected.timeLabel || `${inspected.startTime} – ${inspected.endTime}`}</p>
                                     </div>
-                                    <div className="rounded-2xl border border-white/10 bg-[#171823] p-3">
-                                        <MapPin className="h-4 w-4 text-green-500" />
-                                        <p className="mt-2 truncate text-gray-300">{inspected.venue || 'Online Live Stream'}</p>
+                                    <div className={`rounded-2xl border p-3 ${isDark ? 'border-white/10 bg-[#171823]' : 'border-slate-200 bg-slate-50'}`}>
+                                        <MapPin className="h-4 w-4 text-green-600 dark:text-green-500" />
+                                        <p className={`mt-2 truncate font-semibold ${isDark ? 'text-gray-300' : 'text-slate-800'}`}>{inspected.venue || 'Online Live Stream'}</p>
                                     </div>
                                 </div>
 
-                                <p className="mt-5 text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">About</p>
-                                <div className="mt-2 space-y-3 text-sm leading-relaxed text-[#9CA3AF]">
+                                <p className="mt-5 text-xs font-extrabold uppercase tracking-[0.25em] text-green-600 dark:text-green-500">About</p>
+                                <div className={`mt-2 space-y-3 text-sm leading-relaxed ${isDark ? 'text-[#9CA3AF]' : 'text-slate-600'}`}>
                                     {(inspected.description && inspected.description.length ? inspected.description : ['No description provided.']).map((p, i) => (
                                         <p key={i}>{p}</p>
                                     ))}
                                 </div>
 
                                 {inspected.speaker?.name && (
-                                    <div className="mt-5 flex items-center gap-3 rounded-2xl border border-white/10 bg-[#171823] p-4">
+                                    <div className={`mt-5 flex items-center gap-3 rounded-2xl border p-4 ${isDark ? 'border-white/10 bg-[#171823]' : 'border-slate-200 bg-slate-50'}`}>
                                         <img src={inspected.speaker.avatar || inspected.image} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
                                         <div>
-                                            <p className="flex items-center gap-1.5 text-sm font-bold text-white"><BadgeCheck className="h-4 w-4 text-green-500" /> {inspected.speaker.name}</p>
-                                            <p className="text-xs text-green-300">{inspected.speaker.role}</p>
+                                            <p className={`flex items-center gap-1.5 text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><BadgeCheck className="h-4 w-4 text-green-600 dark:text-green-500" /> {inspected.speaker.name}</p>
+                                            <p className="text-xs text-green-600 dark:text-green-400">{inspected.speaker.role}</p>
                                         </div>
                                     </div>
                                 )}
 
-                                <div className="mt-5 rounded-2xl border border-white/10 bg-[#171823] p-4 text-sm">
+                                <div className={`mt-5 rounded-2xl border p-4 text-sm ${isDark ? 'border-white/10 bg-[#171823]' : 'border-slate-200 bg-slate-50'}`}>
                                     <div className="flex items-center justify-between">
-                                        <span className="flex items-center gap-2 text-gray-200"><Users className="h-4 w-4 text-green-500" /> Seats</span>
-                                        <span className="font-bold text-white">{inspected.registeredCount || 0}<span className="text-gray-500"> / {inspected.totalSlots}</span></span>
+                                        <span className={`flex items-center gap-2 ${isDark ? 'text-gray-200' : 'text-slate-700'}`}><Users className="h-4 w-4 text-green-600 dark:text-green-500" /> Seats</span>
+                                        <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{inspected.registeredCount || 0}<span className={isDark ? 'text-gray-500' : 'text-slate-400'}> / {inspected.totalSlots}</span></span>
                                     </div>
-                                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
+                                    <div className={`mt-2 h-2 w-full overflow-hidden rounded-full ${isDark ? 'bg-white/10' : 'bg-slate-200'}`}>
                                         <div className="h-full rounded-full bg-gradient-to-r from-green-500 to-green-600" style={{ width: `${inspected.totalSlots ? Math.min(100, Math.round(((inspected.registeredCount || 0) / inspected.totalSlots) * 100)) : 0}%` }} />
                                     </div>
                                 </div>
@@ -1146,9 +1194,9 @@ export default function AdminEventsPage() {
 
                             {/* Right — validation checklist */}
                             <div className="p-6">
-                                <p className="mb-4 text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">Validation Checklist</p>
+                                <p className="mb-4 text-xs font-extrabold uppercase tracking-[0.25em] text-green-600 dark:text-green-500">Validation Checklist</p>
 
-                                <div className={`mb-4 flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-bold ${checks.passed ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300' : 'border-red-400/40 bg-red-400/10 text-red-300'}`}>
+                                <div className={`mb-4 flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-bold ${checks.passed ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-400' : 'border-red-400/40 bg-red-400/10 text-red-400'}`}>
                                     {checks.passed ? <ShieldCheck className="h-5 w-5" /> : <ShieldAlert className="h-5 w-5" />}
                                     {checks.passed ? 'All checks passed — ready to publish.' : `${checks.checks.filter((c) => !c.passed).length} check(s) failing — approve is blocked.`}
                                 </div>
@@ -1158,15 +1206,15 @@ export default function AdminEventsPage() {
                                         <li
                                             key={c.key}
                                             className={`flex items-start gap-3 rounded-2xl border p-3.5 text-sm ${
-                                                c.passed ? 'border-emerald-400/20 bg-emerald-400/[0.06]' : 'border-red-400/25 bg-red-400/[0.07]'
+                                                c.passed ? (isDark ? 'border-emerald-400/20 bg-emerald-400/[0.06]' : 'border-emerald-200 bg-emerald-50/60') : (isDark ? 'border-red-400/25 bg-red-400/[0.07]' : 'border-red-200 bg-red-50/60')
                                             }`}
                                         >
-                                            <span className={`mt-0.5 shrink-0 ${c.passed ? 'text-emerald-400' : 'text-red-400'}`}>
+                                            <span className={`mt-0.5 shrink-0 ${c.passed ? 'text-emerald-500' : 'text-red-500'}`}>
                                                 {c.passed ? <CheckCircle2 className="h-[18px] w-[18px]" /> : <XCircle className="h-[18px] w-[18px]" />}
                                             </span>
                                             <div>
-                                                <p className="font-bold text-white">{c.label}</p>
-                                                <p className="mt-0.5 text-xs text-[#9CA3AF]">{c.message}</p>
+                                                <p className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{c.label}</p>
+                                                <p className={`mt-0.5 text-xs ${isDark ? 'text-[#9CA3AF]' : 'text-slate-600'}`}>{c.message}</p>
                                             </div>
                                         </li>
                                     ))}
@@ -1174,19 +1222,19 @@ export default function AdminEventsPage() {
 
                                 {inspected.status === 'REJECTED' && inspected.reviewNote && (
                                     <div className="mt-4 rounded-2xl border border-green-500/30 bg-green-500/10 p-4">
-                                        <p className="text-xs font-extrabold uppercase tracking-widest text-green-300">Previous Feedback Sent to Instructor</p>
-                                        <p className="mt-1.5 text-sm text-green-100/80">{inspected.reviewNote}</p>
+                                        <p className="text-xs font-extrabold uppercase tracking-widest text-green-600 dark:text-green-300">Previous Feedback Sent to Instructor</p>
+                                        <p className="mt-1.5 text-sm text-green-700 dark:text-green-100/80">{inspected.reviewNote}</p>
                                     </div>
                                 )}
 
                                 <div className="mt-5">
-                                    <p className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-400">Rejection Notes (sent to instructor)</p>
+                                    <p className={`mb-2 text-xs font-bold uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Rejection Notes (sent to instructor)</p>
                                     <textarea
                                         value={rejectionNote}
                                         onChange={(e) => setRejectionNote(e.target.value)}
                                         rows={3}
                                         placeholder="Explain what needs to be fixed before resubmission…"
-                                        className="w-full rounded-2xl border border-white/10 bg-[#171823] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-red-400/60 focus:ring-2 focus:ring-red-400/20 focus:outline-none"
+                                        className={`w-full rounded-2xl border px-4 py-3 text-sm transition focus:ring-2 focus:outline-none ${isDark ? 'border-white/10 bg-[#171823] text-white placeholder-gray-500 focus:border-red-400/60 focus:ring-red-400/20' : 'border-slate-300 bg-slate-50 text-slate-900 placeholder-slate-400 focus:border-red-500 focus:bg-white focus:ring-red-500/20'}`}
                                     />
                                 </div>
 
@@ -1209,7 +1257,7 @@ export default function AdminEventsPage() {
                                     </button>
                                     <button
                                         onClick={() => { setDrawerOpen(false); openEdit(inspected); }}
-                                        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-green-600 to-green-600 py-3.5 text-sm font-extrabold uppercase tracking-wide text-white transition hover:brightness-110"
+                                        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-green-600 to-green-600 py-3.5 text-sm font-extrabold uppercase tracking-wide text-white transition hover:brightness-110 shadow-sm"
                                     >
                                         <Pencil className="h-4 w-4" /> Edit Event Details Directly
                                     </button>
@@ -1223,17 +1271,17 @@ export default function AdminEventsPage() {
             {/* ── Create Event Modal ────────────────────────────── */}
             {createOpen && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
-                    <div className="absolute inset-0 bg-black/20" />
-                    <div className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-green-600/25 bg-[#12131A] shadow-[0_24px_80px_rgba(2,6,23,0.6)]">
-                        {/* Dark header */}
-                        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#12131A] px-6 py-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={resetCreateForm} />
+                    <div className={`relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border shadow-2xl ${isDark ? 'border-green-600/25 bg-[#12131A] text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
+                        {/* Header */}
+                        <div className={`sticky top-0 z-10 flex items-center justify-between border-b px-6 py-4 ${isDark ? 'border-white/10 bg-[#12131A]' : 'border-slate-200 bg-white'}`}>
                             <div className="flex items-center gap-3">
                                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-500/10 text-green-500">
                                     <Plus className="h-5 w-5" />
                                 </span>
-                                <h2 className="text-base font-black text-white">Create New Event</h2>
+                                <h2 className={`text-base font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>Create New Event</h2>
                             </div>
-                            <button onClick={resetCreateForm} className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 text-gray-400 transition hover:text-white">
+                            <button onClick={resetCreateForm} className={`flex h-8 w-8 items-center justify-center rounded-xl border transition ${isDark ? 'border-white/10 text-gray-400 hover:text-white' : 'border-slate-200 text-slate-500 hover:text-slate-900'}`}>
                                 <X className="h-4 w-4" />
                             </button>
                         </div>
@@ -1249,122 +1297,122 @@ export default function AdminEventsPage() {
 
                     {/* ── BASIC INFORMATION ── */}
                     <div>
-                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#4ade80', marginBottom: 12 }}>Basic Information</div>
+                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#16a34a', marginBottom: 12 }}>Basic Information</div>
                         <div style={{ display: 'grid', gap: 12 }}>
                             <div>
-                                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Event Title *</label>
+                                <label style={fLbl}>Event Title *</label>
                                 <input
                                     value={createForm.title}
                                     onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
                                     placeholder="e.g. Digital Income Masterclass"
-                                    style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+                                    style={fInp}
                                     required
                                 />
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Category *</label>
+                                    <label style={fLbl}>Category *</label>
                                     <select
                                         value={createForm.category}
                                         onChange={(e) => setCreateForm({ ...createForm, category: e.target.value, eventCategory: e.target.value })}
-                                        style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: '#1e293b', color: '#fff', fontSize: 14, outline: 'none' }}
+                                        style={fSel}
                                     >
-                                        {EVENT_CATEGORIES.map((cat) => <option key={cat} value={cat} style={{ background: '#1e293b', color: '#ffffff' }}>{cat}</option>)}
+                                        {EVENT_CATEGORIES.map((cat) => <option key={cat} value={cat} style={fOpt}>{cat}</option>)}
                                     </select>
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Status</label>
+                                    <label style={fLbl}>Status</label>
                                     <select
                                         value={createForm.eventStatus}
                                         onChange={(e) => setCreateForm({ ...createForm, eventStatus: e.target.value })}
-                                        style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: '#1e293b', color: '#fff', fontSize: 14, outline: 'none' }}
+                                        style={fSel}
                                     >
-                                        <option value="SCHEDULED" style={{ background: '#1e293b', color: '#ffffff' }}>Scheduled</option>
-                                        <option value="CANCELLED" style={{ background: '#1e293b', color: '#ffffff' }}>Cancelled</option>
+                                        <option value="SCHEDULED" style={fOpt}>Scheduled</option>
+                                        <option value="CANCELLED" style={fOpt}>Cancelled</option>
                                     </select>
                                 </div>
                             </div>
                             <div>
-                                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Description</label>
+                                <label style={fLbl}>Description</label>
                                 <textarea
                                     value={createForm.description}
                                     onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
                                     placeholder={isFormPublic ? 'One paragraph per line — each line becomes a section on the public page' : 'Short description'}
                                     rows={3}
-                                    style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+                                    style={{ ...fInp, resize: 'vertical' }}
                                 />
                             </div>
                         </div>
                     </div>
 
-                    <div style={{ height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                    <div style={fDiv} />
 
                     {/* ── SCHEDULE ── */}
                     <div>
-                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#4ade80', marginBottom: 12 }}>Schedule</div>
+                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#16a34a', marginBottom: 12 }}>Schedule</div>
                         <div style={{ display: 'grid', gap: 12 }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Start Date *</label>
-                                    <input type="date" value={createForm.startDate} onChange={(e) => setCreateForm({ ...createForm, startDate: e.target.value })} style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} required />
+                                    <label style={fLbl}>Start Date *</label>
+                                    <input type="date" value={createForm.startDate} onChange={(e) => setCreateForm({ ...createForm, startDate: e.target.value })} style={fInp} required />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Start Time</label>
-                                    <input type="time" value={createForm.startTime} disabled={createForm.isAllDay} onChange={(e) => setCreateForm({ ...createForm, startTime: e.target.value })} style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', opacity: createForm.isAllDay ? 0.5 : 1, boxSizing: 'border-box' }} />
+                                    <label style={fLbl}>Start Time</label>
+                                    <input type="time" value={createForm.startTime} disabled={createForm.isAllDay} onChange={(e) => setCreateForm({ ...createForm, startTime: e.target.value })} style={{ ...fInp, opacity: createForm.isAllDay ? 0.5 : 1 }} />
                                 </div>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>End Date</label>
-                                    <input type="date" value={createForm.endDate} onChange={(e) => setCreateForm({ ...createForm, endDate: e.target.value })} style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                                    <label style={fLbl}>End Date</label>
+                                    <input type="date" value={createForm.endDate} onChange={(e) => setCreateForm({ ...createForm, endDate: e.target.value })} style={fInp} />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>End Time</label>
-                                    <input type="time" value={createForm.endTime} disabled={createForm.isAllDay} onChange={(e) => setCreateForm({ ...createForm, endTime: e.target.value })} style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', opacity: createForm.isAllDay ? 0.5 : 1, boxSizing: 'border-box' }} />
+                                    <label style={fLbl}>End Time</label>
+                                    <input type="time" value={createForm.endTime} disabled={createForm.isAllDay} onChange={(e) => setCreateForm({ ...createForm, endTime: e.target.value })} style={{ ...fInp, opacity: createForm.isAllDay ? 0.5 : 1 }} />
                                 </div>
                             </div>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#9ca3af', cursor: 'pointer', fontSize: 14 }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: isDark ? '#9ca3af' : '#475569', cursor: 'pointer', fontSize: 14 }}>
                                 <input type="checkbox" checked={createForm.isAllDay} onChange={(e) => setCreateForm({ ...createForm, isAllDay: e.target.checked })} />
                                 All day event
                             </label>
                         </div>
                     </div>
 
-                    <div style={{ height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                    <div style={fDiv} />
 
                     {/* ── LOCATION ── */}
                     <div>
-                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#4ade80', marginBottom: 12 }}>Location</div>
+                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#16a34a', marginBottom: 12 }}>Location</div>
                         <div style={{ display: 'grid', gap: 12 }}>
                             <div style={{ display: 'flex', gap: 8 }}>
                                 {['Online', 'Physical', 'Hybrid'].map((t) => (
                                     <button
                                         key={t} type="button"
                                         onClick={() => setCreateForm({ ...createForm, eventType: t })}
-                                        style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: `1px solid ${createForm.eventType === t ? '#22c55e' : 'rgba(255,255,255,0.12)'}`, background: createForm.eventType === t ? '#22c55e' : 'transparent', color: createForm.eventType === t ? '#fff' : '#9ca3af', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s' }}
+                                        style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: `1px solid ${createForm.eventType === t ? '#16a34a' : isDark ? 'rgba(255,255,255,0.12)' : '#cbd5e1'}`, background: createForm.eventType === t ? '#16a34a' : 'transparent', color: createForm.eventType === t ? '#fff' : isDark ? '#9ca3af' : '#64748b', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s' }}
                                     >{t}</button>
                                 ))}
                             </div>
                             {(createForm.eventType === 'Physical' || createForm.eventType === 'Hybrid') && (
                                 <div>
-                                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Location</label>
-                                    <input value={createForm.location} onChange={(e) => setCreateForm({ ...createForm, location: e.target.value })} placeholder="e.g. Emare Live Hub, Addis Ababa" style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                                    <label style={fLbl}>Location</label>
+                                    <input value={createForm.location} onChange={(e) => setCreateForm({ ...createForm, location: e.target.value })} placeholder="e.g. Emare Live Hub, Addis Ababa" style={fInp} />
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <div style={{ height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                    <div style={fDiv} />
 
                     {/* ── VIRTUAL MEETING & LIVE STREAM SETTINGS ── */}
                     {createForm.eventType !== 'Physical' && (
                         <div>
-                            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#4ade80', marginBottom: 12 }}>Virtual Meeting &amp; Live Stream Settings</div>
+                            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#16a34a', marginBottom: 12 }}>Virtual Meeting &amp; Live Stream Settings</div>
                             <div style={{ display: 'grid', gap: 12 }}>
 
                                 {/* Platform */}
                                 <div>
-                                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Platform</label>
+                                    <label style={fLbl}>Platform</label>
                                     <select
                                         value={createForm.meetingPlatform}
                                         onChange={(e) => {
@@ -1377,10 +1425,10 @@ export default function AdminEventsPage() {
                                             }));
                                             setMeetingErrors((m) => ({ ...m, streamUrl: '', meetingInvitees: '' }));
                                         }}
-                                        style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: '#1e293b', color: '#fff', fontSize: 14, outline: 'none' }}
+                                        style={fSel}
                                     >
                                         {MEETING_PLATFORMS.map((pf) => (
-                                            <option key={pf.value} value={pf.value} style={{ background: '#1e293b', color: '#ffffff' }}>{pf.label}</option>
+                                            <option key={pf.value} value={pf.value} style={fOpt}>{pf.label}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -1388,19 +1436,19 @@ export default function AdminEventsPage() {
                                 {/* Meeting ID — Zoom only (optional) */}
                                 {createForm.meetingPlatform === 'zoom' && (
                                     <div>
-                                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Meeting ID (Optional)</label>
+                                        <label style={fLbl}>Meeting ID (Optional)</label>
                                         <input
                                             value={createForm.meetingId || ''}
                                             onChange={(e) => setCreateForm({ ...createForm, meetingId: e.target.value })}
                                             placeholder="e.g. 846 1234 5678"
-                                            style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+                                            style={fInp}
                                         />
                                     </div>
                                 )}
 
                                 {/* Meeting Link + Generate button */}
                                 <div>
-                                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Meeting Link</label>
+                                    <label style={fLbl}>Meeting Link</label>
                                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                         <input
                                             value={createForm.streamUrl}
@@ -1409,14 +1457,14 @@ export default function AdminEventsPage() {
                                                 setMeetingErrors((m) => ({ ...m, streamUrl: '' }));
                                             }}
                                             placeholder="Enter a meeting link or generate one automatically"
-                                            style={{ flex: '1 1 200px', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+                                            style={{ ...fInp, flex: '1 1 200px' }}
                                         />
                                         {GENERATABLE_PLATFORMS.includes(createForm.meetingPlatform) && (
                                             <button
                                                 type="button"
                                                 onClick={handleGenerateMeetingLink}
                                                 disabled={meetingGenerating}
-                                                style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, background: '#15803d', color: '#fff', border: 'none', borderRadius: 8, padding: '0 16px', height: 42, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: meetingGenerating ? 'not-allowed' : 'pointer', opacity: meetingGenerating ? 0.7 : 1 }}
+                                                style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, padding: '0 16px', height: 42, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: meetingGenerating ? 'not-allowed' : 'pointer', opacity: meetingGenerating ? 0.7 : 1 }}
                                             >
                                                 {meetingGenerating
                                                     ? <><Loader2 size={15} className="animate-spin" /> Generating meeting…</>
@@ -1428,16 +1476,16 @@ export default function AdminEventsPage() {
                                         <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#ef4444' }}>{meetingErrors.streamUrl}</div>
                                     )}
                                     {!GENERATABLE_PLATFORMS.includes(createForm.meetingPlatform) && (
-                                        <p style={{ margin: '6px 0 0', fontSize: 12, color: '#6b7280' }}>Paste your external meeting / live-stream URL directly. It is validated when the event is saved.</p>
+                                        <p style={{ margin: '6px 0 0', fontSize: 12, color: isDark ? '#9ca3af' : '#64748b' }}>Paste your external meeting / live-stream URL directly. It is validated when the event is saved.</p>
                                     )}
 
                                     {/* Copy / Open links once URL exists */}
                                     {createForm.streamUrl && (
                                         <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                            <button type="button" onClick={() => handleCopyMeetingLink(createForm.streamUrl)} style={{ padding: '5px 10px', fontSize: 12, borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: '#9ca3af', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                            <button type="button" onClick={() => handleCopyMeetingLink(createForm.streamUrl)} style={{ padding: '5px 10px', fontSize: 12, borderRadius: 6, border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#cbd5e1'}`, background: 'transparent', color: isDark ? '#9ca3af' : '#64748b', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                                                 <Copy size={13} /> Copy Link
                                             </button>
-                                            <a href={createForm.streamUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '5px 10px', fontSize: 12, borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: '#9ca3af', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
+                                            <a href={createForm.streamUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '5px 10px', fontSize: 12, borderRadius: 6, border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#cbd5e1'}`, background: 'transparent', color: isDark ? '#9ca3af' : '#64748b', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
                                                 <ExternalLink size={13} /> Open Meeting
                                             </a>
                                         </div>
@@ -1447,12 +1495,12 @@ export default function AdminEventsPage() {
                                 {/* Meeting Password — only platforms that support one */}
                                 {PASSWORD_PLATFORMS.includes(createForm.meetingPlatform) && (
                                     <div>
-                                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Meeting Password (Optional)</label>
+                                        <label style={fLbl}>Meeting Password (Optional)</label>
                                         <input
                                             value={createForm.meetingPassword}
                                             onChange={(e) => setCreateForm({ ...createForm, meetingPassword: e.target.value })}
                                             placeholder="e.g. 123456 — for passcode-protected meetings / streams"
-                                            style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+                                            style={fInp}
                                         />
                                     </div>
                                 )}
@@ -1467,23 +1515,23 @@ export default function AdminEventsPage() {
                         </div>
                     )}
 
-                    <div style={{ height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                    <div style={fDiv} />
 
                     {/* ── VISIBILITY ── */}
                     <div>
-                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#4ade80', marginBottom: 12 }}>Visibility</div>
+                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#16a34a', marginBottom: 12 }}>Visibility</div>
                         <div style={{ display: 'flex', gap: 8 }}>
-                            {[['internal', '#64748b'], ['public', '#10b981']].map(([v, color]) => (
+                            {[['internal', '#64748b'], ['public', '#16a34a']].map(([v, color]) => (
                                 <button
                                     key={v} type="button"
                                     onClick={() => setCreateForm({ ...createForm, visibility: v })}
-                                    style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: `1px solid ${createForm.visibility === v ? color : 'rgba(255,255,255,0.12)'}`, background: createForm.visibility === v ? color : 'transparent', color: createForm.visibility === v ? '#fff' : '#9ca3af', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                                    style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: `1px solid ${createForm.visibility === v ? color : isDark ? 'rgba(255,255,255,0.12)' : '#cbd5e1'}`, background: createForm.visibility === v ? color : 'transparent', color: createForm.visibility === v ? '#fff' : isDark ? '#9ca3af' : '#64748b', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                                 >
                                     {v === 'internal' ? <><Lock size={13} /> Internal</> : <><Globe size={13} /> Public</>}
                                 </button>
                             ))}
                         </div>
-                        <p style={{ margin: '10px 0 0', fontSize: 12, color: '#6b7280' }}>
+                        <p style={{ margin: '10px 0 0', fontSize: 12, color: isDark ? '#9ca3af' : '#64748b' }}>
                             {isFormPublic
                                 ? 'Public events appear in the public events area and go through the review pipeline.'
                                 : 'Internal events appear only on the admin/internal calendar (holidays, academic dates, meetings).'}
@@ -1493,27 +1541,27 @@ export default function AdminEventsPage() {
                     {/* ── PUBLIC EVENT OPTIONS ── */}
                     {isFormPublic && (
                         <>
-                            <div style={{ height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                            <div style={fDiv} />
                             <div>
-                                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#4ade80', marginBottom: 12 }}>Public Event Options</div>
+                                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#16a34a', marginBottom: 12 }}>Public Event Options</div>
                                 <div style={{ display: 'grid', gap: 12 }}>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                         <div>
-                                            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Price</label>
-                                            <input value={createForm.price} onChange={(e) => setCreateForm({ ...createForm, price: e.target.value })} placeholder="FREE / 0" style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                                            <label style={fLbl}>Price</label>
+                                            <input value={createForm.price} onChange={(e) => setCreateForm({ ...createForm, price: e.target.value })} placeholder="FREE / 0" style={fInp} />
                                         </div>
                                         <div>
-                                            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Total seats / capacity</label>
-                                            <input type="number" min="0" value={createForm.capacity} onChange={(e) => setCreateForm({ ...createForm, capacity: e.target.value })} placeholder="e.g. 50" style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                                            <label style={fLbl}>Total seats / capacity</label>
+                                            <input type="number" min="0" value={createForm.capacity} onChange={(e) => setCreateForm({ ...createForm, capacity: e.target.value })} placeholder="e.g. 50" style={fInp} />
                                         </div>
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>Event Thumbnail</label>
+                                        <label style={fLbl}>Event Thumbnail</label>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                                             <input id="event-banner-upload" type="file" accept="image/*" onChange={handleBannerUpload} style={{ display: 'none' }} />
                                             <label
                                                 htmlFor="event-banner-upload"
-                                                style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, background: 'rgba(16,185,129,0.15)', color: '#34d399', border: '1px solid rgba(16,185,129,0.35)', borderRadius: 8, padding: '9px 16px', display: 'inline-flex', alignItems: 'center', gap: 7, cursor: bannerUploading ? 'not-allowed' : 'pointer', opacity: bannerUploading ? 0.6 : 1 }}
+                                                style={{ whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, background: 'rgba(22,163,74,0.15)', color: isDark ? '#4ade80' : '#15803d', border: '1px solid rgba(22,163,74,0.35)', borderRadius: 8, padding: '9px 16px', display: 'inline-flex', alignItems: 'center', gap: 7, cursor: bannerUploading ? 'not-allowed' : 'pointer', opacity: bannerUploading ? 0.6 : 1 }}
                                             >
                                                 {bannerUploading
                                                     ? <><Loader2 size={15} className="animate-spin" /> Uploading…</>
@@ -1521,12 +1569,12 @@ export default function AdminEventsPage() {
                                             </label>
                                             {createForm.bannerImage && (
                                                 <>
-                                                    <img src={createForm.bannerImage} alt="Thumbnail preview" style={{ width: 112, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)' }} />
+                                                    <img src={createForm.bannerImage} alt="Thumbnail preview" style={{ width: 112, height: 64, objectFit: 'cover', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#cbd5e1'}` }} />
                                                     <button
                                                         type="button"
                                                         onClick={() => setCreateForm({ ...createForm, bannerImage: '' })}
                                                         title="Remove thumbnail"
-                                                        style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: '#ef4444', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                                        style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#cbd5e1'}`, background: 'transparent', color: '#ef4444', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                                                     >
                                                         <X size={15} />
                                                     </button>
@@ -1536,12 +1584,12 @@ export default function AdminEventsPage() {
                                         {bannerUploadError && (
                                             <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: '#ef4444' }}>{bannerUploadError}</div>
                                         )}
-                                        <p style={{ margin: '6px 0 10px', fontSize: 12, color: '#6b7280' }}>JPG, PNG or WebP up to 5MB. Shown on the public event listing.</p>
-                                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#9ca3af' }}>…or paste an image URL</label>
-                                        <input value={createForm.bannerImage} onChange={(e) => setCreateForm({ ...createForm, bannerImage: e.target.value })} placeholder="https://…/cover.jpg" style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                                        <p style={{ margin: '6px 0 10px', fontSize: 12, color: isDark ? '#9ca3af' : '#64748b' }}>JPG, PNG or WebP up to 5MB. Shown on the public event listing.</p>
+                                        <label style={fLbl}>…or paste an image URL</label>
+                                        <input value={createForm.bannerImage} onChange={(e) => setCreateForm({ ...createForm, bannerImage: e.target.value })} placeholder="https://…/cover.jpg" style={fInp} />
                                     </div>
-                                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>
-                                        <span style={{ fontSize: 14, fontWeight: 600, color: '#e5e7eb' }}>Enable public registration</span>
+                                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 10, background: isDark ? 'rgba(255,255,255,0.04)' : '#f8fafc', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}`, cursor: 'pointer' }}>
+                                        <span style={{ fontSize: 14, fontWeight: 600, color: isDark ? '#e5e7eb' : '#1e293b' }}>Enable public registration</span>
                                         <input type="checkbox" checked={createForm.enableRegistration} onChange={(e) => setCreateForm({ ...createForm, enableRegistration: e.target.checked })} />
                                     </label>
                                 </div>
@@ -1549,7 +1597,7 @@ export default function AdminEventsPage() {
                         </>
                     )}
 
-                    <div style={{ height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                    <div style={fDiv} />
 
                     {/* ── LIVE PREVIEW ── */}
                     {(() => {
@@ -1558,22 +1606,22 @@ export default function AdminEventsPage() {
                         const now = new Date();
                         const pStatus = createForm.eventStatus === 'CANCELLED' ? 'cancelled'
                             : (!pStart ? 'upcoming' : (pEnd && now > pEnd ? 'completed' : (now >= pStart ? 'live' : 'upcoming')));
-                        const statusColors = { upcoming: { label: 'Upcoming', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' }, live: { label: 'Ongoing', color: '#10b981', bg: 'rgba(16,185,129,0.12)' }, completed: { label: 'Completed', color: '#64748b', bg: 'rgba(100,116,139,0.14)' }, cancelled: { label: 'Cancelled', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' } };
+                        const statusColors = { upcoming: { label: 'Upcoming', color: '#16a34a', bg: 'rgba(22,163,74,0.12)' }, live: { label: 'Ongoing', color: '#10b981', bg: 'rgba(16,185,129,0.12)' }, completed: { label: 'Completed', color: '#64748b', bg: 'rgba(100,116,139,0.14)' }, cancelled: { label: 'Cancelled', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' } };
                         const sc = statusColors[pStatus] || statusColors.upcoming;
                         const pType = createForm.eventType || 'Online';
                         return (
                             <div>
-                                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#4ade80', marginBottom: 12 }}>Live Preview</div>
-                                <div style={{ padding: 14, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#16a34a', marginBottom: 12 }}>Live Preview</div>
+                                <div style={{ padding: 14, borderRadius: 12, background: isDark ? 'rgba(255,255,255,0.04)' : '#f8fafc', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}` }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 8 }}>
-                                        <strong style={{ fontSize: 15, lineHeight: 1.3, color: '#fff' }}>{createForm.title.trim() || 'Untitled event'}</strong>
+                                        <strong style={{ fontSize: 15, lineHeight: 1.3, color: isDark ? '#fff' : '#0f172a' }}>{createForm.title.trim() || 'Untitled event'}</strong>
                                         <span style={{ fontSize: 11, fontWeight: 700, color: sc.color, background: sc.bg, border: `1px solid ${sc.color}40`, borderRadius: 20, padding: '2px 10px' }}>{sc.label}</span>
                                     </div>
-                                    <div style={{ display: 'grid', gap: 4, fontSize: 13, color: '#6b7280' }}>
-                                        <div><strong style={{ color: '#9ca3af' }}>{createForm.isAllDay ? 'All day' : 'Scheduled'}: </strong>{pStart ? pStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</div>
-                                        <div><strong style={{ color: '#9ca3af' }}>Format: </strong>{pType}{pType === 'Physical' ? ` — ${createForm.location || 'No location set'}` : pType === 'Hybrid' ? ` — ${createForm.location || 'Online + venue TBD'}` : ''}</div>
-                                        {pType !== 'Physical' && <div><strong style={{ color: '#9ca3af' }}>Meeting: </strong>{meetingProviderLabel(createForm.meetingProvider)}{createForm.streamUrl ? ` — ${createForm.streamUrl}` : ' — will be created on save'}</div>}
-                                        <div><strong style={{ color: '#9ca3af' }}>Visibility: </strong>{isFormPublic ? 'Public (review pipeline)' : 'Internal (calendar only)'}</div>
+                                    <div style={{ display: 'grid', gap: 4, fontSize: 13, color: isDark ? '#9ca3af' : '#64748b' }}>
+                                        <div><strong style={{ color: isDark ? '#9ca3af' : '#475569' }}>{createForm.isAllDay ? 'All day' : 'Scheduled'}: </strong>{pStart ? pStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</div>
+                                        <div><strong style={{ color: isDark ? '#9ca3af' : '#475569' }}>Format: </strong>{pType}{pType === 'Physical' ? ` — ${createForm.location || 'No location set'}` : pType === 'Hybrid' ? ` — ${createForm.location || 'Online + venue TBD'}` : ''}</div>
+                                        {pType !== 'Physical' && <div><strong style={{ color: isDark ? '#9ca3af' : '#475569' }}>Meeting: </strong>{meetingProviderLabel(createForm.meetingProvider)}{createForm.streamUrl ? ` — ${createForm.streamUrl}` : ' — will be created on save'}</div>}
+                                        <div><strong style={{ color: isDark ? '#9ca3af' : '#475569' }}>Visibility: </strong>{isFormPublic ? 'Public (review pipeline)' : 'Internal (calendar only)'}</div>
                                     </div>
                                 </div>
                             </div>
@@ -1591,7 +1639,7 @@ export default function AdminEventsPage() {
                                 ? <><Loader2 size={16} className="animate-spin" /> Saving…</>
                                 : <><Plus size={16} /> Create Event</>}
                         </button>
-                        <button type="button" onClick={resetCreateForm} style={{ padding: '12px 24px', borderRadius: 10, background: 'transparent', color: '#9ca3af', fontWeight: 600, border: '1px solid rgba(255,255,255,0.15)', cursor: 'pointer', fontSize: 14 }}>
+                        <button type="button" onClick={resetCreateForm} style={{ padding: '12px 24px', borderRadius: 10, background: 'transparent', color: isDark ? '#9ca3af' : '#64748b', fontWeight: 600, border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#cbd5e1'}`, cursor: 'pointer', fontSize: 14 }}>
                             Cancel
                         </button>
                     </div>
@@ -1603,32 +1651,31 @@ export default function AdminEventsPage() {
 
             {/* ── Edit Modal ────────────────────────────────────────── */}
             {editOpen && editTarget && (
-
                 <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
-                    <div className="absolute inset-0 bg-black/20" onClick={() => setEditOpen(false)} />
-                    <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-green-600/25 bg-[#12131A] p-6 shadow-[0_0_60px_rgba(22,163,74,0.18)] sm:p-8">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setEditOpen(false)} />
+                    <div className={`relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border p-6 shadow-2xl sm:p-8 ${isDark ? 'border-green-600/25 bg-[#12131A] text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
                         <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-black">Edit Event Details</h2>
-                            <button onClick={() => setEditOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-gray-300 transition hover:text-white">
+                            <h2 className={`text-lg font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>Edit Event Details</h2>
+                            <button onClick={() => setEditOpen(false)} className={`flex h-9 w-9 items-center justify-center rounded-xl border transition ${isDark ? 'border-white/10 text-gray-300 hover:text-white' : 'border-slate-200 text-slate-500 hover:text-slate-900'}`}>
                                 <X className="h-4 w-4" />
                             </button>
                         </div>
 
                         <div className="mt-6 grid gap-4 sm:grid-cols-2">
                             <div className="sm:col-span-2">
-                                <label className="mb-1.5 block text-xs font-semibold text-gray-400">Event Title</label>
+                                <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>Event Title</label>
                                 <input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className={inputCls} />
                             </div>
                             <div className="sm:col-span-2">
-                                <label className="mb-1.5 block text-xs font-semibold text-gray-400">Tagline</label>
+                                <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>Tagline</label>
                                 <input value={editForm.tagline} onChange={(e) => setEditForm({ ...editForm, tagline: e.target.value })} className={inputCls} />
                             </div>
                             <div className="sm:col-span-2">
-                                <label className="mb-1.5 block text-xs font-semibold text-gray-400">Description (one paragraph per line)</label>
+                                <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>Description (one paragraph per line)</label>
                                 <textarea rows={4} value={editForm.descriptionText} onChange={(e) => setEditForm({ ...editForm, descriptionText: e.target.value })} className={`${inputCls} resize-y`} />
                             </div>
                             <div>
-                                <label className="mb-1.5 block text-xs font-semibold text-gray-400">Event Type</label>
+                                <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>Event Type</label>
                                 <select value={editForm.eventType} onChange={(e) => setEditForm({ ...editForm, eventType: e.target.value })} className={inputCls}>
                                     <option value="Physical">Physical</option>
                                     <option value="Online">Online</option>
@@ -1636,7 +1683,7 @@ export default function AdminEventsPage() {
                                 </select>
                             </div>
                             <div>
-                                <label className="mb-1.5 block text-xs font-semibold text-gray-400">Status</label>
+                                <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>Status</label>
                                 <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} className={inputCls}>
                                     <option value="DRAFT">Draft</option>
                                     <option value="PENDING_REVIEW">Pending Review</option>
@@ -1645,62 +1692,62 @@ export default function AdminEventsPage() {
                                 </select>
                             </div>
                             <div>
-                                <label className="mb-1.5 block text-xs font-semibold text-gray-400">Venue (physical)</label>
+                                <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>Venue (physical)</label>
                                 <input value={editForm.venue} onChange={(e) => setEditForm({ ...editForm, venue: e.target.value })} className={inputCls} />
                             </div>
                             <div>
-                                <label className="mb-1.5 block text-xs font-semibold text-gray-400">City</label>
+                                <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>City</label>
                                 <input value={editForm.city} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} className={inputCls} />
                             </div>
                             <div className="sm:col-span-2">
-                                <label className="mb-1.5 block text-xs font-semibold text-gray-400">Live Stream URL (for Online / Hybrid)</label>
+                                <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>Live Stream URL (for Online / Hybrid)</label>
                                 <input value={editForm.streamUrl} onChange={(e) => setEditForm({ ...editForm, streamUrl: e.target.value })} placeholder="https://…" className={inputCls} />
                             </div>
                             <div>
-                                <label className="mb-1.5 block text-xs font-semibold text-gray-400">Start Date</label>
+                                <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>Start Date</label>
                                 <input type="date" value={editForm.startDate} onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })} className={inputCls} />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="mb-1.5 block text-xs font-semibold text-gray-400">Start Time</label>
+                                    <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>Start Time</label>
                                     <input type="time" value={editForm.startTime} onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })} className={inputCls} />
                                 </div>
                                 <div>
-                                    <label className="mb-1.5 block text-xs font-semibold text-gray-400">End Time</label>
+                                    <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>End Time</label>
                                     <input type="time" value={editForm.endTime} onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })} className={inputCls} />
                                 </div>
                             </div>
                             <div>
-                                <label className="mb-1.5 block text-xs font-semibold text-gray-400">Price</label>
+                                <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>Price</label>
                                 <input value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })} className={inputCls} />
                             </div>
                             <div>
-                                <label className="mb-1.5 block text-xs font-semibold text-gray-400">Total Slots</label>
+                                <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>Total Slots</label>
                                 <input type="number" min={0} value={editForm.totalSlots} onChange={(e) => setEditForm({ ...editForm, totalSlots: Number(e.target.value) })} className={inputCls} />
                             </div>
                             <div className="sm:col-span-2">
-                                <label className="mb-1.5 block text-xs font-semibold text-gray-400">Cover Image URL</label>
+                                <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>Cover Image URL</label>
                                 <input value={editForm.image} onChange={(e) => setEditForm({ ...editForm, image: e.target.value })} className={inputCls} />
                             </div>
-                            <label className="flex items-center gap-2.5 text-sm font-semibold text-gray-200 sm:col-span-2">
+                            <label className={`flex items-center gap-2.5 text-sm font-semibold sm:col-span-2 ${isDark ? 'text-gray-200' : 'text-slate-700'}`}>
                                 <input
                                     type="checkbox"
                                     checked={editForm.isFeatured}
                                     onChange={(e) => setEditForm({ ...editForm, isFeatured: e.target.checked })}
-                                    className="h-4 w-4 rounded border-white/20 bg-[#1A1B23] accent-green-600"
+                                    className={`h-4 w-4 rounded accent-green-600 ${isDark ? 'border-white/20 bg-[#1A1B23]' : 'border-slate-300 bg-white'}`}
                                 />
                                 Featured event (highlighted on the events page)
                             </label>
                         </div>
 
                         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                            <button onClick={() => setEditOpen(false)} className="rounded-2xl border border-white/10 px-6 py-3 text-sm font-bold text-gray-300 transition hover:text-white">
+                            <button onClick={() => setEditOpen(false)} className={`rounded-2xl border px-6 py-3 text-sm font-bold transition ${isDark ? 'border-white/10 text-gray-300 hover:text-white' : 'border-slate-300 text-slate-700 hover:text-slate-900 bg-slate-50'}`}>
                                 Cancel
                             </button>
                             <button
                                 onClick={handleSaveEdit}
                                 disabled={editSaving}
-                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-green-600 to-green-600 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-white transition hover:brightness-110 disabled:opacity-60"
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-green-600 to-green-600 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-white transition hover:brightness-110 disabled:opacity-60 shadow-md"
                             >
                                 {editSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
                                 Save Changes
@@ -1713,21 +1760,21 @@ export default function AdminEventsPage() {
             {/* ── Cancel Event Modal ──────────────────────────────── */}
             {cancelTarget && (
                 <Modal isOpen={Boolean(cancelTarget)} onClose={() => setCancelTarget(null)} title="Cancel Event" maxWidth="460px">
-                    <p className="mb-3 text-sm text-gray-400">
-                        Cancel <span className="font-bold text-white">{cancelTarget.title}</span>? Registered users will be notified.
+                    <p className={`mb-3 text-sm ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
+                        Cancel <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{cancelTarget.title}</span>? Registered users will be notified.
                     </p>
                     <textarea
                         value={cancelReason}
                         onChange={(e) => setCancelReason(e.target.value)}
                         placeholder="Cancellation reason (optional)"
                         rows={3}
-                        className="w-full rounded-xl border border-white/10 bg-[#1A1B23] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+                        className={`w-full rounded-xl border px-4 py-3 text-sm transition focus:ring-2 focus:outline-none ${isDark ? 'border-white/10 bg-[#1A1B23] text-white placeholder-gray-500 focus:border-green-500 focus:ring-green-500/30' : 'border-slate-300 bg-slate-50 text-slate-900 placeholder-slate-400 focus:border-green-600 focus:bg-white focus:ring-green-500/30'}`}
                     />
                     <div className="mt-5 flex flex-wrap gap-3">
-                        <button onClick={confirmCancel} className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-red-400 to-red-500 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-white transition hover:brightness-110">
+                        <button onClick={confirmCancel} className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-red-500 to-red-600 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-white transition hover:brightness-110 shadow-sm">
                             Confirm Cancel
                         </button>
-                        <button onClick={() => setCancelTarget(null)} className="rounded-2xl border border-white/10 px-6 py-3 text-sm font-bold text-gray-300 transition hover:text-white">
+                        <button onClick={() => setCancelTarget(null)} className={`rounded-2xl border px-6 py-3 text-sm font-bold transition ${isDark ? 'border-white/10 text-gray-300 hover:text-white' : 'border-slate-300 text-slate-700 hover:text-slate-900 bg-slate-50'}`}>
                             Keep Event
                         </button>
                     </div>
@@ -1737,14 +1784,14 @@ export default function AdminEventsPage() {
             {/* ── Delete Event Modal ──────────────────────────────── */}
             {deleteTarget && (
                 <Modal isOpen={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} title="Delete Event" maxWidth="460px">
-                    <p className="mb-5 text-sm text-gray-400">
-                        Delete <span className="font-bold text-white">{deleteTarget.title}</span> permanently? This action cannot be undone.
+                    <p className={`mb-5 text-sm ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
+                        Delete <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{deleteTarget.title}</span> permanently? This action cannot be undone.
                     </p>
                     <div className="flex flex-wrap gap-3">
-                        <button onClick={confirmDelete} className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-red-500 to-red-600 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-white transition hover:brightness-110">
+                        <button onClick={confirmDelete} className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-red-500 to-red-600 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-white transition hover:brightness-110 shadow-sm">
                             <Trash2 className="h-4 w-4" /> Delete Event
                         </button>
-                        <button onClick={() => setDeleteTarget(null)} className="rounded-2xl border border-white/10 px-6 py-3 text-sm font-bold text-gray-300 transition hover:text-white">
+                        <button onClick={() => setDeleteTarget(null)} className={`rounded-2xl border px-6 py-3 text-sm font-bold transition ${isDark ? 'border-white/10 text-gray-300 hover:text-white' : 'border-slate-300 text-slate-700 hover:text-slate-900 bg-slate-50'}`}>
                             Cancel
                         </button>
                     </div>
@@ -1754,7 +1801,7 @@ export default function AdminEventsPage() {
             {/* ── Toasts ────────────────────────────────────────────── */}
             <div className="fixed bottom-6 right-6 z-[80] flex flex-col gap-2.5">
                 {toasts.map((t) => (
-                    <div key={t.id} className={`flex items-center gap-3 rounded-2xl border bg-[#12131A] px-4 py-3 text-sm font-semibold text-white shadow-2xl backdrop-blur ${TOAST_STYLE[t.type].border}`}>
+                    <div key={t.id} className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur ${TOAST_STYLE[t.type].border} ${isDark ? 'bg-[#12131A] text-white' : 'bg-white text-slate-900 border-slate-200'}`}>
                         {TOAST_STYLE[t.type].icon}
                         <span className="max-w-xs">{t.message}</span>
                     </div>
@@ -1763,6 +1810,3 @@ export default function AdminEventsPage() {
         </div>
     );
 }
-
-const inputCls =
-    'w-full rounded-xl border border-slate-600/40 bg-[#151a2c] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none';

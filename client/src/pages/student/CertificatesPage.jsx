@@ -10,7 +10,7 @@ const navItems = [
     { label: 'Certificates', path: '/student/certificates',         key: 'certificates' },
     { label: 'Profile',      path: '/student/profile',              key: 'profile' },
     { label: 'Leaderboard',  path: '/leaderboard',                  key: 'leaderboard' },
-    { label: 'Course Catalog', path: '/courses',                    key: 'catalog' }
+    { label: 'Courses', path: '/courses',                    key: 'catalog' }
 ];
 
 export default function CertificatesPage() {

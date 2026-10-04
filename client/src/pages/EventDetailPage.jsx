@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import {
     AlertTriangle,
     ArrowLeft,
@@ -8,7 +9,6 @@ import {
     BadgeCheck,
     Calendar,
     CalendarDays,
-    Camera,
     CheckCircle2,
     Clock,
     Loader2,
@@ -23,7 +23,7 @@ import {
 import Navbar from '../components/Navbar';
 import EventFooter from '../components/events/EventFooter';
 import EventCalendar from '../components/events/EventCalendar';
-import { eventGallery, formatISODate, formatLongDate } from '../data/events';
+import { formatISODate, formatLongDate } from '../data/events';
 import { publicEventService } from '../services/api';
 import { getLiveStatus, LIVE_STATUS_META } from '../utils/eventStatus';
 
@@ -63,6 +63,8 @@ function useCountdown(target) {
 }
 
 export default function EventDetailPage() {
+    const { theme, colors } = useTheme();
+    const isDark = theme === 'dark';
     const { eventId } = useParams();
     const [searchParams] = useSearchParams();
     const paidSuccess = searchParams.get('paid') === '1';
@@ -240,8 +242,8 @@ export default function EventDetailPage() {
     };
 
     const shell = (children) => (
-        <div className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(135deg,#0B0C10_0%,#14141F_45%,#1F1F2E_100%)] text-white">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] bg-[size:26px_26px]" />
+        <div className={`relative min-h-screen overflow-x-hidden ${isDark ? 'bg-[linear-gradient(135deg,#0B0C10_0%,#14141F_45%,#1F1F2E_100%)] text-white' : 'bg-[linear-gradient(135deg,#f8fafc_0%,#f1f5f9_45%,#e2e8f0_100%)] text-[#16213a]'}`}>
+            <div className={`pointer-events-none absolute inset-0 ${isDark ? 'bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)]' : 'bg-[radial-gradient(circle_at_1px_1px,rgba(15,23,42,0.06)_1px,transparent_0)]'} bg-[size:26px_26px]`} />
             <div className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[720px] -translate-x-1/2 rounded-full bg-green-600/10 blur-[120px]" />
             <Navbar />
             {children}
@@ -255,16 +257,16 @@ export default function EventDetailPage() {
                 {loading ? (
                     <>
                         <Loader2 className="h-12 w-12 animate-spin text-green-500" />
-                        <h1 className="mt-6 text-2xl font-black text-white">Loading Event…</h1>
-                        <p className="mt-3 max-w-md text-sm text-[#9CA3AF]">
+                        <h1 className={`mt-6 text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>Loading Event…</h1>
+                        <p className={`mt-3 max-w-md text-sm ${isDark ? 'text-[#9CA3AF]' : 'text-slate-600'}`}>
                             Fetching the latest event details, please wait a moment.
                         </p>
                     </>
                 ) : (
                     <>
                         <span className="text-6xl">🔍</span>
-                        <h1 className="mt-6 text-3xl font-black text-white">Event Not Found</h1>
-                        <p className="mt-3 max-w-md text-sm text-[#9CA3AF]">
+                        <h1 className={`mt-6 text-3xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>Event Not Found</h1>
+                        <p className={`mt-3 max-w-md text-sm ${isDark ? 'text-[#9CA3AF]' : 'text-slate-600'}`}>
                             The event you are looking for does not exist or has been removed.
                         </p>
                     </>
@@ -287,25 +289,25 @@ export default function EventDetailPage() {
                 {/* Back to Events */}
                 <Link
                     to="/events"
-                    className="inline-flex items-center gap-2 text-sm font-bold text-gray-300 transition hover:text-green-500"
+                    className={`inline-flex items-center gap-2 text-sm font-bold transition ${isDark ? 'text-gray-300 hover:text-green-500' : 'text-slate-600 hover:text-green-600'}`}
                 >
                     <ArrowLeft className="h-4 w-4" /> Back to Events
                 </Link>
 
                 {/* ── Hero / Banner ──────────────────────────────────────── */}
-                <section className="relative mt-6 overflow-hidden rounded-3xl border border-green-600/20">
+                <section className="relative mt-6 overflow-hidden rounded-3xl border border-green-600/20 shadow-xl">
                     <img src={event.image} alt={event.title} className="absolute inset-0 h-full w-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B0C10]/95 via-[#0B0C10]/70 to-[#0B0C10]/35" />
-                    <div className="relative flex min-h-[320px] flex-col justify-end gap-5 px-6 py-10 sm:min-h-[380px] sm:px-12 sm:py-12">
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B0C10]/95 via-[#0B0C10]/75 to-[#0B0C10]/40" />
+                    <div className="relative flex min-h-[320px] flex-col justify-end gap-5 px-6 py-10 sm:min-h-[380px] sm:px-12 sm:py-12 text-white">
                         <span className={`inline-flex w-fit items-center gap-2 rounded-full px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.2em] ${isCancelled ? 'bg-red-500/20 text-red-300' : isLive ? 'bg-emerald-400 text-black shadow-[0_0_20px_rgba(52,211,153,0.4)]' : isCompleted ? 'bg-white/10 text-gray-300' : 'bg-green-500 text-black shadow-[0_0_20px_rgba(74,222,128,0.4)]'}`}>
                             <Sparkles className="h-3.5 w-3.5" /> {isLive ? 'Live Now' : isCancelled ? 'Cancelled' : isCompleted ? 'Completed' : 'Upcoming Event'}
                         </span>
-                        <h1 className="max-w-3xl text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl">{event.title}</h1>
-                        <p className="max-w-xl text-sm text-gray-300 sm:text-base">{event.tagline}</p>
+                        <h1 className="max-w-3xl text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl text-white">{event.title}</h1>
+                        <p className="max-w-xl text-sm text-gray-200 sm:text-base">{event.tagline}</p>
                         <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-gray-200">
-                            <span className="flex items-center gap-2"><Calendar className="h-4 w-4 text-green-500" /> {eventDateISO}</span>
-                            <span className="flex items-center gap-2"><Clock className="h-4 w-4 text-green-500" /> {event.time}</span>
-                            <span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-green-500" /> {event.location}</span>
+                            <span className="flex items-center gap-2"><Calendar className="h-4 w-4 text-green-400" /> {eventDateISO}</span>
+                            <span className="flex items-center gap-2"><Clock className="h-4 w-4 text-green-400" /> {event.time}</span>
+                            <span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-green-400" /> {event.location}</span>
                         </div>
 
                         <div className="flex flex-wrap gap-3">
@@ -315,22 +317,22 @@ export default function EventDetailPage() {
                                 { label: 'Min', value: countdown.minutes },
                                 { label: 'Sec', value: countdown.seconds },
                             ].map((b) => (
-                                <div key={b.label} className="flex min-w-[76px] flex-col items-center rounded-2xl border border-green-600/25 bg-black/40 px-4 py-3 backdrop-blur">
+                                <div key={b.label} className="flex min-w-[76px] flex-col items-center rounded-2xl border border-green-500/30 bg-black/55 px-4 py-3 backdrop-blur shadow-md">
                                     <span className="text-2xl font-black tabular-nums text-white">{padCount(b.value)}</span>
-                                    <span className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.2em] text-green-500">{b.label}</span>
+                                    <span className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.2em] text-green-400">{b.label}</span>
                                 </div>
                             ))}
                         </div>
 
-                        <div className="flex flex-col gap-4 border-t border-white/10 pt-5 sm:flex-row sm:items-end sm:justify-between">
+                        <div className="flex flex-col gap-4 border-t border-white/15 pt-5 sm:flex-row sm:items-end sm:justify-between">
                             {isCancelled ? (
-                                <div className="flex w-fit items-center gap-3 rounded-2xl border border-red-400/40 bg-red-500/15 px-6 py-4 text-sm font-bold text-red-200">
+                                <div className="flex w-fit items-center gap-3 rounded-2xl border border-red-400/40 bg-red-500/20 px-6 py-4 text-sm font-bold text-red-200">
                                     <AlertTriangle className="h-5 w-5 shrink-0 text-red-400" />
                                     This event has been cancelled by the organizer.
                                 </div>
                             ) : isCompleted ? (
-                                <div className="flex w-fit items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-sm font-bold text-gray-300">
-                                    <CheckCircle2 className="h-5 w-5 shrink-0 text-gray-400" />
+                                <div className="flex w-fit items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-6 py-4 text-sm font-bold text-gray-200">
+                                    <CheckCircle2 className="h-5 w-5 shrink-0 text-gray-300" />
                                     This event has ended.
                                 </div>
                             ) : canJoin ? (
@@ -354,9 +356,9 @@ export default function EventDetailPage() {
                                 <span className="inline-flex items-center gap-2 text-xs font-semibold text-green-300">
                                     👥 {event.slotsLeft} Slots Left
                                 </span>
-                                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
+                                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/20">
                                     <div
-                                        className="h-full rounded-full bg-gradient-to-r from-green-500 to-green-600"
+                                        className="h-full rounded-full bg-gradient-to-r from-green-400 to-green-500"
                                         style={{ width: `${Math.round(((event.totalSlots - event.slotsLeft) / event.totalSlots) * 100)}%` }}
                                     />
                                 </div>
@@ -369,58 +371,58 @@ export default function EventDetailPage() {
                 <section className="mt-16 grid gap-8 lg:grid-cols-3">
                     <div className="lg:col-span-2">
                         <div className="mb-4 flex items-center gap-3">
-                            <span className="text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">About The Event</span>
+                            <span className="text-xs font-extrabold uppercase tracking-[0.25em] text-green-600 dark:text-green-500">About The Event</span>
                             <span className="h-px flex-1 bg-gradient-to-r from-green-500/50 to-transparent" />
                         </div>
-                        <h2 className="text-2xl font-extrabold text-white sm:text-3xl">{event.tagline}</h2>
+                        <h2 className={`text-2xl font-extrabold sm:text-3xl ${isDark ? 'text-white' : 'text-slate-900'}`}>{event.tagline}</h2>
                         {(Array.isArray(event.description) ? event.description : [event.description]).filter(Boolean).map((p, i) => (
-                            <p key={i} className="mt-4 leading-relaxed text-[#9CA3AF]">{p}</p>
+                            <p key={i} className={`mt-4 leading-relaxed ${isDark ? 'text-[#9CA3AF]' : 'text-slate-600'}`}>{p}</p>
                         ))}
 
-                        <div className="mt-6 rounded-2xl border border-green-600/20 bg-[#12131A] p-5">
-                            <p className="text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">Localized Schedule</p>
-                            <ul className="mt-3 space-y-1.5 text-sm text-[#9CA3AF]">
-                                <li><span className="font-semibold text-gray-200">Date:</span> {formatLongDate(eventDate)}</li>
-                                <li><span className="font-semibold text-gray-200">Time:</span> {event.time} (EAT) — Local Time</li>
-                                <li><span className="font-semibold text-gray-200">Location:</span> {event.location} · {event.city} &amp; Online Live Stream</li>
+                        <div className={`mt-6 rounded-2xl border p-5 ${isDark ? 'border-green-600/20 bg-[#12131A]' : 'border-slate-200 bg-white shadow-sm'}`}>
+                            <p className="text-xs font-extrabold uppercase tracking-[0.25em] text-green-600 dark:text-green-500">Localized Schedule</p>
+                            <ul className={`mt-3 space-y-1.5 text-sm ${isDark ? 'text-[#9CA3AF]' : 'text-slate-600'}`}>
+                                <li><span className={`font-semibold ${isDark ? 'text-gray-200' : 'text-slate-800'}`}>Date:</span> {formatLongDate(eventDate)}</li>
+                                <li><span className={`font-semibold ${isDark ? 'text-gray-200' : 'text-slate-800'}`}>Time:</span> {event.time} (EAT) — Local Time</li>
+                                <li><span className={`font-semibold ${isDark ? 'text-gray-200' : 'text-slate-800'}`}>Location:</span> {event.location} · {event.city} &amp; Online Live Stream</li>
                             </ul>
                         </div>
 
                         <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                            <div className="flex items-center gap-3 rounded-2xl border border-green-600/20 bg-[#12131A] p-4">
-                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500/10 text-green-500"><CalendarDays className="h-5 w-5" /></span>
+                            <div className={`flex items-center gap-3 rounded-2xl border p-4 ${isDark ? 'border-green-600/20 bg-[#12131A]' : 'border-slate-200 bg-white shadow-sm'}`}>
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500/10 text-green-600 dark:text-green-500"><CalendarDays className="h-5 w-5" /></span>
                                 <div>
-                                    <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Date</p>
-                                    <p className="text-sm font-semibold text-white">{formatLongDate(eventDate)}</p>
+                                    <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Date</p>
+                                    <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{formatLongDate(eventDate)}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3 rounded-2xl border border-green-600/20 bg-[#12131A] p-4">
-                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500/10 text-green-500"><Clock className="h-5 w-5" /></span>
+                            <div className={`flex items-center gap-3 rounded-2xl border p-4 ${isDark ? 'border-green-600/20 bg-[#12131A]' : 'border-slate-200 bg-white shadow-sm'}`}>
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500/10 text-green-600 dark:text-green-500"><Clock className="h-5 w-5" /></span>
                                 <div>
-                                    <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Time (LT)</p>
-                                    <p className="text-sm font-semibold text-white">{event.time} EAT</p>
+                                    <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Time (LT)</p>
+                                    <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{event.time} EAT</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3 rounded-2xl border border-green-600/20 bg-[#12131A] p-4 sm:col-span-2">
-                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500/10 text-green-500"><MapPin className="h-5 w-5" /></span>
+                            <div className={`flex items-center gap-3 rounded-2xl border p-4 sm:col-span-2 ${isDark ? 'border-green-600/20 bg-[#12131A]' : 'border-slate-200 bg-white shadow-sm'}`}>
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500/10 text-green-600 dark:text-green-500"><MapPin className="h-5 w-5" /></span>
                                 <div>
-                                    <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Location</p>
-                                    <p className="text-sm font-semibold text-white">{event.location} · {event.city}</p>
+                                    <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Location</p>
+                                    <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{event.location} · {event.city}</p>
                                 </div>
                             </div>
                         </div>
 
                         {event.speaker && (
-                            <div className="mt-8 rounded-3xl border border-green-600/20 bg-[#12131A] p-6">
-                                <span className="text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">Organizer / Speaker</span>
+                            <div className={`mt-8 rounded-3xl border p-6 ${isDark ? 'border-green-600/20 bg-[#12131A]' : 'border-slate-200 bg-white shadow-sm'}`}>
+                                <span className="text-xs font-extrabold uppercase tracking-[0.25em] text-green-600 dark:text-green-500">Organizer / Speaker</span>
                                 <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center">
                                     <img src={event.speaker.avatar} alt={event.speaker.name} className="h-16 w-16 shrink-0 rounded-2xl border border-green-600/20 object-cover" />
                                     <div>
-                                        <p className="flex items-center gap-2 text-lg font-extrabold text-white">
-                                            <BadgeCheck className="h-5 w-5 text-green-500" /> {event.speaker.name}
+                                        <p className={`flex items-center gap-2 text-lg font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                            <BadgeCheck className="h-5 w-5 text-green-600 dark:text-green-500" /> {event.speaker.name}
                                         </p>
-                                        <p className="text-xs font-bold uppercase tracking-wider text-green-300">{event.speaker.role}</p>
-                                        <p className="mt-2 text-sm leading-relaxed text-[#9CA3AF]">{event.speaker.bio}</p>
+                                        <p className="text-xs font-bold uppercase tracking-wider text-green-600 dark:text-green-400">{event.speaker.role}</p>
+                                        <p className={`mt-2 text-sm leading-relaxed ${isDark ? 'text-[#9CA3AF]' : 'text-slate-600'}`}>{event.speaker.bio}</p>
                                     </div>
                                 </div>
                             </div>
@@ -428,146 +430,122 @@ export default function EventDetailPage() {
                     </div>
 
                     <aside className="flex flex-col gap-6">
-                        <div className="rounded-3xl border border-green-600/20 bg-[#12131A] p-6">
-                            <h3 className="mb-5 text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">Event Info</h3>
+                        <div className={`rounded-3xl border p-6 ${isDark ? 'border-green-600/20 bg-[#12131A]' : 'border-slate-200 bg-white shadow-sm'}`}>
+                            <h3 className="mb-5 text-xs font-extrabold uppercase tracking-[0.25em] text-green-600 dark:text-green-500">Event Info</h3>
                             <div className="space-y-4 text-sm">
                                 <div className="flex items-center gap-3">
-                                    <CalendarDays className="h-4 w-4 shrink-0 text-green-500" />
-                                    <span className="text-gray-200">{formatLongDate(eventDate)}</span>
+                                    <CalendarDays className="h-4 w-4 shrink-0 text-green-600 dark:text-green-500" />
+                                    <span className={isDark ? 'text-gray-200' : 'text-slate-700'}>{formatLongDate(eventDate)}</span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <Clock className="h-4 w-4 shrink-0 text-green-500" />
-                                    <span className="text-gray-200">{event.time} (EAT)</span>
+                                    <Clock className="h-4 w-4 shrink-0 text-green-600 dark:text-green-500" />
+                                    <span className={isDark ? 'text-gray-200' : 'text-slate-700'}>{event.time} (EAT)</span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <MapPin className="h-4 w-4 shrink-0 text-green-500" />
-                                    <span className="text-gray-200">{event.location}</span>
+                                    <MapPin className="h-4 w-4 shrink-0 text-green-600 dark:text-green-500" />
+                                    <span className={isDark ? 'text-gray-200' : 'text-slate-700'}>{event.location}</span>
                                 </div>
-                                <div className="flex items-center justify-between rounded-2xl border border-green-600/20 bg-[#1A1B23] px-4 py-3">
-                                    <span className="flex items-center gap-2 font-semibold text-gray-200"><Tag className="h-4 w-4 text-green-500" /> Price</span>
+                                <div className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${isDark ? 'border-green-600/20 bg-[#1A1B23]' : 'border-slate-200 bg-slate-50'}`}>
+                                    <span className={`flex items-center gap-2 font-semibold ${isDark ? 'text-gray-200' : 'text-slate-700'}`}><Tag className="h-4 w-4 text-green-600 dark:text-green-500" /> Price</span>
                                     <span className="rounded-full bg-green-500 px-3 py-1 text-xs font-extrabold text-black">{event.price}</span>
                                 </div>
-                                <div className="flex items-center justify-between rounded-2xl border border-green-600/20 bg-[#1A1B23] px-4 py-3">
-                                    <span className="flex items-center gap-2 font-semibold text-gray-200"><Users className="h-4 w-4 text-green-500" /> Remaining</span>
-                                    <span className="text-xs font-extrabold text-green-300">{event.slotsLeft} spots</span>
+                                <div className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${isDark ? 'border-green-600/20 bg-[#1A1B23]' : 'border-slate-200 bg-slate-50'}`}>
+                                    <span className={`flex items-center gap-2 font-semibold ${isDark ? 'text-gray-200' : 'text-slate-700'}`}><Users className="h-4 w-4 text-green-600 dark:text-green-500" /> Remaining</span>
+                                    <span className="text-xs font-extrabold text-green-600 dark:text-green-400">{event.slotsLeft} spots</span>
                                 </div>
                             </div>
                             {isCancelled ? (
                                 <div className="mt-6 w-full rounded-xl border border-red-400/40 bg-red-500/15 py-3 text-center text-xs font-extrabold uppercase tracking-wide text-red-200">Event Cancelled</div>
                             ) : isCompleted ? (
-                                <div className="mt-6 w-full rounded-xl border border-white/10 bg-white/5 py-3 text-center text-xs font-extrabold uppercase tracking-wide text-gray-300">Event Ended</div>
+                                <div className={`mt-6 w-full rounded-xl border py-3 text-center text-xs font-extrabold uppercase tracking-wide ${isDark ? 'border-white/10 bg-white/5 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-600'}`}>Event Ended</div>
                             ) : canJoin ? (
                                 <div className="mt-6 flex w-full flex-col gap-2">
                                     <a href={joinUrl} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-emerald-500 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110">
                                         <Video className="h-4 w-4" /> Join Event
                                     </a>
-                                    <button onClick={copyMeetingLink} className="flex w-full items-center justify-center gap-2 rounded-xl border border-green-500/40 bg-green-500/10 py-2.5 text-xs font-bold uppercase tracking-wide text-green-300 transition hover:bg-green-500/20">
+                                    <button onClick={copyMeetingLink} className="flex w-full items-center justify-center gap-2 rounded-xl border border-green-500/40 bg-green-500/10 py-2.5 text-xs font-bold uppercase tracking-wide text-green-600 dark:text-green-300 transition hover:bg-green-500/20">
                                         Copy Meeting Link
                                     </button>
                                     {event.meetingPassword && (
-                                        <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-center text-xs text-gray-300">
-                                            Meeting password: <span className="font-mono font-bold text-green-300">{event.meetingPassword}</span>
+                                        <div className={`rounded-lg border px-3 py-2 text-center text-xs ${isDark ? 'border-white/10 bg-white/5 text-gray-300' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
+                                            Meeting password: <span className="font-mono font-bold text-green-600 dark:text-green-400">{event.meetingPassword}</span>
                                         </div>
                                     )}
                                 </div>
                             ) : (
                                 <button
                                     onClick={scrollToSecureSpot}
-                                    className="mt-6 w-full rounded-xl bg-gradient-to-r from-green-500 to-green-600 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110"
+                                    className="mt-6 w-full rounded-xl bg-gradient-to-r from-green-500 to-green-600 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110 shadow-md"
                                 >
                                     {isEventPaid ? `Pay ${event.price} & Register` : 'Register Now'}
                                 </button>
                             )}
                         </div>
 
-                        <div className="rounded-3xl border border-green-600/20 bg-[#12131A] p-6">
-                            <h3 className="mb-5 text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">Upcoming Events</h3>
+                        <div className={`rounded-3xl border p-6 ${isDark ? 'border-green-600/20 bg-[#12131A]' : 'border-slate-200 bg-white shadow-sm'}`}>
+                            <h3 className="mb-5 text-xs font-extrabold uppercase tracking-[0.25em] text-green-600 dark:text-green-500">Upcoming Events</h3>
                             <div className="space-y-4">
                                 {otherEvents.map((e) => (
-                                        <Link
-                                            key={e.id}
-                                            to={`/events/${e.id}`}
-                                            className="group flex items-center gap-4 rounded-2xl border border-white/5 bg-[#1A1B23] p-3 transition hover:border-green-500/40"
-                                        >
-                                            <img src={e.image} alt={e.title} className="h-14 w-14 shrink-0 rounded-xl border border-green-600/20 object-cover" />
-                                            <div className="min-w-0 flex-1">
-                                                <p className="truncate text-sm font-bold text-white group-hover:text-green-300">{e.title}</p>
-                                                <p className="mt-1 text-xs text-gray-400">{formatISODate(e.date)} · {e.time}</p>
-                                            </div>
-                                            <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider text-green-500 transition group-hover:gap-2">
-                                                View Page <ArrowRight className="h-3.5 w-3.5" />
-                                            </span>
-                                        </Link>
-                                    ))}
+                                    <Link
+                                        key={e.id}
+                                        to={`/events/${e.id}`}
+                                        className={`group flex items-center gap-4 rounded-2xl border p-3 transition ${isDark ? 'border-white/5 bg-[#1A1B23] hover:border-green-500/40' : 'border-slate-200 bg-slate-50 hover:bg-white hover:border-green-500/50 shadow-sm'}`}
+                                    >
+                                        <img src={e.image} alt={e.title} className="h-14 w-14 shrink-0 rounded-xl border border-green-600/20 object-cover" />
+                                        <div className="min-w-0 flex-1">
+                                            <p className={`truncate text-sm font-bold transition ${isDark ? 'text-white group-hover:text-green-300' : 'text-slate-900 group-hover:text-green-600'}`}>{e.title}</p>
+                                            <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{formatISODate(e.date)} · {e.time}</p>
+                                        </div>
+                                        <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider text-green-600 dark:text-green-500 transition group-hover:gap-2">
+                                            View Page <ArrowRight className="h-3.5 w-3.5" />
+                                        </span>
+                                    </Link>
+                                ))}
                             </div>
                         </div>
                     </aside>
                 </section>
 
-                {/* ── Gallery ──────────────────────────────────────────── */}
-                <section className="mt-20">
-                    <div className="mb-6 flex items-center gap-3">
-                        <span className="text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">Moments From Our Events</span>
-                        <span className="h-px flex-1 bg-gradient-to-r from-green-500/50 to-transparent" />
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        <div className="group relative overflow-hidden rounded-3xl border border-green-600/20 sm:row-span-2">
-                            <img src={eventGallery[0].src} alt="" className="h-full min-h-[420px] w-full object-cover transition duration-500 group-hover:scale-105" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-70 transition group-hover:opacity-100" />
-                            <span className="absolute bottom-4 left-4 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
-                                <Camera className="h-3.5 w-3.5 text-green-500" /> {eventGallery[0].label}
-                            </span>
-                        </div>
-                        {eventGallery.slice(1).map((g) => (
-                            <div key={g.label} className="group relative overflow-hidden rounded-3xl border border-green-600/20">
-                                <img src={g.src} alt="" className="h-48 w-full object-cover transition duration-500 group-hover:scale-105" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-70 transition group-hover:opacity-100" />
-                                <span className="absolute bottom-4 left-4 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
-                                    <Camera className="h-3.5 w-3.5 text-green-500" /> {g.label}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </section>
+
 
                 {/* ── Registration / Booking ────────────────────────────── */}
                 <section id="secure-your-spot" className="mt-20 scroll-mt-28">
                     <div className="mb-2 text-center">
-                        <span className="text-xs font-extrabold uppercase tracking-[0.25em] text-green-500">Secure Your Spot</span>
+                        <span className="text-xs font-extrabold uppercase tracking-[0.25em] text-green-600 dark:text-green-500">Secure Your Spot</span>
                     </div>
-                    <h2 className="text-center text-2xl font-extrabold text-white sm:text-3xl">Reserve your place today</h2>
-                    <p className="mx-auto mt-2 max-w-xl text-center text-sm text-[#9CA3AF]">
+                    <h2 className={`text-center text-2xl font-extrabold sm:text-3xl ${isDark ? 'text-white' : 'text-slate-900'}`}>Reserve your place today</h2>
+                    <p className={`mx-auto mt-2 max-w-xl text-center text-sm ${isDark ? 'text-[#9CA3AF]' : 'text-slate-600'}`}>
                         {isEventPaid
                             ? `Select your preferred date and complete payment of ${event.price}. Seats are limited and filling up fast.`
                             : 'Select your preferred date and complete the registration. Seats are limited and filling up fast.'}
                     </p>
 
                     {isCancelled || isCompleted ? (
-                        <div className="mt-10 overflow-hidden rounded-3xl border border-green-600/20 bg-[#12131A] p-10 text-center shadow-[0_0_40px_rgba(74,222,128,0.07)]">
+                        <div className={`mt-10 overflow-hidden rounded-3xl border p-10 text-center shadow-lg ${isDark ? 'border-green-600/20 bg-[#12131A]' : 'border-slate-200 bg-white'}`}>
                             <span className="text-5xl">{isCancelled ? '🚫' : '✅'}</span>
-                            <h3 className="mt-4 text-xl font-extrabold text-white">{isCancelled ? 'Registration Closed' : 'Event Completed'}</h3>
-                            <p className="mx-auto mt-2 max-w-md text-sm text-[#9CA3AF]">
+                            <h3 className={`mt-4 text-xl font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>{isCancelled ? 'Registration Closed' : 'Event Completed'}</h3>
+                            <p className={`mx-auto mt-2 max-w-md text-sm ${isDark ? 'text-[#9CA3AF]' : 'text-slate-600'}`}>
                                 {isCancelled
                                     ? 'This event was cancelled by the organizer and is no longer accepting registrations.'
                                     : 'This event has ended. Thank you for your interest — check the events page for upcoming sessions.'}
                             </p>
-                            <Link to="/events" className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110">
+                            <Link to="/events" className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110 shadow-md">
                                 Browse Upcoming Events <ArrowRight className="h-4 w-4" />
                             </Link>
                         </div>
                     ) : (
-                    <div className="mt-10 overflow-hidden rounded-3xl border border-green-600/20 bg-[#12131A] shadow-[0_0_40px_rgba(74,222,128,0.07)]">
-                        <div className="h-1.5 w-full bg-gradient-to-r from-green-600 via-green-600 to-green-600" />
+                    <div className={`mt-10 overflow-hidden rounded-3xl border shadow-xl ${isDark ? 'border-green-600/20 bg-[#12131A]' : 'border-slate-200 bg-white'}`}>
+                        <div className="h-1.5 w-full bg-gradient-to-r from-green-500 via-green-600 to-emerald-500" />
                         <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_1.1fr]">
                             <EventCalendar selected={selectedDate} onSelect={setSelectedDate} />
 
                             <div className="flex flex-col">
-                            <h3 className="text-lg font-extrabold text-white">Registration Details</h3>
-                            <p className="mt-1 text-xs text-gray-400">
+                            <h3 className={`text-lg font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>Registration Details</h3>
+                            <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>
                                 {eventDateISO} · {selectedSlot} · {event.location}
                             </p>
 
-                            <p className="mt-6 mb-2 text-xs font-bold uppercase tracking-widest text-green-300">Time Slot</p>
+                            <p className="mt-6 mb-2 text-xs font-bold uppercase tracking-widest text-green-600 dark:text-green-400">Time Slot</p>
                             <div className="flex flex-wrap gap-2.5">
                                 {TIME_SLOTS.map((t) => (
                                     <button
@@ -576,7 +554,9 @@ export default function EventDetailPage() {
                                         className={`rounded-xl px-5 py-2.5 text-sm font-bold transition ${
                                             selectedSlot === t
                                                 ? 'bg-gradient-to-r from-green-500 to-green-600 text-black shadow-[0_0_18px_rgba(74,222,128,0.4)]'
-                                                : 'border border-white/10 text-gray-300 hover:border-green-500/50 hover:text-green-300'
+                                                : isDark
+                                                    ? 'border border-white/10 text-gray-300 hover:border-green-500/50 hover:text-green-300 bg-white/5'
+                                                    : 'border border-slate-300 text-slate-700 hover:border-green-600 hover:text-green-700 bg-slate-50'
                                         }`}
                                     >
                                         {t}
@@ -584,21 +564,21 @@ export default function EventDetailPage() {
                                 ))}
                             </div>
 
-                            <p className="mt-6 mb-3 text-xs font-bold uppercase tracking-widest text-green-300">Personal Details</p>
+                            <p className="mt-6 mb-3 text-xs font-bold uppercase tracking-widest text-green-600 dark:text-green-400">Personal Details</p>
 
                             <form className="grid gap-4 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); handleConfirm(); }}>
                                 <div className="sm:col-span-2">
-                                    <label className="mb-1.5 block text-xs font-semibold text-gray-400">Full Name</label>
+                                    <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>Full Name</label>
                                     <input
                                         value={form.name}
                                         onChange={setField('name')}
                                         required
                                         placeholder="Abebe Kebede"
-                                        className="w-full rounded-xl border border-green-600/20 bg-[#1A1B23] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+                                        className={`w-full rounded-xl border px-4 py-3 text-sm transition focus:ring-2 focus:ring-green-500/30 focus:outline-none ${isDark ? 'border-green-600/20 bg-[#1A1B23] text-white placeholder-gray-500 focus:border-green-500' : 'border-slate-300 bg-slate-50 text-slate-900 placeholder-slate-400 focus:border-green-600 focus:bg-white'}`}
                                     />
                                 </div>
                                 <div>
-                                    <label className="mb-1.5 block text-xs font-semibold text-gray-400">Phone Number</label>
+                                    <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>Phone Number</label>
                                     <input
                                         value={form.phone}
                                         onChange={(e) => {
@@ -608,29 +588,29 @@ export default function EventDetailPage() {
                                         required
                                         placeholder="09XX XXX XXX"
                                         maxLength={10}
-                                        className="w-full rounded-xl border border-green-600/20 bg-[#1A1B23] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+                                        className={`w-full rounded-xl border px-4 py-3 text-sm transition focus:ring-2 focus:ring-green-500/30 focus:outline-none ${isDark ? 'border-green-600/20 bg-[#1A1B23] text-white placeholder-gray-500 focus:border-green-500' : 'border-slate-300 bg-slate-50 text-slate-900 placeholder-slate-400 focus:border-green-600 focus:bg-white'}`}
                                     />
-                                    <p className="mt-1 text-xs text-gray-500">Must start with 09 or 07, exactly 10 digits</p>
+                                    <p className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>Must start with 09 or 07, exactly 10 digits</p>
                                 </div>
                                 <div>
-                                    <label className="mb-1.5 block text-xs font-semibold text-gray-400">Email Address</label>
+                                    <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>Email Address</label>
                                     <input
                                         type="email"
                                         value={form.email}
                                         onChange={setField('email')}
                                         required
                                         placeholder="you@email.com"
-                                        className="w-full rounded-xl border border-green-600/20 bg-[#1A1B23] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+                                        className={`w-full rounded-xl border px-4 py-3 text-sm transition focus:ring-2 focus:ring-green-500/30 focus:outline-none ${isDark ? 'border-green-600/20 bg-[#1A1B23] text-white placeholder-gray-500 focus:border-green-500' : 'border-slate-300 bg-slate-50 text-slate-900 placeholder-slate-400 focus:border-green-600 focus:bg-white'}`}
                                     />
                                 </div>
                                 <div className="sm:col-span-2">
-                                    <label className="mb-1.5 block text-xs font-semibold text-gray-400">City / Location</label>
+                                    <label className={`mb-1.5 block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-slate-700'}`}>City / Location</label>
                                     <input
                                         value={form.city}
                                         onChange={setField('city')}
                                         required
                                         placeholder="Addis Ababa"
-                                        className="w-full rounded-xl border border-green-600/20 bg-[#1A1B23] px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+                                        className={`w-full rounded-xl border px-4 py-3 text-sm transition focus:ring-2 focus:ring-green-500/30 focus:outline-none ${isDark ? 'border-green-600/20 bg-[#1A1B23] text-white placeholder-gray-500 focus:border-green-500' : 'border-slate-300 bg-slate-50 text-slate-900 placeholder-slate-400 focus:border-green-600 focus:bg-white'}`}
                                     />
                                 </div>
 
@@ -644,8 +624,8 @@ export default function EventDetailPage() {
                                 </button>
                             </form>
 
-                            <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-[11px] text-gray-500">
-                                <ShieldCheck className="h-3.5 w-3.5 text-green-500" />
+                            <p className={`mt-4 flex items-center justify-center gap-1.5 text-center text-[11px] ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
+                                <ShieldCheck className="h-3.5 w-3.5 text-green-600 dark:text-green-500" />
                                 Your details are secure &amp; never shared with third parties.
                             </p>
                             </div>
@@ -659,8 +639,8 @@ export default function EventDetailPage() {
             {modal && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={closeModal} />
-                    <div className="relative w-full max-w-md rounded-3xl border border-green-600/25 bg-[#12131A] p-8 shadow-[0_0_60px_rgba(74,222,128,0.15)]">
-                        <button onClick={closeModal} aria-label="Close" className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-gray-400 transition hover:text-white">
+                    <div className={`relative w-full max-w-md rounded-3xl border p-8 shadow-2xl ${isDark ? 'border-green-600/25 bg-[#12131A]' : 'border-slate-200 bg-white'}`}>
+                        <button onClick={closeModal} aria-label="Close" className={`absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-lg border transition ${isDark ? 'border-white/10 text-gray-400 hover:text-white' : 'border-slate-200 text-slate-500 hover:text-slate-900'}`}>
                             <X className="h-4 w-4" />
                         </button>
 
@@ -669,11 +649,11 @@ export default function EventDetailPage() {
                                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/15 shadow-[0_0_35px_rgba(74,222,128,0.4)]">
                                     <CheckCircle2 className="h-8 w-8 text-green-500" />
                                 </div>
-                                <h3 className="mt-5 text-center text-2xl font-extrabold text-white">Meeting Link Copied</h3>
-                                <p className="mt-2 break-all text-center text-sm text-[#9CA3AF]">{joinUrl}</p>
+                                <h3 className={`mt-5 text-center text-2xl font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>Meeting Link Copied</h3>
+                                <p className={`mt-2 break-all text-center text-sm ${isDark ? 'text-[#9CA3AF]' : 'text-slate-600'}`}>{joinUrl}</p>
                                 <button
                                     onClick={closeModal}
-                                    className="mt-6 w-full rounded-2xl border border-green-500/40 bg-green-500/10 py-3.5 text-sm font-extrabold uppercase tracking-wide text-green-300 transition hover:bg-green-500/20"
+                                    className="mt-6 w-full rounded-2xl border border-green-500/40 bg-green-500/10 py-3.5 text-sm font-extrabold uppercase tracking-wide text-green-600 dark:text-green-300 transition hover:bg-green-500/20"
                                 >
                                     Done
                                 </button>
@@ -685,8 +665,8 @@ export default function EventDetailPage() {
                                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/15 shadow-[0_0_35px_rgba(245,158,11,0.4)]">
                                     <AlertTriangle className="h-8 w-8 text-amber-500" />
                                 </div>
-                                <h3 className="mt-5 text-center text-2xl font-extrabold text-white">Registration Issue</h3>
-                                <p className="mt-2 text-center text-sm text-[#9CA3AF]">
+                                <h3 className={`mt-5 text-center text-2xl font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>Registration Issue</h3>
+                                <p className={`mt-2 text-center text-sm ${isDark ? 'text-[#9CA3AF]' : 'text-slate-600'}`}>
                                     {modal.message || 'The platform could not confirm your registration right now — please contact us to finalize your spot.'}
                                 </p>
                             </>
@@ -695,56 +675,56 @@ export default function EventDetailPage() {
                                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/15 shadow-[0_0_35px_rgba(74,222,128,0.4)]">
                                     <CheckCircle2 className="h-8 w-8 text-green-500" />
                                 </div>
-                                <h3 className="mt-5 text-center text-2xl font-extrabold text-white">{modal.alreadyRegistered ? 'Already Registered ✓' : "You're in! 🎉"}</h3>
-                                <p className="mt-2 text-center text-sm text-[#9CA3AF]">
+                                <h3 className={`mt-5 text-center text-2xl font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>{modal.alreadyRegistered ? 'Already Registered ✓' : "You're in! 🎉"}</h3>
+                                <p className={`mt-2 text-center text-sm ${isDark ? 'text-[#9CA3AF]' : 'text-slate-600'}`}>
                                     {modal.alreadyRegistered
                                         ? `Your existing booking for ${event.title} is confirmed. No additional payment is needed.`
                                         : `Your booking for ${event.title} is confirmed.`}
                                 </p>
                                 {modal.alreadyRegistered && (
-                                    <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-green-500/40 bg-green-500/10 p-4 text-sm text-green-200">
-                                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                                    <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-green-500/40 bg-green-500/10 p-4 text-sm text-green-700 dark:text-green-200">
+                                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600 dark:text-green-500" />
                                         <span>{modal.message}</span>
                                     </div>
                                 )}
                             </>
                         )}
-                        <div className="mt-6 space-y-3 rounded-2xl border border-white/5 bg-[#1A1B23] p-5 text-sm">
+                        <div className={`mt-6 space-y-3 rounded-2xl border p-5 text-sm ${isDark ? 'border-white/5 bg-[#1A1B23]' : 'border-slate-200 bg-slate-50'}`}>
                             <div className="flex items-center justify-between">
-                                <span className="text-gray-400">Booking Ref</span>
-                                <span className="font-mono font-bold text-green-300">{bookingRef}</span>
+                                <span className={isDark ? 'text-gray-400' : 'text-slate-500'}>Booking Ref</span>
+                                <span className="font-mono font-bold text-green-600 dark:text-green-400">{bookingRef}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-gray-400">Date</span>
-                                <span className="font-semibold text-white">{toISO(new Date(selectedDate.year, selectedDate.month, selectedDate.day))}</span>
+                                <span className={isDark ? 'text-gray-400' : 'text-slate-500'}>Date</span>
+                                <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{toISO(new Date(selectedDate.year, selectedDate.month, selectedDate.day))}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-gray-400">Time</span>
-                                <span className="font-semibold text-white">{selectedSlot}</span>
+                                <span className={isDark ? 'text-gray-400' : 'text-slate-500'}>Time</span>
+                                <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{selectedSlot}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-gray-400">Name</span>
-                                <span className="font-semibold text-white">{form.name || 'Guest'}</span>
+                                <span className={isDark ? 'text-gray-400' : 'text-slate-500'}>Name</span>
+                                <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{form.name || 'Guest'}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-gray-400">Phone</span>
-                                <span className="font-semibold text-white">{form.phone || '—'}</span>
+                                <span className={isDark ? 'text-gray-400' : 'text-slate-500'}>Phone</span>
+                                <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{form.phone || '—'}</span>
                             </div>
                             {joinUrl && (
-                                <div className="mt-1 flex items-center justify-between gap-3 border-t border-white/5 pt-3">
-                                    <span className="flex items-center gap-1.5 text-gray-400"><Video className="h-3.5 w-3.5 text-green-500" /> Meeting Link</span>
-                                    <a href={joinUrl} target="_blank" rel="noopener noreferrer" className="max-w-[55%] truncate font-semibold text-green-300 underline decoration-green-500/40 underline-offset-2 hover:text-green-200">
+                                <div className={`mt-1 flex items-center justify-between gap-3 border-t pt-3 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+                                    <span className={`flex items-center gap-1.5 ${isDark ? 'text-gray-400' : 'text-slate-500'}`}><Video className="h-3.5 w-3.5 text-green-600 dark:text-green-500" /> Meeting Link</span>
+                                    <a href={joinUrl} target="_blank" rel="noopener noreferrer" className="max-w-[55%] truncate font-semibold text-green-600 dark:text-green-400 underline decoration-green-500/40 underline-offset-2 hover:text-green-500">
                                         {joinUrl}
                                     </a>
                                 </div>
                             )}
                         </div>
-                        <p className="mt-4 text-center text-xs text-gray-500">
+                        <p className={`mt-4 text-center text-xs ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>
                             A confirmation SMS &amp; email have been sent to your contact details.
                         </p>
                         <button
                             onClick={closeModal}
-                            className="mt-6 w-full rounded-2xl border border-green-500/40 bg-green-500/10 py-3.5 text-sm font-extrabold uppercase tracking-wide text-green-300 transition hover:bg-green-500/20"
+                            className="mt-6 w-full rounded-2xl border border-green-500/40 bg-green-500/10 py-3.5 text-sm font-extrabold uppercase tracking-wide text-green-600 dark:text-green-300 transition hover:bg-green-500/20"
                         >
                             Done
                         </button>

@@ -334,7 +334,7 @@ export default function LandingPage() {
     ];
 
     const emareTeam = [
-        { name: 'Emare Developers', title: 'Built with dedication and late-night focus', desc: 'Our team worked through the night, often before 9:00 hours, to bring this learning platform to life for Ethiopian students. Every release reflects the passion and persistence of the people behind Emare.', icon: '⚙️' }
+        { name: 'Developers', title: 'Built with dedication and late-night focus', desc: 'Our team worked through the night, often before 9:00 hours, to bring this learning platform to life for Ethiopian students. Every release reflects the passion and persistence of the people behind Emare.', icon: '⚙️' }
     ];
 
     const formatLiveDate = (iso) => {

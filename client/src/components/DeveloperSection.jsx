@@ -92,7 +92,7 @@ export default function DeveloperSection() {
     return (
         <section id="developers" style={styles.section}>
             <div style={styles.hero}>
-                <div style={styles.heroLabel}>EMARE DEVELOPERS</div>
+                <div style={styles.heroLabel}>DEVELOPERS</div>
                 <h2 style={styles.heroTitle}>Let's Introduce Our Developer</h2>
                 <p style={styles.heroSubtitle}>
                     Meet the Emare development team behind the platform. Each developer brings technical depth,

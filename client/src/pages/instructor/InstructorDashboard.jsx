@@ -1717,7 +1717,7 @@ export default function InstructorDashboard() {
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
                 extraBottomButtons={
-                    <button onClick={() => navigate('/courses')} style={{ ...s.catalogBtn, display: 'inline-flex', alignItems: 'center', gap: '8px' }}><BookOpen size={18} aria-hidden="true" />Course Catalog</button>
+                    <button onClick={() => navigate('/courses')} style={{ ...s.catalogBtn, display: 'inline-flex', alignItems: 'center', gap: '8px' }}><BookOpen size={18} aria-hidden="true" />Courses</button>
                 }
             />
 

@@ -56,7 +56,6 @@ export default function CourseCatalog() {
     const [filterLevel, setFilterLevel] = useState(urlParams.get('level') || 'All');
     const [filterLanguage, setFilterLanguage] = useState('All');
     const [filterPrice, setFilterPrice] = useState(urlParams.get('free') === 'true' ? 'Free' : 'All');
-    const [filterRating, setFilterRating] = useState(0);
     const [filterDuration, setFilterDuration] = useState('All');
     const [filterInstructor, setFilterInstructor] = useState('All');
     const [filterCertificate, setFilterCertificate] = useState(urlParams.get('certificates') === 'true');
@@ -128,7 +127,6 @@ export default function CourseCatalog() {
             if (filterLanguage !== 'All' && c.language !== filterLanguage) return false;
             if (filterPrice === 'Free' && c.price !== 0) return false;
             if (filterPrice === 'Paid' && (c.price || 0) === 0) return false;
-            if (filterRating > 0 && (c.averageRating || 0) < filterRating) return false;
             if (filterDuration === '<5' && (c.estimatedDurationHours || 0) >= 5) return false;
             if (filterDuration === '5-20' && ((c.estimatedDurationHours || 0) < 5 || (c.estimatedDurationHours || 0) > 20)) return false;
             if (filterDuration === '>20' && (c.estimatedDurationHours || 0) <= 20) return false;
@@ -148,7 +146,7 @@ export default function CourseCatalog() {
             if (sortBy === 'duration_short') return (a.estimatedDurationHours || 0) - (b.estimatedDurationHours || 0);
             if (sortBy === 'duration_long') return (b.estimatedDurationHours || 0) - (a.estimatedDurationHours || 0);
             return new Date(b.creationTimestamp || b.createdAt || 0) - new Date(a.creationTimestamp || a.createdAt || 0);
-        }), [sectionCourses, filterCategory, filterLevel, filterLanguage, filterPrice, filterRating, filterDuration, filterInstructor, filterCertificate, searchQuery, sortBy]);
+        }), [sectionCourses, filterCategory, filterLevel, filterLanguage, filterPrice, filterDuration, filterInstructor, filterCertificate, searchQuery, sortBy]);
 
     useEffect(() => {
         setFilterCategory(urlParams.get('category') || 'All');
@@ -159,17 +157,9 @@ export default function CourseCatalog() {
         setActiveSection(urlParams.get('section') || (urlParams.get('certificates') === 'true' ? 'certificates' : 'all'));
     }, [urlParams.toString()]);
 
-    const clearFilters = () => { setFilterCategory('All'); setFilterLevel('All'); setFilterLanguage('All'); setFilterPrice('All'); setFilterRating(0); setFilterDuration('All'); setFilterInstructor('All'); setFilterCertificate(false); setSearchQuery(''); setSortBy('newest'); };
-    const hasActiveFilters = filterCategory !== 'All' || filterLevel !== 'All' || filterLanguage !== 'All' || filterPrice !== 'All' || filterRating > 0 || filterDuration !== 'All' || filterInstructor !== 'All' || filterCertificate || searchQuery;
+    const clearFilters = () => { setFilterCategory('All'); setFilterLevel('All'); setFilterLanguage('All'); setFilterPrice('All'); setFilterDuration('All'); setFilterInstructor('All'); setFilterCertificate(false); setSearchQuery(''); setSortBy('newest'); };
+    const hasActiveFilters = filterCategory !== 'All' || filterLevel !== 'All' || filterLanguage !== 'All' || filterPrice !== 'All' || filterDuration !== 'All' || filterInstructor !== 'All' || filterCertificate || searchQuery;
 
-    const categoryCount = Math.max(categories.length - 1, 0);
-    const averageRating = useMemo(() => {
-        const ratings = courses
-            .map(course => course.averageRating)
-            .filter(value => typeof value === 'number' && !Number.isNaN(value));
-        if (!ratings.length) return null;
-        return (ratings.reduce((sum, value) => sum + value, 0) / ratings.length).toFixed(1);
-    }, [courses]);
 
     const getEmoji = (c) => EMOJI_MAP[c.technicalCategory] || EMOJIS[(c._id?.charCodeAt(0) || 0) % EMOJIS.length] || '◈';
 
@@ -186,14 +176,7 @@ export default function CourseCatalog() {
 
     const s = {
         page: { minHeight: '100vh', paddingTop: '90px', background: colors.bg, fontFamily: "'Outfit','Inter',sans-serif" },
-        hero: { background: theme === 'dark' ? 'linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%)' : `linear-gradient(135deg,${colors.primary}06,${colors.accent}06)`, padding: '52px 5% 36px', borderBottom: `1px solid ${colors.border}`, position: 'relative', overflow: 'hidden' },
-        heroDeco: { position: 'absolute', top: '-40%', right: '-8%', width: '420px', height: '420px', borderRadius: '50%', background: `radial-gradient(circle,${colors.primary}08,transparent 70%)`, pointerEvents: 'none' },
-        heroTitle: { fontSize: '42px', fontWeight: '900', color: colors.text, margin: '0 0 6px', letterSpacing: '-0.8px', lineHeight: 1.1 },
-        heroSub: { color: colors.textMuted, fontSize: '15px', margin: '0 0 24px', lineHeight: 1.6 },
-        heroStats: { display: 'flex', gap: '28px', marginBottom: '24px', flexWrap: 'wrap' },
-        statNum: { fontSize: '26px', fontWeight: '800', color: colors.primary, display: 'block' },
-        statLabel: { fontSize: '11px', color: colors.textMuted, fontWeight: '600' },
-        searchWrap: { display: 'flex', maxWidth: '620px', background: colors.bgCard, borderRadius: '14px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 6px 24px rgba(0,0,0,0.08)' },
+        searchWrap: { display: 'flex', width: '100%', maxWidth: '620px', background: colors.bg, borderRadius: '14px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' },
         searchInput: { flex: 1, background: 'transparent', border: 'none', color: colors.text, padding: '13px 4px', fontSize: '14px', outline: 'none' },
         searchClear: { background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: '0 12px', fontSize: '18px', lineHeight: '1' },
         sectionTabs: { display: 'flex', gap: 0, background: colors.bgCard, borderBottom: `1px solid ${colors.border}`, padding: '0 5%', overflowX: 'auto' },
@@ -322,19 +305,12 @@ export default function CourseCatalog() {
     return (
         <div style={s.page}>
             <Navbar />
-            {/* Hero */}
-            <div style={s.hero}>
-                <div style={s.heroDeco} />
-                <h1 style={s.heroTitle}>▧ Course Catalog</h1>
-                <p style={s.heroSub}>Discover world-class tech courses curated for African learners. Learn at your pace, earn certificates.</p>
-                <div style={s.heroStats}>
-                    <div><span style={s.statNum}>{courses.length}+</span><span style={s.statLabel}>Total Courses</span></div>
-                    <div><span style={s.statNum}>{categoryCount}+</span><span style={s.statLabel}>Categories</span></div>
-                    <div><span style={s.statNum}>{courses.filter(c => c.price === 0).length}</span><span style={s.statLabel}>Free Courses</span></div>
-                    <div><span style={s.statNum}>{averageRating ?? '—'}</span><span style={s.statLabel}>Avg Rating</span></div>
-                </div>
+            <h1 className="sr-only">Courses</h1>
+
+            {/* Search Bar */}
+            <div style={{ padding: '24px 5% 20px', background: colors.bgCard, borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'center' }}>
                 <div style={s.searchWrap}>
-                        <span style={{ padding: '13px 14px', fontSize: '16px', color: colors.textMuted }}>⌕</span>
+                    <span style={{ padding: '13px 14px', fontSize: '16px', color: colors.textMuted }}>⌕</span>
                     <input type="text" placeholder="Search courses, topics, instructors..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={s.searchInput} id="catalog-search" />
                     {searchQuery && <button type="button" aria-label="Clear search" style={s.searchClear} onClick={() => setSearchQuery('')}>×</button>}
                     <button type="button" style={{ background: `linear-gradient(135deg,${colors.primary},${colors.accent})`, color: '#fff', border: 'none', padding: '13px 24px', fontWeight: '800', cursor: 'pointer', fontSize: '13px' }}>Search</button>
@@ -369,17 +345,6 @@ export default function CourseCatalog() {
                             <div style={{ display: 'flex', gap: '5px' }}>
                                 {['All', 'Free', 'Paid'].map(p => <button key={p} style={priceBtnStyle(filterPrice === p)} onClick={() => setFilterPrice(p)}>{p}</button>)}
                             </div>
-                        </div>
-
-                        {/* Rating */}
-                        <div style={s.fGroup}>
-                            <span style={s.fLabel}>Minimum Rating</span>
-                            {[4.5, 4.0, 3.5, 0].map(r => (
-                                <div key={r} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', cursor: 'pointer' }} onClick={() => setFilterRating(r)}>
-                                    <div style={radioCircle(filterRating === r)}>{filterRating === r && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#fff' }} />}</div>
-                                    <span style={radioLabel(filterRating === r)}>{r === 0 ? 'Any rating' : <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>{renderStars(r)} {r}+</span>}</span>
-                                </div>
-                            ))}
                         </div>
 
                         {/* Difficulty */}
@@ -469,7 +434,6 @@ export default function CourseCatalog() {
                             {filterLevel !== 'All' && <span style={s.filterTag}>{filterLevel} <span style={{ cursor: 'pointer' }} onClick={() => setFilterLevel('All')}></span></span>}
                             {filterLanguage !== 'All' && <span style={s.filterTag}>{filterLanguage} <span style={{ cursor: 'pointer' }} onClick={() => setFilterLanguage('All')}></span></span>}
                             {filterPrice !== 'All' && <span style={s.filterTag}>{filterPrice} <span style={{ cursor: 'pointer' }} onClick={() => setFilterPrice('All')}></span></span>}
-                            {filterRating > 0 && <span style={s.filterTag}> {filterRating}+ <span style={{ cursor: 'pointer' }} onClick={() => setFilterRating(0)}></span></span>}
                             {filterDuration !== 'All' && <span style={s.filterTag}>⏱ {filterDuration}h <span style={{ cursor: 'pointer' }} onClick={() => setFilterDuration('All')}></span></span>}
                             {filterInstructor !== 'All' && <span style={s.filterTag}>◉ {filterInstructor} <span style={{ cursor: 'pointer' }} onClick={() => setFilterInstructor('All')}></span></span>}
                             {filterCertificate && <span style={s.filterTag}> Cert <span style={{ cursor: 'pointer' }} onClick={() => setFilterCertificate(false)}></span></span>}

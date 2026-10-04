@@ -103,7 +103,7 @@ export default function MyLearningTab(dash) {
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
-                        <button onClick={() => navigate('/courses')} style={{ ...styles.resumeBtn, padding: '12px 28px' }}>Browse Course Catalog</button>
+                        <button onClick={() => navigate('/courses')} style={{ ...styles.resumeBtn, padding: '12px 28px' }}>Browse Courses</button>
                     </div>
                 </div>
             ) : (

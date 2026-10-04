@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 const DEFAULT_TEAM = [
     {
         icon: '⚙️',
-        title: 'Emare Developers',
+        title: 'Developers',
         text: 'Our team worked through the night, often before 9:00 hours, to bring this learning platform to life for Ethiopian students. Every release reflects the passion and persistence of the people behind Emare.'
     }
 ];
@@ -53,7 +53,7 @@ export default function EmareTeamSection({ team = DEFAULT_TEAM }) {
         <section style={s.section}>
             <div style={s.header}>
                 <span style={s.badge}>Team</span>
-                <h2 style={s.title}>Emare Developers</h2>
+                <h2 style={s.title}>Developers</h2>
                 <p style={s.subtitle}>A dedicated team that built this platform for Ethiopian learners, working long hours through the night to deliver an experience you can trust.</p>
             </div>
             <div style={s.grid}>

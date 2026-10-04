@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import NotificationBell from './NotificationBell';
 import { 
-    Sun, Moon, BookOpen, Home, LogOut, LayoutDashboard, Award, 
+    Sun, Moon, BookOpen, LogOut, LayoutDashboard, Award, 
     Trophy, MessageSquare, Video, User, Settings, PlusCircle, Shield, Inbox
 } from 'lucide-react';
 
@@ -48,13 +48,13 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                 { key: 'contact-messages', label: 'Contact Messages', path: '/admin/contact-messages', icon: <Inbox size={20} /> },
                 { key: 'messages', label: 'Messages', path: '/messages', icon: <MessageSquare size={20} /> },
                 { key: 'live', label: 'Live Sessions', path: '/live-sessions', icon: <Video size={20} /> },
-                { key: 'catalog', label: 'Course Catalog', path: '/courses', icon: <BookOpen size={20} /> },
+                { key: 'catalog', label: 'Courses', path: '/courses', icon: <BookOpen size={20} /> },
             ];
         } else {
             // Student or Default
             return [
                 { key: 'dashboard', label: 'Dashboard', path: '/student/dashboard', icon: <LayoutDashboard size={20} /> },
-                { key: 'courses', label: 'Course Catalog', path: '/courses', icon: <BookOpen size={20} /> },
+                { key: 'courses', label: 'Courses', path: '/courses', icon: <BookOpen size={20} /> },
                 { key: 'certificates', label: 'Certificates', path: '/student/certificates', icon: <Award size={20} /> },
                 { key: 'leaderboard', label: 'Leaderboard', path: '/leaderboard', icon: <Trophy size={20} /> },
                 { key: 'messages', label: 'Messages', path: '/messages', icon: <MessageSquare size={20} /> },
@@ -253,13 +253,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                             onClick={() => { navigate('/courses'); setAccountDropdownOpen(false); }}
                             style={{ ...styles.dropdownItem, color: colors.text, borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '10px' }}
                         >
-                            <BookOpen size={20} aria-hidden="true" /> Course Catalog
-                        </button>
-                        <button 
-                            onClick={() => { navigate('/'); setAccountDropdownOpen(false); }}
-                            style={{ ...styles.dropdownItem, color: colors.text, borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '10px' }}
-                        >
-                            <Home size={20} aria-hidden="true" /> Home Page
+                            <BookOpen size={20} aria-hidden="true" /> Courses
                         </button>
                         <button 
                             onClick={async () => { 
