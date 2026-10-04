@@ -45,6 +45,11 @@
   --focus-ring: #15803d;
   --control-disabled-background: #e5e7eb;
   --control-disabled-foreground: #9ca3af;
+  --option-background: #ffffff;
+  --option-foreground: #14201a;
+  --option-hover-background: rgba(21,128,61,0.08);
+  --option-selected-background: #15803d;
+  --option-selected-foreground: #ffffff;
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -221,19 +226,44 @@ button:focus, input:focus, select:focus, textarea:focus {
 }
 
 /* Native form controls use the same tokens as custom controls. */
-select { color-scheme: light; }
-option { padding: 8px 12px; }
+select {
+  color-scheme: light;
+}
 
-[data-theme='dark'] {
+option {
+  padding: 8px 12px;
+}
+
+option,
+optgroup {
+  background-color: var(--option-background, #ffffff);
+  color: var(--option-foreground, #14201a);
+}
+
+option:checked {
+  background-color: var(--option-selected-background, #15803d);
+  color: var(--option-selected-foreground, #ffffff);
+}
+
+[data-theme='dark'],
+.dark {
   color-scheme: dark;
   --control-disabled-background: var(--muted);
   --control-disabled-foreground: var(--muted-foreground);
+  --option-background: #111a2e;
+  --option-foreground: #f4f7fc;
+  --option-hover-background: #166534;
+  --option-selected-background: #15803d;
+  --option-selected-foreground: #ffffff;
 }
 
 [data-theme='dark'] input,
 [data-theme='dark'] textarea,
-[data-theme='dark'] select {
-  color-scheme: dark;
+[data-theme='dark'] select,
+.dark input,
+.dark textarea,
+.dark select {
+  color-scheme: dark !important;
   background-color: var(--input-background) !important;
   color: var(--input-foreground) !important;
   border-color: var(--input-border) !important;
@@ -241,15 +271,70 @@ option { padding: 8px 12px; }
 }
 
 [data-theme='dark'] input::placeholder,
-[data-theme='dark'] textarea::placeholder {
+[data-theme='dark'] textarea::placeholder,
+.dark input::placeholder,
+.dark textarea::placeholder {
   color: var(--input-placeholder) !important;
   opacity: 1;
 }
 
+/* Native select dropdown options in dark mode:
+   MUST have a 100% solid, opaque dark background (#111a2e)
+   and high-contrast bright text (#f4f7fc) so options never wash out
+   or blur against native OS popup canvases. */
 [data-theme='dark'] option,
-[data-theme='dark'] optgroup {
-  background-color: var(--input-background) !important;
-  color: var(--input-foreground) !important;
+[data-theme='dark'] optgroup,
+.dark option,
+.dark optgroup {
+  color-scheme: dark !important;
+  background-color: #111a2e !important;
+  color: #f4f7fc !important;
+}
+
+[data-theme='dark'] option:checked,
+.dark option:checked {
+  background-color: #15803d !important;
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] option:hover,
+[data-theme='dark'] option:focus,
+.dark option:hover,
+.dark option:focus {
+  background-color: #166534 !important;
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] option:disabled,
+.dark option:disabled {
+  background-color: #0b1120 !important;
+  color: #64748b !important;
+}
+
+/* Fallback for any dark-styled select wrappers across the application */
+select.bg-\[\#151a2c\] option,
+select.bg-\[\#12131A\] option,
+select[style*='#1e293b'] option,
+select[style*='#12131A'] option,
+select[style*='rgb(30, 41, 59)'] option {
+  color-scheme: dark !important;
+  background-color: #111a2e !important;
+  color: #f4f7fc !important;
+}
+
+.emare-select option,
+.emare-select optgroup {
+  background-color: var(--emare-bg-card, #ffffff);
+  color: var(--emare-text, #14201a);
+}
+
+[data-theme='dark'] .emare-select option,
+[data-theme='dark'] .emare-select optgroup,
+.dark .emare-select option,
+.dark .emare-select optgroup {
+  color-scheme: dark !important;
+  background-color: #111a2e !important;
+  color: #f4f7fc !important;
 }
 
 [data-theme='dark'] input[type='checkbox'],

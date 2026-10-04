@@ -124,7 +124,14 @@ export const ThemeProvider = ({ children }) => {
         root.setProperty('--muted', c.bgDarker);
         root.setProperty('--muted-foreground', c.textMuted);
         root.setProperty('--focus-ring', c.primary);
+        root.setProperty('--option-background', theme === 'dark' ? '#111a2e' : '#ffffff');
+        root.setProperty('--option-foreground', theme === 'dark' ? '#f4f7fc' : '#14201a');
+        root.setProperty('--option-hover-background', theme === 'dark' ? '#166534' : 'rgba(21,128,61,0.08)');
+        root.setProperty('--option-selected-background', '#15803d');
+        root.setProperty('--option-selected-foreground', '#ffffff');
+        root.setProperty('color-scheme', theme === 'dark' ? 'dark' : 'light');
         root.colorScheme = theme === 'dark' ? 'dark' : 'light';
+        document.documentElement.classList.toggle('dark', theme === 'dark');
     }, [theme]);
 
     const setTheme = (value) => setThemeValue(value);

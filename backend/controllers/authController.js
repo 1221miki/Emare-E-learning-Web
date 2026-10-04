@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const SystemSettings = require('../models/SystemSettings');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const qrcode = require('qrcode');
@@ -267,12 +268,12 @@ const login = async (req, res, next) => {
             return res.status(403).json({ success: false, message: 'Login disabled for non-admin users.' });
         }
 
-        // Two-Factor Authentication step: password matched, but the account has
-        // 2FA enabled. Do NOT issue the session cookie yet — hand back a short-lived
-        // pending token so the client can complete the second factor at
-        // POST /api/auth/2fa/verify-login. lastLoginTimestamp stays untouched until
-        // the full login succeeds so old sessions remain valid.
-        if (user.twoFactorEnabled && user.twoFactorMethod) {
+        // Two-Factor Authentication step: password matched, but check if 2FA
+        // is active system-wide before requiring second factor.
+        const sysSettings = await SystemSettings.findOne().lean();
+        const is2FAActive = sysSettings ? (sysSettings.twoFactorAuthEnabled !== false && sysSettings.twoFactorAuth !== false && sysSettings.requireMfa !== false) : true;
+
+        if (is2FAActive && user.twoFactorEnabled && user.twoFactorMethod) {
             audit.security({ req, user, action: 'LOGIN_2FA_REQUIRED', severity: 'info',
                 description: `User (${user.accountEmail}) entered correct password; awaiting 2FA verification (method: ${user.twoFactorMethod}).`,
                 targetType: 'User', targetId: user._id, targetLabel: user.accountEmail });
@@ -449,6 +450,15 @@ const socialLogin = async (req, res, next) => {
 // ─────────────────────────────────────────────
 const resendVerificationCode = async (req, res, next) => {
     try {
+        const sysSettings = await SystemSettings.findOne().lean();
+        const isEmailActive = sysSettings ? (sysSettings.smtpEnabled !== false && sysSettings.automaticEmailNotifs !== false) : true;
+        if (!isEmailActive) {
+            return res.status(403).json({
+                success: false,
+                message: 'Transactional email service is currently disabled by system administrator. Verification code cannot be sent.'
+            });
+        }
+
         const { accountEmail } = req.body;
         const normalizedEmail = (accountEmail || '').trim().toLowerCase();
 
@@ -555,6 +565,15 @@ const verifyEmail = async (req, res, next) => {
 
 const forgotPassword = async (req, res, next) => {
     try {
+        const sysSettings = await SystemSettings.findOne().lean();
+        const isEmailActive = sysSettings ? (sysSettings.smtpEnabled !== false && sysSettings.automaticEmailNotifs !== false) : true;
+        if (!isEmailActive) {
+            return res.status(403).json({
+                success: false,
+                message: 'Transactional email service is currently disabled by system administrator. Password reset cannot be sent.'
+            });
+        }
+
         const { accountEmail } = req.body;
 
         if (!accountEmail) {
@@ -702,6 +721,20 @@ const resetEmailCounter = (req, res) => {
 // ─────────────────────────────────────────────
 const getTwoFactorStatus = async (req, res, next) => {
     try {
+        const sysSettings = await SystemSettings.findOne().lean();
+        const is2FAActive = sysSettings ? (sysSettings.twoFactorAuthEnabled !== false && sysSettings.twoFactorAuth !== false && sysSettings.requireMfa !== false) : true;
+        if (!is2FAActive) {
+            return res.status(200).json({
+                success: true,
+                data: {
+                    twoFactorEnabled: false,
+                    twoFactorMethod: '',
+                    systemDisabled: true,
+                    message: 'Two-factor authentication is currently disabled across the system by administrator.'
+                }
+            });
+        }
+
         const user = await User.findById(req.user.id).select('twoFactorEnabled twoFactorMethod');
         // Legacy accounts may carry twoFactorEnabled=true from the old single-toggle
         // UI without a configured method — treat those as disabled (they are not
@@ -711,7 +744,8 @@ const getTwoFactorStatus = async (req, res, next) => {
             success: true,
             data: {
                 twoFactorEnabled: enabled,
-                twoFactorMethod: enabled ? user.twoFactorMethod : ''
+                twoFactorMethod: enabled ? user.twoFactorMethod : '',
+                systemDisabled: false
             }
         });
     } catch (err) {
@@ -726,6 +760,15 @@ const getTwoFactorStatus = async (req, res, next) => {
 // ─────────────────────────────────────────────
 const setupTwoFactor = async (req, res, next) => {
     try {
+        const sysSettings = await SystemSettings.findOne().lean();
+        const is2FAActive = sysSettings ? (sysSettings.twoFactorAuthEnabled !== false && sysSettings.twoFactorAuth !== false && sysSettings.requireMfa !== false) : true;
+        if (!is2FAActive) {
+            return res.status(403).json({
+                success: false,
+                message: 'Two-factor authentication is currently disabled by system administrator.'
+            });
+        }
+
         const { method, currentPassword } = req.body;
 
         if (!['authenticator', 'sms'].includes(method)) {
@@ -805,6 +848,15 @@ const setupTwoFactor = async (req, res, next) => {
 // ─────────────────────────────────────────────
 const verifyTwoFactorSetup = async (req, res, next) => {
     try {
+        const sysSettings = await SystemSettings.findOne().lean();
+        const is2FAActive = sysSettings ? (sysSettings.twoFactorAuthEnabled !== false && sysSettings.twoFactorAuth !== false && sysSettings.requireMfa !== false) : true;
+        if (!is2FAActive) {
+            return res.status(403).json({
+                success: false,
+                message: 'Two-factor authentication is currently disabled by system administrator.'
+            });
+        }
+
         const { method, code, currentPassword } = req.body;
 
         if (!['authenticator', 'sms'].includes(method)) {
@@ -1016,6 +1068,15 @@ const verifyTwoFactorLogin = async (req, res, next) => {
         if (!user) {
             return res.status(401).json({ success: false, message: 'Invalid verification token. Please sign in again.' });
         }
+
+        const sysSettings = await SystemSettings.findOne().lean();
+        const is2FAActive = sysSettings ? (sysSettings.twoFactorAuthEnabled !== false && sysSettings.twoFactorAuth !== false && sysSettings.requireMfa !== false) : true;
+        if (!is2FAActive) {
+            // Admin turned off 2FA system-wide while user was logging in: bypass and sign in
+            sendTokenResponse(user, 200, res, req);
+            return;
+        }
+
         if (!user.twoFactorEnabled || !user.twoFactorMethod) {
             return res.status(400).json({ success: false, message: 'Two-factor authentication is not enabled on this account.' });
         }

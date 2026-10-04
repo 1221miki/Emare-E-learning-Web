@@ -12,7 +12,9 @@ const systemSettingsSchema = new mongoose.Schema({
 
     // 2. Authentication & Login
     requireEmailVerification: { type: Boolean, default: false },
-    requireMfa: { type: Boolean, default: false },
+    requireMfa: { type: Boolean, default: true },
+    twoFactorAuthEnabled: { type: Boolean, default: true },
+    twoFactorAuth: { type: Boolean, default: true },
     passwordComplexityStrict: { type: Boolean, default: true },
     maxLoginAttempts: { type: Number, default: 5 },
     sessionTimeoutMinutes: { type: Number, default: 60 },
@@ -59,6 +61,7 @@ const systemSettingsSchema = new mongoose.Schema({
 
     // 8. Payment Settings
     paymentGatewayActive: { type: Boolean, default: true },
+    onlinePaymentsEnabled: { type: Boolean, default: true },
     multiCurrencySupport: { type: Boolean, default: true },
     invoiceGeneration: { type: Boolean, default: true },
     taxCalculationEnabled: { type: Boolean, default: true },
@@ -123,5 +126,14 @@ const systemSettingsSchema = new mongoose.Schema({
     }],
     settingMeta: { type: Map, of: mongoose.Schema.Types.Mixed, default: {} }
 }, { timestamps: true });
+
+// Static helper to retrieve or create default settings
+systemSettingsSchema.statics.getSettings = async function() {
+    let settings = await this.findOne();
+    if (!settings) {
+        settings = await this.create({});
+    }
+    return settings;
+};
 
 module.exports = mongoose.model('SystemSettings', systemSettingsSchema);

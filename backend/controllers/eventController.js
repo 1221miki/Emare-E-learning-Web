@@ -3,6 +3,7 @@ const EventRegistration = require('../models/EventRegistration');
 const Transaction = require('../models/Transaction');
 const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
+const SystemSettings = require('../models/SystemSettings');
 const { validateEvent } = require('../utils/eventValidation');
 const { broadcastEventNotification } = require('./notificationController');
 const { resolveMeetingUrl, isValidMeetingUrl, generateMeetingUrl, missingEnvMessage, normalizeProvider, mergeMeetingInfo, deleteProviderResource, validateInvitees } = require('../services/meetingService');
@@ -638,6 +639,16 @@ exports.registerForEvent = async (req, res) => {
         // Parse event price — if > 0, initiate Chapa payment before confirming
         const eventPrice = parseEventPrice(event);
         const isPaid = eventPrice > 0;
+
+        if (isPaid) {
+            const systemSettings = await SystemSettings.getSettings();
+            if (systemSettings && (systemSettings.paymentGatewayActive === false || systemSettings.onlinePaymentsEnabled === false)) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Online payment processing is currently disabled by system administrator. Registration for paid events is temporarily suspended.'
+                });
+            }
+        }
 
         // ── Reuse an existing registration if one already exists ──────────
         let registration = null;

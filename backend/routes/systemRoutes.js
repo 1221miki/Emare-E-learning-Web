@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { getSettings, updateSettings, resetToDefaults, createBackup, restoreDatabase, optimizeDatabase, monitorCollections, monitorStorage, clearCache } = require('../controllers/systemController');
+const { getSettings, updateSettings, getPublicSystemStatus, resetToDefaults, createBackup, restoreDatabase, optimizeDatabase, monitorCollections, monitorStorage, clearCache } = require('../controllers/systemController');
 const { protect, authorizeRoles } = require('../middleware/auth');
 
-// Only Admins can access system routes
+// Public system status (accessible to all authenticated and guest users)
+router.get('/public-status', getPublicSystemStatus);
+
+// Only Admins can access administrative system routes
 router.use(protect);
 router.use(authorizeRoles('Admin'));
 

@@ -8,6 +8,7 @@ const Enrollment = require('../models/Enrollment');
 const EventRegistration = require('../models/EventRegistration');
 const Course = require('../models/Course');
 const User = require('../models/User');
+const SystemSettings = require('../models/SystemSettings');
 const emailService = require('../services/emailService');
 const { audit, resolveIp } = require('../utils/auditLogger');
 
@@ -19,6 +20,15 @@ const CHAPA_WEBHOOK_SECRET = process.env.CHAPA_WEBHOOK_SECRET || CHAPA_SECRET_KE
 // Initiate payment (creates a pending transaction and returns a provider redirect/url)
 exports.initiatePayment = async (req, res) => {
     try {
+        // Enforce system setting for online payments
+        const systemSettings = await SystemSettings.getSettings();
+        if (systemSettings && (systemSettings.paymentGatewayActive === false || systemSettings.onlinePaymentsEnabled === false)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Online payment processing is currently disabled by system administrator.'
+            });
+        }
+
         const { courseId, amount, currency = 'ETB', provider = 'chapa', coupon } = req.body;
 
         // Check if student is already enrolled in this course

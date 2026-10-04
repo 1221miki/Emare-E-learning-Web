@@ -215,6 +215,20 @@ const buildAntiSpamHeaders = () => ({
 const sendEmail = async ({ to, subject, html, text }) => {
     const recipients = Array.isArray(to) ? to : [to];
 
+    // Enforce system setting: SMTP Email toggle
+    try {
+        const SystemSettings = require('../models/SystemSettings');
+        const sysSettings = await SystemSettings.findOne().lean();
+        if (sysSettings && (sysSettings.smtpEnabled === false || sysSettings.automaticEmailNotifs === false)) {
+            console.warn(`📧 [SMTP DISABLED] Transactional email sending is disabled by system administrator. Suppressed email to ${recipients.join(', ')} (Subject: "${subject}")`);
+            const err = new Error('Transactional email service is currently disabled by system administrator.');
+            err.code = 'EMAIL_DISABLED_BY_ADMIN';
+            throw err;
+        }
+    } catch (checkErr) {
+        if (checkErr.code === 'EMAIL_DISABLED_BY_ADMIN') throw checkErr;
+    }
+
     // DEV MODE: log email content when no provider is configured, so registration
     // can still proceed while warning that real delivery is unavailable.
     if (!emailConfigured) {

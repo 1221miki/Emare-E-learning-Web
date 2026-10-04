@@ -19,12 +19,14 @@ export default function TwoFactorSection({ user, twoFactorEnabled, setTwoFactorE
     const [success, setSuccess] = useState('');
     const [copied, setCopied] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [systemDisabled, setSystemDisabled] = useState(false);
 
     useEffect(() => {
         let active = true;
         authService.getTwoFactorStatus()
             .then(({ data }) => {
                 if (!active || !data?.data) return;
+                setSystemDisabled(Boolean(data.data.systemDisabled));
                 setMethod(data.data.twoFactorMethod || '');
                 if (typeof data.data.twoFactorEnabled === 'boolean') {
                     setTwoFactorEnabled(data.data.twoFactorEnabled);
@@ -203,11 +205,47 @@ export default function TwoFactorSection({ user, twoFactorEnabled, setTwoFactorE
                     </span>
                 </div>
                 {mode === 'idle' && (
-                    <button type="button" onClick={() => { resetFlow(); setSuccess(''); if (twoFactorEnabled) { setMode('disable'); } else { setMode('choose'); } }} style={actionBtn} disabled={busy}>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (systemDisabled && !twoFactorEnabled) return;
+                            resetFlow();
+                            setSuccess('');
+                            if (twoFactorEnabled) {
+                                setMode('disable');
+                            } else {
+                                setMode('choose');
+                            }
+                        }}
+                        style={{
+                            ...actionBtn,
+                            opacity: (busy || (systemDisabled && !twoFactorEnabled)) ? 0.6 : 1,
+                            cursor: (busy || (systemDisabled && !twoFactorEnabled)) ? 'not-allowed' : 'pointer'
+                        }}
+                        disabled={busy || (systemDisabled && !twoFactorEnabled)}
+                        title={systemDisabled && !twoFactorEnabled ? '2FA is disabled system-wide by the administrator' : ''}
+                    >
                         {twoFactorEnabled ? t('btn_disable_2fa') : t('btn_enable_2fa')}
                     </button>
                 )}
             </div>
+
+            {systemDisabled && (
+                <div style={{
+                    background: '#fef3c7',
+                    border: '1px solid #fde68a',
+                    color: '#92400e',
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    fontSize: '12.5px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                }}>
+                    <ShieldCheck size={16} />
+                    <span>Two-Factor Authentication is currently disabled system-wide by the administrator.</span>
+                </div>
+            )}
 
             {success && <div style={styles.successAlert}>{success}</div>}
             {error && <div style={{ background: `${DANGER}15`, border: `1px solid ${DANGER}40`, color: DANGER, padding: '12px 16px', borderRadius: '10px', fontSize: '13px' }}>{error}</div>}

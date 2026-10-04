@@ -465,6 +465,7 @@ export const auditService = {
 // ── System API Calls (Admin) ─────────────────────────────────
 export const systemService = {
     getSettings: () => API.get('/system/settings'),
+    getPublicStatus: () => API.get('/system/public-status'),
     updateSettings: (data) => API.put('/system/settings', data),
     resetToDefaults: () => API.post('/system/settings/reset-defaults'),
     createBackup: () => API.post('/system/backup'),

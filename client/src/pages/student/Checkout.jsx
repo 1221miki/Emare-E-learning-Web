@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { courseService, paymentService } from '../../services/api.jsx';
+import { courseService, paymentService, systemService } from '../../services/api.jsx';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function Checkout() {
@@ -11,6 +11,7 @@ export default function Checkout() {
     const [course, setCourse] = useState(null);
     const [payLoading, setPayLoading] = useState(false);
     const [payError, setPayError] = useState('');
+    const [paymentsEnabled, setPaymentsEnabled] = useState(true);
 
     // ── Coupon state ──────────────────────────────────────────────────────────
     const [couponInput, setCouponInput] = useState('');
@@ -31,6 +32,14 @@ export default function Checkout() {
         courseService.getById(courseId)
             .then(res => setCourse(res.data.data))
             .catch(() => setPayError('Unable to load course details. Please refresh the page.'));
+
+        systemService.getPublicStatus()
+            .then(res => {
+                if (res.data?.success && res.data?.data) {
+                    setPaymentsEnabled(res.data.data.paymentGatewayActive !== false);
+                }
+            })
+            .catch(() => {});
     }, [courseId]);
 
     // ── Coupon apply ──────────────────────────────────────────────────────────
@@ -84,6 +93,10 @@ export default function Checkout() {
     // ── Payment initiate ──────────────────────────────────────────────────────
     const handlePayNow = async () => {
         if (!course) return;
+        if (finalPrice > 0 && !paymentsEnabled) {
+            setPayError('Online payment processing is currently disabled by system administrator.');
+            return;
+        }
         setPayError('');
         setPayLoading(true);
         try {
@@ -349,9 +362,15 @@ export default function Checkout() {
                             </div>
                         )}
 
+                        {!paymentsEnabled && finalPrice > 0 && (
+                            <div role="alert" style={{ marginBottom: '16px', background: '#fef3c7', border: '1px solid #fde68a', color: '#92400e', padding: '12px 16px', borderRadius: '10px', fontSize: '13.5px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span>⚠️ Online payment processing is currently disabled by system administrator. Checkout is temporarily suspended.</span>
+                            </div>
+                        )}
+
                         {/* ── Pay button ── */}
                         <button
-                            disabled={payLoading}
+                            disabled={payLoading || (!paymentsEnabled && finalPrice > 0)}
                             onClick={handlePayNow}
                             style={{
                                 width: '100%',
@@ -360,10 +379,10 @@ export default function Checkout() {
                                 border: 'none',
                                 fontSize: '15px',
                                 fontWeight: '800',
-                                background: payLoading ? colors.textMuted : 'linear-gradient(135deg, #15803d, #166534)',
+                                background: (payLoading || (!paymentsEnabled && finalPrice > 0)) ? colors.textMuted : 'linear-gradient(135deg, #15803d, #166534)',
                                 color: '#fff',
-                                cursor: payLoading ? 'not-allowed' : 'pointer',
-                                boxShadow: payLoading ? 'none' : '0 8px 24px rgba(67,56,202,0.25)',
+                                cursor: (payLoading || (!paymentsEnabled && finalPrice > 0)) ? 'not-allowed' : 'pointer',
+                                boxShadow: (payLoading || (!paymentsEnabled && finalPrice > 0)) ? 'none' : '0 8px 24px rgba(67,56,202,0.25)',
                                 transition: 'opacity 0.2s',
                                 display: 'flex',
                                 alignItems: 'center',

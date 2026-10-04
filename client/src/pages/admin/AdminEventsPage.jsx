@@ -1269,7 +1269,7 @@ export default function AdminEventsPage() {
                                         onChange={(e) => setCreateForm({ ...createForm, category: e.target.value, eventCategory: e.target.value })}
                                         style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: '#1e293b', color: '#fff', fontSize: 14, outline: 'none' }}
                                     >
-                                        {EVENT_CATEGORIES.map((cat) => <option key={cat} value={cat} style={{ background: '#1e293b' }}>{cat}</option>)}
+                                        {EVENT_CATEGORIES.map((cat) => <option key={cat} value={cat} style={{ background: '#1e293b', color: '#ffffff' }}>{cat}</option>)}
                                     </select>
                                 </div>
                                 <div>
@@ -1279,8 +1279,8 @@ export default function AdminEventsPage() {
                                         onChange={(e) => setCreateForm({ ...createForm, eventStatus: e.target.value })}
                                         style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: '#1e293b', color: '#fff', fontSize: 14, outline: 'none' }}
                                     >
-                                        <option value="SCHEDULED" style={{ background: '#1e293b' }}>Scheduled</option>
-                                        <option value="CANCELLED" style={{ background: '#1e293b' }}>Cancelled</option>
+                                        <option value="SCHEDULED" style={{ background: '#1e293b', color: '#ffffff' }}>Scheduled</option>
+                                        <option value="CANCELLED" style={{ background: '#1e293b', color: '#ffffff' }}>Cancelled</option>
                                     </select>
                                 </div>
                             </div>
@@ -1380,7 +1380,7 @@ export default function AdminEventsPage() {
                                         style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: '#1e293b', color: '#fff', fontSize: 14, outline: 'none' }}
                                     >
                                         {MEETING_PLATFORMS.map((pf) => (
-                                            <option key={pf.value} value={pf.value} style={{ background: '#1e293b' }}>{pf.label}</option>
+                                            <option key={pf.value} value={pf.value} style={{ background: '#1e293b', color: '#ffffff' }}>{pf.label}</option>
                                         ))}
                                     </select>
                                 </div>

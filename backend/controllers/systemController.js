@@ -79,6 +79,34 @@ exports.getSettings = async (req, res) => {
     }
 };
 
+// Get public status of system features (accessible by all users)
+exports.getPublicSystemStatus = async (req, res) => {
+    try {
+        let settings = await SystemSettings.findOne().lean();
+        if (!settings) {
+            settings = await SystemSettings.create({});
+        }
+        const twoFactorAuthEnabled = settings.twoFactorAuthEnabled !== false && settings.twoFactorAuth !== false && settings.requireMfa !== false;
+        const smtpEnabled = settings.smtpEnabled !== false && settings.automaticEmailNotifs !== false;
+        const paymentGatewayActive = settings.paymentGatewayActive !== false && settings.onlinePaymentsEnabled !== false;
+
+        res.status(200).json({
+            success: true,
+            data: {
+                twoFactorAuthEnabled,
+                smtpEnabled,
+                paymentGatewayActive,
+                strictRbac: true,
+                auditLogs: true,
+                automaticBackup: true,
+                automaticCertificates: true
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error retrieving system status.' });
+    }
+};
+
 // Update settings
 exports.updateSettings = async (req, res) => {
     try {
@@ -86,6 +114,36 @@ exports.updateSettings = async (req, res) => {
         const updateData = { ...req.body };
         const adminName = req.user?.fullName || req.user?.username || 'Admin User';
         const adminId = req.user?._id;
+
+        // 1. Synchronize the 3 functional system toggles across all alias fields
+        if (typeof updateData.twoFactorAuthEnabled === 'boolean') {
+            updateData.twoFactorAuth = updateData.twoFactorAuthEnabled;
+            updateData.requireMfa = updateData.twoFactorAuthEnabled;
+        } else if (typeof updateData.twoFactorAuth === 'boolean') {
+            updateData.twoFactorAuthEnabled = updateData.twoFactorAuth;
+            updateData.requireMfa = updateData.twoFactorAuth;
+        } else if (typeof updateData.requireMfa === 'boolean') {
+            updateData.twoFactorAuthEnabled = updateData.requireMfa;
+            updateData.twoFactorAuth = updateData.requireMfa;
+        }
+
+        if (typeof updateData.smtpEnabled === 'boolean') {
+            updateData.automaticEmailNotifs = updateData.smtpEnabled;
+        } else if (typeof updateData.automaticEmailNotifs === 'boolean') {
+            updateData.smtpEnabled = updateData.automaticEmailNotifs;
+        }
+
+        if (typeof updateData.paymentGatewayActive === 'boolean') {
+            updateData.onlinePaymentsEnabled = updateData.paymentGatewayActive;
+        } else if (typeof updateData.onlinePaymentsEnabled === 'boolean') {
+            updateData.paymentGatewayActive = updateData.onlinePaymentsEnabled;
+        }
+
+        // 2. Permanently enforce the 4 core system features with no disable option
+        updateData.rbacEnforced = true;
+        updateData.auditLoggingActive = true;
+        updateData.backupEnabled = true;
+        updateData.autoGenerateCertificates = true;
 
         // Build log entries for updated fields
         if (settings) {
