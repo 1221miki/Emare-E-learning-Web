@@ -83,40 +83,23 @@ exports.streamSocraticResponse = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Session not found' });
         }
 
-        // Set up SSE headers
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
-        res.setHeader('Access-Control-Allow-Origin', '*');
+        const isSSE = req.headers.accept && req.headers.accept.includes('text/event-stream');
 
-        // Send initial connection message
-        res.write(`data: ${JSON.stringify({ type: 'connection', message: 'Connected to Socratic Tutor' })}\n\n`);
-
-        // Retrieve relevant course content
-        res.write(`data: ${JSON.stringify({ type: 'status', message: 'Retrieving relevant course material...' })}\n\n`);
-        
         const relevantContent = await socraticAiService.retrieveRelevantContent(
             question,
             courseId,
             3
         );
 
-        // Generate Socratic response
-        res.write(`data: ${JSON.stringify({ type: 'status', message: 'Generating Socratic response...' })}\n\n`);
-
         let socraticResponse;
-        
         if (useHints && session.metrics.hintRequests < 5) {
-            // Generate hint
             socraticResponse = await socraticAiService.generateAdaptiveHint(
                 question,
                 session.comprehensionLevel,
                 []
             );
-
             session.metrics.hintRequests += 1;
         } else {
-            // Generate Socratic question
             const questionResult = await socraticAiService.generateSocraticQuestion(
                 question,
                 {
@@ -125,22 +108,9 @@ exports.streamSocraticResponse = async (req, res) => {
                 },
                 session.messages.length > 0 ? session.messages[session.messages.length - 1].content : ''
             );
-
             socraticResponse = questionResult.content;
         }
 
-        // Stream the response
-        res.write(`data: ${JSON.stringify({
-            type: 'response',
-            content: socraticResponse,
-            relevantContent: relevantContent.map(item => ({
-                lesson: item.lessonTitle,
-                chapter: item.chapterTitle,
-                preview: item.content.substring(0, 200)
-            }))
-        })}\n\n`);
-
-        // Save interaction to session
         session.messages.push({
             role: 'student',
             content: question,
@@ -156,8 +126,37 @@ exports.streamSocraticResponse = async (req, res) => {
         });
 
         session.metrics.totalQuestions += 1;
+        await session.save();
 
-        // If student should evaluate, generate evaluation prompt
+        if (!isSSE) {
+            return res.json({
+                success: true,
+                content: socraticResponse,
+                relevantContent: relevantContent.map(item => ({
+                    lesson: item.lessonTitle,
+                    chapter: item.chapterTitle,
+                    preview: item.content.substring(0, 200)
+                }))
+            });
+        }
+
+        // Set up SSE headers
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+
+        res.write(`data: ${JSON.stringify({ type: 'connection', message: 'Connected to Socratic Tutor' })}\n\n`);
+        res.write(`data: ${JSON.stringify({
+            type: 'response',
+            content: socraticResponse,
+            relevantContent: relevantContent.map(item => ({
+                lesson: item.lessonTitle,
+                chapter: item.chapterTitle,
+                preview: item.content.substring(0, 200)
+            }))
+        })}\n\n`);
+
         if (session.socraticSettings.evaluateResponses && !useHints) {
             res.write(`data: ${JSON.stringify({
                 type: 'prompt',
@@ -165,9 +164,6 @@ exports.streamSocraticResponse = async (req, res) => {
             })}\n\n`);
         }
 
-        await session.save();
-
-        // Send completion marker
         res.write(`data: ${JSON.stringify({ type: 'done', totalInteractions: session.messages.length })}\n\n`);
         res.end();
 

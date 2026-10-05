@@ -255,7 +255,16 @@ const updateUser = async (req, res, next) => {
         if (avatarUrl !== undefined && avatarUrl !== '') user.avatarUrl = avatarUrl;
         if (req.body.profilePicture !== undefined) user.profilePicture = req.body.profilePicture;
         if (req.body.professionalTitle !== undefined) user.professionalTitle = req.body.professionalTitle;
-        if (req.body.phoneNumber !== undefined) user.phoneNumber = req.body.phoneNumber;
+        if (req.body.phoneNumber !== undefined) {
+            const rawPhone = String(req.body.phoneNumber || '').trim();
+            if (rawPhone && !/^(09|07)\d{8}$/.test(rawPhone)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Phone number must be exactly 10 digits starting with 09 or 07 (e.g., 0912345678 or 0712345678).'
+                });
+            }
+            user.phoneNumber = rawPhone;
+        }
         if (req.body.linkedIn !== undefined) user.linkedIn = req.body.linkedIn;
         if (req.body.portfolioUrl !== undefined) user.portfolioUrl = req.body.portfolioUrl;
         if (req.body.institution !== undefined) user.institution = req.body.institution;

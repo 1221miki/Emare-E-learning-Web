@@ -8,6 +8,7 @@ import AdminSystemSettings from '../../components/admin/AdminSystemSettings';
 import { AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { LayoutDashboard, BarChart3, Users, UserCog, Building2, BookOpen, FolderTree, NotebookPen, Video, FileQuestion, ClipboardList, Award, Wallet, Receipt, DollarSign, TicketPercent, FileBarChart, Bell, Megaphone, MessageSquare, MessagesSquare, Bot, LifeBuoy, Settings, ShieldCheck, ClipboardCheck, DatabaseBackup, PlugZap, KeyRound, UserCircle, LogOut, TrendingUp, Clock3, Activity, PlusCircle, FilePen, Upload, Archive, Trash2, UserPlus, UserMinus, ShieldAlert, RotateCcw, CreditCard, PieChart as LucidePieChart, Mail, Eye, EyeOff, AlertTriangle, Palette, Languages, MoonStar, Database, BadgeInfo, CircleCheck, Server, GraduationCap, Search, Download, Monitor, Lock, Shield, MoreVertical, CheckCircle2, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Edit, Image, User, Copy, Star, Settings2, DownloadCloud, Trash, Wand2, PartyPopper, FileText, HelpCircle, Clipboard, Pin, Headphones, File, Radio, XCircle, Flag, Package, MessageCircle, Folder, RefreshCw, ScrollText, X, Trophy, CheckSquare, Check, FileEdit, Scale, Repeat, Calendar, Ban, Medal, Plus, Rocket, Zap, Book, Library, Clock, Save, FolderOpen, Link, Circle, Bookmark, Building, Eraser, Sparkles, Pause, MapPin, Tag, Globe, ExternalLink, Loader2, Code2, Inbox } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { getLiveStatus, LIVE_STATUS_META, formatEventDate, isValidUrl, EVENT_CATEGORIES } from '../../utils/eventStatus';
 import CourseCreationWizard from '../instructor/CourseCreationWizard';
 import AdminContactMessages from './AdminContactMessages';
@@ -167,6 +168,7 @@ const copyToClipboard = async (text) => {
 
 export default function AdminDashboard() {
     const { colors, theme } = useTheme();
+    const { t } = useLanguage();
     const navigate = useNavigate();
     const location = useLocation();
     // Tabs that still have a panel in this dashboard. Removed modules
@@ -4430,18 +4432,18 @@ const resetCalendarForm = () => {
     );
 
     const sidebarItems = [
-        { key: 'overview', label: 'Overview', icon: <LayoutDashboard size={20} aria-hidden="true" /> },
-        { key: 'users', label: 'User Management', icon: <Users size={20} aria-hidden="true" /> },
-        { key: 'security', label: 'Security & Roles', icon: <ShieldCheck size={20} aria-hidden="true" /> },
-        { key: 'courses', label: 'Course Management', icon: <BookOpen size={20} aria-hidden="true" /> },
-        { key: 'analytics', label: 'Analytics Dashboard', icon: <BarChart3 size={20} aria-hidden="true" /> },
-        { key: 'finances', label: 'Finances & Revenue', icon: <Wallet size={20} aria-hidden="true" /> },
-        { key: 'cms', label: 'CMS & Comms', icon: <Megaphone size={20} aria-hidden="true" /> },
-        { key: 'audit', label: 'Audit Logs', icon: <ClipboardCheck size={20} aria-hidden="true" /> },
-        { key: 'contact-messages', label: 'Contact Messages', icon: <Inbox size={20} aria-hidden="true" /> },
-        { key: 'developers', label: 'Developers', icon: <Code2 size={20} aria-hidden="true" /> },
-        { key: 'calendar', label: 'Event Management', icon: <Clock3 size={20} aria-hidden="true" /> },
-        { key: 'system', label: 'System Settings', icon: <Settings size={20} aria-hidden="true" /> }
+        { key: 'overview', label: t('nav_overview') || 'Overview', icon: <LayoutDashboard size={20} aria-hidden="true" /> },
+        { key: 'users', label: t('nav_admin_users') || 'User Management', icon: <Users size={20} aria-hidden="true" /> },
+        { key: 'security', label: t('nav_admin_security') || 'Security & Roles', icon: <ShieldCheck size={20} aria-hidden="true" /> },
+        { key: 'courses', label: t('nav_admin_courses') || 'Course Management', icon: <BookOpen size={20} aria-hidden="true" /> },
+        { key: 'analytics', label: t('nav_admin_analytics') || 'Analytics Dashboard', icon: <BarChart3 size={20} aria-hidden="true" /> },
+        { key: 'finances', label: t('nav_admin_finances') || 'Finances & Revenue', icon: <Wallet size={20} aria-hidden="true" /> },
+        { key: 'cms', label: t('nav_admin_cms') || 'CMS & Comms', icon: <Megaphone size={20} aria-hidden="true" /> },
+        { key: 'audit', label: t('nav_admin_audit') || 'Audit Logs', icon: <ClipboardCheck size={20} aria-hidden="true" /> },
+        { key: 'contact-messages', label: t('nav_admin_contact_messages') || 'Contact Messages', icon: <Inbox size={20} aria-hidden="true" /> },
+        { key: 'developers', label: t('nav_admin_developers') || 'Developers', icon: <Code2 size={20} aria-hidden="true" /> },
+        { key: 'calendar', label: t('nav_admin_calendar') || 'Event Management', icon: <Clock3 size={20} aria-hidden="true" /> },
+        { key: 'system', label: t('nav_admin_system') || 'System Settings', icon: <Settings size={20} aria-hidden="true" /> }
     ];
 
     return (
@@ -4450,7 +4452,7 @@ const resetCalendarForm = () => {
             
             <main style={s.main}>
                 <header style={s.header}>
-                    <h1 style={s.greeting}>Admin Portal</h1>
+                    <h1 style={s.greeting}>{t('admin_portal') || 'Admin Portal'}</h1>
                 </header>
 
                 {notificationMsg && (

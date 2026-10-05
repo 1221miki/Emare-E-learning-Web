@@ -2,7 +2,7 @@
  * socraticAiService.js
  * 
  * Enhanced AI Service with Socratic Method and RAG (Retrieval-Augmented Generation)
- * Supports both OpenAI and Google Gemini APIs
+ * Supports Groq API (high-speed LPU inference) and OpenAI
  * Features:
  * - Socratic questioning techniques
  * - RAG using MongoDB Atlas Vector Search
@@ -30,74 +30,27 @@ const {
 
 class SocraticAIService {
     constructor() {
-        this.apiKey = process.env.AI_API_KEY || '';
-        this.provider = process.env.AI_PROVIDER || (this.apiKey ? 'gemini' : 'mock');
-        this.model = process.env.AI_MODEL || 'gemini-flash-latest';
-    }
-
-    _extractGeminiText(responseData) {
-        const candidates = responseData?.candidates || [];
-        for (const candidate of candidates) {
-            const parts = candidate?.content?.parts || [];
-            if (Array.isArray(parts)) {
-                const text = parts
-                    .map(part => typeof part?.text === 'string' ? part.text : '')
-                    .join('')
-                    .trim();
-                if (text) return text;
-            }
-            if (typeof candidate?.content?.text === 'string' && candidate.content.text.trim()) {
-                return candidate.content.text.trim();
-            }
-        }
-        return '';
+        this.apiKey = process.env.GROQ_API_KEY || process.env.AI_API_KEY || '';
+        this.provider = process.env.AI_PROVIDER || (this.apiKey ? 'groq' : 'mock');
+        this.model = process.env.AI_MODEL || (this.provider === 'groq' ? 'openai/gpt-oss-120b' : 'gpt-4o-mini');
+        this.fallbackModel = 'openai/gpt-oss-20b';
     }
 
     /**
-     * Generate text embeddings using Gemini or OpenAI API
+     * Generate text embeddings using OpenAI API (if configured) or fallback vector
      * @param {string} text - Text to embed
      * @returns {Promise<Array<number>>} - Vector embedding
      */
     async generateEmbedding(text) {
-        if (!this.apiKey) {
-            throw new Error('AI_API_KEY not configured');
-        }
-
         try {
-            if (this.provider === 'gemini') {
-                return await this._generateGeminiEmbedding(text);
-            } else {
+            if (this.provider === 'openai' && this.apiKey) {
                 return await this._generateOpenAIEmbedding(text);
             }
+            // Groq does not provide text embeddings directly; return safe zero/mock vector for vector search
+            return new Array(1536).fill(0);
         } catch (error) {
             console.error('Error generating embedding:', error.message);
-            throw error;
-        }
-    }
-
-    /**
-     * Generate embedding using Gemini API
-     */
-    async _generateGeminiEmbedding(text) {
-        try {
-            const response = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key=${this.apiKey}`,
-                {
-                    model: 'models/embedding-001',
-                    content: {
-                        parts: [{ text: text.substring(0, 8191) }]
-                    }
-                },
-                {
-                    headers: { 'Content-Type': 'application/json' },
-                    timeout: 30000
-                }
-            );
-
-            return response.data.embedding.values;
-        } catch (error) {
-            console.error('Error with Gemini embedding:', error.message);
-            throw error;
+            return new Array(1536).fill(0);
         }
     }
 
@@ -220,8 +173,8 @@ class SocraticAIService {
         );
 
         try {
-            if (this.provider === 'gemini') {
-                return await this._generateGeminiSocraticQuestion(socraticPrompt, comprehensionLevel, difficultyLevel);
+            if (this.provider === 'groq') {
+                return await this._generateGroqSocraticQuestion(socraticPrompt, comprehensionLevel, difficultyLevel);
             } else {
                 return await this._generateOpenAISocraticQuestion(socraticPrompt, comprehensionLevel, difficultyLevel);
             }
@@ -232,36 +185,47 @@ class SocraticAIService {
     }
 
     /**
-     * Generate Socratic question using Gemini
+     * Generate Socratic question using Groq API
      */
-    async _generateGeminiSocraticQuestion(prompt, comprehensionLevel, difficultyLevel) {
+    async _generateGroqSocraticQuestion(prompt, comprehensionLevel, difficultyLevel) {
         try {
             const systemPrompt = getProfessionalSystemPrompt(comprehensionLevel, 'question_generation');
-            
-            const response = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`,
-                {
-                    system_instruction: {
-                        parts: [{ text: systemPrompt }]
-                    },
-                    contents: [{
-                        parts: [{
-                            text: prompt
-                        }]
-                    }],
-                    generationConfig: {
-                        temperature: 0.7,
-                        maxOutputTokens: 300,
-                        topP: 0.9
-                    }
-                },
-                {
-                    headers: { 'Content-Type': 'application/json' },
-                    timeout: 30000
-                }
-            );
 
-            const questionContent = this._extractGeminiText(response.data) || 'I am ready to guide your thinking. What have you tried so far?';
+            const sendGroq = async (modelToUse) => {
+                return await axios.post(
+                    'https://api.groq.com/openai/v1/chat/completions',
+                    {
+                        model: modelToUse,
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: prompt }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 300,
+                        top_p: 0.9
+                    },
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${this.apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        timeout: 30000
+                    }
+                );
+            };
+
+            let response;
+            try {
+                response = await sendGroq(this.model);
+            } catch (err) {
+                if (this.fallbackModel && this.fallbackModel !== this.model) {
+                    response = await sendGroq(this.fallbackModel);
+                } else {
+                    throw err;
+                }
+            }
+
+            const questionContent = response.data?.choices?.[0]?.message?.content || 'I am ready to guide your thinking. What have you tried so far?';
 
             return {
                 success: true,
@@ -272,7 +236,7 @@ class SocraticAIService {
                 difficultyLevel: difficultyLevel
             };
         } catch (error) {
-            console.error('Error with Gemini Socratic question:', error.message);
+            console.error('Error with Groq Socratic question:', error.message);
             throw error;
         }
     }
@@ -363,8 +327,8 @@ Course Context:
 ${context || 'General domain knowledge'}`;
 
         try {
-            if (this.provider === 'gemini') {
-                return await this._evaluateWithGemini(fullPrompt, studentProfile.comprehensionLevel || 3);
+            if (this.provider === 'groq') {
+                return await this._evaluateWithGroq(fullPrompt, studentProfile.comprehensionLevel || 3);
             } else {
                 return await this._evaluateWithOpenAI(fullPrompt, studentProfile.comprehensionLevel || 3);
             }
@@ -375,43 +339,55 @@ ${context || 'General domain knowledge'}`;
     }
 
     /**
-     * Evaluate with Gemini
+     * Evaluate with Groq
      */
-    async _evaluateWithGemini(prompt, comprehensionLevel = 3) {
+    async _evaluateWithGroq(prompt, comprehensionLevel = 3) {
         try {
             const systemPrompt = getProfessionalSystemPrompt(comprehensionLevel, 'evaluation');
-            
-            const response = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`,
-                {
-                    system_instruction: {
-                        parts: [{ text: systemPrompt }]
-                    },
-                    contents: [{
-                        parts: [{
-                            text: prompt
-                        }]
-                    }],
-                    generationConfig: {
-                        temperature: 0.5,
-                        maxOutputTokens: 500
-                    }
-                },
-                {
-                    headers: { 'Content-Type': 'application/json' }
-                }
-            );
 
-            const responseText = this._extractGeminiText(response.data) || 'I need a bit more detail to assess your answer.';
+            const sendGroq = async (modelToUse) => {
+                return await axios.post(
+                    'https://api.groq.com/openai/v1/chat/completions',
+                    {
+                        model: modelToUse,
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: prompt }
+                        ],
+                        temperature: 0.5,
+                        max_tokens: 500
+                    },
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${this.apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        timeout: 30000
+                    }
+                );
+            };
+
+            let response;
+            try {
+                response = await sendGroq(this.model);
+            } catch (err) {
+                if (this.fallbackModel && this.fallbackModel !== this.model) {
+                    response = await sendGroq(this.fallbackModel);
+                } else {
+                    throw err;
+                }
+            }
+
+            const responseText = response.data?.choices?.[0]?.message?.content || 'I need a bit more detail to assess your answer.';
             const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-            
+
             return jsonMatch ? JSON.parse(jsonMatch[0]) : {
                 feedback: responseText,
                 socraticQuestion: 'Can you elaborate on your thinking?',
                 isCorrect: 'partial'
             };
         } catch (error) {
-            console.error('Error evaluating with Gemini:', error);
+            console.error('Error evaluating with Groq:', error);
             return { error: error.message };
         }
     }
@@ -506,8 +482,8 @@ ${context || 'General domain knowledge'}`;
         }
 
         try {
-            if (this.provider === 'gemini') {
-                return await this._generateGeminiHint(hintPrompt);
+            if (this.provider === 'groq') {
+                return await this._generateGroqHint(hintPrompt);
             } else {
                 return await this._generateOpenAIHint(hintPrompt);
             }
@@ -518,34 +494,49 @@ ${context || 'General domain knowledge'}`;
     }
 
     /**
-     * Generate hint with Gemini
+     * Generate hint with Groq
      */
-    async _generateGeminiHint(prompt) {
+    async _generateGroqHint(prompt) {
         try {
-            const response = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`,
-                {
-                    system_instruction: {
-                        parts: [{ text: 'You are a helpful tutor providing adaptive hints based on student level. Follow the Socratic method: never give direct answers, only hints that guide thinking.' }]
-                    },
-                    contents: [{
-                        parts: [{
-                            text: prompt
-                        }]
-                    }],
-                    generationConfig: {
+            const sendGroq = async (modelToUse) => {
+                return await axios.post(
+                    'https://api.groq.com/openai/v1/chat/completions',
+                    {
+                        model: modelToUse,
+                        messages: [
+                            {
+                                role: 'system',
+                                content: 'You are a helpful tutor providing adaptive hints based on student level. Follow the Socratic method: never give direct answers, only hints that guide thinking.'
+                            },
+                            { role: 'user', content: prompt }
+                        ],
                         temperature: 0.6,
-                        maxOutputTokens: 200
+                        max_tokens: 200
+                    },
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${this.apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        timeout: 30000
                     }
-                },
-                {
-                    headers: { 'Content-Type': 'application/json' }
-                }
-            );
+                );
+            };
 
-            return response.data.candidates[0].content.parts[0].text;
+            let response;
+            try {
+                response = await sendGroq(this.model);
+            } catch (err) {
+                if (this.fallbackModel && this.fallbackModel !== this.model) {
+                    response = await sendGroq(this.fallbackModel);
+                } else {
+                    throw err;
+                }
+            }
+
+            return response.data?.choices?.[0]?.message?.content || 'Try breaking down the problem into smaller steps.';
         } catch (error) {
-            console.error('Error generating Gemini hint:', error);
+            console.error('Error generating Groq hint:', error);
             return 'Try breaking down the problem into smaller steps.';
         }
     }

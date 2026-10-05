@@ -47,7 +47,7 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
     // ── Auto-load the current lesson's PDF ────────────────────────────────
     // When mounted inside a lesson workspace that has notes (context.lessonPdfUrl),
     // extract its text once so every question is answered from the actual
-    // course material — same quality as asking Gemini with the PDF attached.
+    // course material — same quality as asking the AI Tutor with the PDF attached.
     useEffect(() => {
         const pdfUrl = context?.lessonPdfUrl;
         if (!pdfUrl || autoPdfLoadedRef.current === pdfUrl) return;
@@ -229,51 +229,6 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
         setIsTyping(true);
 
         try {
-            const validCourseId = typeof context.courseId === 'string' && /^[a-fA-F0-9]{24}$/.test(context.courseId) ? context.courseId : null;
-            const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '/api';
-
-            // When a lesson PDF is loaded, use the document-QA path (/ai/ask)
-            // so the tutor answers directly from the course material instead
-            // of the Socratic tutor (which never gives direct answers).
-            if (validCourseId && !pdfText) {
-                try {
-                    let sessionId = window.sessionStorage.getItem(`socratic-session-${validCourseId}`);
-
-                    if (!sessionId) {
-                        const sessionResponse = await axios.post(
-                            `${API_BASE_URL}/socratic/session/${validCourseId}/start`,
-                            { topic: context.courseName || 'General Learning', learningObjectives: [], difficultyLevel: 3 },
-                            { withCredentials: true }
-                        );
-                        sessionId = sessionResponse.data.session.sessionId;
-                        window.sessionStorage.setItem(`socratic-session-${validCourseId}`, sessionId);
-                    }
-
-                    const socraticResponse = await axios.post(
-                        `${API_BASE_URL}/socratic/ask`,
-                        { sessionId, question: query, courseId: validCourseId, useHints: false },
-                        { withCredentials: true }
-                    );
-
-                    let answer = 'No response generated';
-                    if (socraticResponse.data && socraticResponse.data.content) {
-                        answer = socraticResponse.data.content;
-                    }
-
-                    addMessage({
-                        sender: 'ai',
-                        text: answer,
-                        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                    });
-                    setLastResponse(answer);
-                    saveHistoryItem(query);
-                    reloadServerHistory();
-                    return;
-                } catch (socraticErr) {
-                    console.warn('Socratic endpoint failed, falling back to old AI service:', socraticErr);
-                }
-            }
-
             const payloadContext = {
                 ...context,
                 pdfText: pdfText || undefined,

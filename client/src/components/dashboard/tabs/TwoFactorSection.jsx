@@ -257,15 +257,15 @@ export default function TwoFactorSection({ user, twoFactorEnabled, setTwoFactorE
                         <div onClick={() => setChooseMethod('authenticator')} style={optionStyle(chooseMethod === 'authenticator')}>
                             <ShieldCheck size={20} color={colors.primary} aria-hidden="true" />
                             <div>
-                                <div style={{ fontSize: '13px', fontWeight: '700', color: colors.text }}>Authenticator app</div>
-                                <div style={{ fontSize: '11px', color: colors.textMuted }}>Google Authenticator, Authy, etc.</div>
+                                <div style={{ fontSize: '13px', fontWeight: '700', color: colors.text }}>{t('twofa_method_authenticator') || 'Authenticator app'}</div>
+                                <div style={{ fontSize: '11px', color: colors.textMuted }}>{t('twofa_authenticator_desc') || 'Google Authenticator, Authy, etc.'}</div>
                             </div>
                         </div>
                         <div onClick={() => setChooseMethod('sms')} style={optionStyle(chooseMethod === 'sms')}>
                             <Smartphone size={20} color={colors.primary} aria-hidden="true" />
                             <div>
-                                <div style={{ fontSize: '13px', fontWeight: '700', color: colors.text }}>Email code</div>
-                                <div style={{ fontSize: '11px', color: colors.textMuted }}>Receive a one-time code by email</div>
+                                <div style={{ fontSize: '13px', fontWeight: '700', color: colors.text }}>{t('twofa_method_email') || 'Email code'}</div>
+                                <div style={{ fontSize: '11px', color: colors.textMuted }}>{t('twofa_email_desc') || 'Receive a one-time code by email'}</div>
                             </div>
                         </div>
                     </div>
@@ -282,7 +282,7 @@ export default function TwoFactorSection({ user, twoFactorEnabled, setTwoFactorE
                                 placeholder="••••••••"
                                 autoComplete="current-password"
                             />
-                            <button type="button" onClick={() => setShowPassword(v => !v)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: colors.textMuted, padding: '2px', display: 'flex', alignItems: 'center' }} tabIndex={-1} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                            <button type="button" onClick={() => setShowPassword(v => !v)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: colors.textMuted, padding: '2px', display: 'flex', alignItems: 'center' }} tabIndex={-1} aria-label={showPassword ? (t('hide_password') || 'Hide password') : (t('show_password') || 'Show password')}>
                                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                             </button>
                         </div>
@@ -290,9 +290,9 @@ export default function TwoFactorSection({ user, twoFactorEnabled, setTwoFactorE
 
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                         <button type="button" onClick={startSetup} style={actionBtn} disabled={busy}>
-                            {busy ? 'Starting...' : 'Continue'}
+                            {busy ? (t('btn_starting') || 'Starting...') : (t('btn_continue') || 'Continue')}
                         </button>
-                        <button type="button" onClick={resetFlow} style={ghostBtn} disabled={busy}>Cancel</button>
+                        <button type="button" onClick={resetFlow} style={ghostBtn} disabled={busy}>{t('btn_cancel') || 'Cancel'}</button>
                     </div>
                 </div>
             )}
@@ -306,11 +306,11 @@ export default function TwoFactorSection({ user, twoFactorEnabled, setTwoFactorE
                                 <img src={qrDataUrl} alt="Scan this QR code with your authenticator app" style={{ width: '160px', height: '160px', borderRadius: '10px', background: '#fff', padding: '8px', border: `1px solid ${colors.border}` }} />
                             )}
                             <div style={{ flex: 1, minWidth: '220px' }}>
-                                <div style={{ fontSize: '13px', fontWeight: '700', color: colors.text, marginBottom: '6px' }}>Scan the QR code</div>
-                                <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '10px' }}>Or enter this setup key manually:</div>
+                                <div style={{ fontSize: '13px', fontWeight: '700', color: colors.text, marginBottom: '6px' }}>{t('twofa_scan_qr') || 'Scan the QR code'}</div>
+                                <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '10px' }}>{t('twofa_manual_key') || 'Or enter this setup key manually:'}</div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <code style={{ flex: 1, background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '10px', fontSize: '12px', wordBreak: 'break-all', color: colors.text }}>{secret}</code>
-                                    <button type="button" onClick={copySecret} style={{ ...ghostBtn, padding: '10px' }} title="Copy setup key">
+                                    <button type="button" onClick={copySecret} style={{ ...ghostBtn, padding: '10px' }} title={t('twofa_copy_key') || 'Copy setup key'}>
                                         {copied ? <Check size={14} /> : <Copy size={14} />}
                                     </button>
                                 </div>
@@ -326,14 +326,14 @@ export default function TwoFactorSection({ user, twoFactorEnabled, setTwoFactorE
                         <label style={styles.label}>{t('lbl_current_pw')}</label>
                         <div style={{ position: 'relative' }}>
                             <input type={showPassword ? 'text' : 'password'} style={{ ...styles.input, paddingRight: '40px' }} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmSetup(); } }} placeholder="••••••••" autoComplete="current-password" />
-                            <button type="button" onClick={() => setShowPassword(v => !v)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: colors.textMuted, padding: '2px', display: 'flex', alignItems: 'center' }} tabIndex={-1} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                            <button type="button" onClick={() => setShowPassword(v => !v)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: colors.textMuted, padding: '2px', display: 'flex', alignItems: 'center' }} tabIndex={-1} aria-label={showPassword ? (t('hide_password') || 'Hide password') : (t('show_password') || 'Show password')}>
                                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                             </button>
                         </div>
                     </div>
 
                     <div style={styles.formGroup}>
-                        <label style={styles.label}>Verification code</label>
+                        <label style={styles.label}>{t('twofa_verification_code') || 'Verification code'}</label>
                         <input
                             type="text"
                             inputMode="numeric"

@@ -2,16 +2,17 @@
  * aiService.js
  * 
  * AI Service for the Emare ELMS implementation.
- * Supports a mock fallback and an OpenAI-powered tutor assistant.
+ * Supports Groq API (default, high-performance LPU inference), OpenAI, and mock fallback.
  */
 
 const axios = require('axios');
 
 class AIService {
     constructor() {
-        this.apiKey = process.env.AI_API_KEY || '';
-        this.provider = process.env.AI_PROVIDER || (this.apiKey ? 'openai' : 'mock');
-        this.model = process.env.AI_MODEL || (this.provider === 'gemini' ? 'gemini-flash-latest' : 'gpt-4o-mini');
+        this.apiKey = process.env.GROQ_API_KEY || process.env.AI_API_KEY || '';
+        this.provider = process.env.AI_PROVIDER || (this.apiKey ? 'groq' : 'mock');
+        this.model = process.env.AI_MODEL || (this.provider === 'groq' ? 'openai/gpt-oss-120b' : 'gpt-4o-mini');
+        this.fallbackModel = 'openai/gpt-oss-20b';
         // A placeholder key must never be sent upstream — treat as mock
         if (/your_.*_api_key_here/i.test(this.apiKey)) {
             this.apiKey = '';
@@ -27,21 +28,15 @@ class AIService {
      */
     async generateChatResponse(prompt, context = {}, conversationHistory = []) {
         const pdfInstruction = context.pdfText ? `A PDF document is attached. For questions directly about the attached PDF, course document, or lesson material in the PDF, use only the attached PDF content to answer. For unrelated questions, answer normally using the available course context and general knowledge. Do not answer a different question than the user asked. If the question is clearly about the PDF but the PDF does not contain enough information, respond exactly: "I could not find enough information in the attached document to answer that question."` : null;
-        if (this.provider === 'openai' && this.apiKey) {
+
+        if (this.apiKey && (this.provider === 'groq' || this.provider === 'openai')) {
             try {
+                if (this.provider === 'groq') {
+                    return await this._callGroq(prompt, context, conversationHistory, pdfInstruction);
+                }
                 return await this._callOpenAI(prompt, context, conversationHistory, pdfInstruction);
             } catch (error) {
-                console.error('AIProvider error:', error.message || error);
-                const pdfFallback = this._getPdfFallbackResponse(prompt, context);
-                return pdfFallback ? pdfFallback : `${this._getMockResponse(prompt, context)}\n\n(Note: This response is a fallback because the external AI service was unavailable.)`;
-            }
-        }
-
-        if (this.provider === 'gemini' && this.apiKey) {
-            try {
-                return await this._callGemini(prompt, context, conversationHistory, pdfInstruction);
-            } catch (error) {
-                console.error('AIProvider error:', error.message || error);
+                console.error(`AIProvider [${this.provider}] error:`, error.message || error);
                 const pdfFallback = this._getPdfFallbackResponse(prompt, context);
                 return pdfFallback ? pdfFallback : `${this._getMockResponse(prompt, context)}\n\n(Note: This response is a fallback because the external AI service was unavailable.)`;
             }
@@ -92,7 +87,6 @@ class AIService {
     async _callOpenAI(prompt, context, conversationHistory = [], instruction = null) {
         const messages = this._buildConversationMessages(prompt, context, conversationHistory, instruction);
 
-        const isPdfOnly = typeof instruction === 'string' && instruction.includes('attached PDF content');
         const response = await axios.post('https://api.openai.com/v1/chat/completions', {
             model: this.model,
             messages,
@@ -106,7 +100,8 @@ class AIService {
             headers: {
                 Authorization: `Bearer ${this.apiKey}`,
                 'Content-Type': 'application/json'
-            }
+            },
+            timeout: 45000
         });
 
         const answer = response?.data?.choices?.[0]?.message?.content;
@@ -118,49 +113,63 @@ class AIService {
     }
 
     /**
-     * Google Gemini chat completion. Reuses the same message builder as the
-     * OpenAI path, then maps roles: system messages become Gemini's
-     * systemInstruction, assistant messages become 'model' parts.
+     * Groq chat completion. Uses Groq's high-speed OpenAI-compatible endpoint.
+     * Automatically attempts the fallback model if primary model returns an error.
      */
-    async _callGemini(prompt, context, conversationHistory = [], instruction = null) {
+    async _callGroq(prompt, context, conversationHistory = [], instruction = null) {
         const messages = this._buildConversationMessages(prompt, context, conversationHistory, instruction);
 
-        const systemText = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
-        const contents = messages
-            .filter(m => m.role !== 'system')
-            .map(m => ({
-                role: m.role === 'assistant' ? 'model' : 'user',
-                parts: [{ text: m.content }]
-            }));
-
-        const response = await axios.post(
-            `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`,
-            {
-                ...(systemText ? { systemInstruction: { parts: [{ text: systemText }] } } : {}),
-                contents,
-                generationConfig: {
-                    temperature: 0.0,
-                    maxOutputTokens: 4096,
-                    topP: 0.8
-                }
-            },
-            {
-                headers: {
-                    'x-goog-api-key': this.apiKey,
-                    'Content-Type': 'application/json'
+        const sendGroqRequest = async (modelToUse) => {
+            return await axios.post(
+                'https://api.groq.com/openai/v1/chat/completions',
+                {
+                    model: modelToUse,
+                    messages,
+                    temperature: 0.3,
+                    max_tokens: 1500,
+                    top_p: 0.9
                 },
-                timeout: 60000
-            }
-        );
+                {
+                    headers: {
+                        Authorization: `Bearer ${this.apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 45000
+                }
+            );
+        };
 
-        const candidates = response?.data?.candidates || [];
-        const answer = candidates[0]?.content?.parts?.map(p => p.text).filter(Boolean).join('') ||
-                       candidates[0]?.finishReason && `The AI tutor could not answer this (reason: ${candidates[0].finishReason}).`;
-        if (!answer) {
-            throw new Error('Empty response from AI provider');
+        let response;
+        try {
+            response = await sendGroqRequest(this.model);
+        } catch (primaryErr) {
+            if (this.fallbackModel && this.fallbackModel !== this.model) {
+                console.warn(`Groq primary model [${this.model}] error (${primaryErr.message}). Retrying with fallback model [${this.fallbackModel}]...`);
+                response = await sendGroqRequest(this.fallbackModel);
+            } else {
+                throw primaryErr;
+            }
         }
 
-        return String(answer).trim();
+        const answer = response?.data?.choices?.[0]?.message?.content;
+        if (!answer) {
+            throw new Error('Empty response from Groq AI provider');
+        }
+
+        return answer.trim();
+    }
+
+    /**
+     * Unified caller routing to Groq (default) or OpenAI
+     */
+    async _callActiveProvider(prompt, context = {}, conversationHistory = [], instruction = null) {
+        if (this.provider === 'groq' && this.apiKey) {
+            return await this._callGroq(prompt, context, conversationHistory, instruction);
+        }
+        if (this.provider === 'openai' && this.apiKey) {
+            return await this._callOpenAI(prompt, context, conversationHistory, instruction);
+        }
+        throw new Error('No active AI provider configured');
     }
 
     _buildConversationMessages(prompt, context, conversationHistory = [], instruction = null) {
@@ -407,8 +416,9 @@ Use these details when they are available.`;
     }
 
     async generatePersonalizedLearningPath(studentContext = {}) {
-        if (this.provider === 'openai' && this.apiKey) {
-            const instruction = `You are an AI Learning Coach.
+        if ((this.provider === 'groq' || this.provider === 'openai') && this.apiKey) {
+            try {
+                const instruction = `You are an AI Learning Coach.
 
 Analyze:
 - Student progress
@@ -436,8 +446,11 @@ Recommended Next Steps:
 
 Learning Path:
 [step-by-step plan]`;
-            const prompt = `Provide a personalized learning summary and plan based on the student's progress and performance.`;
-            return await this._callOpenAI(prompt, studentContext, instruction);
+                const prompt = `Provide a personalized learning summary and plan based on the student's progress and performance.`;
+                return await this._callActiveProvider(prompt, studentContext, [], instruction);
+            } catch (err) {
+                console.error('generatePersonalizedLearningPath error:', err.message);
+            }
         }
 
         return `Strengths:
@@ -461,8 +474,9 @@ Learning Path:
     }
 
     async recommendCourses(studentContext = {}) {
-        if (this.provider === 'openai' && this.apiKey) {
-            const instruction = `You are an AI Course Recommendation Specialist.
+        if ((this.provider === 'groq' || this.provider === 'openai') && this.apiKey) {
+            try {
+                const instruction = `You are an AI Course Recommendation Specialist.
 
 Analyze:
 - Student interests
@@ -487,8 +501,11 @@ Recommended Courses
 Reason
 Expected Skills
 Estimated Learning Time`;
-            const prompt = `Provide course recommendations for the student based on their career goals, interests, and completed learning history.`;
-            return await this._callOpenAI(prompt, studentContext, instruction);
+                const prompt = `Provide course recommendations for the student based on their career goals, interests, and completed learning history.`;
+                return await this._callActiveProvider(prompt, studentContext, [], instruction);
+            } catch (err) {
+                console.error('recommendCourses error:', err.message);
+            }
         }
 
         return `Recommended Courses:
@@ -511,8 +528,9 @@ Estimated Learning Time:
     }
 
     async generateQuiz(quizContext = {}) {
-        if (this.provider === 'openai' && this.apiKey) {
-            const instruction = `You are an AI Assessment Generator.
+        if ((this.provider === 'groq' || this.provider === 'openai') && this.apiKey) {
+            try {
+                const instruction = `You are an AI Assessment Generator.
 
 Create quizzes from:
 
@@ -542,8 +560,11 @@ Options
 Correct Answer
 Explanation
 Difficulty`;
-            const prompt = `Generate a mixed-format assessment that reflects the student's current learning material, course objectives, and lesson topics.`;
-            return await this._callOpenAI(prompt, quizContext, instruction);
+                const prompt = `Generate a mixed-format assessment that reflects the student's current learning material, course objectives, and lesson topics.`;
+                return await this._callActiveProvider(prompt, quizContext, [], instruction);
+            } catch (err) {
+                console.error('generateQuiz error:', err.message);
+            }
         }
 
         return `Question 1: What is the primary purpose of a responsive layout in modern web design?
@@ -583,8 +604,9 @@ Difficulty: Hard`;
     }
 
     async generateAssignmentAssistant(assignmentContext = {}) {
-        if (this.provider === 'openai' && this.apiKey) {
-            const instruction = `You are an AI Assignment Coach.
+        if ((this.provider === 'groq' || this.provider === 'openai') && this.apiKey) {
+            try {
+                const instruction = `You are an AI Assignment Coach.
 
 Your job:
 
@@ -608,8 +630,11 @@ Required Skills
 Step-by-Step Plan
 Helpful Resources
 Common Mistakes`;
-            const prompt = `Provide assignment coaching based on the assignment details, student progress, and learning objectives.`;
-            return await this._callOpenAI(prompt, assignmentContext, instruction);
+                const prompt = `Provide assignment coaching based on the assignment details, student progress, and learning objectives.`;
+                return await this._callActiveProvider(prompt, assignmentContext, [], instruction);
+            } catch (err) {
+                console.error('generateAssignmentAssistant error:', err.message);
+            }
         }
 
         return `Assignment Goal:
@@ -645,9 +670,13 @@ Common Mistakes:
      */
     async summarizeText(text = '', context = {}) {
         if (!text || text.trim().length === 0) return 'No text provided to summarize.';
-        if (this.provider === 'openai' && this.apiKey) {
-            const instruction = `You are an expert summarizer. Produce a concise, bullet-point summary, key takeaways, and 3 practice questions for the provided text.`;
-            return await this._callOpenAI(`Summarize the following content and provide key takeaways and 3 practice questions:\n\n${text}`, context, [], instruction);
+        if ((this.provider === 'groq' || this.provider === 'openai') && this.apiKey) {
+            try {
+                const instruction = `You are an expert summarizer. Produce a concise, bullet-point summary, key takeaways, and 3 practice questions for the provided text.`;
+                return await this._callActiveProvider(`Summarize the following content and provide key takeaways and 3 practice questions:\n\n${text}`, context, [], instruction);
+            } catch (err) {
+                console.error('summarizeText error:', err.message);
+            }
         }
 
         // Mock fallback
@@ -660,10 +689,14 @@ Common Mistakes:
      * @param {Object} topicContext
      */
     async generateMicroLesson(topicContext = {}) {
-        if (this.provider === 'openai' && this.apiKey) {
-            const instruction = `Create a 3-5 minute microlearning module: learning objective, 3 short sections, 2 quick questions, and suggested further reading.`;
-            const prompt = `Create a short micro-lesson for: ${topicContext.topic || topicContext.title || 'a topic'}. Include objectives, 3 concise sections, 2 quick quiz questions with answers, and 2 resources.`;
-            return await this._callOpenAI(prompt, topicContext, [], instruction);
+        if ((this.provider === 'groq' || this.provider === 'openai') && this.apiKey) {
+            try {
+                const instruction = `Create a 3-5 minute microlearning module: learning objective, 3 short sections, 2 quick questions, and suggested further reading.`;
+                const prompt = `Create a short micro-lesson for: ${topicContext.topic || topicContext.title || 'a topic'}. Include objectives, 3 concise sections, 2 quick quiz questions with answers, and 2 resources.`;
+                return await this._callActiveProvider(prompt, topicContext, [], instruction);
+            } catch (err) {
+                console.error('generateMicroLesson error:', err.message);
+            }
         }
 
         return `Microlesson: ${topicContext.topic || 'Topic'}\n1. Quick intro\n2. Key idea\n3. Short example\n\nQuiz:\n1) Q? A.\n2) Q? A.`;
@@ -675,21 +708,23 @@ Common Mistakes:
      */
     async generateFlashcards(content = '') {
         if (!content || content.trim().length === 0) return [];
-        if (this.provider === 'openai' && this.apiKey) {
-            const instruction = `Extract 6-10 concise Q&A flashcards from the provided content. Output as JSON array: [{"q":"..","a":".."}]`;
-            const response = await this._callOpenAI(`Create flashcards from the following content:\n\n${content}`, {}, [], instruction);
-            // Try to parse JSON from the response if provided
+        if ((this.provider === 'groq' || this.provider === 'openai') && this.apiKey) {
             try {
-                const jsonStart = response.indexOf('[');
-                const jsonText = jsonStart >= 0 ? response.slice(jsonStart) : response;
-                const parsed = JSON.parse(jsonText);
-                if (Array.isArray(parsed)) return parsed;
-            } catch (e) {
-                // ignore parse errors and return simple split
+                const instruction = `Extract 6-10 concise Q&A flashcards from the provided content. Output as JSON array: [{"q":"..","a":".."}]`;
+                const response = await this._callActiveProvider(`Create flashcards from the following content:\n\n${content}`, {}, [], instruction);
+                try {
+                    const jsonStart = response.indexOf('[');
+                    const jsonEnd = response.lastIndexOf(']');
+                    if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                        const parsed = JSON.parse(response.slice(jsonStart, jsonEnd + 1));
+                        if (Array.isArray(parsed)) return parsed;
+                    }
+                } catch (e) {
+                    // ignore parse errors and return simple split
+                }
+            } catch (err) {
+                console.error('generateFlashcards error:', err.message);
             }
-            // Fallback simple split
-            const lines = content.split('\n').filter(Boolean).slice(0, 6);
-            return lines.map((l, i) => ({ q: `Q${i + 1}: ${l.slice(0, 40)}?`, a: `A: ${l.slice(0, 80)}` }));
         }
 
         const lines = content.split('\n').filter(Boolean).slice(0, 6);

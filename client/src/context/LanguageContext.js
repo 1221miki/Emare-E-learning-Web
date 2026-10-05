@@ -1,1 +1,1 @@
-export { LanguageProvider, useLanguage } from './LanguageContext.jsx';
+export * from './LanguageContext.jsx';

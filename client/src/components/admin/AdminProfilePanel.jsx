@@ -2,14 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { User, ShieldCheck, KeyRound, Camera, Save, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useLanguage } from '../../context/LanguageContext';
+import { useLanguage, codeForLanguage } from '../../context/LanguageContext.jsx';
 import { userService, uploadService } from '../../services/api';
 import TwoFactorSection from '../dashboard/tabs/TwoFactorSection';
 
 export default function AdminProfilePanel() {
     const { user, updateUser } = useAuth();
     const { colors, theme } = useTheme();
-    const { t } = useLanguage();
+    const { language, changeLanguage, t } = useLanguage();
 
     const fileInputRef = useRef(null);
     const [savingProfile, setSavingProfile] = useState(false);
@@ -17,6 +17,7 @@ export default function AdminProfilePanel() {
     const [savingPassword, setSavingPassword] = useState(false);
     const [toast, setToast] = useState({ message: '', type: 'success' });
     const [twoFactorEnabled, setTwoFactorEnabled] = useState(user?.twoFactorEnabled || false);
+    const [phoneError, setPhoneError] = useState('');
 
     const [activeSubTab, setActiveSubTab] = useState('personal');
 
@@ -33,12 +34,13 @@ export default function AdminProfilePanel() {
         phone: user?.phoneNumber || '',
         title: user?.professionalTitle || 'System Administrator',
         biography: user?.biography || '',
-        language: user?.preferredLanguage || 'en',
+        language: codeForLanguage(user?.preferredLanguage || language || 'en'),
         avatarUrl: user?.avatarUrl || '',
     });
 
     useEffect(() => {
         if (user) {
+            const userLangCode = codeForLanguage(user.preferredLanguage || language || 'en');
             setProfile(p => ({
                 ...p,
                 fullName: user.fullName || p.fullName,
@@ -47,12 +49,16 @@ export default function AdminProfilePanel() {
                 phone: user.phoneNumber || p.phone,
                 title: user.professionalTitle || p.title,
                 biography: user.biography || p.biography,
-                language: user.preferredLanguage || p.language,
+                language: userLangCode,
                 avatarUrl: user.avatarUrl || p.avatarUrl,
             }));
             setTwoFactorEnabled(user.twoFactorEnabled || false);
+
+            if (user.preferredLanguage) {
+                changeLanguage(user.preferredLanguage);
+            }
         }
-    }, [user]);
+    }, [user, changeLanguage]);
 
     // Security state
     const [security, setSecurity] = useState({
@@ -80,22 +86,64 @@ export default function AdminProfilePanel() {
             await userService.updateProfile({ avatarUrl: newUrl });
             setProfile(prev => ({ ...prev, avatarUrl: newUrl }));
             updateUser({ avatarUrl: newUrl });
-            showToast('Profile photo updated successfully!');
+            showToast(t('admin_toast_avatar_success') || 'Profile photo updated successfully!');
         } catch (err) {
-            showToast(err.response?.data?.message || 'Failed to upload photo.', 'error');
+            showToast(err.response?.data?.message || t('admin_toast_avatar_error') || 'Failed to upload photo.', 'error');
         } finally {
             setUploadingAvatar(false);
         }
     };
 
+    // Phone validation: exactly 10 digits starting with 09 or 07
+    const validatePhone = (num) => {
+        const phoneRegex = /^(09|07)\d{8}$/;
+        return phoneRegex.test(String(num || '').trim());
+    };
+
+    const handlePhoneChange = (e) => {
+        let raw = e.target.value.trim();
+        // Support copying or typing +251 or 251 Ethiopian international prefix
+        if (raw.startsWith('+251')) raw = '0' + raw.slice(4);
+        else if (raw.startsWith('251') && raw.length >= 12) raw = '0' + raw.slice(3);
+        const digits = raw.replace(/\D/g, '').slice(0, 10);
+
+        setProfile(p => ({ ...p, phone: digits }));
+
+        if (!digits) {
+            setPhoneError(t('admin_err_phone_invalid') || 'Phone number must be exactly 10 digits starting with 09 or 07 (e.g., 0912345678 or 0712345678).');
+        } else if (digits.length >= 2 && !digits.startsWith('09') && !digits.startsWith('07')) {
+            setPhoneError(t('admin_err_phone_invalid') || 'Phone number must be exactly 10 digits starting with 09 or 07 (e.g., 0912345678 or 0712345678).');
+        } else if (digits.length < 10) {
+            setPhoneError(t('admin_err_phone_invalid') || 'Phone number must be exactly 10 digits starting with 09 or 07 (e.g., 0912345678 or 0712345678).');
+        } else if (validatePhone(digits)) {
+            setPhoneError('');
+        }
+    };
+
+    const handleLanguageSelect = (e) => {
+        const newLang = e.target.value;
+        setProfile(p => ({ ...p, language: newLang }));
+        changeLanguage(newLang);
+    };
+
     const handleSaveProfile = async (e) => {
         e.preventDefault();
+
+        // Strict Phone validation
+        if (!validatePhone(profile.phone)) {
+            const errorMsg = t('admin_err_phone_invalid') || 'Phone number must be exactly 10 digits starting with 09 or 07 (e.g., 0912345678 or 0712345678).';
+            setPhoneError(errorMsg);
+            showToast(errorMsg, 'error');
+            return;
+        }
+        setPhoneError('');
+
         setSavingProfile(true);
         try {
             const payload = {
                 fullName: profile.fullName,
                 username: profile.username,
-                phoneNumber: profile.phone,
+                phoneNumber: profile.phone.trim(),
                 professionalTitle: profile.title,
                 biography: profile.biography,
                 preferredLanguage: profile.language,
@@ -103,9 +151,10 @@ export default function AdminProfilePanel() {
 
             await userService.updateProfile(payload);
             updateUser(payload);
-            showToast('Admin profile updated successfully!');
+            changeLanguage(profile.language);
+            showToast(t('admin_toast_profile_success') || 'Admin profile updated successfully!');
         } catch (err) {
-            showToast(err.response?.data?.message || 'Failed to update profile.', 'error');
+            showToast(err.response?.data?.message || t('admin_toast_profile_error') || 'Failed to update profile.', 'error');
         } finally {
             setSavingProfile(false);
         }
@@ -114,15 +163,15 @@ export default function AdminProfilePanel() {
     const handleSavePassword = async (e) => {
         e.preventDefault();
         if (!security.currentPassword) {
-            showToast('Please enter your current password.', 'error');
+            showToast(t('admin_err_pw_current_required') || 'Please enter your current password.', 'error');
             return;
         }
         if (security.newPassword !== security.confirmPassword) {
-            showToast('New passwords do not match.', 'error');
+            showToast(t('admin_err_pw_mismatch') || 'New passwords do not match.', 'error');
             return;
         }
         if (security.newPassword.length < 8) {
-            showToast('New password must be at least 8 characters long.', 'error');
+            showToast(t('admin_err_pw_length') || 'New password must be at least 8 characters long.', 'error');
             return;
         }
 
@@ -140,9 +189,9 @@ export default function AdminProfilePanel() {
                 showNew: false,
                 showConfirm: false,
             });
-            showToast('Password changed successfully!');
+            showToast(t('admin_toast_pw_success') || 'Password changed successfully!');
         } catch (err) {
-            showToast(err.response?.data?.message || 'Failed to update password.', 'error');
+            showToast(err.response?.data?.message || t('admin_toast_pw_error') || 'Failed to update password.', 'error');
         } finally {
             setSavingPassword(false);
         }
@@ -323,12 +372,18 @@ export default function AdminProfilePanel() {
         },
     };
 
+    const isPhoneValid = validatePhone(profile.phone);
+
     return (
         <div>
             {/* Page Header */}
             <div style={{ marginBottom: '24px' }}>
-                <h2 style={{ fontSize: '26px', fontWeight: '900', color: colors.text, margin: '0 0 6px' }}>Admin Profile Settings</h2>
-                <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>Manage your administrator profile details, security credentials, and two-factor authentication.</p>
+                <h2 style={{ fontSize: '26px', fontWeight: '900', color: colors.text, margin: '0 0 6px' }}>
+                    {t('admin_profile_title') || 'Admin Profile Settings'}
+                </h2>
+                <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>
+                    {t('admin_profile_subtitle') || 'Manage your administrator profile details, security credentials, and two-factor authentication.'}
+                </p>
             </div>
 
             {toast.message && (
@@ -341,7 +396,7 @@ export default function AdminProfilePanel() {
             {/* Profile Overview Card */}
             <div style={s.card}>
                 <div style={s.headerBox}>
-                    <div style={s.avatarWrapper} onClick={() => fileInputRef.current?.click()} title="Click to change profile picture">
+                    <div style={s.avatarWrapper} onClick={() => fileInputRef.current?.click()} title={t('admin_avatar_change_hint') || 'Click to change profile picture'}>
                         {profile.avatarUrl ? (
                             <img src={profile.avatarUrl} alt={profile.fullName} style={s.avatarImg} crossOrigin="anonymous" />
                         ) : (
@@ -354,13 +409,13 @@ export default function AdminProfilePanel() {
                     <input type="file" ref={fileInputRef} onChange={handleAvatarUpload} accept="image/*" style={{ display: 'none' }} />
 
                     <div style={{ flex: 1 }}>
-                        <h3 style={s.title}>{profile.fullName || 'Administrator'}</h3>
+                        <h3 style={s.title}>{profile.fullName || t('admin_role_system_admin') || 'Administrator'}</h3>
                         <p style={s.subtitle}>{profile.email} — @{profile.username || 'admin'}</p>
                         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-                            <span style={s.badge}>🛡️ System Administrator</span>
+                            <span style={s.badge}>🛡️ {t('admin_role_system_admin') || 'System Administrator'}</span>
                             {user?.creationTimestamp && (
                                 <span style={{ ...s.badge, background: `${colors.textMuted}15`, color: colors.textMuted }}>
-                                    Joined {new Date(user.creationTimestamp).toLocaleDateString()}
+                                    {t('admin_joined') || 'Joined'} {new Date(user.creationTimestamp).toLocaleDateString()}
                                 </span>
                             )}
                         </div>
@@ -371,13 +426,13 @@ export default function AdminProfilePanel() {
             {/* Sub Tabs */}
             <div style={s.subTabNav}>
                 <button style={s.subTabBtn(activeSubTab === 'personal')} onClick={() => setActiveSubTab('personal')}>
-                    <User size={16} /> Personal Details
+                    <User size={16} /> {t('admin_tab_personal') || 'Personal Details'}
                 </button>
                 <button style={s.subTabBtn(activeSubTab === 'security')} onClick={() => setActiveSubTab('security')}>
-                    <KeyRound size={16} /> Password & Security
+                    <KeyRound size={16} /> {t('admin_tab_security') || 'Password & Security'}
                 </button>
                 <button style={s.subTabBtn(activeSubTab === '2fa')} onClick={() => setActiveSubTab('2fa')}>
-                    <ShieldCheck size={16} /> Two-Factor Auth (2FA)
+                    <ShieldCheck size={16} /> {t('admin_tab_2fa') || 'Two-Factor Auth (2FA)'}
                 </button>
             </div>
 
@@ -387,31 +442,31 @@ export default function AdminProfilePanel() {
                     <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         <div style={s.formGrid}>
                             <div style={s.field}>
-                                <label style={s.label}>Full Name</label>
+                                <label style={s.label}>{t('admin_lbl_fullname') || 'Full Name'}</label>
                                 <input
                                     type="text"
                                     style={s.input}
                                     value={profile.fullName}
                                     onChange={e => setProfile(p => ({ ...p, fullName: e.target.value }))}
-                                    placeholder="Admin Full Name"
+                                    placeholder={t('admin_ph_fullname') || 'Admin Full Name'}
                                     required
                                 />
                             </div>
 
                             <div style={s.field}>
-                                <label style={s.label}>Username</label>
+                                <label style={s.label}>{t('lbl_username') || 'Username'}</label>
                                 <input
                                     type="text"
                                     style={s.input}
                                     value={profile.username}
                                     onChange={e => setProfile(p => ({ ...p, username: e.target.value }))}
-                                    placeholder="admin_username"
+                                    placeholder={t('admin_ph_username') || 'admin_username'}
                                     required
                                 />
                             </div>
 
                             <div style={s.field}>
-                                <label style={s.label}>Account Email (Read Only)</label>
+                                <label style={s.label}>{t('admin_lbl_email_readonly') || 'Account Email (Read Only)'}</label>
                                 <input
                                     type="email"
                                     style={{ ...s.input, opacity: 0.7, cursor: 'not-allowed' }}
@@ -421,56 +476,80 @@ export default function AdminProfilePanel() {
                             </div>
 
                             <div style={s.field}>
-                                <label style={s.label}>Phone Number</label>
+                                <label style={s.label}>
+                                    {t('admin_lbl_phone') || 'Phone Number'}
+                                    <span style={{ fontSize: '11px', color: colors.textMuted, marginLeft: '6px', textTransform: 'none', fontWeight: '500' }}>
+                                        (10 digits: 09... / 07...)
+                                    </span>
+                                </label>
                                 <input
                                     type="text"
-                                    style={s.input}
+                                    inputMode="numeric"
+                                    maxLength={10}
+                                    style={{
+                                        ...s.input,
+                                        border: phoneError 
+                                            ? '1.5px solid #ef4444' 
+                                            : (isPhoneValid ? '1.5px solid #22c55e' : `1px solid ${colors.border}`),
+                                    }}
                                     value={profile.phone}
-                                    onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))}
-                                    placeholder="0912345678"
+                                    onChange={handlePhoneChange}
+                                    placeholder={t('admin_ph_phone') || '0912345678'}
+                                    required
                                 />
+                                {phoneError ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444', fontSize: '12px', marginTop: '4px', fontWeight: '600' }}>
+                                        <AlertCircle size={14} />
+                                        <span>{phoneError}</span>
+                                    </div>
+                                ) : isPhoneValid ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#22c55e', fontSize: '12px', marginTop: '4px', fontWeight: '600' }}>
+                                        <CheckCircle2 size={14} />
+                                        <span>{profile.phone.startsWith('09') ? 'Ethio Telecom (09)' : 'Safaricom / Telecom (07)'}</span>
+                                    </div>
+                                ) : null}
                             </div>
 
                             <div style={s.field}>
-                                <label style={s.label}>Professional Title</label>
+                                <label style={s.label}>{t('admin_lbl_title') || 'Professional Title'}</label>
                                 <input
                                     type="text"
                                     style={s.input}
                                     value={profile.title}
                                     onChange={e => setProfile(p => ({ ...p, title: e.target.value }))}
-                                    placeholder="e.g. Lead Administrator & Platform Architect"
+                                    placeholder={t('admin_ph_title') || 'e.g. Lead Administrator & Platform Architect'}
                                 />
                             </div>
 
                             <div style={s.field}>
-                                <label style={s.label}>Preferred Language</label>
+                                <label style={s.label}>{t('admin_lbl_language') || 'Preferred Language'}</label>
                                 <select
                                     style={s.input}
                                     value={profile.language}
-                                    onChange={e => setProfile(p => ({ ...p, language: e.target.value }))}
+                                    onChange={handleLanguageSelect}
                                 >
                                     <option value="en">English</option>
                                     <option value="am">አማርኛ (Amharic)</option>
-                                    <option value="om">Afaan Oromoo</option>
+                                    <option value="om">Afaan Oromoo (Oromo)</option>
                                     <option value="ti">ትግርኛ (Tigrinya)</option>
                                 </select>
                             </div>
                         </div>
 
                         <div style={s.field}>
-                            <label style={s.label}>Biography / Administrator Bio</label>
+                            <label style={s.label}>{t('admin_lbl_bio') || 'Biography / Administrator Bio'}</label>
                             <textarea
                                 style={s.textarea}
                                 value={profile.biography}
                                 onChange={e => setProfile(p => ({ ...p, biography: e.target.value }))}
-                                placeholder="Describe your administrative role or details..."
+                                placeholder={t('admin_ph_bio') || 'Describe your administrative role or details...'}
                             />
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
                             <button type="submit" style={s.submitBtn} disabled={savingProfile}>
                                 {savingProfile ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                {savingProfile ? 'Saving Changes...' : 'Save Profile Changes'}
+                                {savingProfile ? (t('admin_btn_saving') || 'Saving Changes...') : (t('admin_btn_save') || 'Save Profile Changes')}
                             </button>
                         </div>
                     </form>
@@ -482,20 +561,21 @@ export default function AdminProfilePanel() {
                 <div style={s.card}>
                     <form onSubmit={handleSavePassword} style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '600px' }}>
                         <div style={s.field}>
-                            <label style={s.label}>Current Password</label>
+                            <label style={s.label}>{t('admin_lbl_current_pw') || 'Current Password'}</label>
                             <div style={{ position: 'relative' }}>
                                 <input
                                     type={security.showCurrent ? 'text' : 'password'}
                                     style={s.input}
                                     value={security.currentPassword}
                                     onChange={e => setSecurity(p => ({ ...p, currentPassword: e.target.value }))}
-                                    placeholder="Enter your current password"
+                                    placeholder={t('admin_ph_current_pw') || 'Enter your current password'}
                                     required
                                 />
                                 <button
                                     type="button"
                                     style={s.eyeBtn}
                                     onClick={() => setSecurity(p => ({ ...p, showCurrent: !p.showCurrent }))}
+                                    aria-label={security.showCurrent ? (t('hide_password') || 'Hide password') : (t('show_password') || 'Show password')}
                                 >
                                     {security.showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
@@ -503,20 +583,21 @@ export default function AdminProfilePanel() {
                         </div>
 
                         <div style={s.field}>
-                            <label style={s.label}>New Password</label>
+                            <label style={s.label}>{t('admin_lbl_new_pw') || 'New Password'}</label>
                             <div style={{ position: 'relative' }}>
                                 <input
                                     type={security.showNew ? 'text' : 'password'}
                                     style={s.input}
                                     value={security.newPassword}
                                     onChange={e => setSecurity(p => ({ ...p, newPassword: e.target.value }))}
-                                    placeholder="At least 8 characters"
+                                    placeholder={t('admin_ph_new_pw') || 'At least 8 characters'}
                                     required
                                 />
                                 <button
                                     type="button"
                                     style={s.eyeBtn}
                                     onClick={() => setSecurity(p => ({ ...p, showNew: !p.showNew }))}
+                                    aria-label={security.showNew ? (t('hide_password') || 'Hide password') : (t('show_password') || 'Show password')}
                                 >
                                     {security.showNew ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
@@ -524,20 +605,21 @@ export default function AdminProfilePanel() {
                         </div>
 
                         <div style={s.field}>
-                            <label style={s.label}>Confirm New Password</label>
+                            <label style={s.label}>{t('admin_lbl_confirm_pw') || 'Confirm New Password'}</label>
                             <div style={{ position: 'relative' }}>
                                 <input
                                     type={security.showConfirm ? 'text' : 'password'}
                                     style={s.input}
                                     value={security.confirmPassword}
                                     onChange={e => setSecurity(p => ({ ...p, confirmPassword: e.target.value }))}
-                                    placeholder="Re-enter new password"
+                                    placeholder={t('admin_ph_confirm_pw') || 'Re-enter new password'}
                                     required
                                 />
                                 <button
                                     type="button"
                                     style={s.eyeBtn}
                                     onClick={() => setSecurity(p => ({ ...p, showConfirm: !p.showConfirm }))}
+                                    aria-label={security.showConfirm ? (t('hide_password') || 'Hide password') : (t('show_password') || 'Show password')}
                                 >
                                     {security.showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
@@ -547,7 +629,7 @@ export default function AdminProfilePanel() {
                         <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '10px' }}>
                             <button type="submit" style={s.submitBtn} disabled={savingPassword}>
                                 {savingPassword ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
-                                {savingPassword ? 'Updating Password...' : 'Update Password'}
+                                {savingPassword ? (t('admin_btn_updating_pw') || 'Updating Password...') : (t('admin_btn_update_pw') || 'Update Password')}
                             </button>
                         </div>
                     </form>
@@ -562,7 +644,12 @@ export default function AdminProfilePanel() {
                         twoFactorEnabled={twoFactorEnabled}
                         setTwoFactorEnabled={setTwoFactorEnabled}
                         colors={colors}
-                        styles={{}}
+                        styles={{
+                            formGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
+                            label: s.label,
+                            input: s.input,
+                            successAlert: { background: 'rgba(34, 197, 94, 0.15)', border: '1px solid rgba(34, 197, 94, 0.3)', color: colors.primary, padding: '12px 16px', borderRadius: '10px', fontSize: '13px' }
+                        }}
                         t={t}
                     />
                 </div>

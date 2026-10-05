@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import NotificationBell from './NotificationBell';
 import { 
     Sun, Moon, BookOpen, LogOut, LayoutDashboard, Award, 
@@ -15,6 +16,7 @@ const SIDEBAR_WIDTH_COLLAPSED = 76;
 export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBottomButtons }) {
     const { user, logout } = useAuth();
     const { theme, toggleTheme, colors } = useTheme();
+    const { t } = useLanguage();
     const navigate = useNavigate();
     const location = useLocation();
     const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
@@ -33,7 +35,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
     };
 
     const getProfileNavState = () => {
-        if (user?.assignedRole === 'Admin') return { activeTab: 'developers' };
+        if (user?.assignedRole === 'Admin') return { activeTab: 'profile' };
         return undefined;
     };
 
@@ -430,16 +432,22 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
 
                         {/* Menu Items */}
                         <button
-                            onClick={() => { navigate(getProfilePath(), { state: getProfileNavState() }); setAccountDropdownOpen(false); }}
+                            onClick={() => {
+                                if (onTabChange && user?.assignedRole === 'Admin') {
+                                    onTabChange('profile');
+                                }
+                                navigate(getProfilePath(), { state: getProfileNavState() });
+                                setAccountDropdownOpen(false);
+                            }}
                             style={{ ...styles.dropdownItem, color: colors.text, borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '10px' }}
                         >
-                            <Settings size={18} aria-hidden="true" /> Profile Settings
+                            <Settings size={18} aria-hidden="true" /> {t('menu_profile_settings') || 'Profile Settings'}
                         </button>
                         <button 
                             onClick={() => { navigate('/courses'); setAccountDropdownOpen(false); }}
                             style={{ ...styles.dropdownItem, color: colors.text, borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '10px' }}
                         >
-                            <BookOpen size={18} aria-hidden="true" /> Courses
+                            <BookOpen size={18} aria-hidden="true" /> {t('menu_courses') || 'Courses'}
                         </button>
                         <button 
                             onClick={async () => { 
@@ -449,7 +457,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                             }}
                             style={{ ...styles.dropdownItem, color: '#dc2626', display: 'flex', alignItems: 'center', gap: '10px' }}
                         >
-                            <LogOut size={18} aria-hidden="true" /> Sign Out
+                            <LogOut size={18} aria-hidden="true" /> {t('menu_sign_out') || 'Sign Out'}
                         </button>
                     </div>
                 )}
