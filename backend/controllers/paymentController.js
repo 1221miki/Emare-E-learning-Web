@@ -1,11 +1,13 @@
 const axios = require('axios');
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 
 const Transaction = require('../models/Transaction');
 const Payment = require('../models/Payment');
 const Coupon = require('../models/Coupon');
 const Enrollment = require('../models/Enrollment');
 const EventRegistration = require('../models/EventRegistration');
+const Event = require('../models/Event');
 const Course = require('../models/Course');
 const User = require('../models/User');
 const SystemSettings = require('../models/SystemSettings');
@@ -468,18 +470,85 @@ exports.getMyTransactions = async (req, res) => {
 
 exports.getInvoiceData = async (req, res) => {
     try {
-        const tx = await Transaction.findById(req.params.id).populate('studentRef courseRef').lean();
-        if (!tx) return res.status(404).json({ success: false });
-        res.json({ success: true, data: {
-            invoiceNumber: `INV-${tx._id.toString().slice(-8).toUpperCase()}`,
-            date: tx.createdAt,
-            amount: tx.amount,
-            currency: tx.currency,
-            course: tx.courseRef,
-            student: tx.studentRef,
-            transactionId: tx._id
-        }});
-    } catch (err) { console.error(err); res.status(500).json({ success: false }); }
+        const id = req.params.id;
+        const isValidObjectId = mongoose.Types.ObjectId.isValid(id);
+
+        let tx = null;
+        if (isValidObjectId) {
+            tx = await Transaction.findById(id).populate('studentRef courseRef eventRef').lean();
+        }
+        if (!tx) {
+            tx = await Transaction.findOne({
+                $or: [
+                    { 'metadata.tx_ref': id },
+                    { providerTransactionId: id }
+                ]
+            }).populate('studentRef courseRef eventRef').lean();
+        }
+        if (!tx && isValidObjectId) {
+            const pay = await Payment.findById(id).populate('studentRef courseRef').lean();
+            if (pay) {
+                tx = {
+                    _id: pay.transactionRef || pay._id,
+                    createdAt: pay.createdAt,
+                    amount: pay.amount,
+                    currency: pay.currency || 'ETB',
+                    courseRef: pay.courseRef,
+                    studentRef: pay.studentRef,
+                    metadata: pay.metadata || { tx_ref: pay.tx_ref }
+                };
+            }
+        }
+        if (!tx) {
+            const pay = await Payment.findOne({ tx_ref: id }).populate('studentRef courseRef').lean();
+            if (pay) {
+                tx = {
+                    _id: pay.transactionRef || pay._id,
+                    createdAt: pay.createdAt,
+                    amount: pay.amount,
+                    currency: pay.currency || 'ETB',
+                    courseRef: pay.courseRef,
+                    studentRef: pay.studentRef,
+                    metadata: pay.metadata || { tx_ref: pay.tx_ref }
+                };
+            }
+        }
+        if (!tx && isValidObjectId) {
+            const enr = await Enrollment.findById(id).populate('studentRef courseRef').lean();
+            if (enr) {
+                tx = {
+                    _id: enr._id,
+                    createdAt: enr.createdAt || enr.enrollmentTimestamp,
+                    amount: enr.paymentAmount || 0,
+                    currency: 'ETB',
+                    courseRef: enr.courseRef,
+                    studentRef: enr.studentRef,
+                    metadata: enr.metadata || { tx_ref: enr.paymentReference }
+                };
+            }
+        }
+
+        if (!tx) {
+            return res.status(404).json({ success: false, message: 'Invoice record not found' });
+        }
+
+        const invNumber = tx.metadata?.tx_ref || `INV-${(tx._id || id).toString().slice(-8).toUpperCase()}`;
+        return res.json({
+            success: true,
+            data: {
+                invoiceNumber: invNumber,
+                date: tx.createdAt || new Date(),
+                amount: tx.amount || 0,
+                currency: tx.currency || 'ETB',
+                course: tx.courseRef || tx.eventRef || { courseTitle: 'Course / Training' },
+                student: tx.studentRef || req.user,
+                transactionId: tx._id || id
+            }
+        });
+    } catch (err) {
+        console.error('[getInvoiceData] error:', err);
+        return res.status(500).json({ success: false, message: 'Failed to retrieve invoice details' });
+    }
 };
 
 exports.applyCoupon = async (req, res) => {

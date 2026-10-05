@@ -77,7 +77,7 @@ export default function PaymentsTab(dash) {
 
     const courseTitle = (ref) => {
         const id = ref?._id || ref;
-        return courseMap[id]?.courseTitle || ref?.courseTitle || ref?.title || 'Course';
+        return courseMap[id]?.courseTitle || ref?.courseTitle || ref?.title || ref?.eventTitle || ref?.name || 'Course';
     };
 
     useEffect(() => {
@@ -108,14 +108,35 @@ export default function PaymentsTab(dash) {
         writeLocal(METHODS_KEY, next);
     };
 
+    const [invoiceLoading, setInvoiceLoading] = useState(false);
+
     const openInvoice = async (tx) => {
-        setActiveInvoice(tx._id);
-        setInvoiceData(null);
+        if (!tx) return;
+        setActiveInvoice(tx._id || 'tx');
+        setInvoiceLoading(true);
+        // Pre-fill invoice data immediately from transaction record already present in client
+        const initial = {
+            invoiceNumber: tx.metadata?.tx_ref || (tx._id ? `INV-${String(tx._id).slice(-8).toUpperCase()}` : 'INV-RECEIPT'),
+            date: tx.createdAt || new Date(),
+            amount: tx.amount || 0,
+            currency: tx.currency || 'ETB',
+            course: tx.courseRef || tx.eventRef || { courseTitle: 'Course / Training' },
+            student: tx.studentRef || user,
+            transactionId: tx._id || tx.metadata?.tx_ref
+        };
+        setInvoiceData(initial);
+
         try {
-            const res = await paymentService.invoice(tx._id);
-            setInvoiceData(res.data.data || null);
-        } catch {
-            setInvoiceData(null);
+            if (tx._id) {
+                const res = await paymentService.invoice(tx._id);
+                if (res.data?.success && res.data?.data) {
+                    setInvoiceData(res.data.data);
+                }
+            }
+        } catch (err) {
+            console.warn('[PaymentsTab] Remote invoice fetch error, continuing with transaction record:', err);
+        } finally {
+            setInvoiceLoading(false);
         }
     };
 
@@ -374,8 +395,10 @@ export default function PaymentsTab(dash) {
                                     </button>
                                 </div>
                             </div>
+                        ) : invoiceLoading ? (
+                            <div style={{ padding: '40px 0', color: colors.textMuted, fontSize: '13px', textAlign: 'center' }}>Loading invoice details...</div>
                         ) : (
-                            <div style={{ padding: '40px 0', color: DANGER, fontSize: '13px', textAlign: 'center' }}>Could not load this invoice. Try again later.</div>
+                            <div style={{ padding: '40px 0', color: colors.textMuted, fontSize: '13px', textAlign: 'center' }}>No invoice record found.</div>
                         )}
                     </div>
                 </div>
