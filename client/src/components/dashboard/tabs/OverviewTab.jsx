@@ -83,23 +83,15 @@ export default function OverviewTab(dash) {
                 {/* Main column */}
                 <div className="col-span-12 space-y-6 lg:col-span-8">
                     {/* Welcome hero */}
-                    <div
-                        className="relative overflow-hidden rounded-xl border border-green-700/30 p-5 text-white shadow-sm"
-                        style={{
-                            background: 'linear-gradient(135deg, #15803d 0%, #166534 50%, #14532d 100%)',
-                            backgroundColor: '#15803d',
-                            color: '#ffffff',
-                            boxShadow: '0 8px 24px rgba(21, 128, 61, 0.25)'
-                        }}
-                    >
+                    <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
                         <div className="flex flex-wrap items-start justify-between gap-4">
                             <div className="min-w-0">
-                                <h2 className="text-xl font-extrabold tracking-tight sm:text-2xl text-white" style={{ color: '#ffffff' }}>{getGreeting()}, {user?.fullName?.split(' ')[0]}!</h2>
-                                <p className="mt-1 text-sm" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>Level {currentLevel} Scholar · {completedCoursesCount} completed · {activeCourses.length} in progress</p>
+                                <h2 className="text-xl font-extrabold tracking-tight sm:text-2xl text-slate-900 dark:text-white">{getGreeting()}, {user?.fullName?.split(' ')[0]}!</h2>
+                                <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Level {currentLevel} Scholar · {completedCoursesCount} completed · {activeCourses.length} in progress</p>
                             </div>
                             <div className="flex shrink-0 items-center gap-2">
-                                <span className="rounded-md px-3 py-1.5 text-xs font-bold" style={{ background: 'rgba(255, 255, 255, 0.18)', border: '1px solid rgba(255, 255, 255, 0.35)', color: '#ffffff' }}>Lv {currentLevel}</span>
-                                <span className="rounded-md px-3 py-1.5 text-xs font-bold" style={{ background: 'rgba(255, 255, 255, 0.18)', border: '1px solid rgba(255, 255, 255, 0.35)', color: '#ffffff' }}>{xpPoints} XP</span>
+                                <span className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200">Lv {currentLevel}</span>
+                                <span className="rounded-lg border border-green-600/30 bg-green-50 dark:bg-green-950/40 px-3 py-1.5 text-xs font-bold text-green-700 dark:text-green-400">{xpPoints} XP</span>
                             </div>
                         </div>
                         <div className="mt-4 flex flex-wrap gap-2">
@@ -107,8 +99,12 @@ export default function OverviewTab(dash) {
                                 <button
                                     key={a.label}
                                     onClick={a.onClick}
-                                    className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold text-white transition-colors hover:bg-white/30"
-                                    style={{ background: 'rgba(255, 255, 255, 0.18)', border: '1px solid rgba(255, 255, 255, 0.35)', color: '#ffffff' }}
+                                    className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold text-white transition-all shadow-sm hover:shadow hover:brightness-105 active:scale-95"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                                        color: '#ffffff',
+                                        border: 'none'
+                                    }}
                                     aria-label={a.label}
                                 >
                                     {a.icon} {a.label}
