@@ -1648,7 +1648,7 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
     return (
         <>
             <Sidebar />
-            <main style={{ marginLeft: 300, minHeight: '100vh', padding: 28, color: colors.text, background: colors.bg, boxSizing: 'border-box' }}>
+            <main style={{ marginLeft: 'var(--sidebar-width, 260px)', minHeight: '100vh', padding: 28, color: colors.text, background: colors.bg, boxSizing: 'border-box' }}>
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                 <div style={{ maxWidth: 1120, margin: '0 auto' }}>
                 <header style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>

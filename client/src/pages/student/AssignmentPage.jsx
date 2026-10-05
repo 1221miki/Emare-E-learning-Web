@@ -77,7 +77,7 @@ export default function AssignmentPage() {
         <div style={{ display: 'flex', minHeight: '100vh', background: colors.bg }}>
             <Sidebar navItems={navItems} activeTab="assignments" />
             
-            <main style={{ marginLeft: '260px', padding: '40px', flex: 1, maxWidth: '900px' }}>
+            <main style={{ marginLeft: 'var(--sidebar-width, 260px)', padding: '40px', flex: 1, maxWidth: '900px' }}>
                 <h1 style={{ color: colors.text, fontSize: '28px', fontWeight: '800', marginBottom: '32px' }}>Course Assignments</h1>
 
                 {assignments.length === 0 ? (

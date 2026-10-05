@@ -85,7 +85,7 @@ export default function MessageInboxPage() {
         <div style={{ display: 'flex', height: '100vh', background: colors.bg, overflow: 'hidden' }}>
             <Sidebar navItems={navItems} activeTab="messages" />
             
-            <main style={{ marginLeft: '260px', flex: 1, display: 'flex' }}>
+            <main style={{ marginLeft: 'var(--sidebar-width, 260px)', flex: 1, display: 'flex' }}>
                 {/* Inbox Sidebar */}
                 <div style={{ width: '350px', background: colors.bgCard, borderRight: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ padding: '24px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -12,6 +12,7 @@ import { getLiveStatus, LIVE_STATUS_META, formatEventDate, isValidUrl, EVENT_CAT
 import CourseCreationWizard from '../instructor/CourseCreationWizard';
 import AdminContactMessages from './AdminContactMessages';
 import { DevelopersPanel } from '../AdminDevelopers';
+import AdminProfilePanel from '../../components/admin/AdminProfilePanel';
 
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
 const combineDateAndTime = (dateStr, timeStr) => {
@@ -134,9 +135,9 @@ const formatTimeShort = (dateStr) => {
     return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 };
 const formatDateShort = (dateStr) => {
-    if (!dateStr) return '-"';
+    if (!dateStr) return '-';
     const d = new Date(dateStr);
-    if (Number.isNaN(d.getTime())) return '-"';
+    if (Number.isNaN(d.getTime())) return '-';
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 const statusChip = (live) => ({
@@ -171,7 +172,7 @@ export default function AdminDashboard() {
     // Tabs that still have a panel in this dashboard. Removed modules
     // (content & moderation, assessments & certs, reports & exports) are
     // intentionally absent — anyone landing on them falls back to Overview.
-    const VALID_TABS = ['overview', 'users', 'security', 'courses', 'course_builder', 'analytics', 'finances', 'cms', 'audit', 'contact-messages', 'developers', 'calendar', 'system'];
+    const VALID_TABS = ['overview', 'users', 'security', 'courses', 'course_builder', 'analytics', 'finances', 'cms', 'audit', 'contact-messages', 'developers', 'calendar', 'system', 'profile'];
     const sanitizeTab = (tab) => VALID_TABS.includes(tab) ? tab : 'overview';
     const [activeTab, setActiveTab] = useState(() => sanitizeTab(location.state?.activeTab) || 'overview');
     const [userSubTab, setUserSubTab] = useState('accounts');
@@ -2008,7 +2009,7 @@ const resetCalendarForm = () => {
 
     const s = {
         page: { display: 'flex', minHeight: '100vh', fontFamily: "'Outfit', 'Inter', sans-serif", background: colors.bg },
-        main: { marginLeft: '260px', flex: 1, padding: '40px', overflowY: 'auto' },
+        main: { marginLeft: 'var(--sidebar-width, 260px)', flex: 1, padding: '40px', overflowY: 'auto' },
         header: { marginBottom: '32px' },
         greeting: { color: colors.text, fontSize: '32px', fontWeight: '900', margin: 0, letterSpacing: '-0.5px' },
         notification: { position: 'fixed', top: '24px', right: '24px', background: colors.success, color: colors.text, padding: '16px 24px', borderRadius: '12px', fontWeight: '600', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', zIndex: 1000, animation: 'fadeIn 0.3s ease-out' },
@@ -2022,6 +2023,12 @@ const resetCalendarForm = () => {
         cardTitle: { color: colors.text, fontSize: '18px', fontWeight:'700', margin:'0 0 20px' },
         tableContainer: { background: colors.bgCard, backdropFilter: 'blur(10px)', borderRadius: '16px', border: `1px solid ${colors.border}`, overflowX: 'auto', padding: '4px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' },
         table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: colors.text },
+        instructorTableCard: { background: colors.bgCard, backdropFilter: 'blur(10px)', borderRadius: '14px', border: `1px solid ${colors.border}`, overflow: 'hidden' },
+        instructorTable: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
+        instructorThRow: { background: colors.bgDarkest },
+        instructorTh: { padding: '14px 20px', color: colors.textMuted, fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' },
+        instructorTr: { borderBottom: `1px solid ${colors.border}` },
+        instructorTd: { padding: '14px 20px', color: colors.text, fontSize: '14px' },
         th: { padding: '16px 24px', color: colors.textMuted, fontSize: '13px', fontWeight: '700', borderBottom: `1px solid ${colors.border}` },
         td: { padding: '16px 24px', fontSize: '14px', borderBottom: `1px solid ${colors.border}` },
         badge: { padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700' },
@@ -3613,7 +3620,7 @@ const resetCalendarForm = () => {
                                 </div>
                                 <div style={{ color: colors.textMuted, fontSize: '14px', marginBottom: '6px' }}>{log.description || 'No description provided.'}</div>
                                 <div style={{ fontSize: '13px', color: colors.textMuted }}>
-                                    User: {log.userRef?.fullName || 'System'} A- Role: {log.userRef?.assignedRole || 'N/A'} A- IP: {log.ipAddress || 'N/A'}
+                                    User: {log.userRef?.fullName || 'System'} • Role: {log.userRef?.assignedRole || 'N/A'} • IP: {log.ipAddress || 'N/A'}
                                 </div>
                             </div>
                         )) : <div style={{ color: colors.textMuted }}>No audit logs found for the selected filter.</div>}
@@ -3731,12 +3738,12 @@ const resetCalendarForm = () => {
 
         const renderDateCell = (event) => {
             const allDay = Boolean(event.isAllDay);
-            const startTxt = event.startDate ? `${formatDateShort(event.startDate)}${allDay ? '' : ` A- ${formatTimeShort(event.startDate)}`}` : '-"';
-            const endTxt = event.endDate ? `${formatDateShort(event.endDate)}${allDay ? '' : ` A- ${formatTimeShort(event.endDate)}`}` : '';
+            const startTxt = event.startDate ? `${formatDateShort(event.startDate)}${allDay ? '' : ` at ${formatTimeShort(event.startDate)}`}` : '-';
+            const endTxt = event.endDate ? `${formatDateShort(event.endDate)}${allDay ? '' : ` at ${formatTimeShort(event.endDate)}`}` : '';
             return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 170, whiteSpace: 'nowrap' }}>
                     <span style={{ color: colors.text, fontSize: 13, fontWeight: 600 }}>{startTxt}</span>
-                    {endTxt && <span style={{ color: colors.textMuted, fontSize: 12 }}>-+' {endTxt}</span>}
+                    {endTxt && <span style={{ color: colors.textMuted, fontSize: 12 }}>to {endTxt}</span>}
                 </div>
             );
         };
@@ -3750,7 +3757,7 @@ const resetCalendarForm = () => {
                     {showStream && (
                         <a href={event.streamUrl} target="_blank" rel="noopener noreferrer" style={{ color: colors.primary, fontSize: 12, fontWeight: 600, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.streamUrl}</a>
                     )}
-                    {!loc && !showStream && <span style={{ color: colors.textMuted, fontSize: 13 }}>-"</span>}
+                    {!loc && !showStream && <span style={{ color: colors.textMuted, fontSize: 13 }}>-</span>}
                 </div>
             );
         };
@@ -3823,59 +3830,65 @@ const resetCalendarForm = () => {
                 {filteredEvents.length === 0 ? emptyState : (
                     <>
                         {/* Desktop table */}
-                        <div className="em-cal-table" style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
-                                <thead>
-                                    <tr>
-                                        <th style={{ ...s.th, textAlign: 'left' }}>Event</th>
-                                        <th style={{ ...s.th, textAlign: 'left' }}>Category</th>
-                                        <th style={{ ...s.th, textAlign: 'left' }}>Date &amp; Time</th>
-                                        <th style={{ ...s.th, textAlign: 'left' }}>Location</th>
-                                        <th style={{ ...s.th, textAlign: 'left' }}>Status</th>
-                                        <th style={{ ...s.th, textAlign: 'left' }}>Visibility</th>
-                                        <th style={{ ...s.th, textAlign: 'right' }}>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
+                        <div className="em-cal-table" style={s.instructorTableCard}>
+                            <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+                                <table style={{ ...s.instructorTable, minWidth: 1020 }}>
+                                    <thead>
+                                        <tr style={s.instructorThRow}>
+                                            <th style={{ ...s.instructorTh, textAlign: 'left', minWidth: 200 }}>Event</th>
+                                            <th style={{ ...s.instructorTh, textAlign: 'left', minWidth: 110 }}>Category</th>
+                                            <th style={{ ...s.instructorTh, textAlign: 'left', minWidth: 220 }}>Date &amp; Time</th>
+                                            <th style={{ ...s.instructorTh, textAlign: 'left', minWidth: 160 }}>Location</th>
+                                            <th style={{ ...s.instructorTh, textAlign: 'left', minWidth: 100 }}>Status</th>
+                                            <th style={{ ...s.instructorTh, textAlign: 'left', minWidth: 100 }}>Visibility</th>
+                                            <th style={{ ...s.instructorTh, textAlign: 'right', minWidth: 130 }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
                                     {filteredEvents.map((event) => {
                                         const live = eventLive(event);
                                         const sc = statusChip(live);
                                         return (
-                                            <tr key={`${event.visibility}-${event._id}`} style={{ transition: 'background 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.background = colors.bgInput; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
-                                                <td style={{ ...s.td, textAlign: 'left' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                                            <tr key={`${event.visibility}-${event._id}`} style={s.instructorTr}>
+                                                <td style={s.instructorTd}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                         {event.image ? (
-                                                            <img src={event.image} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', border: `1px solid ${colors.border}` }} />
+                                                            <img src={event.image} alt="" style={{ width: 52, height: 52, borderRadius: 14, objectFit: 'cover', border: `1px solid ${colors.border}` }} />
                                                         ) : (
-                                                            <span style={{ width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${colors.primary}14`, color: colors.primary, flexShrink: 0 }}>
-                                                                <Calendar size={17} />
-                                                            </span>
+                                                            <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700' }}>
+                                                                {event.title?.charAt(0)?.toUpperCase()}
+                                                            </div>
                                                         )}
-                                                        <div style={{ minWidth: 0 }}>
-                                                            <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{event.title}</p>
-                                                            <p style={{ margin: '2px 0 0', fontSize: 12, color: colors.textMuted }}>{event.visibility === 'public' ? (event.eventType || 'Hybrid') : 'Internal'}</p>
+                                                        <div>
+                                                            <strong style={{ color: colors.text, display: 'block', fontSize: '14px' }}>{event.title}</strong>
+                                                            <span style={{ color: colors.textMuted, fontSize: '12px' }}>{event.visibility === 'public' ? (event.eventType || 'Hybrid') : 'Internal'}</span>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td style={{ ...s.td, textAlign: 'left' }}>
+                                                <td style={s.instructorTd}>
                                                     <span style={{ ...chip(colors.primary, `${colors.primary}14`), textTransform: 'capitalize' }}>{event.category || 'Event'}</span>
                                                 </td>
-                                                <td style={{ ...s.td, textAlign: 'left' }}>{renderDateCell(event)}</td>
-                                                <td style={{ ...s.td, textAlign: 'left' }}>{renderLocationCell(event)}</td>
-                                                <td style={{ ...s.td, textAlign: 'left' }}>
+                                                <td style={s.instructorTd}>{renderDateCell(event)}</td>
+                                                <td style={s.instructorTd}>{renderLocationCell(event)}</td>
+                                                <td style={s.instructorTd}>
                                                     <span style={chip(sc.color, sc.bg)}>{sc.label}</span>
                                                 </td>
-                                                <td style={{ ...s.td, textAlign: 'left' }}>
+                                                <td style={s.instructorTd}>
                                                     <span style={event.visibility === 'public' ? chip('#10b981', 'rgba(16,185,129,0.12)') : chip('#94a3b8', 'rgba(148,163,184,0.14)')}>
                                                         {event.visibility === 'public' ? 'Public' : 'Internal'}
                                                     </span>
                                                 </td>
-                                                <td style={{ ...s.td, textAlign: 'right' }}>{renderRowActions(event)}</td>
+                                                <td style={s.instructorTd}>
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'flex-end' }}>
+                                                        {renderRowActions(event)}
+                                                    </div>
+                                                </td>
                                             </tr>
                                         );
                                     })}
                                 </tbody>
                             </table>
+                            </div>
                         </div>
 
                         {/* Mobile cards */}
@@ -4256,10 +4269,10 @@ const resetCalendarForm = () => {
                                         <span style={chip(psc.color, psc.bg)}>{psc.label}</span>
                                     </div>
                                     <div style={{ display: 'grid', gap: 4, fontSize: 13, color: colors.textMuted }}>
-                                        <div><strong style={{ color: colors.text }}>{calendarForm.isAllDay ? 'All day' : 'Scheduled'}: </strong>{pStart ? formatEventDate(pStart.toISOString()) : '-"'}{pEnd && !calendarForm.isAllDay ? ` -+' ${formatEventDate(pEnd.toISOString())}` : ''}</div>
-                                        <div><strong style={{ color: colors.text }}>Format: </strong>{pType} {pType === 'Physical' ? `-- ${calendarForm.location || 'No location set'}` : pType === 'Hybrid' ? `-- ${calendarForm.location || 'Online + venue TBD'}` : ''}</div>
-                                        {pType !== 'Physical' && <div><strong style={{ color: colors.text }}>Meeting: </strong>{meetingProviderLabel(calendarForm.meetingProvider)}{calendarForm.streamUrl ? ` – ${calendarForm.streamUrl}` : ' – will be created on save'}</div>}
-                                        {isFormPublic && <div><strong style={{ color: colors.text }}>Price: </strong>{calendarForm.price || 'FREE'}{calendarForm.capacity !== '' ? ` -- Capacity: ${calendarForm.capacity}` : ''}</div>}
+                                        <div><strong style={{ color: colors.text }}>{calendarForm.isAllDay ? 'All day' : 'Scheduled'}: </strong>{pStart ? formatEventDate(pStart.toISOString()) : '-'}{pEnd && !calendarForm.isAllDay ? ` to ${formatEventDate(pEnd.toISOString())}` : ''}</div>
+                                        <div><strong style={{ color: colors.text }}>Format: </strong>{pType} {pType === 'Physical' ? ` - ${calendarForm.location || 'No location set'}` : pType === 'Hybrid' ? ` - ${calendarForm.location || 'Online + venue TBD'}` : ''}</div>
+                                        {pType !== 'Physical' && <div><strong style={{ color: colors.text }}>Meeting: </strong>{meetingProviderLabel(calendarForm.meetingProvider)}{calendarForm.streamUrl ? ` - ${calendarForm.streamUrl}` : ' - will be created on save'}</div>}
+                                        {isFormPublic && <div><strong style={{ color: colors.text }}>Price: </strong>{calendarForm.price || 'FREE'}{calendarForm.capacity !== '' ? ` • Capacity: ${calendarForm.capacity}` : ''}</div>}
                                         <div><strong style={{ color: colors.text }}>Visibility: </strong>{isFormPublic ? 'Public (review pipeline)' : 'Internal (calendar only)'}</div>
                                     </div>
                                 </div>
@@ -4298,11 +4311,11 @@ const resetCalendarForm = () => {
                                 </div>
                                 <div style={{ display: 'grid', gap: 8, fontSize: 14, marginBottom: 14 }}>
                                     <div><span style={{ color: colors.textMuted }}>Category: </span><strong style={{ textTransform: 'capitalize' }}>{ev.category || 'Event'}</strong></div>
-                                    <div><span style={{ color: colors.textMuted }}>Starts: </span><strong>{ev.startDate ? formatEventDate(ev.startDate) : '-"'}</strong></div>
+                                    <div><span style={{ color: colors.textMuted }}>Starts: </span><strong>{ev.startDate ? formatEventDate(ev.startDate) : '-'}</strong></div>
                                     {ev.endDate && <div><span style={{ color: colors.textMuted }}>Ends: </span><strong>{formatEventDate(ev.endDate)}</strong></div>}
                                     {ev.isAllDay && <div><span style={{ color: colors.textMuted }}>All day: </span><strong>Yes</strong></div>}
                                     <div><span style={{ color: colors.textMuted }}>Format: </span><strong>{ev.eventType || 'Hybrid'}</strong></div>
-                                    <div><span style={{ color: colors.textMuted }}>Location: </span><strong>{ev.location || (ev.eventType === 'Online' ? 'Online Live Stream' : '-"')}</strong></div>
+                                    <div><span style={{ color: colors.textMuted }}>Location: </span><strong>{ev.location || (ev.eventType === 'Online' ? 'Online Live Stream' : '-')}</strong></div>
 {ev.meetingUrl || ev.streamUrl ? (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                             <span style={{ color: colors.textMuted }}>Meeting URL ({meetingProviderLabel(ev.meetingProvider)}): </span>
@@ -4467,6 +4480,7 @@ const resetCalendarForm = () => {
                         )}
                         {activeTab === 'calendar' && renderCalendar()}
                         {activeTab === 'system' && renderSystem()}
+                        {activeTab === 'profile' && <AdminProfilePanel />}
                     </>
             </main>
 

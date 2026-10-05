@@ -34,7 +34,7 @@ export default function AdminUserProfilePage() {
 
     const styles = {
         page: { minHeight: '100vh', display: 'flex', background: colors.bg },
-        main: { flex: 1, padding: '48px', maxWidth: '1200px', margin: '0 auto', marginLeft: '260px' },
+        main: { flex: 1, padding: '48px', maxWidth: '1200px', margin: '0 auto', marginLeft: 'var(--sidebar-width, 260px)' },
         card: { background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '24px', padding: '32px', marginBottom: '28px' },
         header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginBottom: '28px' },
         title: { fontSize: '28px', fontWeight: '800', margin: 0, color: colors.text },

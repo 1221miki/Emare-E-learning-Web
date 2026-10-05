@@ -19,7 +19,7 @@ export const getStudentStyles = (colors) => ({
         homeBtn: { width: '100%', background: colors.bgInput, border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '16px', padding: '14px 16px', cursor: 'pointer', fontSize: '14px', fontWeight: '700', transition: 'background 0.2s' },
         logoutBtn: { width: '100%', background: '#ffffff', border: '1px solid rgba(239,68,68,0.45)', color: '#b91c1c', boxShadow: '0 8px 20px rgba(239,68,68,0.12)', borderRadius: '16px', padding: '14px 16px', cursor: 'pointer', fontSize: '14px', fontWeight: '700', textAlign: 'center' },
         sidebarBottom: { display: 'flex', flexDirection: 'column', gap: '12px', marginTop: 'auto' },
-        main: { marginLeft: '260px', flex: 1, padding: '32px 48px', overflowY: 'auto' },
+        main: { marginLeft: 'var(--sidebar-width, 260px)', flex: 1, padding: '32px 48px', overflowY: 'auto', transition: 'margin-left 0.25s ease, margin-right 0.25s ease' },
         header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' },
         greeting: { color: colors.text, fontSize: '32px', fontWeight: '900', margin: 0, letterSpacing: '-0.5px' },
         subGreeting: { color: colors.textMuted, fontSize: '14px', margin: '6px 0 0' },

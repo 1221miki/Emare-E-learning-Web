@@ -592,7 +592,7 @@ export default function PaymentPage() {
 
 const styles = {
     page: { display: 'flex', minHeight: '100vh', background: '#0f172a', fontFamily: "'Segoe UI', sans-serif" },
-    main: { marginLeft: '250px', flex: 1, padding: '32px 40px', overflowY: 'auto' },
+    main: { marginLeft: 'var(--sidebar-width, 260px)', flex: 1, padding: '32px 40px', overflowY: 'auto' },
     header: { marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     greeting: { color: '#f8fafc', fontSize: '32px', fontWeight: '800', margin: 0 },
     subGreeting: { color: '#94a3b8', fontSize: '15px', marginTop: '8px', maxWidth: '780px' },

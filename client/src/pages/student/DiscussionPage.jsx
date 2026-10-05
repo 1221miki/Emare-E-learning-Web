@@ -184,7 +184,7 @@ export default function DiscussionPage() {
         <div style={{ display: 'flex', minHeight: '100vh', background: colors.bg }}>
             <Sidebar navItems={navItems} activeTab="qa" />
 
-            <main style={{ marginLeft: '260px', padding: '40px', flex: 1, maxWidth: '1000px' }}>
+            <main style={{ marginLeft: 'var(--sidebar-width, 260px)', padding: '40px', flex: 1, maxWidth: '1000px' }}>
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap', marginBottom: '24px' }}>
                             <div>

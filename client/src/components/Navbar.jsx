@@ -55,6 +55,11 @@ export default function Navbar() {
         }
     };
 
+    const getProfileNavState = () => {
+        if (user?.assignedRole === 'Admin') return { activeTab: 'profile' };
+        return undefined;
+    };
+
     const goToSection = (id) => {
         if (window.location.pathname === '/') {
             const el = document.getElementById(id);
@@ -202,7 +207,7 @@ export default function Navbar() {
                     
                     {isAuthenticated ? (
                         <button
-                            onClick={() => navigate(handleProfileRedirect())}
+                            onClick={() => navigate(handleProfileRedirect(), { state: getProfileNavState() })}
                             style={s.avatarBtn}
                             title={user?.fullName ? `${user.fullName} — Profile Settings` : 'Profile Settings'}
                             aria-label="Go to Profile Settings"
@@ -250,7 +255,7 @@ export default function Navbar() {
                                 </div>
                                 <span style={{ fontWeight: '600', color: colors.text, fontSize: '14px' }}>{user?.fullName}</span>
                             </div>
-                            <Link to={handleProfileRedirect()} style={s.loginBtn} onClick={() => setIsMobileMenuOpen(false)}>Profile Settings</Link>
+                            <button onClick={() => { setIsMobileMenuOpen(false); navigate(handleProfileRedirect(), { state: getProfileNavState() }); }} style={{ ...s.loginBtn, background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer' }}>Profile Settings</button>
                             <Link to={handleDashboardRedirect()} style={s.loginBtn} onClick={() => setIsMobileMenuOpen(false)}>Dashboard</Link>
                             <button onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }} style={s.logoutBtn}>Sign Out</button>
                         </>

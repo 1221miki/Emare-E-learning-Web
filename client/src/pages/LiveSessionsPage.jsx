@@ -379,7 +379,7 @@ export default function LiveSessionsPage() {
         <div style={{ display: 'flex', minHeight: '100vh', background: colors.bg }}>
             <Sidebar navItems={navItems} activeTab="live" />
             
-            <main style={{ marginLeft: '260px', padding: '40px', flex: 1 }}>
+            <main style={{ marginLeft: 'var(--sidebar-width, 260px)', padding: '40px', flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                     <h1 style={{ color: colors.text, fontSize: '32px', fontWeight: '900', margin: 0 }}>Live Sessions & Events</h1>
                     {user?.assignedRole !== 'Student' && selectedCourse && (

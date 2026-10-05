@@ -193,7 +193,7 @@ export default function AdminAuditLogs() {
                 }
             }} />
 
-            <div style={{ flex: 1, marginLeft: '260px', overflowY: 'auto', paddingBottom: '40px' }}>
+            <div style={{ flex: 1, marginLeft: 'var(--sidebar-width, 260px)', overflowY: 'auto', paddingBottom: '40px' }}>
 
                 {/* ── Header ──────────────────────────────────────────────────── */}
             <div style={{

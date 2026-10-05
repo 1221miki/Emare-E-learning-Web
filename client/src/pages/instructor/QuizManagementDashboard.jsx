@@ -404,7 +404,7 @@ export default function QuizManagementDashboard() {
     // Styles setup
     const s = {
         page: { display: 'flex', minHeight: '100vh', fontFamily: "'Outfit', system-ui, sans-serif", background: colors.bg },
-        main: { marginLeft: '260px', padding: '32px 32px 60px', flex: 1, minHeight: '100vh' },
+        main: { marginLeft: 'var(--sidebar-width, 260px)', padding: '32px 32px 60px', flex: 1, minHeight: '100vh' },
         card: { background: colors.bgCard, borderRadius: '20px', padding: '24px', border: `1px solid ${colors.border}`, boxShadow: '0 4px 20px rgba(0,0,0,0.04)' },
         header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '28px' },
         tabsRow: { display: 'flex', gap: '8px', flexWrap: 'wrap', background: colors.bgCard, padding: '8px', borderRadius: '16px', border: `1px solid ${colors.border}`, marginBottom: '24px' },

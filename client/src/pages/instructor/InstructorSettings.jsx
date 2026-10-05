@@ -148,7 +148,7 @@ export default function InstructorSettings() {
     const c = colors;
     const s = {
         page: { display: 'flex', minHeight: '100vh', fontFamily: "'Outfit', system-ui, sans-serif", background: c.bg },
-        main: { marginLeft: 260, padding: '32px 32px 60px', flex: 1, minHeight: '100vh' },
+        main: { marginLeft: 'var(--sidebar-width, 260px)', padding: '32px 32px 60px', flex: 1, minHeight: '100vh' },
         card: { background: c.bgCard, borderRadius: 20, padding: 28, border: `1px solid ${c.border}`, boxShadow: '0 4px 24px rgba(15,23,42,0.06)' },
         row2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 },
         row3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 },

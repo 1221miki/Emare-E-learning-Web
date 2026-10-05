@@ -450,10 +450,14 @@ input:-webkit-autofill:focus {
   }
 }
 
-/* Sidebar dragged to the right side: push main content from the right */
+/* Sidebar positioned on the right side: push main content from the right */
 body.emare-sidebar-right main {
   margin-left: 0 !important;
-  margin-right: 260px !important;
+  margin-right: var(--sidebar-width, 260px) !important;
+}
+
+main {
+  transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1), margin-right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .emare-mobile-drawer {

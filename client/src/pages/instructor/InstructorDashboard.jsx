@@ -40,7 +40,7 @@ export default function InstructorDashboard() {
         logoutBtn: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
 
         // Main
-        main: { marginLeft: '260px', flex: 1, padding: '40px', overflowY: 'auto', background: colors.bg },
+        main: { marginLeft: 'var(--sidebar-width, 260px)', flex: 1, padding: '40px', overflowY: 'auto', background: colors.bg },
         header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '36px' },
         greeting: { color: colors.text, fontSize: '26px', fontWeight: '800', margin: 0 },
         subGreeting: { color: colors.textMuted, fontSize: '14px', margin: '4px 0 0' },
@@ -1429,8 +1429,8 @@ export default function InstructorDashboard() {
                         <p style={s.emptyText}>No courses match the selected filters. Adjust search or filters to find courses.</p>
                     </div>
                 ) : (
-                    <div style={s.tableCard}>
-                        <table style={s.table}>
+                    <div style={{...s.tableCard, overflowX: 'auto', WebkitOverflowScrolling: 'touch'}}>
+                        <table style={{...s.table, minWidth: 1000}}>
                             <thead style={s.thRow}>
                                 <tr>
                                     <th style={s.th}>Course</th>

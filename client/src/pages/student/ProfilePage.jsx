@@ -60,7 +60,7 @@ export default function ProfilePage() {
         <div style={{ display: 'flex', minHeight: '100vh', background: colors.bg }}>
             <Sidebar navItems={navItems} activeTab="profile" />
             
-            <main style={{ marginLeft: '260px', padding: '40px', flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <main style={{ marginLeft: 'var(--sidebar-width, 260px)', padding: '40px', flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <h1 style={{ color: colors.text, fontSize: '28px', fontWeight: '800' }}>Student Profile</h1>
 
                 {/* Profile Header Card */}
@@ -95,7 +95,14 @@ export default function ProfilePage() {
                                     @{profile?.username || user.username || user.accountEmail?.split('@')[0]}
                                 </span>
                             </div>
-                            <button onClick={() => navigate('/student/dashboard?tab=settings')} style={{ background: `${colors.primary}15`, border: `1px solid ${colors.primary}30`, color: colors.primary, padding: '8px 16px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
+                            <button
+                                onClick={() => {
+                                    if (user?.assignedRole === 'Admin') navigate('/admin/dashboard', { state: { activeTab: 'profile' } });
+                                    else if (user?.assignedRole === 'Instructor') navigate('/instructor/settings');
+                                    else navigate('/student/dashboard?tab=settings');
+                                }}
+                                style={{ background: `${colors.primary}15`, border: `1px solid ${colors.primary}30`, color: colors.primary, padding: '8px 16px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
+                            >
                                 ◈️ Edit Profile Settings
                             </button>
                         </div>

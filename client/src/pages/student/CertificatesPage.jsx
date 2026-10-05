@@ -226,7 +226,7 @@ export default function CertificatesPage() {
         <div style={{ display: 'flex', minHeight: '100vh', background: colors.bg, fontFamily: "'Outfit', sans-serif" }}>
             <Sidebar navItems={navItems} activeTab="certificates" />
 
-            <main style={{ marginLeft: '260px', padding: '40px', flex: 1 }}>
+            <main style={{ marginLeft: 'var(--sidebar-width, 260px)', padding: '40px', flex: 1 }}>
                 <div style={{ marginBottom: 32 }}>
                     <h1 style={{ color: colors.text, fontSize: 28, fontWeight: 800, margin: 0 }}>
                         🎓 My Certificates
