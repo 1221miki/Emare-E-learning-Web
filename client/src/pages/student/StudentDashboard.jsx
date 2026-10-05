@@ -773,12 +773,6 @@ export default function StudentDashboard() {
                     if (key === 'messages') setMessagesSection('inbox');
                     setActiveTab(key);
                 }}
-                    extraBottomButtons={
-                    <button onClick={() => navigate('/courses')} style={styles.catalogBtn}>
-                        <Library size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} aria-hidden="true" />
-                        {t('nav_course_catalog')}
-                    </button>
-                }
             />
 
             {/* Main Content Area */}
