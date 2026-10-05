@@ -30,33 +30,66 @@ const {
 
 class SocraticAIService {
     constructor() {
-        this.apiKey = process.env.GROQ_API_KEY || process.env.AI_API_KEY || '';
-        this.provider = process.env.AI_PROVIDER || (this.apiKey ? 'groq' : 'mock');
-        this.model = process.env.AI_MODEL || (this.provider === 'groq' ? 'openai/gpt-oss-120b' : 'gpt-4o-mini');
+        this.apiKey = process.env.GROQ_API_KEY || '';
+        if (!this.apiKey && process.env.AI_API_KEY && !process.env.AI_API_KEY.startsWith('AIzaSy')) {
+            this.apiKey = process.env.AI_API_KEY;
+        }
+        let envProvider = process.env.AI_PROVIDER;
+        if (envProvider === 'gemini') envProvider = 'groq';
+        this.provider = envProvider || (this.apiKey ? 'groq' : 'mock');
+        this.model = (this.provider === 'groq') ? 'openai/gpt-oss-120b' : (process.env.AI_MODEL || 'gpt-4o-mini');
         this.fallbackModel = 'openai/gpt-oss-20b';
+        if (/your_.*_api_key_here/i.test(this.apiKey) || this.apiKey.startsWith('AIzaSy')) {
+            this.apiKey = '';
+            this.provider = 'mock';
+        }
     }
 
     async _ensureConfig() {
-        if (!this.apiKey || this.provider === 'mock') {
-            const envKey = process.env.GROQ_API_KEY || process.env.AI_API_KEY;
-            if (envKey && !/your_.*_api_key_here/i.test(envKey)) {
-                this.apiKey = envKey;
-                this.provider = process.env.AI_PROVIDER || 'groq';
-                this.model = process.env.AI_MODEL || (this.provider === 'groq' ? 'openai/gpt-oss-120b' : 'gpt-4o-mini');
+        // Detect stale Gemini provider or legacy Gemini key (e.g. from cloud deployment env vars)
+        const isLegacyGemini = this.provider === 'gemini' ||
+            (this.apiKey && this.apiKey.startsWith('AIzaSy')) ||
+            (process.env.AI_PROVIDER === 'gemini' && !process.env.GROQ_API_KEY);
+
+        const isUnconfigured = !this.apiKey || this.provider === 'mock' || isLegacyGemini;
+
+        if (isUnconfigured) {
+            // 1. Try explicit GROQ_API_KEY from environment
+            if (process.env.GROQ_API_KEY && !/your_.*_api_key_here/i.test(process.env.GROQ_API_KEY)) {
+                this.apiKey = process.env.GROQ_API_KEY;
+                this.provider = 'groq';
+                this.model = (process.env.AI_MODEL && !process.env.AI_MODEL.includes('gemini')) ? process.env.AI_MODEL : 'openai/gpt-oss-120b';
                 return;
             }
 
+            // 2. Try AI_API_KEY if it is a Groq key (starts with gsk_)
+            if (process.env.AI_API_KEY && process.env.AI_API_KEY.startsWith('gsk_')) {
+                this.apiKey = process.env.AI_API_KEY;
+                this.provider = 'groq';
+                this.model = (process.env.AI_MODEL && !process.env.AI_MODEL.includes('gemini')) ? process.env.AI_MODEL : 'openai/gpt-oss-120b';
+                return;
+            }
+
+            // 3. Fallback: Retrieve active configuration from MongoDB Atlas SystemSettings
             try {
                 const SystemSettings = require('../models/SystemSettings');
                 const settings = await SystemSettings.getSettings();
-                const dbKey = settings?.groqApiKey || settings?.aiApiKey;
-                if (dbKey && !/your_.*_api_key_here/i.test(dbKey)) {
-                    this.apiKey = dbKey;
-                    this.provider = settings.aiProvider || 'groq';
-                    this.model = settings.aiModel || 'openai/gpt-oss-120b';
+                const dbGroqKey = settings?.groqApiKey || (settings?.aiApiKey?.startsWith('gsk_') ? settings.aiApiKey : null);
+                if (dbGroqKey && !/your_.*_api_key_here/i.test(dbGroqKey)) {
+                    this.apiKey = dbGroqKey;
+                    this.provider = 'groq';
+                    this.model = (settings.aiModel && !settings.aiModel.includes('gemini')) ? settings.aiModel : 'openai/gpt-oss-120b';
+                    return;
                 }
             } catch (err) {
-                // ignore
+                console.warn('[socraticAiService] Could not read AI configuration from database:', err.message);
+            }
+
+            // 4. OpenAI fallback if explicitly configured
+            if (process.env.AI_PROVIDER === 'openai' && process.env.AI_API_KEY && process.env.AI_API_KEY.startsWith('sk-')) {
+                this.apiKey = process.env.AI_API_KEY;
+                this.provider = 'openai';
+                this.model = process.env.AI_MODEL || 'gpt-4o-mini';
             }
         }
     }

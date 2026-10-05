@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { messageService, notificationService, discussionService, aiService } from '../../../services/api';
 import { Award, Bell, BookOpen, Bot, CheckCircle2, ClipboardCheck, CreditCard, FileQuestion, Inbox, Medal, MessagesSquare, SendHorizonal, Settings, Star } from 'lucide-react';
+import MarkdownRenderer from '../../MarkdownRenderer';
 
 const WARN = '#f59e0b';
 const DANGER = '#ef4444';
@@ -263,9 +264,22 @@ export default function MessagesTab(dash) {
         const isMe = String(msg.senderRef) === uid || msg.role === 'user';
         return (
             <div key={msg._id || msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
-                <div style={{ maxWidth: '72%' }}>
-                    <div style={{ background: isMe ? `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` : colors.bgCard, color: isMe ? '#fff' : colors.text, padding: '10px 14px', borderRadius: isMe ? '14px 14px 4px 14px' : '14px 14px 14px 4px', fontSize: '14px', lineHeight: 1.5, border: isMe ? 'none' : `1px solid ${colors.border}`, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                        {msg.body}
+                <div style={{ maxWidth: isMe ? '75%' : '88%', width: isMe ? 'auto' : '100%' }}>
+                    <div style={{
+                        background: isMe ? `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` : colors.bgCard,
+                        color: isMe ? '#fff' : colors.text,
+                        padding: isMe ? '10px 14px' : '14px 18px',
+                        borderRadius: isMe ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                        fontSize: '14px',
+                        lineHeight: 1.5,
+                        border: isMe ? 'none' : `1px solid ${colors.border}`,
+                        wordBreak: 'break-word'
+                    }}>
+                        {isMe ? (
+                            <div style={{ whiteSpace: 'pre-wrap' }}>{msg.body}</div>
+                        ) : (
+                            <MarkdownRenderer content={msg.body} />
+                        )}
                     </div>
                     <div style={{ color: colors.textMuted, fontSize: '10px', marginTop: '4px', textAlign: isMe ? 'right' : 'left' }}>
                         {msg.createdAt ? new Date(msg.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
