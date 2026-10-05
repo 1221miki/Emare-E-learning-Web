@@ -89,6 +89,10 @@ const systemSettingsSchema = new mongoose.Schema({
     storageProvider: { type: String, default: 'cloudinary' },
     storageBucket: { type: String, default: '' },
     thirdPartyLmsSync: { type: Boolean, default: false },
+    aiProvider: { type: String, default: 'groq' },
+    groqApiKey: { type: String, default: '' },
+    aiApiKey: { type: String, default: '' },
+    aiModel: { type: String, default: 'openai/gpt-oss-120b' },
 
     // 12. Email & SMS Configuration
     smtpEnabled: { type: Boolean, default: true },

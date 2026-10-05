@@ -20,6 +20,31 @@ class AIService {
         }
     }
 
+    async _ensureConfig() {
+        if (!this.apiKey || this.provider === 'mock') {
+            const envKey = process.env.GROQ_API_KEY || process.env.AI_API_KEY;
+            if (envKey && !/your_.*_api_key_here/i.test(envKey)) {
+                this.apiKey = envKey;
+                this.provider = process.env.AI_PROVIDER || 'groq';
+                this.model = process.env.AI_MODEL || (this.provider === 'groq' ? 'openai/gpt-oss-120b' : 'gpt-4o-mini');
+                return;
+            }
+
+            try {
+                const SystemSettings = require('../models/SystemSettings');
+                const settings = await SystemSettings.getSettings();
+                const dbKey = settings?.groqApiKey || settings?.aiApiKey;
+                if (dbKey && !/your_.*_api_key_here/i.test(dbKey)) {
+                    this.apiKey = dbKey;
+                    this.provider = settings.aiProvider || 'groq';
+                    this.model = settings.aiModel || 'openai/gpt-oss-120b';
+                }
+            } catch (err) {
+                // ignore
+            }
+        }
+    }
+
     /**
      * Get a chat response from the AI learning assistant
      * @param {string} prompt - The user's query
@@ -27,6 +52,7 @@ class AIService {
      * @returns {Promise<string>}
      */
     async generateChatResponse(prompt, context = {}, conversationHistory = []) {
+        await this._ensureConfig();
         const pdfInstruction = context.pdfText ? `A PDF document is attached. For questions directly about the attached PDF, course document, or lesson material in the PDF, use only the attached PDF content to answer. For unrelated questions, answer normally using the available course context and general knowledge. Do not answer a different question than the user asked. If the question is clearly about the PDF but the PDF does not contain enough information, respond exactly: "I could not find enough information in the attached document to answer that question."` : null;
 
         if (this.apiKey && (this.provider === 'groq' || this.provider === 'openai')) {
@@ -163,6 +189,7 @@ class AIService {
      * Unified caller routing to Groq (default) or OpenAI
      */
     async _callActiveProvider(prompt, context = {}, conversationHistory = [], instruction = null) {
+        await this._ensureConfig();
         if (this.provider === 'groq' && this.apiKey) {
             return await this._callGroq(prompt, context, conversationHistory, instruction);
         }

@@ -36,6 +36,31 @@ class SocraticAIService {
         this.fallbackModel = 'openai/gpt-oss-20b';
     }
 
+    async _ensureConfig() {
+        if (!this.apiKey || this.provider === 'mock') {
+            const envKey = process.env.GROQ_API_KEY || process.env.AI_API_KEY;
+            if (envKey && !/your_.*_api_key_here/i.test(envKey)) {
+                this.apiKey = envKey;
+                this.provider = process.env.AI_PROVIDER || 'groq';
+                this.model = process.env.AI_MODEL || (this.provider === 'groq' ? 'openai/gpt-oss-120b' : 'gpt-4o-mini');
+                return;
+            }
+
+            try {
+                const SystemSettings = require('../models/SystemSettings');
+                const settings = await SystemSettings.getSettings();
+                const dbKey = settings?.groqApiKey || settings?.aiApiKey;
+                if (dbKey && !/your_.*_api_key_here/i.test(dbKey)) {
+                    this.apiKey = dbKey;
+                    this.provider = settings.aiProvider || 'groq';
+                    this.model = settings.aiModel || 'openai/gpt-oss-120b';
+                }
+            } catch (err) {
+                // ignore
+            }
+        }
+    }
+
     /**
      * Generate text embeddings using OpenAI API (if configured) or fallback vector
      * @param {string} text - Text to embed
@@ -172,6 +197,7 @@ class SocraticAIService {
             lastResponse
         );
 
+        await this._ensureConfig();
         try {
             if (this.provider === 'groq') {
                 return await this._generateGroqSocraticQuestion(socraticPrompt, comprehensionLevel, difficultyLevel);
@@ -326,6 +352,7 @@ class SocraticAIService {
 Course Context:
 ${context || 'General domain knowledge'}`;
 
+        await this._ensureConfig();
         try {
             if (this.provider === 'groq') {
                 return await this._evaluateWithGroq(fullPrompt, studentProfile.comprehensionLevel || 3);
@@ -481,6 +508,7 @@ ${context || 'General domain knowledge'}`;
                 hintPrompt = CONCEPTUAL_HINT_TEMPLATE(topic, 'the underlying principle', `Level: ${comprehensionLevel}/5`);
         }
 
+        await this._ensureConfig();
         try {
             if (this.provider === 'groq') {
                 return await this._generateGroqHint(hintPrompt);
