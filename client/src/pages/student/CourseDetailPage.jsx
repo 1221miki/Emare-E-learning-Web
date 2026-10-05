@@ -153,7 +153,7 @@ export default function CourseDetailPage() {
                                 <div style={{ fontSize: '12px', color: colors.textMuted }}>Created by</div>
                                 <Link
                                     to={`/instructors/${course.creatorRef?._id}`}
-                                    style={{ fontSize: '15px', fontWeight: '600', color: '#4ade80', textDecoration: 'none' }}
+                                    style={{ fontSize: '15px', fontWeight: '700', color: colors.primary, textDecoration: 'none' }}
                                 >
                                     {course.creatorRef?.fullName} ↗
                                 </Link>
@@ -297,7 +297,7 @@ export default function CourseDetailPage() {
                                     {showReviewForm ? 'Cancel' : 'Write a Review'}
                                 </button>
                             ) : (
-                                <button style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#4ade80', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}
+                                <button style={{ background: colors.primarySoft || 'rgba(34,197,94,0.1)', border: `1px solid ${colors.primary}`, color: colors.primary, padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '13px' }}
                                     onClick={() => setGuestModal({ open: true, action: 'write a review for this course' })}>
                                     ▣ Login to Review
                                 </button>

@@ -13,16 +13,16 @@ import JitsiMeetingModal from '../JitsiMeetingModal';
 import RecordingManagementModal from './RecordingManagementModal';
 import { isMeetingUrl } from '../../utils/videoPlayer';
 
-// ── Status badge ───────────────────────────────────────────
-const SESSION_STATUS = {
-    upcoming:  { bg: 'rgba(34,197,94,0.15)',  color: '#4ade80', label: 'Upcoming' },
-    live:      { bg: 'rgba(239,68,68,0.15)',   color: '#f87171', label: '🔴 LIVE NOW' },
-    ended:     { bg: 'rgba(100,116,139,0.15)', color: '#94a3b8', label: 'Ended' },
-    cancelled: { bg: 'rgba(239,68,68,0.15)',   color: '#ef4444', label: 'Cancelled' },
-};
-
 const StatusBadge = ({ status }) => {
-    const s = SESSION_STATUS[status] || SESSION_STATUS.upcoming;
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+    const s = {
+        upcoming:  { bg: isDark ? 'rgba(34,197,94,0.15)' : 'rgba(21,128,61,0.12)',  color: isDark ? '#4ade80' : '#15803d', label: 'Upcoming' },
+        live:      { bg: 'rgba(239,68,68,0.15)',   color: isDark ? '#f87171' : '#b91c1c', label: '🔴 LIVE NOW' },
+        ended:     { bg: 'rgba(100,116,139,0.15)', color: isDark ? '#94a3b8' : '#475569', label: 'Ended' },
+        cancelled: { bg: 'rgba(239,68,68,0.15)',   color: isDark ? '#ef4444' : '#b91c1c', label: 'Cancelled' },
+    }[status] || { bg: isDark ? 'rgba(34,197,94,0.15)' : 'rgba(21,128,61,0.12)', color: isDark ? '#4ade80' : '#15803d', label: 'Upcoming' };
+
     return (
         <span style={{
             background: s.bg, color: s.color,
@@ -38,7 +38,8 @@ const StatusBadge = ({ status }) => {
 
 // ── Main component ─────────────────────────────────────────
 export default function InstructorLiveSessions({ courses = [] }) {
-    const { colors: c } = useTheme();
+    const { theme, colors: c } = useTheme();
+    const isDark = theme === 'dark';
     const navigate = useNavigate();
 
     const [sessions,      setSessions]      = useState([]);
@@ -337,9 +338,9 @@ export default function InstructorLiveSessions({ courses = [] }) {
 
                                         {/* Ended: recording status */}
                                         {isEnded && rec?.isPublished && rec?.videoUrl && (
-                                            <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(34,197,94,0.07)', borderRadius: '8px', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <Film size={14} color="#4ade80" />
-                                                <span style={{ color: '#4ade80', fontSize: '13px', fontWeight: '600' }}>
+                                            <div style={{ marginTop: '12px', padding: '10px 14px', background: isDark ? 'rgba(34,197,94,0.07)' : 'rgba(21,128,61,0.08)', borderRadius: '8px', border: `1px solid ${isDark ? 'rgba(34,197,94,0.2)' : 'rgba(21,128,61,0.25)'}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <Film size={14} color={isDark ? '#4ade80' : '#15803d'} />
+                                                <span style={{ color: isDark ? '#4ade80' : '#15803d', fontSize: '13px', fontWeight: '700' }}>
                                                     Recording is live — students can watch it now
                                                 </span>
                                             </div>

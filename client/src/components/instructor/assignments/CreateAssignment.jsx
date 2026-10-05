@@ -252,8 +252,8 @@ export default function CreateAssignment({ courses, defaultCourse, onCreated, on
                             </div>
                         </div>
 
-                        <div style={{ gridColumn: '1 / -1', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '10px', padding: '12px 16px' }}>
-                            <div style={{ color: '#4ade80', fontSize: '13px', fontWeight: 700 }}>No submission deadline</div>
+                        <div style={{ gridColumn: '1 / -1', background: 'rgba(21,128,61,0.08)', border: '1px solid rgba(21,128,61,0.25)', borderRadius: '10px', padding: '12px 16px' }}>
+                            <div style={{ color: '#15803d', fontSize: '13px', fontWeight: 700 }}>No submission deadline</div>
                             <div style={{ color: '#64748b', fontSize: '12px', marginTop: '2px' }}>
                                 Students complete this assignment at their own pace when they reach its lesson. Progress is enforced by the lesson sequence, not a due date.
                             </div>

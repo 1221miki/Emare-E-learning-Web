@@ -1614,7 +1614,7 @@ export default function LearningWorkspace() {
                                     <span style={{
                                         padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
                                         background: lessonAssignmentSubmitted ? 'rgba(16,185,129,0.15)' : 'rgba(139,92,246,0.15)',
-                                        color: lessonAssignmentSubmitted ? '#10b981' : (lessonAssignmentRequired && lessonQuizPassed ? '#f59e0b' : '#4ade80'),
+                                        color: lessonAssignmentSubmitted ? '#10b981' : (lessonAssignmentRequired && lessonQuizPassed ? '#f59e0b' : (isDark ? '#4ade80' : '#15803d')),
                                         border: `1px solid ${lessonAssignmentSubmitted ? 'rgba(16,185,129,0.35)' : 'rgba(139,92,246,0.35)'}`
                                     }}>
                                         {lessonAssignmentSubmitted ? '✓ Assignment submitted' : lessonAssignmentRequired && lessonQuizPassed ? '⏳ Assignment: submit to continue' : '⚬ Assignment required'}
@@ -1962,7 +1962,7 @@ export default function LearningWorkspace() {
                                                             </span>
                                                         )}
                                                         {!isDone && hasAsgReq && (
-                                                            <span style={{ fontSize: 10, background: 'rgba(139,92,246,0.15)', color: '#4ade80', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>
+                                                            <span style={{ fontSize: 10, background: isDark ? 'rgba(139,92,246,0.15)' : 'rgba(21,128,61,0.1)', color: isDark ? '#4ade80' : '#15803d', borderRadius: 4, padding: '1px 5px', fontWeight: 700 }}>
                                                                 {(() => {
                                                                     const st = entry?.assignmentStatus;
                                                                     if (!st) return 'Assignment';

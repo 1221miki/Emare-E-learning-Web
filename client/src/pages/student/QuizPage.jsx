@@ -15,14 +15,14 @@ export default function QuizPage() {
         primaryBtn: { background: 'linear-gradient(135deg, #22c55e, #22c55e)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', width:'100%' },
         
         page: { minHeight: '100vh', background: colors.bg, fontFamily: "'Segoe UI', sans-serif", paddingBottom: '80px' },
-        header: { background: colors.bgCard, borderBottom: '1px solid #334155', padding: '24px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10 },
+        header: { background: colors.bgCard, borderBottom: `1px solid ${colors.border}`, padding: '24px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10 },
         title: { color: colors.text, fontSize: '24px', fontWeight: '800', margin: '0 0 4px' },
         subtitle: { color: colors.textMuted, fontSize: '14px', margin: 0 },
-        timer: { background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#4ade80', padding: '8px 16px', borderRadius: '12px', fontSize: '20px', fontWeight: '800', fontFamily: 'monospace' },
+        timer: { background: colors.primarySoft || 'rgba(34,197,94,0.1)', border: `1px solid ${colors.primary}`, color: colors.primary, padding: '8px 16px', borderRadius: '12px', fontSize: '20px', fontWeight: '800', fontFamily: 'monospace' },
         timerWarning: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', padding: '8px 16px', borderRadius: '12px', fontSize: '20px', fontWeight: '800', fontFamily: 'monospace', animation: 'pulse 1s infinite' },
         
         main: { maxWidth: '800px', margin: '0 auto', padding: '40px 20px' },
-        questionCard: { background: colors.bgCard, border: '1px solid #334155', borderRadius: '16px', padding: '32px', marginBottom: '24px' },
+        questionCard: { background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '16px', padding: '32px', marginBottom: '24px' },
         questionText: { color: colors.text, fontSize: '18px', fontWeight: '600', margin: '0 0 24px', lineHeight: '1.5', display: 'flex', gap: '12px', alignItems: 'flex-start' },
         qNum: { background: 'rgba(255,255,255,0.1)', color: colors.textMuted, padding: '2px 8px', borderRadius: '6px', fontSize: '14px', flexShrink: 0 },
         optionsList: { display: 'flex', flexDirection: 'column', gap: '12px' },

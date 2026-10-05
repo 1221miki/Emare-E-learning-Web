@@ -5,16 +5,16 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 
-// ── Status config ────────────────────────────────────────────
-const STATUS = {
-    active:    { label: 'Active',    bg: 'rgba(16,185,129,0.12)',  color: '#10b981', border: 'rgba(16,185,129,0.3)',  Icon: Activity },
-    completed: { label: 'Completed', bg: 'rgba(34,197,94,0.12)',  color: '#4ade80', border: 'rgba(34,197,94,0.3)',  Icon: CheckCircle },
-    inactive:  { label: 'Inactive',  bg: 'rgba(100,116,139,0.12)', color: '#94a3b8', border: 'rgba(100,116,139,0.3)', Icon: Clock },
-    'at-risk': { label: 'At Risk',   bg: 'rgba(239,68,68,0.12)',   color: '#f87171', border: 'rgba(239,68,68,0.3)',   Icon: AlertTriangle },
-};
-
 function StatusBadge({ status }) {
-    const cfg  = STATUS[status] || STATUS.inactive;
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+    const cfg = {
+        active:    { label: 'Active',    bg: isDark ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.12)',  color: isDark ? '#10b981' : '#059669', border: 'rgba(16,185,129,0.3)',  Icon: Activity },
+        completed: { label: 'Completed', bg: isDark ? 'rgba(34,197,94,0.15)' : 'rgba(21,128,61,0.12)',   color: isDark ? '#4ade80' : '#15803d', border: 'rgba(21,128,61,0.3)',  Icon: CheckCircle },
+        inactive:  { label: 'Inactive',  bg: 'rgba(100,116,139,0.12)', color: isDark ? '#94a3b8' : '#475569', border: 'rgba(100,116,139,0.3)', Icon: Clock },
+        'at-risk': { label: 'At Risk',   bg: 'rgba(239,68,68,0.12)',   color: isDark ? '#f87171' : '#dc2626', border: 'rgba(239,68,68,0.3)',   Icon: AlertTriangle },
+    }[status] || { label: 'Inactive', bg: 'rgba(100,116,139,0.12)', color: isDark ? '#94a3b8' : '#475569', border: 'rgba(100,116,139,0.3)', Icon: Clock };
+
     const Icon = cfg.Icon;
     return (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`, borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }}>
@@ -80,15 +80,15 @@ function ActionMenu({ student, onViewProfile, onMessage, onRemove }) {
                     {/* Dropdown */}
                     <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: colors.bgCard, backdropFilter: 'blur(16px)', border: `2px solid ${colors.border}`, borderRadius: '12px', minWidth: '190px', zIndex: 1000, padding: '6px', boxShadow: `0 10px 30px ${theme === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.12)'}` }}>
                         {[
-                            { label: 'View Profile',    icon: <Eye size={14} aria-hidden="true" />,           action: () => { onViewProfile(student); setOpen(false); }, color: '#4ade80' },
-                            { label: 'Send Message',    icon: <MessageSquare size={14} aria-hidden="true" />,  action: () => { onMessage(student); setOpen(false); },      color: '#34d399' },
-                            { label: 'View Progress',   icon: <TrendingUp size={14} aria-hidden="true" />,     action: () => { onViewProfile(student); setOpen(false); }, color: '#4ade80' },
-                            { label: 'Remove Student',  icon: <Trash2 size={14} aria-hidden="true" />,         action: () => { onRemove(student); setOpen(false); },       color: '#f87171', danger: true },
+                            { label: 'View Profile',    icon: <Eye size={14} aria-hidden="true" />,           action: () => { onViewProfile(student); setOpen(false); }, color: theme === 'dark' ? '#4ade80' : '#15803d' },
+                            { label: 'Send Message',    icon: <MessageSquare size={14} aria-hidden="true" />,  action: () => { onMessage(student); setOpen(false); },      color: theme === 'dark' ? '#34d399' : '#059669' },
+                            { label: 'View Progress',   icon: <TrendingUp size={14} aria-hidden="true" />,     action: () => { onViewProfile(student); setOpen(false); }, color: theme === 'dark' ? '#4ade80' : '#15803d' },
+                            { label: 'Remove Student',  icon: <Trash2 size={14} aria-hidden="true" />,         action: () => { onRemove(student); setOpen(false); },       color: theme === 'dark' ? '#f87171' : '#dc2626', danger: true },
                         ].map((item, i) => (
                             <button
                                 key={i}
                                 onClick={item.action}
-                                style={{ width: '100%', background: 'transparent', border: 'none', color: item.danger ? '#f87171' : colors.text, padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left', transition: 'background 0.15s' }}
+                                style={{ width: '100%', background: 'transparent', border: 'none', color: item.danger ? (theme === 'dark' ? '#f87171' : '#dc2626') : colors.text, padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left', transition: 'background 0.15s' }}
                                 onMouseEnter={e => e.currentTarget.style.background = item.danger ? 'rgba(239,68,68,0.15)' : colors.bgInput}
                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                             >

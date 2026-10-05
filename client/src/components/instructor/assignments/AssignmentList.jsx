@@ -93,8 +93,8 @@ function EditModal({ assignment, onSave, onClose }) {
                             <input type="checkbox" checked={form.aiTutorEnabled} onChange={e => setForm(f => ({ ...f, aiTutorEnabled: e.target.checked }))} style={{ accentColor: form.aiTutorEnabled ? '#10b981' : '#ef4444' }} /> ⊡ Emare AI Tutor
                         </label>
                     </div>
-                    <div style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '8px', padding: '10px 14px' }}>
-                        <div style={{ color: '#4ade80', fontSize: '12px', fontWeight: 700 }}>No submission deadline</div>
+                    <div style={{ background: 'rgba(21,128,61,0.08)', border: '1px solid rgba(21,128,61,0.25)', borderRadius: '8px', padding: '10px 14px' }}>
+                        <div style={{ color: '#15803d', fontSize: '12px', fontWeight: 700 }}>No submission deadline</div>
                         <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>Students complete this at their own pace when they reach the lesson.</div>
                     </div>
                 </div>

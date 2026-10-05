@@ -91,10 +91,10 @@ export default function InstructorDashboard() {
 
         // Buttons
         primaryBtn: { background: 'linear-gradient(135deg, #16a34a, #15803d)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 22px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', transition: 'opacity 0.2s' },
-        actionBtn: { background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'background 0.2s' },
+        actionBtn: { background: theme === 'dark' ? 'rgba(34,197,94,0.15)' : 'rgba(21,128,61,0.1)', border: `1px solid ${theme === 'dark' ? 'rgba(34,197,94,0.3)' : 'rgba(21,128,61,0.25)'}`, color: theme === 'dark' ? '#4ade80' : '#15803d', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '700', fontSize: '12px', transition: 'background 0.2s' },
         actionBtnAlt: { background: 'transparent', border: `1px solid ${colors.border}`, color: colors.text, borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'background 0.2s' },
-        dangerBtn: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '600', fontSize: '12px' },
-        textBtn: { background: 'transparent', border: 'none', color: '#22c55e', cursor: 'pointer', fontWeight: '600', fontSize: '13px', textDecoration: 'underline' },
+        dangerBtn: { background: theme === 'dark' ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)', border: `1px solid ${theme === 'dark' ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.25)'}`, color: theme === 'dark' ? '#f87171' : '#b91c1c', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontWeight: '700', fontSize: '12px' },
+        textBtn: { background: 'transparent', border: 'none', color: colors.primary, cursor: 'pointer', fontWeight: '700', fontSize: '13px', textDecoration: 'underline' },
 
         // Forms
         formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
@@ -1183,10 +1183,10 @@ export default function InstructorDashboard() {
 
     const getStatusBadge = (status) => {
         const styles = {
-            upcoming: { bg: 'rgba(34,197,94,0.15)', color: '#4ade80', text: 'Upcoming' },
-            live: { bg: 'rgba(239,68,68,0.15)', color: '#f87171', text: '🔴 LIVE NOW' },
-            ended: { bg: 'rgba(100,116,139,0.15)', color: '#94a3b8', text: 'Ended' },
-            cancelled: { bg: 'rgba(239,68,68,0.15)', color: '#ef4444', text: 'Cancelled' }
+            upcoming: { bg: theme === 'dark' ? 'rgba(34,197,94,0.15)' : 'rgba(21,128,61,0.12)', color: theme === 'dark' ? '#4ade80' : '#15803d', text: 'Upcoming' },
+            live: { bg: 'rgba(239,68,68,0.15)', color: theme === 'dark' ? '#f87171' : '#b91c1c', text: '🔴 LIVE NOW' },
+            ended: { bg: 'rgba(100,116,139,0.15)', color: theme === 'dark' ? '#94a3b8' : '#475569', text: 'Ended' },
+            cancelled: { bg: 'rgba(239,68,68,0.15)', color: theme === 'dark' ? '#ef4444' : '#b91c1c', text: 'Cancelled' }
         };
         const style = styles[status] || styles.upcoming;
         return <span style={{ background: style.bg, color: style.color, padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>{style.text}</span>;
@@ -1194,10 +1194,10 @@ export default function InstructorDashboard() {
 
     const getRecordingStatusBadge = (status) => {
         const styles = {
-            processing: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b', text: 'Processing' },
-            available: { bg: 'rgba(34,197,94,0.15)', color: '#4ade80', text: 'Available' },
-            failed: { bg: 'rgba(239,68,68,0.15)', color: '#ef4444', text: 'Failed' },
-            draft: { bg: 'rgba(100,116,139,0.15)', color: '#94a3b8', text: 'Draft' }
+            processing: { bg: 'rgba(245,158,11,0.15)', color: theme === 'dark' ? '#f59e0b' : '#b45309', text: 'Processing' },
+            available: { bg: theme === 'dark' ? 'rgba(34,197,94,0.15)' : 'rgba(21,128,61,0.12)', color: theme === 'dark' ? '#4ade80' : '#15803d', text: 'Available' },
+            failed: { bg: 'rgba(239,68,68,0.15)', color: theme === 'dark' ? '#ef4444' : '#b91c1c', text: 'Failed' },
+            draft: { bg: 'rgba(100,116,139,0.15)', color: theme === 'dark' ? '#94a3b8' : '#475569', text: 'Draft' }
         };
         const style = styles[status] || styles.draft;
         return <span style={{ background: style.bg, color: style.color, padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase' }}>{style.text}</span>;
@@ -1622,10 +1622,10 @@ export default function InstructorDashboard() {
                                     {Array.from({ length: r.rating }).map((_, iconIndex) => <Star key={iconIndex} size={14} style={{ color: '#f59e0b' }} aria-hidden="true" />)}
                                 </span>
                             </div>
-                            <p style={{ color: '#cbd5e1', fontSize: '14px', margin: '0 0 16px', lineHeight: '1.5' }}>{r.reviewText}</p>
+                            <p style={{ color: colors.text, fontSize: '14px', margin: '0 0 16px', lineHeight: '1.5' }}>{r.reviewText}</p>
                             {r.instructorReply ? (
-                                <div style={{ background: 'rgba(34,197,94,0.08)', padding: '12px 16px', borderRadius: '8px', borderLeft: '3px solid #22c55e' }}>
-                                    <span style={{ color: '#4ade80', fontSize: '12px', fontWeight: '700' }}>Your Reply:</span>
+                                <div style={{ background: theme === 'dark' ? 'rgba(34,197,94,0.08)' : 'rgba(21,128,61,0.08)', padding: '12px 16px', borderRadius: '8px', borderLeft: `3px solid ${colors.primary}` }}>
+                                    <span style={{ color: theme === 'dark' ? '#4ade80' : '#15803d', fontSize: '12px', fontWeight: '700' }}>Your Reply:</span>
                                     <p style={{ color: colors.textMuted, fontSize: '13px', margin: '4px 0 0' }}>{r.instructorReply}</p>
                                 </div>
                             ) : (
@@ -2154,7 +2154,7 @@ export default function InstructorDashboard() {
                             {selectedSubmission?.submittedRepositoryURL && (
                                 <div style={{ marginBottom: '16px', padding: '12px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px' }}>
                                     <p style={{ margin: 0, fontSize: '12px', color: colors.textMuted }}>Submitted Link:</p>
-                                    <a href={selectedSubmission.submittedRepositoryURL} target="_blank" rel="noreferrer" style={{ color: '#4ade80', fontSize: '13px' }}>{selectedSubmission.submittedRepositoryURL}</a>
+                                    <a href={selectedSubmission.submittedRepositoryURL} target="_blank" rel="noreferrer" style={{ color: theme === 'dark' ? '#4ade80' : '#15803d', fontSize: '13px', fontWeight: 600 }}>{selectedSubmission.submittedRepositoryURL}</a>
                                 </div>
                             )}
                             <form onSubmit={handleGradeSubmission} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -2187,7 +2187,7 @@ export default function InstructorDashboard() {
                             )}
 
                             {(checkpointEditLesson.quizCheckpoints || []).map((cp, cpIdx) => (
-                                <div key={cp.checkpointId} style={{ background: 'rgba(9,13,22,0.4)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: 10, padding: '12px' }}>
+                                <div key={cp.checkpointId} style={{ background: theme === 'dark' ? 'rgba(9,13,22,0.4)' : colors.bgInput, border: `1px solid ${colors.border}`, borderRadius: 10, padding: '12px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 8, flexWrap: 'wrap' }}>
                                         <span style={{ fontSize: 12, fontWeight: 800, color: '#f59e0b' }}>⏸ Checkpoint {cpIdx + 1}</span>
                                         <button type="button" onClick={() => removeEditedCheckpoint(cpIdx)} style={{ background: 'transparent', border: '1px solid rgba(239,68,68,0.35)', color: '#ef4444', borderRadius: 6, padding: '3px 10px', fontSize: 11, cursor: 'pointer' }}>Remove</button>
@@ -2198,9 +2198,9 @@ export default function InstructorDashboard() {
                                         <div style={s.formGroup}><label style={s.label}>Passing Score (%)</label><input style={s.input} type="number" min="0" max="100" value={cp.passingScorePercent} onChange={e => patchEditedCheckpoint(cpIdx, { passingScorePercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })} /></div>
                                     </div>
                                     {(cp.questions || []).map((q, qIdx) => (
-                                        <div key={qIdx} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '10px', marginBottom: 8, border: '1px solid rgba(51,65,85,0.4)' }}>
+                                        <div key={qIdx} style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.03)' : colors.bgCard, borderRadius: 8, padding: '10px', marginBottom: 8, border: `1px solid ${colors.border}` }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                                                <span style={{ fontSize: 11, fontWeight: 700, color: '#cbd5e1' }}>Question {qIdx + 1}</span>
+                                                <span style={{ fontSize: 11, fontWeight: 700, color: colors.text }}>Question {qIdx + 1}</span>
                                                 <button type="button" onClick={() => removeEditedQuestion(cpIdx, qIdx)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 11, padding: 0 }}>✕ Remove</button>
                                             </div>
                                             <input style={{ ...s.input, marginBottom: 8 }} value={q.questionText} onChange={e => patchEditedQuestion(cpIdx, qIdx, { questionText: e.target.value })} placeholder="Enter the question text" />
@@ -2214,7 +2214,7 @@ export default function InstructorDashboard() {
                                                 </div>
                                             ))}
                                             <div style={{ display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
-                                                <button type="button" onClick={() => addEditedOption(cpIdx, qIdx)} style={{ background: 'transparent', border: 'none', color: '#4ade80', cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: 0 }}>+ Add Option</button>
+                                                <button type="button" onClick={() => addEditedOption(cpIdx, qIdx)} style={{ background: 'transparent', border: 'none', color: theme === 'dark' ? '#4ade80' : '#15803d', cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: 0 }}>+ Add Option</button>
                                                 <span style={{ fontSize: 10, color: colors.textMuted }}>◉ = correct answer</span>
                                             </div>
                                         </div>
