@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { aiService, uploadService } from '../services/api';
 import axios from 'axios';
 import { getAiTutorBlocked, subscribeAiTutorBlocked, AI_TUTOR_BLOCKED_MESSAGE } from '../utils/aiTutorBlock';
+import MarkdownRenderer from './MarkdownRenderer';
 
 export default function AiAssistant({ context = {}, initialPrompt = { prompt: '', id: null } }) {
     const { colors } = useTheme();
@@ -659,13 +660,13 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
             flexShrink: 0
         }),
         msgBubble: (isUser) => ({
-            maxWidth: '78%',
+            maxWidth: isUser ? '78%' : '88%',
             padding: '14px 16px',
             borderRadius: isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
             background: isUser ? colors.primary : colors.bgInput,
             color: isUser ? '#fff' : colors.text,
             border: isUser ? 'none' : `1px solid ${colors.border}`,
-            whiteSpace: 'pre-wrap',
+            whiteSpace: isUser ? 'pre-wrap' : 'normal',
             wordBreak: 'break-word',
             fontSize: '14px',
             lineHeight: 1.6,
@@ -930,7 +931,9 @@ export default function AiAssistant({ context = {}, initialPrompt = { prompt: ''
                             <div key={i} style={s.msgRow(isUser)}>
                                 {!isUser && <div style={s.avatar(false)}>AI</div>}
                                 <div>
-                                    <div style={s.msgBubble(isUser)}>{m.text}</div>
+                                    <div style={s.msgBubble(isUser)}>
+                                        {isUser ? m.text : <MarkdownRenderer content={m.text} isDark={colors.isDark} />}
+                                    </div>
                                     {!isUser && (attachedFile || pdfText) && (
                                         <div style={s.pdfBadge}>PDF Verified</div>
                                     )}
