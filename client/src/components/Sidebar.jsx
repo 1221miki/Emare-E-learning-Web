@@ -63,7 +63,6 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
             // Student or Default
             return [
                 { key: 'dashboard', label: 'Dashboard', path: '/student/dashboard', icon: <LayoutDashboard size={20} /> },
-                { key: 'courses', label: 'Courses', path: '/courses', icon: <BookOpen size={20} /> },
                 { key: 'certificates', label: 'Certificates', path: '/student/certificates', icon: <Award size={20} /> },
                 { key: 'leaderboard', label: 'Leaderboard', path: '/leaderboard', icon: <Trophy size={20} /> },
                 { key: 'messages', label: 'Messages', path: '/messages', icon: <MessageSquare size={20} /> },
@@ -333,35 +332,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                     );
                 })}
 
-                {/* Optional extra bottom buttons */}
-                {extraBottomButtons && (
-                    <div style={{ marginTop: '12px', width: '100%', display: 'flex', justifyContent: 'center' }}>
-                        {!isCollapsed ? (
-                            extraBottomButtons
-                        ) : (
-                            <button
-                                onClick={() => navigate('/courses')}
-                                style={{
-                                    width: '42px',
-                                    height: '42px',
-                                    borderRadius: '12px',
-                                    background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent || colors.primary})`,
-                                    border: 'none',
-                                    color: '#fff',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer',
-                                    boxShadow: '0 4px 12px rgba(34,197,94,0.25)'
-                                }}
-                                title="Course Catalog"
-                                aria-label="Course Catalog"
-                            >
-                                <BookOpen size={18} />
-                            </button>
-                        )}
-                    </div>
-                )}
+
             </nav>
 
             {/* ── USER INFO / ACCOUNT DROPDOWN ──────────────────────────── */}

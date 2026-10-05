@@ -14,8 +14,7 @@ export default function LeaderboardPage() {
         { label: 'My Courses', path: '/student/dashboard?tab=my_courses', key: 'courses' },
         { label: 'Certificates', path: '/student/certificates', key: 'certificates' },
         { label: 'Profile', path: '/student/profile', key: 'profile' },
-        { label: 'Leaderboard', path: '/leaderboard', key: 'leaderboard' },
-        { label: 'Courses', path: '/courses', key: 'catalog' }
+        { label: 'Leaderboard', path: '/leaderboard', key: 'leaderboard' }
     ];
 
     useEffect(() => {
