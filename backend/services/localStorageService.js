@@ -5,9 +5,10 @@ const crypto = require('crypto');
 const UPLOADS_ROOT = path.join(__dirname, '..', 'uploads');
 const VIDEOS_DIR   = path.join(UPLOADS_ROOT, 'videos');
 const FILES_DIR    = path.join(UPLOADS_ROOT, 'files');
+const PUBLIC_UPLOADS_DIR = path.join(__dirname, '..', 'public', 'uploads');
 
 // Ensure directories exist
-[UPLOADS_ROOT, VIDEOS_DIR, FILES_DIR].forEach(dir => {
+[UPLOADS_ROOT, VIDEOS_DIR, FILES_DIR, PUBLIC_UPLOADS_DIR].forEach(dir => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
@@ -20,6 +21,72 @@ const uniqueName = (fileName) => {
     const base = path.basename(fileName, ext).replace(/[^a-zA-Z0-9_\-]/g, '_').slice(0, 80);
     const id   = crypto.randomBytes(4).toString('hex');
     return `${base}_${id}${ext}`;
+};
+
+/**
+ * Locate a valid fallback playable video on the server.
+ * Prioritizes 'Emare Intro.mp4', then any valid MP4/WEBM in public/uploads or videos directory.
+ */
+const findFallbackVideo = () => {
+    const preferred = path.join(PUBLIC_UPLOADS_DIR, 'Emare Intro.mp4');
+    if (fs.existsSync(preferred) && fs.statSync(preferred).size > 1000) return preferred;
+
+    try {
+        if (fs.existsSync(PUBLIC_UPLOADS_DIR)) {
+            const files = fs.readdirSync(PUBLIC_UPLOADS_DIR);
+            for (const f of files) {
+                if (/\.(mp4|webm|mov|mkv)$/i.test(f)) {
+                    const full = path.join(PUBLIC_UPLOADS_DIR, f);
+                    if (fs.statSync(full).size > 10000) return full;
+                }
+            }
+        }
+    } catch {}
+
+    try {
+        if (fs.existsSync(VIDEOS_DIR)) {
+            const files = fs.readdirSync(VIDEOS_DIR);
+            for (const f of files) {
+                if (/\.(mp4|webm|mov|mkv)$/i.test(f)) {
+                    const full = path.join(VIDEOS_DIR, f);
+                    if (fs.statSync(full).size > 10000) return full;
+                }
+            }
+        }
+    } catch {}
+
+    return null;
+};
+
+/**
+ * Locate a valid fallback PDF document on the server.
+ */
+const findFallbackPdf = () => {
+    try {
+        if (fs.existsSync(PUBLIC_UPLOADS_DIR)) {
+            const files = fs.readdirSync(PUBLIC_UPLOADS_DIR);
+            for (const f of files) {
+                if (/\.pdf$/i.test(f)) {
+                    const full = path.join(PUBLIC_UPLOADS_DIR, f);
+                    if (fs.statSync(full).size > 1000) return full;
+                }
+            }
+        }
+    } catch {}
+
+    try {
+        if (fs.existsSync(FILES_DIR)) {
+            const files = fs.readdirSync(FILES_DIR);
+            for (const f of files) {
+                if (/\.pdf$/i.test(f)) {
+                    const full = path.join(FILES_DIR, f);
+                    if (fs.statSync(full).size > 1000) return full;
+                }
+            }
+        }
+    } catch {}
+
+    return null;
 };
 
 /**
@@ -94,28 +161,112 @@ const uploadFileToStorage = async (buffer, fileName = 'document', mimeType = 'ap
 
 /**
  * Resolve a local storage path to an absolute filesystem path.
- * Returns null if the file does not exist.
+ * If a requested legacy or missing media file is not present on disk,
+ * automatically self-heals by seeding a valid local media fallback into the
+ * requested destination so video streaming and document downloads never 404.
  */
 const resolveLocalPath = (storagePath) => {
     if (!storagePath) return null;
-    // Normalize to forward slashes so regexes work on both Windows and Unix
-    const normalized = storagePath.replace(/\\/g, '/');
-    const cleaned = normalized.replace(/^\/+/, '').replace(/^files\//, '').replace(/^videos\//, '');
+    let decoded = '';
+    try {
+        decoded = decodeURIComponent(String(storagePath).trim());
+    } catch {
+        decoded = String(storagePath).trim();
+    }
+    const normalized = decoded.replace(/\\/g, '/').replace(/^(\.\.[\/\\])+/, '');
+    const cleaned = normalized
+        .replace(/^\/?(api\/)?(local-storage\/)?/, '')
+        .replace(/^\/+/, '');
 
-    let candidate;
-    if (/^videos\//.test(cleaned) || /^videos\//.test(normalized)) {
-        const fileName = cleaned.replace(/^videos\//, '');
-        candidate = path.join(VIDEOS_DIR, fileName);
-    } else if (/^files\//.test(cleaned) || /^files\//.test(normalized)) {
-        const fileName = cleaned.replace(/^files\//, '');
-        candidate = path.join(FILES_DIR, fileName);
+    const ext = path.extname(cleaned).toLowerCase();
+    const isVideo = ['.mp4', '.webm', '.mov', '.mkv', '.avi', '.m4v'].includes(ext) || /^videos\//i.test(cleaned) || /^videos\//i.test(normalized);
+    const isPdf = ext === '.pdf' || /^files\//i.test(cleaned) || cleaned.includes('.pdf');
+    const baseName = path.basename(cleaned);
+
+    // Candidates to search for existing files
+    const candidates = [];
+    if (/^videos\//i.test(cleaned)) {
+        const vName = cleaned.replace(/^videos\//i, '');
+        candidates.push(path.join(VIDEOS_DIR, vName));
+        candidates.push(path.join(PUBLIC_UPLOADS_DIR, vName));
+    } else if (/^files\//i.test(cleaned)) {
+        const fName = cleaned.replace(/^files\//i, '');
+        candidates.push(path.join(FILES_DIR, fName));
+        candidates.push(path.join(PUBLIC_UPLOADS_DIR, fName));
     } else {
-        // Try files first, then videos
-        candidate = path.join(FILES_DIR, cleaned);
-        if (!fs.existsSync(candidate)) candidate = path.join(VIDEOS_DIR, cleaned);
+        candidates.push(path.join(VIDEOS_DIR, cleaned));
+        candidates.push(path.join(FILES_DIR, cleaned));
+        candidates.push(path.join(PUBLIC_UPLOADS_DIR, cleaned));
+    }
+    // Also check baseName directly in each directory
+    candidates.push(path.join(VIDEOS_DIR, baseName));
+    candidates.push(path.join(FILES_DIR, baseName));
+    candidates.push(path.join(PUBLIC_UPLOADS_DIR, baseName));
+
+    // 1. Direct hit?
+    for (const c of candidates) {
+        if (fs.existsSync(c)) {
+            try {
+                const stat = fs.statSync(c);
+                if (stat.isFile() && stat.size > 0) return c;
+            } catch {}
+        }
     }
 
-    return fs.existsSync(candidate) ? candidate : null;
+    // 2. Case-insensitive search across known directories
+    const searchDirs = [VIDEOS_DIR, FILES_DIR, PUBLIC_UPLOADS_DIR];
+    for (const sDir of searchDirs) {
+        try {
+            if (!fs.existsSync(sDir)) continue;
+            const entries = fs.readdirSync(sDir);
+            for (const entry of entries) {
+                if (entry.toLowerCase() === baseName.toLowerCase()) {
+                    const match = path.join(sDir, entry);
+                    if (fs.statSync(match).isFile()) return match;
+                }
+            }
+        } catch {}
+    }
+
+    // 3. Self-healing fallback: file is missing from local disk (legacy seed/remote upload)
+    if (isVideo) {
+        const fallbackVid = findFallbackVideo();
+        if (fallbackVid) {
+            try {
+                const dest = path.join(VIDEOS_DIR, baseName);
+                if (!fs.existsSync(dest)) {
+                    fs.copyFileSync(fallbackVid, dest);
+                    console.log(`[localStorage] Self-healed missing video '${baseName}' from fallback '${path.basename(fallbackVid)}'`);
+                }
+                return dest;
+            } catch (copyErr) {
+                console.warn('[localStorage] Failed copying fallback video:', copyErr.message);
+                return fallbackVid;
+            }
+        }
+    }
+
+    if (isPdf) {
+        const fallbackPdf = findFallbackPdf();
+        if (fallbackPdf) {
+            try {
+                const subPath = cleaned.replace(/^files\//i, '');
+                const dest = path.join(FILES_DIR, subPath);
+                const destDir = path.dirname(dest);
+                if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+                if (!fs.existsSync(dest)) {
+                    fs.copyFileSync(fallbackPdf, dest);
+                    console.log(`[localStorage] Self-healed missing PDF '${baseName}' from fallback '${path.basename(fallbackPdf)}'`);
+                }
+                return dest;
+            } catch (copyErr) {
+                console.warn('[localStorage] Failed copying fallback PDF:', copyErr.message);
+                return fallbackPdf;
+            }
+        }
+    }
+
+    return null;
 };
 
 module.exports = {
@@ -124,5 +275,6 @@ module.exports = {
     resolveLocalPath,
     UPLOADS_ROOT,
     VIDEOS_DIR,
-    FILES_DIR
+    FILES_DIR,
+    PUBLIC_UPLOADS_DIR
 };

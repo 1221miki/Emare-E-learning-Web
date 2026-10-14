@@ -317,34 +317,51 @@ export default function LearningWorkspace() {
     // via the Axios-equivalent fetch with the JWT, then trigger a blob download.
     const [pdfDownloading, setPdfDownloading] = useState(false);
     const downloadPdf = async (rawUrl, label = 'document.pdf') => {
-        const proxyUrl = getPdfUrl(rawUrl);
-        if (!proxyUrl) return;
-        // Non-local/non-video URLs (Google Drive, etc.) — open normally
-        if (proxyUrl === rawUrl || !proxyUrl.includes('/api/pdf-proxy/')) {
-            window.open(proxyUrl, '_blank', 'noopener,noreferrer');
-            return;
+        let proxyUrl = getPdfUrl(rawUrl);
+        if (!proxyUrl && activeLesson?.notesPdfUrl) {
+            proxyUrl = activeLesson.notesPdfUrl;
         }
+        if (!proxyUrl) return;
+
         setPdfDownloading(true);
         try {
-            const token = localStorage.getItem('elms_token');
-            const res = await fetch(proxyUrl, {
-                headers: token ? { Authorization: `Bearer ${token}` } : {},
-                credentials: 'include'
-            });
+            // Generate clean safe filename for saving to disk
+            let safeName = String(label || 'lesson-notes.pdf')
+                .replace(/[/\\?%*:|"<>]/g, '_')
+                .trim();
+            if (!safeName.toLowerCase().endsWith('.pdf')) {
+                safeName += '.pdf';
+            }
+
+            const separator = proxyUrl.includes('?') ? '&' : '?';
+            const downloadUrl = `${proxyUrl}${separator}download=1&filename=${encodeURIComponent(safeName)}`;
+
+            const res = await fetch(downloadUrl);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const blob = await res.blob();
-            const blobUrl = URL.createObjectURL(blob);
+
+            const blobUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
+            a.style.display = 'none';
             a.href = blobUrl;
-            a.download = label;
+            a.download = safeName;
+            document.body.appendChild(a);
+            a.click();
+
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(blobUrl);
+            }, 600);
+        } catch (err) {
+            console.error('[downloadPdf] Direct blob download failed, falling back to direct anchor:', err);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = proxyUrl;
+            a.download = label || 'lesson-notes.pdf';
             a.target = '_blank';
             document.body.appendChild(a);
             a.click();
-            document.body.removeChild(a);
-            setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-        } catch (err) {
-            console.error('[downloadPdf] failed:', err);
-            alert('Could not download the PDF. Please try again.');
+            setTimeout(() => document.body.removeChild(a), 600);
         } finally {
             setPdfDownloading(false);
         }
@@ -470,7 +487,10 @@ export default function LearningWorkspace() {
         setIsPlaying(false);
         setCheckpointDirectFailed(false);
 
-        const raw = getLessonVideoUrl(activeLesson);
+        let raw = getLessonVideoUrl(activeLesson);
+        if (!raw && activeLesson?.videoSource === 'upload') {
+            raw = `/api/local-storage/videos/lesson_${activeLesson._id}.mp4`;
+        }
         const isYouTube = activeLesson?.videoSource === 'youtube' || isYouTubeUrl(raw);
         if (!raw) { setVideoUrl(''); setVideoError('No video available for this lesson.'); devLog('Lesson → no videoUrl on lesson; video area shows notice.'); return; }
         setVideoLoading(true);
@@ -774,7 +794,14 @@ export default function LearningWorkspace() {
             if (isCheckpointPassed(cp)) { firedCheckpointsRef.current.add(cp.checkpointId); continue; }
             if (!nearest || cp.timestampSeconds < nearest.timestampSeconds) nearest = cp;
         }
-        if (nearest && t >= nearest.timestampSeconds - 0.25) {
+        if (!nearest) return false;
+
+        const vidDur = videoEl.duration || videoDuration || 0;
+        const triggerTime = (vidDur > 0 && nearest.timestampSeconds > vidDur)
+            ? Math.max(0, vidDur - 0.5)
+            : (nearest.timestampSeconds - 0.25);
+
+        if (t >= triggerTime) {
             videoEl.pause();                       // hard stop BEFORE anything else
             firedCheckpointsRef.current.add(nearest.checkpointId);
             setActiveCheckpoint(nearest);
@@ -784,7 +811,7 @@ export default function LearningWorkspace() {
             return true;
         }
         return false;
-    }, [hasCheckpoints, activeCheckpoint, checkpointsData, isCheckpointPassed]);
+    }, [hasCheckpoints, activeCheckpoint, checkpointsData, isCheckpointPassed, videoDuration]);
 
     // Pause safety-net: while a quiz overlay is open the video must NEVER play —
     // covers programmatic play() races and browser autoplay quirks.
@@ -1142,8 +1169,20 @@ export default function LearningWorkspace() {
     }, [activeLesson, isCurrentDone, checkpointsData, isCheckpointPassed, performCompletion, activeFlatIdx, totalLessons, startAutoNextCountdown, lessonQuizRequired, lessonQuizPassed, lessonAssignmentRequired, lessonAssignmentSubmitted]);
 
     const handleVideoEnded = useCallback(() => {
+        setIsPlaying(false);
+        if (hasCheckpoints && !allConceptsDone) {
+            const firstUnpassed = sortedCheckpoints.find(cp => !isCheckpointPassed(cp));
+            if (firstUnpassed) {
+                firedCheckpointsRef.current.add(firstUnpassed.checkpointId);
+                setActiveCheckpoint(firstUnpassed);
+                setCheckpointAnswers({});
+                setCheckpointResult(null);
+                setCheckpointError('');
+                return;
+            }
+        }
         tryAutoCompleteAndAdvance();
-    }, [tryAutoCompleteAndAdvance]);
+    }, [hasCheckpoints, allConceptsDone, sortedCheckpoints, isCheckpointPassed, tryAutoCompleteAndAdvance]);
 
     const goPrev = () => { if (activeFlatIdx > 0) goToFlatIdx(activeFlatIdx - 1); };
 
@@ -1153,6 +1192,45 @@ export default function LearningWorkspace() {
     };
 
     // ── Certificate generation ────────────────────────────────────────────────
+    useEffect(() => {
+        if (!showCompletion || !courseId) return;
+        certificateService.checkEligibility(courseId).then(res => {
+            const cert = res.data?.data?.certificate;
+            if (cert?.certificateId) {
+                setCertId(cert.certificateId);
+            }
+        }).catch(() => {});
+    }, [showCompletion, courseId]);
+
+    const [downloadingCert, setDownloadingCert] = useState(false);
+    const handleDownloadCertificateDirect = async () => {
+        if (!certId) {
+            navigate('/student/certificates');
+            return;
+        }
+        setDownloadingCert(true);
+        try {
+            const res = await certificateService.download(certId, { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `${certId}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 600);
+        } catch (err) {
+            console.error('[LearningWorkspace] Certificate direct download failed, navigating:', err);
+            navigate('/student/certificates');
+        } finally {
+            setDownloadingCert(false);
+        }
+    };
+
     const handleGetCertificate = async () => {
         setCertLoading(true); setCertError('');
         try {
@@ -1220,8 +1298,15 @@ export default function LearningWorkspace() {
                                 <div style={{ color: gold, fontFamily: 'monospace', fontWeight: 700, fontSize: 14, letterSpacing: '0.05em' }}>{certId}</div>
                             </div>
                             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-                                <button onClick={() => navigate('/student/certificates')} style={{ background: `linear-gradient(135deg, ${green}, #059669)`, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>📥 Download Certificate</button>
+                                <button
+                                    onClick={handleDownloadCertificateDirect}
+                                    disabled={downloadingCert}
+                                    style={{ background: `linear-gradient(135deg, ${green}, #059669)`, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: downloadingCert ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                                >
+                                    📥 {downloadingCert ? 'Downloading…' : 'Download Certificate PDF'}
+                                </button>
                                 <button onClick={() => navigate(`/verify-certificate/${certId}`)} style={{ background: 'rgba(255,255,255,0.1)', color: isDark ? '#e2e8f0' : '#374151', border: `1px solid ${border}`, borderRadius: 10, padding: '12px 24px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>🔍 Verify</button>
+                                <button onClick={() => navigate('/student/certificates')} style={{ background: 'transparent', border: `1px solid ${border}`, color: muted, borderRadius: 10, padding: '12px 20px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>📜 All Certificates</button>
                             </div>
                         </>
                     ) : (
@@ -1433,6 +1518,18 @@ export default function LearningWorkspace() {
                                                         attemptStatus={checkpointsData?.attemptStatus || {}}
                                                         activeCheckpointId={activeCheckpoint?.checkpointId || null}
                                                         onSeek={seekTo}
+                                                        onCheckpointClick={(cp) => {
+                                                            if (!cp) return;
+                                                            const targetTime = Math.max(0, (cp.startSeconds ?? (cp.timestampSeconds - 5)));
+                                                            if (videoRef.current) {
+                                                                videoRef.current.currentTime = targetTime;
+                                                            }
+                                                            firedCheckpointsRef.current.add(cp.checkpointId);
+                                                            setActiveCheckpoint(cp);
+                                                            setCheckpointAnswers({});
+                                                            setCheckpointResult(null);
+                                                            setCheckpointError('');
+                                                        }}
                                                     />
                                                 </div>
 
@@ -1528,23 +1625,40 @@ export default function LearningWorkspace() {
                                     const isActive = activeCheckpoint?.checkpointId === cp.checkpointId;
                                     const isPending = !passed && !isActive;
                                     return (
-                                        <div key={cp.checkpointId} style={{
-                                            display: 'flex', alignItems: 'center', gap: 6,
-                                            padding: '5px 12px', borderRadius: 20, flexShrink: 0,
-                                            fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
-                                            background: isActive
-                                                ? `${gold}25`
-                                                : passed
-                                                    ? `${green}20`
-                                                    : isDark ? '#334155' : '#e2e8f0',
-                                            color: isActive ? gold : passed ? green : muted,
-                                            border: `1px solid ${isActive ? `${gold}50` : passed ? `${green}40` : 'transparent'}`
-                                        }}>
+                                        <button
+                                            key={cp.checkpointId}
+                                            onClick={() => {
+                                                const targetTime = Math.max(0, (cp.startSeconds ?? (cp.timestampSeconds - 5)));
+                                                if (videoRef.current) {
+                                                    videoRef.current.currentTime = targetTime;
+                                                }
+                                                firedCheckpointsRef.current.add(cp.checkpointId);
+                                                setActiveCheckpoint(cp);
+                                                setCheckpointAnswers({});
+                                                setCheckpointResult(null);
+                                                setCheckpointError('');
+                                            }}
+                                            title={passed ? `${cp.title || `Concept ${idx + 1}`} (Passed ✓)` : `Click to take Concept ${idx + 1} Quiz`}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: 6,
+                                                padding: '6px 14px', borderRadius: 20, flexShrink: 0,
+                                                fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
+                                                cursor: 'pointer',
+                                                background: isActive
+                                                    ? `${gold}25`
+                                                    : passed
+                                                        ? `${green}20`
+                                                        : isDark ? '#334155' : '#e2e8f0',
+                                                color: isActive ? gold : passed ? green : (isDark ? '#cbd5e1' : '#475569'),
+                                                border: `1.5px solid ${isActive ? `${gold}60` : passed ? `${green}40` : (isDark ? '#475569' : '#cbd5e1')}`,
+                                                transition: 'all 0.15s ease'
+                                            }}
+                                        >
                                             <span style={{ fontSize: 13 }}>
                                                 {isActive ? '⏸' : passed ? '✓' : `${idx + 1}`}
                                             </span>
                                             {cp.title || `Concept ${idx + 1}`}
-                                        </div>
+                                        </button>
                                     );
                                 })}
                             </div>

@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { FaEye, FaEyeSlash, FaArrowLeft, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
 
 export default function ResetPasswordPage() {
     const { resetPassword } = useAuth();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
@@ -76,6 +79,87 @@ export default function ResetPasswordPage() {
             }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const s = {
+        page: {
+            minHeight: '100vh',
+            background: isDark
+                ? 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)'
+                : 'linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%)',
+            display: 'flex', flexDirection: 'column',
+            justifyContent: 'center', alignItems: 'center',
+            padding: 20,
+            position: 'relative'
+        },
+        back: {
+            position: 'absolute', top: 24, left: 24,
+            color: isDark ? '#94a3b8' : '#475569',
+            textDecoration: 'none',
+            display: 'flex', alignItems: 'center', gap: 8,
+            fontSize: 14, fontWeight: 600,
+            padding: '10px 14px',
+            background: isDark ? 'rgba(255,255,255,0.06)' : '#ffffff',
+            borderRadius: 10,
+            border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e2e8f0',
+            transition: 'color 0.2s, background 0.2s'
+        },
+        card: {
+            background: isDark ? '#111a2e' : '#ffffff',
+            borderRadius: 24,
+            boxShadow: isDark
+                ? '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)'
+                : '0 24px 60px rgba(15,23,42,0.08)',
+            border: isDark ? '1px solid #24304d' : '1px solid #e2e8f0',
+            padding: 36, maxWidth: 450, width: '100%'
+        },
+        field:   { display: 'flex', flexDirection: 'column', gap: 8 },
+        label:   { fontSize: 13, fontWeight: 600, color: isDark ? '#cbd5e1' : '#334155' },
+        input: {
+            padding: '12px 14px',
+            border: isDark ? '1px solid rgba(255,255,255,0.15)' : '1px solid #e2e8f0',
+            borderRadius: 10, fontSize: 14,
+            background: isDark ? 'rgba(255,255,255,0.07)' : '#f8fafc',
+            color: isDark ? '#ffffff' : '#0f172a',
+            outline: 'none',
+            boxSizing: 'border-box'
+        },
+        pwdWrap: { position: 'relative', display: 'flex', alignItems: 'center', width: '100%' },
+        eye: {
+            position: 'absolute', right: 12,
+            background: 'none', border: 'none',
+            cursor: 'pointer', color: isDark ? '#94a3b8' : '#64748b', fontSize: 16
+        },
+        btn: {
+            padding: '14px 16px',
+            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+            color: '#fff', border: 'none', borderRadius: 10,
+            fontSize: 15, fontWeight: 700, cursor: 'pointer',
+            boxShadow: '0 8px 24px rgba(34,197,94,0.35)',
+            marginTop: 10, textDecoration: 'none', textAlign: 'center'
+        },
+        errorBox: {
+            background: isDark ? 'rgba(239,68,68,0.15)' : '#ffebee',
+            border: isDark ? '1px solid rgba(239,68,68,0.4)' : '1px solid #ef5350',
+            borderRadius: 10, padding: '12px 14px',
+            color: isDark ? '#fca5a5' : '#d32f2f',
+            fontSize: 13, marginBottom: 20,
+            display: 'flex', alignItems: 'flex-start'
+        },
+        successBox: {
+            background: isDark ? 'rgba(34,197,94,0.15)' : '#e8f5e9',
+            border: isDark ? '1px solid rgba(34,197,94,0.4)' : '1px solid #66bb6a',
+            borderRadius: 10, padding: '12px 14px',
+            color: isDark ? '#86efac' : '#2e7d32',
+            fontSize: 13, marginBottom: 20,
+            display: 'flex', alignItems: 'center'
+        },
+        req: {
+            background: isDark ? 'rgba(255,255,255,0.04)' : '#f9f9f9',
+            border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e0e0e0',
+            borderRadius: 10, padding: '12px 14px',
+            color: isDark ? '#94a3b8' : '#333'
         }
     };
 
@@ -220,59 +304,3 @@ export default function ResetPasswordPage() {
     );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-const s = {
-    page: {
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        display: 'flex', flexDirection: 'column',
-        justifyContent: 'center', alignItems: 'center',
-        padding: 20,
-        fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
-    },
-    back: {
-        position: 'absolute', top: 20, left: 20,
-        color: '#fff', textDecoration: 'none',
-        display: 'flex', alignItems: 'center', gap: 8,
-        fontSize: 14, fontWeight: 500
-    },
-    card: {
-        background: '#fff', borderRadius: 12,
-        boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-        padding: 40, maxWidth: 450, width: '100%'
-    },
-    field:   { display: 'flex', flexDirection: 'column', gap: 8 },
-    label:   { fontSize: 13, fontWeight: 600, color: '#333' },
-    input: {
-        padding: '12px 14px', border: '1px solid #ddd',
-        borderRadius: 6, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box'
-    },
-    pwdWrap: { position: 'relative', display: 'flex', alignItems: 'center' },
-    eye: {
-        position: 'absolute', right: 12,
-        background: 'none', border: 'none',
-        cursor: 'pointer', color: '#666', fontSize: 16
-    },
-    btn: {
-        padding: '12px 16px', backgroundColor: '#22c55e',
-        color: '#fff', border: 'none', borderRadius: 6,
-        fontSize: 15, fontWeight: 600, cursor: 'pointer',
-        transition: 'background 0.3s', marginTop: 10
-    },
-    errorBox: {
-        background: '#ffebee', border: '1px solid #ef5350',
-        borderRadius: 6, padding: '12px 14px', color: '#d32f2f',
-        fontSize: 13, marginBottom: 20,
-        display: 'flex', alignItems: 'flex-start'
-    },
-    successBox: {
-        background: '#e8f5e9', border: '1px solid #66bb6a',
-        borderRadius: 6, padding: '12px 14px', color: '#2e7d32',
-        fontSize: 13, marginBottom: 20,
-        display: 'flex', alignItems: 'center'
-    },
-    req: {
-        background: '#f9f9f9', border: '1px solid #e0e0e0',
-        borderRadius: 6, padding: '12px 14px'
-    }
-};

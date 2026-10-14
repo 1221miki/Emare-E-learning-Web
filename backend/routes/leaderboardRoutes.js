@@ -5,15 +5,8 @@ const User = require('../models/User');
 // @route   GET /api/leaderboard
 // @access  Public
 router.get('/', async (req, res) => {
-    try {
-        const leaders = await User.find({ assignedRole: 'Student', isActive: true })
-            .select('fullName avatarUrl gamificationPoints level earnedBadges')
-            .sort('-gamificationPoints')
-            .limit(50);
-        res.status(200).json({ success: true, data: leaders });
-    } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
-    }
+    // Leaderboard disabled per application requirements
+    res.status(200).json({ success: true, data: [] });
 });
 
 module.exports = router;

@@ -31,7 +31,8 @@ export default function CheckpointTimeline({
     checkpoints = [],          // sorted by timestampSeconds ascending
     attemptStatus = {},        // { [checkpointId]: { passed } }
     activeCheckpointId = null, // checkpoint whose quiz modal is open
-    onSeek                     // (seconds:number) => void
+    onSeek,                    // (seconds:number) => void
+    onCheckpointClick          // (checkpoint) => void
 }) {
     const trackRef   = useRef(null);
     const draggingRef = useRef(false);
@@ -165,11 +166,17 @@ export default function CheckpointTimeline({
                     const isNext = nextPending?.checkpointId === cp.checkpointId;
                     const dotColor = passed ? GREEN : isActive || isNext ? GOLD : SLATE;
                     return (
-                        <div key={cp.checkpointId} title={`${cp.title || `Concept ${i + 1}`} · ${fmt(cp.timestampSeconds)}${passed ? ' · passed ✓' : ''}`} style={{
-                            position: 'absolute', top: 13,
-                            left: `${(cp.timestampSeconds / dur) * 100}%`,
-                            transform: 'translate(-50%, -50%)'
-                        }}>
+                        <div
+                            key={cp.checkpointId}
+                            onClick={(e) => { e.stopPropagation(); onCheckpointClick?.(cp); }}
+                            title={`${cp.title || `Concept ${i + 1}`} · ${fmt(cp.timestampSeconds)}${passed ? ' · passed ✓' : ' · click to take quiz'}`}
+                            style={{
+                                position: 'absolute', top: 13,
+                                left: `${(cp.timestampSeconds / dur) * 100}%`,
+                                transform: 'translate(-50%, -50%)',
+                                cursor: 'pointer'
+                            }}
+                        >
                             {/* pulsing halo on the next required dot */}
                             {(isActive || isNext) && !passed && (
                                 <span style={{
@@ -209,7 +216,11 @@ export default function CheckpointTimeline({
                 <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.85)', fontFamily: 'monospace' }}>
                     {fmt(currentTime)}
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: GOLD }}>
+                <span
+                    onClick={(e) => { e.stopPropagation(); if (nextPending) onCheckpointClick?.(nextPending); }}
+                    title={nextPending ? 'Click to open checkpoint quiz' : undefined}
+                    style={{ fontSize: 11, fontWeight: 700, color: GOLD, cursor: nextPending ? 'pointer' : 'default', textDecoration: nextPending ? 'underline' : 'none' }}
+                >
                     {nextPending
                         ? `⏸ Checkpoint at ${fmt(nextPending.timestampSeconds)} — quiz will pop up`
                         : '✓ All concepts completed'}

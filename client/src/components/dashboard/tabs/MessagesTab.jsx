@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { messageService, notificationService, discussionService, aiService } from '../../../services/api';
-import { Award, Bell, BookOpen, Bot, CheckCircle2, ClipboardCheck, CreditCard, FileQuestion, Inbox, Medal, MessagesSquare, SendHorizonal, Settings, Star } from 'lucide-react';
+import { Award, Bell, BookOpen, Bot, CheckCircle2, CheckCheck, ClipboardCheck, CreditCard, FileQuestion, Inbox, Medal, MessagesSquare, SendHorizonal, Settings, Star, Trash2 } from 'lucide-react';
 import MarkdownRenderer from '../../MarkdownRenderer';
 
 const WARN = '#f59e0b';
@@ -42,6 +42,7 @@ export default function MessagesTab(dash) {
     const [expandedSent, setExpandedSent] = useState(null);
 
     const [notifs, setNotifs] = useState([]);
+    const [notifFilter, setNotifFilter] = useState('all'); // 'all' | 'unread'
 
     const [discCourse, setDiscCourse] = useState('');
     const [discussions, setDiscussions] = useState([]);
@@ -57,9 +58,30 @@ export default function MessagesTab(dash) {
 
     const threadEndRef = useRef(null);
 
-    const getOther = useCallback((conv) => (conv.participants || []).find(p => (p.userRef?._id || p.userRef) !== uid), [uid]);
-    const convTitle = useCallback((conv) => conv.title || getOther(conv)?.userRef?.fullName || 'Conversation', [getOther]);
-    const convRole = useCallback((conv) => getOther(conv)?.userRef?.assignedRole || '', [getOther]);
+    const getOther = useCallback((conv) => {
+        if (!conv || !conv.participants) return null;
+        return (conv.participants || []).find(p => {
+            const pid = (p.userRef?._id || p.userRef)?.toString();
+            return pid && pid !== uid?.toString();
+        }) || null;
+    }, [uid]);
+    const convTitle = useCallback((conv) => {
+        if (!conv) return 'Conversation';
+        if (conv.title) return conv.title;
+        if (conv.displayTitle) return conv.displayTitle;
+        const other = getOther(conv);
+        if (other?.userRef?.fullName) return other.userRef.fullName;
+        if (conv.otherParticipant?.fullName) return conv.otherParticipant.fullName;
+        return 'Unavailable User';
+    }, [getOther]);
+    const convRole = useCallback((conv) => {
+        if (!conv) return '';
+        if (conv.displayRole) return conv.displayRole;
+        const other = getOther(conv);
+        if (other?.userRef?.assignedRole) return other.userRef.assignedRole;
+        if (conv.otherParticipant?.assignedRole) return conv.otherParticipant.assignedRole;
+        return '';
+    }, [getOther]);
 
     const scrollToBottom = () => setTimeout(() => threadEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
 
@@ -112,7 +134,8 @@ export default function MessagesTab(dash) {
             if (r.status !== 'fulfilled') return;
             const msgs = r.value?.data?.data || [];
             msgs.forEach(m => {
-                if (String(m.senderRef) === uid) sent.push({ ...m, conv: conversations[i] });
+                const sId = (m.senderRef?._id || m.senderRef)?.toString();
+                if (sId === uid?.toString()) sent.push({ ...m, conv: conversations[i] });
             });
         });
         setSentList(sent);
@@ -127,11 +150,11 @@ export default function MessagesTab(dash) {
     const handleSend = async () => {
         if (!draft.trim() || !activeConv) return;
         const other = getOther(activeConv);
-        const receiverId = other?.userRef?._id || other?.userRef;
+        const receiverId = (other?.userRef?._id || other?.userRef)?.toString() || activeConv.otherParticipant?._id;
         if (!receiverId) return;
         setSending(true);
         try {
-            const res = await messageService.sendMessageDirect({ receiverId, body: draft });
+            const res = await messageService.sendMessageDirect({ conversationId: activeConv._id, receiverId, body: draft });
             const msg = res.data.data || { _id: Date.now(), body: draft, senderRef: uid, createdAt: new Date().toISOString() };
             setThread(prev => [...prev, msg]);
             setDraft('');
@@ -152,6 +175,23 @@ export default function MessagesTab(dash) {
     const markAllNotifsRead = async () => {
         setNotifs(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
         try { await notificationService.markAllAsRead(); } catch { /* non-fatal */ }
+    };
+
+    const deleteSingleNotif = async (id) => {
+        setNotifs(prev => prev.filter(n => n._id !== id));
+        try { await notificationService.delete(id); } catch (err) { console.error('Failed to delete notification:', err); }
+    };
+
+    const clearReadNotifs = async () => {
+        setNotifs(prev => prev.filter(n => n.isRead === false && n.read === false));
+        try { await notificationService.clearRead(); } catch (err) { console.error('Failed to clear read notifications:', err); }
+    };
+
+    const deleteAllNotifs = async () => {
+        const confirmed = window.confirm('Are you sure you want to delete all notifications? This action cannot be undone.');
+        if (!confirmed) return;
+        setNotifs([]);
+        try { await notificationService.deleteAll(); } catch (err) { console.error('Failed to delete all notifications:', err); }
     };
 
     const openAiConv = async (convId) => {
@@ -529,55 +569,261 @@ export default function MessagesTab(dash) {
         </div>
     );
 
-    const renderNotifications = () => (
-        <div>
-            <div style={styles.tabHeader}>
-                <h2 style={{ ...styles.tabTitle, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Bell size={20} aria-hidden="true" /> Notification Center
-                    {notifs.filter(n => n.isRead === false || n.read === false).length > 0 && (
-                        <span style={{ background: DANGER, color: '#fff', fontSize: 11, fontWeight: 800, borderRadius: 99, padding: '2px 10px' }}>
-                            {notifs.filter(n => n.isRead === false || n.read === false).length} unread
-                        </span>
-                    )}
-                </h2>
-                <p style={styles.tabSubtitle}>Assignment reminders, quiz deadlines, instructor announcements and system updates</p>
-            </div>
-            <div style={styles.panelCard}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
-                <span style={{ color: colors.textMuted, fontSize: 13 }}>{notifs.length} notification{notifs.length !== 1 ? 's' : ''}</span>
-                <button onClick={markAllNotifsRead} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.primary, borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    <CheckCircle2 size={14} aria-hidden="true" /> Mark All Read
-                </button>
-            </div>
-            {notifs.length === 0 ? (
-                <div style={styles.emptyContent}>
-                    <Bell size={40} color={colors.textMuted} style={{ marginBottom: 12 }} aria-hidden="true" />
-                    <p style={styles.emptyText}>No notifications yet. Assignment reminders, quiz deadlines, and payment updates will appear here.</p>
+    const renderNotifications = () => {
+        const unreadList = notifs.filter(n => n.isRead === false || n.read === false);
+        const unreadCount = unreadList.length;
+        const readCount = notifs.length - unreadCount;
+        const displayedNotifs = notifFilter === 'unread' ? unreadList : notifs;
+
+        return (
+            <div>
+                <div style={styles.tabHeader}>
+                    <h2 style={{ ...styles.tabTitle, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Bell size={20} aria-hidden="true" /> Notification Center
+                        {unreadCount > 0 && (
+                            <span style={{ background: DANGER, color: '#fff', fontSize: 11, fontWeight: 800, borderRadius: 99, padding: '2px 10px' }}>
+                                {unreadCount} unread
+                            </span>
+                        )}
+                    </h2>
+                    <p style={styles.tabSubtitle}>Assignment reminders, quiz deadlines, instructor announcements and system updates</p>
                 </div>
-            ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {notifs.map(n => {
-                        const meta = TYPE_META[n.type] || TYPE_META.default;
-                        const unread = n.isRead === false || n.read === false;
-                        return (
-                            <div key={n._id} onClick={() => markNotifRead(n._id)} style={{ display: 'flex', gap: 14, padding: '14px 16px', borderRadius: 12, background: unread ? `${colors.primary}08` : colors.bgInput, border: `1px solid ${unread ? `${colors.primary}30` : colors.border}`, cursor: 'pointer', alignItems: 'flex-start', transition: 'background 0.15s' }}>
-                                <div style={{ width: 40, height: 40, borderRadius: 12, background: `${meta.color}15`, color: meta.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{meta.icon}</div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                                        <span style={{ color: colors.text, fontSize: 14, fontWeight: unread ? 800 : 600 }}>{n.title || 'Notification'}</span>
-                                        <span style={{ color: colors.textMuted, fontSize: 11, flexShrink: 0 }}>{n.createdAt ? new Date(n.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : ''}</span>
+
+                <div style={styles.panelCard}>
+                    {/* Header Controls: Filters and Actions */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+                        {/* Requirement 5: All and Unread filters */}
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <button
+                                type="button"
+                                onClick={() => setNotifFilter('all')}
+                                style={{
+                                    background: notifFilter === 'all' ? colors.primary : 'transparent',
+                                    color: notifFilter === 'all' ? '#fff' : colors.text,
+                                    border: `1px solid ${notifFilter === 'all' ? colors.primary : colors.border}`,
+                                    borderRadius: 8,
+                                    padding: '6px 14px',
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s'
+                                }}
+                            >
+                                All ({notifs.length})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setNotifFilter('unread')}
+                                style={{
+                                    background: notifFilter === 'unread' ? colors.primary : 'transparent',
+                                    color: notifFilter === 'unread' ? '#fff' : colors.text,
+                                    border: `1px solid ${notifFilter === 'unread' ? colors.primary : colors.border}`,
+                                    borderRadius: 8,
+                                    padding: '6px 14px',
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s'
+                                }}
+                            >
+                                Unread ({unreadCount})
+                            </button>
+                        </div>
+
+                        {/* Bulk Action Buttons */}
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                            {unreadCount > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={markAllNotifsRead}
+                                    style={{
+                                        background: 'transparent',
+                                        border: `1px solid ${colors.border}`,
+                                        color: colors.primary,
+                                        borderRadius: 8,
+                                        padding: '7px 12px',
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 6,
+                                        transition: 'all 0.15s'
+                                    }}
+                                >
+                                    <CheckCircle2 size={14} aria-hidden="true" /> Mark All Read
+                                </button>
+                            )}
+
+                            {/* Requirement 3: Clear Read button */}
+                            {readCount > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={clearReadNotifs}
+                                    title="Remove only read notifications"
+                                    style={{
+                                        background: 'transparent',
+                                        border: `1px solid ${colors.border}`,
+                                        color: colors.textMuted,
+                                        borderRadius: 8,
+                                        padding: '7px 12px',
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 6,
+                                        transition: 'all 0.15s'
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.color = colors.text; e.currentTarget.style.borderColor = colors.textMuted; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.color = colors.textMuted; e.currentTarget.style.borderColor = colors.border; }}
+                                >
+                                    <CheckCheck size={14} aria-hidden="true" /> Clear Read ({readCount})
+                                </button>
+                            )}
+
+                            {/* Requirement 2 & 4: Delete All button with confirmation */}
+                            {notifs.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={deleteAllNotifs}
+                                    title="Delete all notifications"
+                                    style={{
+                                        background: 'transparent',
+                                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                                        color: DANGER,
+                                        borderRadius: 8,
+                                        padding: '7px 12px',
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 6,
+                                        transition: 'all 0.15s'
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                >
+                                    <Trash2 size={14} aria-hidden="true" /> Delete All
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Notification List */}
+                    {displayedNotifs.length === 0 ? (
+                        <div style={styles.emptyContent}>
+                            <Bell size={40} color={colors.textMuted} style={{ marginBottom: 12 }} aria-hidden="true" />
+                            <p style={styles.emptyText}>
+                                {notifFilter === 'unread'
+                                    ? 'No unread notifications right now.'
+                                    : 'No notifications yet. Assignment reminders, quiz deadlines, and payment updates will appear here.'}
+                            </p>
+                            {notifFilter === 'unread' && notifs.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setNotifFilter('all')}
+                                    style={{
+                                        background: 'transparent',
+                                        border: `1px solid ${colors.border}`,
+                                        color: colors.primary,
+                                        borderRadius: 8,
+                                        padding: '6px 14px',
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        marginTop: 8
+                                    }}
+                                >
+                                    View All Notifications
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {displayedNotifs.map(n => {
+                                const meta = TYPE_META[n.type] || TYPE_META.default;
+                                const unread = n.isRead === false || n.read === false;
+                                return (
+                                    <div
+                                        key={n._id}
+                                        onClick={() => markNotifRead(n._id)}
+                                        style={{
+                                            display: 'flex',
+                                            gap: 14,
+                                            padding: '14px 16px',
+                                            borderRadius: 12,
+                                            background: unread ? `${colors.primary}08` : colors.bgInput,
+                                            border: `1px solid ${unread ? `${colors.primary}30` : colors.border}`,
+                                            cursor: 'pointer',
+                                            alignItems: 'flex-start',
+                                            transition: 'background 0.15s'
+                                        }}
+                                    >
+                                        <div style={{ width: 40, height: 40, borderRadius: 12, background: `${meta.color}15`, color: meta.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            {meta.icon}
+                                        </div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                                                <span style={{ color: colors.text, fontSize: 14, fontWeight: unread ? 800 : 600 }}>{n.title || 'Notification'}</span>
+                                                <span style={{ color: colors.textMuted, fontSize: 11, flexShrink: 0 }}>
+                                                    {n.createdAt ? new Date(n.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : ''}
+                                                </span>
+                                            </div>
+                                            <p style={{ color: colors.textMuted, fontSize: 13, margin: '4px 0 0', lineHeight: 1.5 }}>
+                                                {n.message || n.body}
+                                            </p>
+                                            {unread && (
+                                                <span style={{ display: 'inline-block', marginTop: 6, background: colors.primary, color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 99 }}>
+                                                    NEW
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Requirement 1 & 7: Delete button (trash icon) on each notification */}
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteSingleNotif(n._id);
+                                            }}
+                                            title="Delete notification"
+                                            aria-label="Delete notification"
+                                            style={{
+                                                background: 'transparent',
+                                                border: 'none',
+                                                color: colors.textMuted,
+                                                cursor: 'pointer',
+                                                padding: '6px',
+                                                borderRadius: '6px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                flexShrink: 0,
+                                                marginTop: 2,
+                                                transition: 'color 0.15s, background 0.15s'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.color = DANGER;
+                                                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.color = colors.textMuted;
+                                                e.currentTarget.style.background = 'transparent';
+                                            }}
+                                        >
+                                            <Trash2 size={16} aria-hidden="true" />
+                                        </button>
                                     </div>
-                                    <p style={{ color: colors.textMuted, fontSize: 13, margin: '4px 0 0', lineHeight: 1.5 }}>{n.message || n.body}</p>
-                                    {unread && <span style={{ display: 'inline-block', marginTop: 6, background: colors.primary, color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 99 }}>NEW</span>}
-                                </div>
-                            </div>
-                        );
-                    })}
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
-            )}
             </div>
-        </div>
-    );
+        );
+    };
 
     const renderAi = () => (
         <div>

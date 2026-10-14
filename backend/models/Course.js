@@ -16,7 +16,8 @@ const LessonSchema = new mongoose.Schema({
     },
     videoUrl: {
         type: String, // Local storage video URL or YouTube URL
-        required: true
+        default: '',
+        trim: true
     },
     // videoSource: distinguishes between uploaded video files and YouTube links.
     // 'upload' = local storage (videoUrl is a local storage path)

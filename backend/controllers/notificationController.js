@@ -50,8 +50,70 @@ exports.markAllAsRead = async (req, res) => {
 // @access  Private
 exports.deleteNotification = async (req, res) => {
     try {
-        await Notification.findOneAndDelete({ _id: req.params.id, recipientRef: req.user.id });
+        const deleted = await Notification.findOneAndDelete({
+            _id: req.params.id,
+            recipientRef: req.user.id
+        });
+        if (!deleted) {
+            return res.status(404).json({ success: false, message: 'Notification not found or unauthorized' });
+        }
         res.status(200).json({ success: true, message: 'Notification deleted' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// @desc    Delete all notifications for the authenticated user
+// @route   DELETE /api/notifications/clear-all
+// @access  Private
+exports.deleteAllNotifications = async (req, res) => {
+    try {
+        const result = await Notification.deleteMany({ recipientRef: req.user.id });
+        res.status(200).json({
+            success: true,
+            message: 'All notifications deleted',
+            deletedCount: result.deletedCount
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// @desc    Delete only read notifications for the authenticated user
+// @route   DELETE /api/notifications/clear-read
+// @access  Private
+exports.deleteReadNotifications = async (req, res) => {
+    try {
+        const result = await Notification.deleteMany({
+            recipientRef: req.user.id,
+            $or: [{ isRead: true }, { read: true }]
+        });
+        res.status(200).json({
+            success: true,
+            message: 'Read notifications cleared',
+            deletedCount: result.deletedCount
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// @desc    Delete notifications (all or by filter like ?filter=read)
+// @route   DELETE /api/notifications
+// @access  Private
+exports.deleteNotifications = async (req, res) => {
+    try {
+        const filter = req.query.filter || req.query.type;
+        const query = { recipientRef: req.user.id };
+        if (filter === 'read') {
+            query.$or = [{ isRead: true }, { read: true }];
+        }
+        const result = await Notification.deleteMany(query);
+        res.status(200).json({
+            success: true,
+            message: filter === 'read' ? 'Read notifications cleared' : 'All notifications deleted',
+            deletedCount: result.deletedCount
+        });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
@@ -125,24 +187,62 @@ exports.getAdminNotificationSummary = async (req, res) => {
 // ── Helper: Create a notification (used internally by other controllers) ──
 exports.createNotification = async ({ recipientRef, type, title, message, link, metadata }) => {
     try {
-        await Notification.create({ recipientRef, type, title, message, link, metadata });
+        if (!recipientRef) return null;
+
+        // Prevent duplicate notifications for the same recipient, type, and event/title
+        const query = {
+            recipientRef,
+            type,
+            title
+        };
+
+        if (link) query.link = link;
+
+        if (metadata?.eventId) query['metadata.eventId'] = metadata.eventId;
+        if (metadata?.enrollmentId) query['metadata.enrollmentId'] = metadata.enrollmentId;
+        if (metadata?.assignmentId) query['metadata.assignmentId'] = metadata.assignmentId;
+        if (metadata?.certificateId) query['metadata.certificateId'] = metadata.certificateId;
+        if (metadata?.liveSessionId) query['metadata.liveSessionId'] = metadata.liveSessionId;
+
+        const existing = await Notification.findOne(query);
+        if (existing) {
+            return existing;
+        }
+
+        return await Notification.create({ recipientRef, type, title, message, link, metadata });
     } catch (err) {
         console.error('Notification creation failed:', err.message);
+        return null;
     }
 };
 
 // ── Helper: Broadcast an event notification to all active users ──
-exports.broadcastEventNotification = async ({ title, message, link, type = 'event' }) => {
+exports.broadcastEventNotification = async ({ title, message, link, type = 'event', eventId }) => {
     try {
         const users = await User.find({ isActive: true }).select('_id').lean();
-        const payloads = users.map((u) => ({
-            recipientRef: u._id,
+        if (!users.length) return;
+
+        // Deduplication: Find recipients who already received this notification for the same event and type
+        const existingRecipients = await Notification.find({
             type,
             title,
-            message,
-            link: link || '',
-            metadata: { source: 'event' }
-        }));
+            ...(link ? { link } : {}),
+            recipientRef: { $in: users.map(u => u._id) }
+        }).distinct('recipientRef');
+
+        const existingSet = new Set(existingRecipients.map(id => String(id)));
+
+        const payloads = users
+            .filter(u => !existingSet.has(String(u._id)))
+            .map((u) => ({
+                recipientRef: u._id,
+                type,
+                title,
+                message,
+                link: link || '',
+                metadata: { source: 'event', ...(eventId ? { eventId } : {}) }
+            }));
+
         if (payloads.length) await Notification.insertMany(payloads);
     } catch (err) {
         console.error('Event broadcast failed:', err.message);

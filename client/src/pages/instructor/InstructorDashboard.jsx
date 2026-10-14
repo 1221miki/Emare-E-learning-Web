@@ -19,7 +19,7 @@ import InstructorOverview from '../../components/instructor/InstructorOverview';
 import StudentManagement from '../../components/instructor/StudentManagement';
 import InstructorSettings from '../../components/instructor/InstructorSettings';
 import {
-    LayoutDashboard, BookOpen, NotebookPen, ClipboardList, FileQuestion, Video, Users, GraduationCap, Award, BarChart3, MessagesSquare, MessageCircle, Megaphone, CalendarDays, Star, Settings, Upload, UploadCloud, FilePen, FileText, Archive, PlusCircle, AlertTriangle, X, Link2, Trash2, ArrowUp, ArrowDown, Edit3, PauseCircle, Circle, Square, Eye, Play, Trash, FileVideo, Clock, RadioTower
+    LayoutDashboard, BookOpen, NotebookPen, ClipboardList, FileQuestion, Video, Users, GraduationCap, Award, BarChart3, MessagesSquare, MessageCircle, Megaphone, CalendarDays, Star, Settings, Upload, UploadCloud, FilePen, FileText, Archive, PlusCircle, AlertTriangle, X, Link2, Trash2, ArrowUp, ArrowDown, Edit3, PauseCircle, Circle, Square, Eye, Play, Trash, FileVideo, Clock, RadioTower, MoreHorizontal
 } from 'lucide-react';
 import InstructorLiveSessions from '../../components/instructor/InstructorLiveSessions';
 
@@ -163,9 +163,29 @@ export default function InstructorDashboard() {
     const [isAddChapterModalOpen, setIsAddChapterModalOpen] = useState(false);
     const [isAddLessonModalOpen, setIsAddLessonModalOpen] = useState(false);
 
+    // Course Actions Dropdown Menu state
+    const [courseMenuOpenId, setCourseMenuOpenId] = useState(null);
+    const [courseMenuPos, setCourseMenuPos] = useState({ top: 0, right: 0 });
+
+    useEffect(() => {
+        if (!courseMenuOpenId) return;
+        const close = () => setCourseMenuOpenId(null);
+        document.addEventListener('mousedown', close);
+        document.addEventListener('scroll', close, true);
+        window.addEventListener('resize', close);
+        return () => {
+            document.removeEventListener('mousedown', close);
+            document.removeEventListener('scroll', close, true);
+            window.removeEventListener('resize', close);
+        };
+    }, [courseMenuOpenId]);
+
     const [newChapterTitle, setNewChapterTitle] = useState('');
     const [newLessonTitle, setNewLessonTitle] = useState('');
     const [newLessonContent, setNewLessonContent] = useState('');
+    const [newLessonVideoUrl, setNewLessonVideoUrl] = useState('');
+    const [newLessonDuration, setNewLessonDuration] = useState(10);
+    const [newLessonIsFree, setNewLessonIsFree] = useState(false);
     const [lessonChapterIndex, setLessonChapterIndex] = useState(0);
 
     const [courseForm, setCourseForm] = useState({
@@ -452,7 +472,7 @@ export default function InstructorDashboard() {
         if (!newChapterTitle.trim()) return alert('Enter chapter title');
         try {
             const tree = Array.isArray(selectedCourse.curriculumTree) ? [...selectedCourse.curriculumTree] : [];
-            tree.push({ title: newChapterTitle.trim(), lessons: [] });
+            tree.push({ chapterTitle: newChapterTitle.trim(), title: newChapterTitle.trim(), lessons: [] });
             const updated = { ...selectedCourse, curriculumTree: tree };
             const res = await courseService.update(selectedCourse._id, updated);
             setSelectedCourse(res.data.data);
@@ -471,13 +491,37 @@ export default function InstructorDashboard() {
             const idx = Number(lessonChapterIndex) || 0;
             if (!tree[idx]) return alert('Invalid chapter selected');
             const lessons = Array.isArray(tree[idx].lessons) ? [...tree[idx].lessons] : [];
-            lessons.push({ title: newLessonTitle.trim(), content: newLessonContent });
-            tree[idx] = { ...tree[idx], lessons };
+            const trimmedVideo = newLessonVideoUrl.trim();
+            const isYt = /youtube\.com|youtu\.be/i.test(trimmedVideo);
+            const newLesson = {
+                lessonTitle: newLessonTitle.trim(),
+                title: newLessonTitle.trim(),
+                videoUrl: trimmedVideo || '',
+                videoSource: isYt ? 'youtube' : 'upload',
+                durationMinutes: Number(newLessonDuration) || 0,
+                isFreePreview: !!newLessonIsFree,
+                notesPdfUrl: newLessonContent.trim(),
+                resourceLink: '',
+                quizRequired: false,
+                assignmentRequired: false,
+                quizCheckpoints: []
+            };
+            lessons.push(newLesson);
+            tree[idx] = {
+                ...tree[idx],
+                chapterTitle: tree[idx].chapterTitle || tree[idx].title || `Chapter ${idx + 1}`,
+                lessons
+            };
             const updated = { ...selectedCourse, curriculumTree: tree };
             const res = await courseService.update(selectedCourse._id, updated);
             setSelectedCourse(res.data.data);
             setCourses(prev => prev.map(c => c._id === res.data.data._id ? res.data.data : c));
-            setNewLessonTitle(''); setNewLessonContent(''); setIsAddLessonModalOpen(false);
+            setNewLessonTitle('');
+            setNewLessonContent('');
+            setNewLessonVideoUrl('');
+            setNewLessonDuration(10);
+            setNewLessonIsFree(false);
+            setIsAddLessonModalOpen(false);
         } catch (err) { alert(err.response?.data?.message || 'Failed to add lesson'); }
     };
 
@@ -519,11 +563,11 @@ export default function InstructorDashboard() {
 
     const handleRenameLesson = async (chapterIdx, lessonIdx) => {
         const current = selectedCourse?.curriculumTree?.[chapterIdx]?.lessons?.[lessonIdx];
-        const title = prompt('Lesson title', current?.title || `Lesson ${lessonIdx + 1}`);
+        const title = prompt('Lesson title', current?.lessonTitle || current?.title || `Lesson ${lessonIdx + 1}`);
         if (!title) return;
         const tree = [...selectedCourse.curriculumTree];
         const lessons = [...(tree[chapterIdx].lessons || [])];
-        lessons[lessonIdx] = { ...lessons[lessonIdx], title };
+        lessons[lessonIdx] = { ...lessons[lessonIdx], title, lessonTitle: title };
         tree[chapterIdx] = { ...tree[chapterIdx], lessons };
         try {
             const res = await courseService.update(selectedCourse._id, { ...selectedCourse, curriculumTree: tree });
@@ -1466,11 +1510,71 @@ export default function InstructorDashboard() {
                                         <td style={s.td}>{course.averageRating ? `${course.averageRating.toFixed(1)} ` : '—'}</td>
                                         <td style={s.td}><span style={{ ...s.badge, background: statusLabel(course.publicationState) === 'Published' ? 'rgba(16,185,129,0.15)' : statusLabel(course.publicationState) === 'Draft' ? 'rgba(245,158,11,0.15)' : statusLabel(course.publicationState) === 'Pending Review' ? 'rgba(34,197,94,0.15)' : 'rgba(100,116,139,0.15)', color: statusLabel(course.publicationState) === 'Published' ? '#10b981' : statusLabel(course.publicationState) === 'Draft' ? '#f59e0b' : statusLabel(course.publicationState) === 'Pending Review' ? '#16a34a' : '#64748b' }}>{statusLabel(course.publicationState)}</span></td>
                                         <td style={s.td}>
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                                <button onClick={() => { setSelectedCourse(course); setIsEditCourseModal(true); }} style={s.actionBtnAlt}>Edit Info</button>
-                                                <button onClick={() => navigate('/instructor/courses/new')} style={s.actionBtn}>New/Wizard</button>
-                                                <button onClick={() => navigate(`/courses/${course._id}`)} style={s.actionBtnAlt}>Preview</button>
-                                                <button onClick={() => handleDeleteCourse(course._id)} style={s.dangerBtn}>Delete</button>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap' }}>
+                                                <button
+                                                    onClick={() => navigate(`/courses/${course._id}`)}
+                                                    style={{
+                                                        ...s.actionBtnAlt,
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
+                                                        padding: '7px 12px',
+                                                        whiteSpace: 'nowrap'
+                                                    }}
+                                                    title="Preview Course"
+                                                >
+                                                    <Eye size={13} aria-hidden="true" />
+                                                    Preview
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    title="More actions"
+                                                    aria-label={`Actions for ${course.courseTitle}`}
+                                                    aria-expanded={courseMenuOpenId === course._id}
+                                                    aria-haspopup="true"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (courseMenuOpenId === course._id) {
+                                                            setCourseMenuOpenId(null);
+                                                            return;
+                                                        }
+                                                        const rect = e.currentTarget.getBoundingClientRect();
+                                                        const menuHeight = 135;
+                                                        const fitsBelow = rect.bottom + menuHeight < window.innerHeight;
+                                                        setCourseMenuPos({
+                                                            top: fitsBelow ? rect.bottom + 4 : Math.max(10, rect.top - menuHeight - 4),
+                                                            right: Math.max(16, window.innerWidth - rect.right)
+                                                        });
+                                                        setCourseMenuOpenId(course._id);
+                                                    }}
+                                                    style={{
+                                                        background: courseMenuOpenId === course._id ? (colors.bgInput || 'rgba(255,255,255,0.08)') : 'transparent',
+                                                        border: `1px solid ${courseMenuOpenId === course._id ? colors.primary : colors.border}`,
+                                                        borderRadius: '8px',
+                                                        color: courseMenuOpenId === course._id ? colors.primary : colors.textMuted,
+                                                        padding: '7px 9px',
+                                                        cursor: 'pointer',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        transition: 'all 0.15s'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        if (courseMenuOpenId !== course._id) {
+                                                            e.currentTarget.style.color = colors.text;
+                                                            e.currentTarget.style.borderColor = colors.textMuted;
+                                                        }
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        if (courseMenuOpenId !== course._id) {
+                                                            e.currentTarget.style.color = colors.textMuted;
+                                                            e.currentTarget.style.borderColor = colors.border;
+                                                        }
+                                                    }}
+                                                >
+                                                    <MoreHorizontal size={16} aria-hidden="true" />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -1479,6 +1583,98 @@ export default function InstructorDashboard() {
                         </table>
                     </div>
                 )}
+
+                {courseMenuOpenId && (() => {
+                    const course = courses.find(c => c._id === courseMenuOpenId) || filteredCourses.find(c => c._id === courseMenuOpenId);
+                    if (!course) return null;
+
+                    const itemBtnStyle = {
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '9px',
+                        padding: '9px 12px',
+                        background: 'transparent',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: colors.text,
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'background 0.15s, color 0.15s',
+                        outline: 'none'
+                    };
+
+                    return (
+                        <div
+                            onMouseDown={(e) => e.stopPropagation()}
+                            style={{
+                                position: 'fixed',
+                                top: courseMenuPos.top,
+                                right: courseMenuPos.right,
+                                width: '175px',
+                                background: colors.bgCard,
+                                backdropFilter: 'blur(16px)',
+                                border: `1px solid ${colors.border}`,
+                                borderRadius: '12px',
+                                boxShadow: theme === 'dark' ? '0 12px 36px rgba(0,0,0,0.6)' : '0 12px 36px rgba(15,23,42,0.15)',
+                                padding: '6px',
+                                zIndex: 99999,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '2px'
+                            }}
+                        >
+                            <button
+                                type="button"
+                                style={itemBtnStyle}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = colors.bgInput || 'rgba(255,255,255,0.08)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                onClick={() => {
+                                    setCourseMenuOpenId(null);
+                                    setSelectedCourse(course);
+                                    setIsEditCourseModal(true);
+                                }}
+                            >
+                                <FilePen size={14} aria-hidden="true" style={{ color: colors.primary }} />
+                                Edit Info
+                            </button>
+
+                            <button
+                                type="button"
+                                style={itemBtnStyle}
+                                title="New/Wizard"
+                                aria-label="NewWizard"
+                                onMouseEnter={(e) => { e.currentTarget.style.background = colors.bgInput || 'rgba(255,255,255,0.08)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                onClick={() => {
+                                    setCourseMenuOpenId(null);
+                                    navigate('/instructor/courses/new');
+                                }}
+                            >
+                                <PlusCircle size={14} aria-hidden="true" style={{ color: colors.textMuted }} />
+                                NewWizard
+                            </button>
+
+                            <div style={{ height: '1px', background: colors.border, margin: '4px 0' }} />
+
+                            <button
+                                type="button"
+                                style={{ ...itemBtnStyle, color: '#ef4444' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                onClick={() => {
+                                    setCourseMenuOpenId(null);
+                                    handleDeleteCourse(course._id);
+                                }}
+                            >
+                                <Trash2 size={14} aria-hidden="true" />
+                                Delete
+                            </button>
+                        </div>
+                    );
+                })()}
             </div>
         );
     };
@@ -1973,25 +2169,44 @@ export default function InstructorDashboard() {
                                                     {selectedCourse.curriculumTree.map((chapter, idx) => (
                                                         <div key={idx} style={{ background: 'rgba(9,13,22,0.4)', border: '1px solid rgba(30,41,59,0.5)', borderRadius: '8px', padding: '12px', fontSize: '13px' }}>
                                                             <div style={{ color: colors.text, fontWeight: '600', marginBottom: '6px' }}>
-                                                                📚 {chapter.chapterTitle || `Chapter ${idx + 1}`}
+                                                                📚 {chapter.chapterTitle || chapter.title || `Chapter ${idx + 1}`}
                                                             </div>
                                                             <div style={{ color: colors.textMuted, fontSize: '12px', marginLeft: '20px' }}>
                                                                 {chapter.lessons?.length || 0} lesson{(chapter.lessons?.length || 0) !== 1 ? 's' : ''}
                                                                 {chapter.lessons && chapter.lessons.length > 0 && (
-                                                                    <div style={{ marginTop: '4px', maxHeight: '100px', overflowY: 'auto' }}>
+                                                                    <div style={{ marginTop: '4px', maxHeight: '120px', overflowY: 'auto' }}>
                                                                         {chapter.lessons.map((lesson, lessonIdx) => (
-                                                                            <div key={lessonIdx} style={{ paddingLeft: '12px', color: '#94a3b8', fontSize: '11px', marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                                                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                                    ▪ {lesson.lessonTitle || `Lesson ${lessonIdx + 1}`}
+                                                                            <div key={lessonIdx} style={{ paddingLeft: '12px', color: '#94a3b8', fontSize: '11px', marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                                                                                    ▪ {lesson.lessonTitle || lesson.title || `Lesson ${lessonIdx + 1}`}
+                                                                                    {lesson.videoUrl ? <span style={{ color: '#22c55e', marginLeft: 6, fontSize: 10 }}>▶ Video</span> : <span style={{ color: '#f59e0b', marginLeft: 6, fontSize: 10 }}>[Draft]</span>}
                                                                                 </span>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={(e) => { e.stopPropagation(); setCheckpointEdit({ chapterIdx: idx, lessonIdx }); }}
-                                                                                    title="Edit in-video quiz checkpoints"
-                                                                                    style={{ flexShrink: 0, background: (lesson.quizCheckpoints || []).length > 0 ? 'rgba(245,158,11,0.15)' : 'transparent', border: '1px solid rgba(245,158,11,0.4)', color: '#f59e0b', borderRadius: 5, padding: '1px 7px', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}
-                                                                                >
-                                                                                    ⏸ {(lesson.quizCheckpoints || []).length || 0} quiz{(lesson.quizCheckpoints || []).length === 1 ? '' : 'zes'}
-                                                                                </button>
+                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={(e) => { e.stopPropagation(); setCheckpointEdit({ chapterIdx: idx, lessonIdx }); }}
+                                                                                        title="Edit in-video quiz checkpoints"
+                                                                                        style={{ background: (lesson.quizCheckpoints || []).length > 0 ? 'rgba(245,158,11,0.15)' : 'transparent', border: '1px solid rgba(245,158,11,0.4)', color: '#f59e0b', borderRadius: 5, padding: '1px 7px', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}
+                                                                                    >
+                                                                                        ⏸ {(lesson.quizCheckpoints || []).length || 0} quiz{(lesson.quizCheckpoints || []).length === 1 ? '' : 'zes'}
+                                                                                    </button>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={(e) => { e.stopPropagation(); handleRenameLesson(idx, lessonIdx); }}
+                                                                                        title="Rename lesson"
+                                                                                        style={{ background: 'transparent', border: '1px solid rgba(148,163,184,0.3)', color: colors.text, borderRadius: 5, padding: '1px 6px', fontSize: 10, cursor: 'pointer' }}
+                                                                                    >
+                                                                                        ✎
+                                                                                    </button>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={(e) => { e.stopPropagation(); handleDeleteLesson(idx, lessonIdx); }}
+                                                                                        title="Delete lesson"
+                                                                                        style={{ background: 'transparent', border: '1px solid rgba(239,68,68,0.4)', color: '#ef4444', borderRadius: 5, padding: '1px 6px', fontSize: 10, cursor: 'pointer' }}
+                                                                                    >
+                                                                                        ✕
+                                                                                    </button>
+                                                                                </div>
                                                                             </div>
                                                                         ))}
                                                                     </div>
@@ -2078,11 +2293,35 @@ export default function InstructorDashboard() {
                                 <div>
                                     <label style={s.label}>Chapter</label>
                                     <select style={s.select} value={lessonChapterIndex} onChange={e => setLessonChapterIndex(e.target.value)}>
-                                        {(selectedCourse?.curriculumTree || []).map((ch, idx) => <option key={idx} value={idx}>{ch.title || `Chapter ${idx + 1}`}</option>)}
+                                        {(selectedCourse?.curriculumTree || []).map((ch, idx) => (
+                                            <option key={idx} value={idx}>{ch.chapterTitle || ch.title || `Chapter ${idx + 1}`}</option>
+                                        ))}
                                     </select>
                                 </div>
-                                <div style={s.formGroup}><label style={s.label}>Lesson Title</label><input style={s.input} required value={newLessonTitle} onChange={e => setNewLessonTitle(e.target.value)} /></div>
-                                <div style={s.formGroup}><label style={s.label}>Lesson Content (notes)</label><textarea style={{ ...s.input, minHeight: '120px' }} value={newLessonContent} onChange={e => setNewLessonContent(e.target.value)} /></div>
+                                <div style={s.formGroup}>
+                                    <label style={s.label}>Lesson Title *</label>
+                                    <input style={s.input} required value={newLessonTitle} onChange={e => setNewLessonTitle(e.target.value)} placeholder="e.g. Introduction to React Hooks" />
+                                </div>
+                                <div style={s.formGroup}>
+                                    <label style={s.label}>Video URL (YouTube or local video link)</label>
+                                    <input style={s.input} value={newLessonVideoUrl} onChange={e => setNewLessonVideoUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=... or /api/local-storage/videos/..." />
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                    <div style={s.formGroup}>
+                                        <label style={s.label}>Duration (minutes)</label>
+                                        <input style={s.input} type="number" min="0" value={newLessonDuration} onChange={e => setNewLessonDuration(e.target.value)} />
+                                    </div>
+                                    <div style={{ ...s.formGroup, display: 'flex', alignItems: 'center', gap: 8, paddingTop: 24 }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: colors.text, fontSize: 13, fontWeight: 600 }}>
+                                            <input type="checkbox" checked={newLessonIsFree} onChange={e => setNewLessonIsFree(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#10b981' }} />
+                                            Free Preview
+                                        </label>
+                                    </div>
+                                </div>
+                                <div style={s.formGroup}>
+                                    <label style={s.label}>Lesson Notes / Content</label>
+                                    <textarea style={{ ...s.input, minHeight: '100px' }} value={newLessonContent} onChange={e => setNewLessonContent(e.target.value)} placeholder="Lesson overview, key notes, or instructions" />
+                                </div>
                                 <div style={{ display: 'flex', gap: 8 }}>
                                     <button type="submit" style={s.primaryBtn}>Add Lesson</button>
                                     <button type="button" onClick={() => setIsAddLessonModalOpen(false)} style={s.actionBtnAlt}>Cancel</button>

@@ -144,3 +144,40 @@ export const removeAllLiveSessionListeners = () => {
         socket.off('recordingDeleted');
     }
 };
+
+// ── Direct Messaging Helpers ─────────────────────────────────────
+export const joinConversationRoom = (conversationId) => {
+    if (socket?.connected && conversationId) {
+        socket.emit('joinConversation', conversationId);
+    }
+};
+
+export const leaveConversationRoom = (conversationId) => {
+    if (socket?.connected && conversationId) {
+        socket.emit('leaveConversation', conversationId);
+    }
+};
+
+export const onNewMessage = (callback) => {
+    if (socket) socket.on('new_message', callback);
+};
+
+export const offNewMessage = (callback) => {
+    if (socket) socket.off('new_message', callback);
+};
+
+export const onDirectMessage = (callback) => {
+    if (socket) socket.on('direct_message', callback);
+};
+
+export const offDirectMessage = (callback) => {
+    if (socket) socket.off('direct_message', callback);
+};
+
+export const onConversationUpdated = (callback) => {
+    if (socket) socket.on('conversation_updated', callback);
+};
+
+export const offConversationUpdated = (callback) => {
+    if (socket) socket.off('conversation_updated', callback);
+};

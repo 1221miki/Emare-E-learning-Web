@@ -1,15 +1,18 @@
 const Enrollment = require('../models/Enrollment');
+const Course = require('../models/Course');
+const LearningProgress = require('../models/LearningProgress');
 const { createNotification } = require('./notificationController');
 const { uploadImage } = require('../services/cloudinaryService');
 
 // ─────────────────────────────────────────────
-// @desc    Get all enrollments (Admin view with payment details)
+// @desc    Get enrollments (Admin view all, Instructor view own courses)
 // @route   GET /api/enrollments
-// @access  Private (Admin only)
+// @access  Private (Admin & Instructor)
 // ─────────────────────────────────────────────
 const getAllEnrollments = async (req, res, next) => {
     try {
-        const { status } = req.query;
+        const { status, courseId, courseRef, course } = req.query;
+        const targetCourseId = courseId || courseRef || course;
         const query = {};
 
         // Filter by payment status if specified
@@ -17,13 +20,96 @@ const getAllEnrollments = async (req, res, next) => {
             query.paymentStatus = status;
         }
 
+        // Scoping based on user role
+        if (req.user.assignedRole === 'Instructor') {
+            // Find all courses where this instructor is creator or assigned instructor
+            const instructorCourses = await Course.find({
+                $or: [
+                    { creatorRef: req.user.id },
+                    { assignedInstructorRef: req.user.id }
+                ]
+            }).select('_id').lean();
+
+            const instructorCourseIds = instructorCourses.map(c => c._id.toString());
+
+            if (targetCourseId) {
+                // If instructor requested a specific course, verify they teach it
+                if (!instructorCourseIds.includes(targetCourseId.toString())) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Access denied. You do not teach this course.'
+                    });
+                }
+                query.courseRef = targetCourseId;
+            } else {
+                // Instructor sees enrollments for all their courses
+                query.courseRef = { $in: instructorCourses.map(c => c._id) };
+            }
+        } else if (req.user.assignedRole === 'Admin') {
+            if (targetCourseId) {
+                query.courseRef = targetCourseId;
+            }
+        } else {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied.'
+            });
+        }
+
         const enrollments = await Enrollment.find(query)
-            .populate({ path: 'studentRef', select: 'fullName accountEmail assignedRole' })
-            .populate({ path: 'courseRef', select: 'courseTitle technicalCategory price' })
+            .populate({ path: 'studentRef', select: 'fullName accountEmail avatarUrl assignedRole' })
+            .populate({ path: 'courseRef', select: 'courseTitle technicalCategory price level thumbnailUrl creatorRef assignedInstructorRef' })
             .sort({ createdAt: -1 })
             .lean();
 
-        res.status(200).json({ success: true, count: enrollments.length, data: enrollments });
+        // Filter out broken records where studentRef or courseRef no longer exist
+        const validEnrollments = enrollments.filter(e => e.studentRef && e.courseRef);
+
+        // Fetch LearningProgress to enrich completion, watch time, and last activity
+        const studentCoursePairs = validEnrollments
+            .filter(e => e.studentRef?._id && e.courseRef?._id)
+            .map(e => ({ studentRef: e.studentRef._id, courseRef: e.courseRef._id }));
+
+        let progressDocs = [];
+        if (studentCoursePairs.length > 0) {
+            progressDocs = await LearningProgress.find({
+                $or: studentCoursePairs.map(p => ({ studentRef: p.studentRef, courseRef: p.courseRef }))
+            }).lean();
+        }
+
+        const progressMap = new Map();
+        for (const p of progressDocs) {
+            const key = `${p.studentRef.toString()}_${p.courseRef.toString()}`;
+            progressMap.set(key, p);
+        }
+
+        const enrichedEnrollments = validEnrollments.map(en => {
+            const studentIdStr = en.studentRef?._id ? en.studentRef._id.toString() : '';
+            const courseIdStr = en.courseRef?._id ? en.courseRef._id.toString() : '';
+            const key = `${studentIdStr}_${courseIdStr}`;
+            const lp = progressMap.get(key);
+
+            let totalWatchSeconds = 0;
+            if (lp && Array.isArray(lp.progressItems)) {
+                totalWatchSeconds = lp.progressItems.reduce((sum, item) => sum + (item.watchedSeconds || 0), 0);
+            }
+
+            const completionPercentage = lp && typeof lp.completionPercentage === 'number'
+                ? Math.max(lp.completionPercentage, en.completionPercentage || 0)
+                : (en.completionPercentage || 0);
+
+            const lastActivityAt = (lp && lp.updatedAt) || en.updatedAt || en.enrollmentTimestamp || en.createdAt;
+
+            return {
+                ...en,
+                completionPercentage,
+                lastActivityAt,
+                totalWatchMinutes: Math.round(totalWatchSeconds / 60),
+                enrollmentDate: en.enrollmentTimestamp || en.createdAt
+            };
+        });
+
+        res.status(200).json({ success: true, count: enrichedEnrollments.length, data: enrichedEnrollments });
     } catch (err) {
         next(err);
     }

@@ -81,6 +81,8 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
     const [grades, setGrades]                 = useState([]);
     const [assignments, setAssignments]       = useState([]);
     const [refreshKey, setRefreshKey]         = useState(0);
+    const [isLoading, setIsLoading]           = useState(false);
+    const [loadError, setLoadError]           = useState(null);
 
     // Filters
     const [search, setSearch]       = useState('');
@@ -92,36 +94,54 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
     const [messageStudent, setMessageStudent] = useState(null);
     const [removeConfirm, setRemoveConfirm]   = useState(null);
 
-    // ── Load courses on mount if not passed ─────────────────
+    // ── Load courses on mount if not passed or propCourses updates ─────────────────
     useEffect(() => {
         if (propCourses.length === 0) {
             courseService.getInstructorCourses()
                 .then(r => {
                     const list = r.data.data || [];
                     setCourses(list);
-                    if (list.length > 0) setSelectedCourse(list[0]);
+                    if (list.length > 0) {
+                        setSelectedCourse(prev => {
+                            if (!prev) return list[0];
+                            const found = list.find(c => (c._id || c) === (prev._id || prev));
+                            return found || list[0];
+                        });
+                    }
                 })
                 .catch(console.error);
         } else {
             setCourses(propCourses);
-            if (propCourses.length > 0 && !selectedCourse) setSelectedCourse(propCourses[0]);
+            if (propCourses.length > 0) {
+                setSelectedCourse(prev => {
+                    if (!prev) return propCourses[0];
+                    const found = propCourses.find(c => (c._id || c) === (prev._id || prev));
+                    return found || propCourses[0];
+                });
+            }
         }
     }, [propCourses]);
 
     // ── Load enrollments when course changes ─────────────────
     const loadCourseData = useCallback(async (courseId) => {
         if (!courseId) return;
+        setIsLoading(true);
+        setLoadError(null);
         try {
             const [enrollRes, gradeRes, assignRes] = await Promise.all([
-                enrollmentService.getAll({ courseId }).catch(() => ({ data: { data: [] } })),
+                enrollmentService.getAll({ courseId }),
                 gradebookService.getSubmissionsForCourse(courseId).catch(() => ({ data: { data: [] } })),
                 assignmentService.getByCourse(courseId).catch(() => ({ data: { data: [] } })),
             ]);
-            setEnrollments(enrollRes.data.data || []);
-            setGrades(gradeRes.data.data || []);
-            setAssignments(assignRes.data.data || []);
+            setEnrollments(enrollRes.data?.data || []);
+            setGrades(gradeRes.data?.data || []);
+            setAssignments(assignRes.data?.data || []);
         } catch (err) {
             console.error('StudentManagement data load error:', err);
+            setLoadError(err?.response?.data?.message || 'Failed to load enrolled students.');
+            setEnrollments([]);
+        } finally {
+            setIsLoading(false);
         }
     }, []);
 
@@ -132,19 +152,22 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
     // ── Derived student rows ─────────────────────────────────
     const students = enrollments.map(en => {
         const student  = en.studentRef || {};
-        const courseGrades = grades.filter(g =>
-            (g.studentRef?._id || g.studentRef) === (student._id || student)
-        );
+        const studentId = student._id || en.studentRef;
+        const courseGrades = grades.filter(g => {
+            const gradeStudentId = g.studentRef?._id || g.studentRef;
+            return gradeStudentId && studentId && gradeStudentId.toString() === studentId.toString();
+        });
         const avgScore = courseGrades.length
             ? Math.round(courseGrades.reduce((a, g) => a + (g.numericalScoreEarned || 0), 0) / courseGrades.length)
             : null;
 
-        // Compute status
-        const pct       = en.completionPercentage || 0;
-        const cleared   = en.tuitionClearanceFlag;
-        const daysSince = en.lastActivityAt
-            ? Math.floor((Date.now() - new Date(en.lastActivityAt)) / 86400000)
-            : 999;
+        // Compute status based on real activity, progress, and clearance
+        const pct       = typeof en.completionPercentage === 'number' ? en.completionPercentage : 0;
+        const cleared   = Boolean(en.tuitionClearanceFlag);
+        const lastActiveDate = en.lastActivityAt || en.updatedAt || en.enrollmentTimestamp || en.createdAt;
+        const daysSince = lastActiveDate
+            ? Math.max(0, Math.floor((Date.now() - new Date(lastActiveDate).getTime()) / 86400000))
+            : 0;
 
         let status = 'active';
         if (pct >= 100) status = 'completed';
@@ -152,21 +175,25 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
         else if (daysSince > 14) status = 'inactive';
         else if (pct < 20 && daysSince > 7) status = 'at-risk';
 
+        const watchTime = en.totalWatchMinutes
+            ? `${Math.round(en.totalWatchMinutes / 60)}h ${en.totalWatchMinutes % 60}m`
+            : (en.watchTime || '—');
+
         return {
             _id:            en._id,
-            studentId:      student._id || en.studentRef,
+            studentId:      studentId,
             name:           student.fullName || 'Unknown Student',
             email:          student.accountEmail || student.email || '—',
             avatar:         student.avatarUrl || null,
             initials:       (student.fullName || 'U').charAt(0).toUpperCase(),
-            course:         selectedCourse?.courseTitle || '—',
-            courseId:       selectedCourse?._id,
-            enrollmentDate: en.enrollmentDate || en.createdAt,
+            course:         selectedCourse?.courseTitle || en.courseRef?.courseTitle || '—',
+            courseId:       selectedCourse?._id || en.courseRef?._id,
+            enrollmentDate: en.enrollmentTimestamp || en.enrollmentDate || en.createdAt,
             progress:       pct,
-            lastActivity:   en.lastActivityAt,
+            lastActivity:   lastActiveDate,
             status,
             cleared,
-            watchTime:      en.totalWatchMinutes ? `${Math.round(en.totalWatchMinutes / 60)}h` : '—',
+            watchTime,
             quizScore:      avgScore,
             submissionsCount: courseGrades.length,
             enrollment:     en,
@@ -339,12 +366,31 @@ export default function StudentManagement({ courses: propCourses = [], colors, s
                 </span>
             </div>
 
+            {/* ── Error Banner ─────────────────────────────── */}
+            {loadError && (
+                <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '12px', padding: '14px 18px', color: '#ef4444', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <AlertTriangle size={18} aria-hidden="true" />
+                        <span style={{ fontSize: '13px', fontWeight: '600' }}>{loadError}</span>
+                    </div>
+                    <button
+                        onClick={() => selectedCourse?._id && loadCourseData(selectedCourse._id)}
+                        style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                        Retry
+                    </button>
+                </div>
+            )}
+
             {/* ── Student Table ────────────────────────────── */}
             <StudentTable
                 students={filtered}
                 onViewProfile={setProfileStudent}
                 onMessage={setMessageStudent}
                 onRemove={setRemoveConfirm}
+                loading={isLoading}
+                hasFilters={Boolean(search || statusFilter !== 'all')}
+                onClearFilters={() => { setSearch(''); setStatus('all'); }}
             />
 
             {/* ── Profile Modal ────────────────────────────── */}

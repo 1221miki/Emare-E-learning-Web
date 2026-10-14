@@ -56,9 +56,16 @@ router.get('/*', (req, res) => {
             return res.status(404).json({ success: false, message: 'File not found.' });
         }
 
-        // Double-check the resolved path is still inside our uploads directory
+        // Double-check the resolved path is inside an allowed root
         const uploadsRoot = path.resolve(VIDEOS_DIR, '..');
-        if (!absPath.startsWith(uploadsRoot)) {
+        const allowedRoots = [
+            uploadsRoot,
+            path.resolve(VIDEOS_DIR),
+            path.resolve(FILES_DIR),
+            path.resolve(__dirname, '..', 'public', 'uploads'),
+            path.resolve(__dirname, '..', 'public')
+        ];
+        if (!allowedRoots.some(r => absPath.startsWith(r))) {
             return res.status(403).json({ success: false, message: 'Access denied.' });
         }
 
@@ -68,12 +75,22 @@ router.get('/*', (req, res) => {
         const stat = fs.statSync(absPath);
         const fileSize = stat.size;
 
+        const isDownload = req.query.download === '1' || req.query.download === 'true';
+        const disposition = isDownload ? 'attachment' : 'inline';
+        const rawCustomName = typeof req.query.filename === 'string' ? req.query.filename.trim() : '';
+        const outFileName = rawCustomName ? rawCustomName.replace(/[/\\?%*:|"<>]/g, '_') : fileName;
+
         // Support range requests for video seeking/scrubbing
         const range = req.headers.range;
         if (range && (mime.startsWith('video/') || mime.startsWith('audio/'))) {
             const parts = range.replace(/bytes=/, '').split('-');
             const start = parseInt(parts[0], 10);
-            const end = parts[1] ? parseInt(parts[1], 10) : Math.min(start + 10 * 1024 * 1024 - 1, fileSize - 1);
+            if (isNaN(start) || start >= fileSize) {
+                res.status(416);
+                res.setHeader('Content-Range', `bytes */${fileSize}`);
+                return res.end();
+            }
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
             const chunkSize = end - start + 1;
 
             res.status(206);
@@ -81,13 +98,13 @@ router.get('/*', (req, res) => {
             res.setHeader('Accept-Ranges', 'bytes');
             res.setHeader('Content-Length', chunkSize);
             res.setHeader('Content-Type', mime);
-            res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(fileName)}"`);
+            res.setHeader('Content-Disposition', `${disposition}; filename="${encodeURIComponent(outFileName)}"`);
             res.setHeader('Cache-Control', 'public, max-age=86400');
 
             fs.createReadStream(absPath, { start, end }).pipe(res);
         } else {
             res.setHeader('Content-Type', mime);
-            res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(fileName)}"`);
+            res.setHeader('Content-Disposition', `${disposition}; filename="${encodeURIComponent(outFileName)}"`);
             res.setHeader('Cache-Control', 'public, max-age=86400');
             res.setHeader('Accept-Ranges', 'bytes');
             res.setHeader('Content-Length', fileSize);

@@ -232,7 +232,9 @@ export const notificationService = {
     sendAdmin: (data) => API.post('/notifications/admin/send', data),
     markAsRead: (id) => API.patch(`/notifications/${id}/read`),
     markAllAsRead: () => API.patch('/notifications/read-all'),
-    delete: (id) => API.delete(`/notifications/${id}`)
+    delete: (id) => API.delete(`/notifications/${id}`),
+    deleteAll: () => API.delete('/notifications/clear-all'),
+    clearRead: () => API.delete('/notifications/clear-read')
 };
 
 // Internal and external messaging APIs (merged)
@@ -347,9 +349,9 @@ export const projectService = {
     gradeSubmission: (submissionId, data) => API.patch(`/projects/submissions/${submissionId}/grade`, data)
 };
 
-// ── Leaderboard API Calls ──────────────────────────────────
+// ── Leaderboard API Calls (Disabled) ────────────────────────
 export const leaderboardService = {
-    getTop: () => API.get('/leaderboard')
+    getTop: () => Promise.resolve({ data: { success: true, data: [] } })
 };
 
 // ── Live Sessions API Calls ────────────────────────────────

@@ -6,11 +6,11 @@ import { useLanguage } from '../context/LanguageContext';
 import NotificationBell from './NotificationBell';
 import { 
     Sun, Moon, BookOpen, LogOut, LayoutDashboard, Award, 
-    Trophy, MessageSquare, Video, User, Settings, PlusCircle, Shield, Inbox,
+    MessageSquare, Video, User, Settings, PlusCircle, Shield, Inbox,
     ChevronLeft, ChevronRight
 } from 'lucide-react';
 
-const SIDEBAR_WIDTH_EXPANDED = 260;
+const SIDEBAR_WIDTH_EXPANDED = 270;
 const SIDEBAR_WIDTH_COLLAPSED = 76;
 
 export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBottomButtons }) {
@@ -64,7 +64,6 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
             return [
                 { key: 'dashboard', label: 'Dashboard', path: '/student/dashboard', icon: <LayoutDashboard size={20} /> },
                 { key: 'certificates', label: 'Certificates', path: '/student/certificates', icon: <Award size={20} /> },
-                { key: 'leaderboard', label: 'Leaderboard', path: '/leaderboard', icon: <Trophy size={20} /> },
                 { key: 'messages', label: 'Messages', path: '/messages', icon: <MessageSquare size={20} /> },
                 { key: 'live', label: 'Live Sessions', path: '/live-sessions', icon: <Video size={20} /> },
                 { key: 'profile', label: 'Profile', path: '/student/profile', icon: <User size={20} /> },
@@ -140,7 +139,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                 onMouseLeave={() => setIsToggleHovered(false)}
                 style={{
                     position: 'absolute',
-                    top: '24px',
+                    top: '72px',
                     [position === 'right' ? 'left' : 'right']: '-14px',
                     width: '28px',
                     height: '28px',
@@ -190,27 +189,21 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
             {!isCollapsed ? (
                 <div style={styles.headerBox}>
                     <Link to="/" style={{ ...styles.logoBox, cursor: 'pointer', textDecoration: 'none' }} className="transition-opacity hover:opacity-90">
-                        <img src="/images/Real Emare ICT Hub logo.png" alt="Emare ICT Hub Logo" className="h-10 w-10 bg-transparent object-contain" />
-                        <span style={{ color: colors.text, fontSize: '18px', fontWeight: '700', whiteSpace: 'nowrap' }}>Emare ICT Hub</span>
+                        <img src="/images/Real Emare ICT Hub logo.png" alt="Emare ICT Hub Logo" className="h-9 w-9 bg-transparent object-contain" />
+                        <span style={{ color: colors.text, fontSize: '16px', fontWeight: '700', whiteSpace: 'nowrap' }}>Emare ICT Hub</span>
                     </Link>
                     <div style={styles.actionsBox}>
                         <button onClick={toggleTheme} style={styles.iconBtn} title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'} aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
-                            {theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
+                            {theme === 'dark' ? <Sun size={20} color={colors.text} /> : <Moon size={20} color={colors.text} />}
                         </button>
                         <NotificationBell />
                     </div>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
                     <Link to="/" style={{ cursor: 'pointer', textDecoration: 'none' }} title="Emare ICT Hub" className="transition-opacity hover:opacity-90">
                         <img src="/images/Real Emare ICT Hub logo.png" alt="Emare ICT Hub Logo" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
                     </Link>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <button onClick={toggleTheme} style={{ ...styles.iconBtn, padding: '6px' }} title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'} aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
-                            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                        </button>
-                        <NotificationBell />
-                    </div>
                 </div>
             )}
 
@@ -334,6 +327,16 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
 
 
             </nav>
+
+            {/* Collapsed Mode Quick Actions */}
+            {isCollapsed && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', paddingBottom: '12px', borderBottom: `1px solid ${colors.border}`, marginBottom: '10px' }}>
+                    <NotificationBell />
+                    <button onClick={toggleTheme} style={styles.iconBtn} title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'} aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+                        {theme === 'dark' ? <Sun size={19} color={colors.text} /> : <Moon size={19} color={colors.text} />}
+                    </button>
+                </div>
+            )}
 
             {/* ── USER INFO / ACCOUNT DROPDOWN ──────────────────────────── */}
             <div style={{ position: 'relative' }}>
@@ -479,17 +482,17 @@ const styles = {
         borderRadius: '50%',
         flexShrink: 0
     },
-    headerBox: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '28px', minWidth: 'max-content' },
-    logoBox: { display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 },
+    headerBox: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '24px', width: '100%', boxSizing: 'border-box' },
+    logoBox: { display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 },
     logo: {
-        width: '40px', height: '40px', borderRadius: '10px',
+        width: '38px', height: '38px', borderRadius: '10px',
         background: 'linear-gradient(135deg, #22c55e, #22c55e)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontWeight: '900', color: '#fff', fontSize: '18px'
     },
     logoText: { fontWeight: '700', fontSize: '16px' },
-    actionsBox: { display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 },
-    iconBtn: { background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px', display: 'flex', alignItems: 'center' },
+    actionsBox: { display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 },
+    iconBtn: { background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
     nav: { display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflowY: 'auto' },
     navItem: {
         textDecoration: 'none',

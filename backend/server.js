@@ -163,6 +163,7 @@ const io = new Server(server, {
 });
 
 const userSocketMap = new Map();
+app.set('io', io);
 
 io.on('connection', (socket) => {
     console.log(`Socket connected: ${socket.id}`);
@@ -178,6 +179,9 @@ io.on('connection', (socket) => {
                 socket.userRole = user.assignedRole;
                 userSocketMap.set(socket.userId, socket.id);
                 
+                // Join personal user room for direct events
+                socket.join(`user:${socket.userId}`);
+
                 const enrollments = await Enrollment.find({ studentRef: user._id }).select('courseRef');
                 const courseIds = enrollments.map(e => e.courseRef.toString());
                 
@@ -203,13 +207,27 @@ io.on('connection', (socket) => {
     });
 
     socket.on('joinCourse', (courseId) => {
-        if (socket.userId) {
+        if (socket.userId && courseId) {
             socket.join(`course:${courseId}`);
         }
     });
 
     socket.on('leaveCourse', (courseId) => {
-        socket.leave(`course:${courseId}`);
+        if (courseId) {
+            socket.leave(`course:${courseId}`);
+        }
+    });
+
+    socket.on('joinConversation', (conversationId) => {
+        if (socket.userId && conversationId) {
+            socket.join(`conversation:${conversationId}`);
+        }
+    });
+
+    socket.on('leaveConversation', (conversationId) => {
+        if (conversationId) {
+            socket.leave(`conversation:${conversationId}`);
+        }
     });
 
     socket.on('disconnect', () => {

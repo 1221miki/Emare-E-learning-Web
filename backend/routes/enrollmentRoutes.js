@@ -14,8 +14,8 @@ const {
 router.get('/my-status', protect, authorizeRoles('Student'), getStudentPaymentStatus);
 router.post('/:id/payment-slip', protect, authorizeRoles('Student'), upload.single('paymentSlip'), uploadPaymentSlip);
 
-// ── Admin Routes ────────────────────────────────────────────
-router.get('/', protect, authorizeRoles('Admin'), getAllEnrollments);
+// ── Admin & Instructor Routes ───────────────────────────────
+router.get('/', protect, authorizeRoles('Admin', 'Instructor'), getAllEnrollments);
 router.patch('/:id/approve', protect, authorizeRoles('Admin'), approvePayment);
 router.patch('/:id/reject', protect, authorizeRoles('Admin'), rejectPayment);
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    GraduationCap, ClipboardCheck, CreditCard, Video, Trophy,
+    GraduationCap, ClipboardCheck, CreditCard, Video, Award,
     BarChart3, Zap, Megaphone, Bell, CheckCircle2, Clock,
     ArrowRight, PlayCircle, Lightbulb, CalendarDays
 } from 'lucide-react';
@@ -56,7 +56,7 @@ export default function OverviewTab(dash) {
         { label: 'Tasks', icon: <ClipboardCheck size={15} aria-hidden="true" />, onClick: () => setActiveTab('assignments') },
         { label: 'Tuition', icon: <CreditCard size={15} aria-hidden="true" />, onClick: () => setActiveTab('payments') },
         { label: 'Live', icon: <Video size={15} aria-hidden="true" />, onClick: () => setActiveTab('live') },
-        { label: 'Rank', icon: <Trophy size={15} aria-hidden="true" />, onClick: () => setActiveTab('leaderboard') }
+        { label: 'Certificates', icon: <Award size={15} aria-hidden="true" />, onClick: () => setActiveTab('certificates') }
     ];
 
     const card = 'rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5';

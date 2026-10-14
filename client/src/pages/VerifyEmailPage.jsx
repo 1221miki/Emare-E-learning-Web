@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { FaArrowLeft, FaCheckCircle, FaExclamationCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
 
 // Normalize + decode the email passed via the ?email= query parameter.
@@ -65,6 +66,8 @@ const extractErrorMessage = (err, fallback = 'Something went wrong. Please try a
 
 export default function VerifyEmailPage() {
     const { verifyEmail, resendVerification } = useAuth();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const location = useLocation();
@@ -143,9 +146,6 @@ export default function VerifyEmailPage() {
         try {
             const response = await resendVerification({ accountEmail: normalizeEmail(currentEmail) });
 
-            // Defensive: the server should signal failures via non-2xx, but if it
-            // ever replies 200 with success:false, surface the message instead of
-            // claiming success.
             if (response && response.success === false) {
                 setResendError(response.message || 'Failed to resend verification code.');
                 return;
@@ -154,7 +154,6 @@ export default function VerifyEmailPage() {
             const successMessage = response?.message || 'A new verification code has been sent.';
             setResendSuccess(successMessage);
 
-            // Dev-mode convenience: auto-fill the returned code so testing is friction-free.
             if (response?.verificationCode && import.meta.env.DEV) {
                 console.log('Dev Verification Code:', response.verificationCode);
                 setForm(prev => ({ ...prev, verificationCode: response.verificationCode }));
@@ -167,6 +166,177 @@ export default function VerifyEmailPage() {
             setResendLoading(false);
         }
     }, [form.accountEmail, email, resendVerification]);
+
+    const styles = {
+        page: {
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: isDark
+                ? 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)'
+                : 'linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%)',
+            padding: '20px',
+            position: 'relative'
+        },
+        backButton: {
+            position: 'absolute',
+            top: '24px',
+            left: '24px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            color: isDark ? '#94a3b8' : '#475569',
+            textDecoration: 'none',
+            fontSize: '14px',
+            fontWeight: '600',
+            padding: '10px 14px',
+            background: isDark ? 'rgba(255,255,255,0.06)' : '#ffffff',
+            borderRadius: '10px',
+            border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e2e8f0',
+            transition: 'color 0.2s, background 0.2s'
+        },
+        card: {
+            background: isDark ? '#111a2e' : '#ffffff',
+            border: isDark ? '1px solid #24304d' : '1px solid #e2e8f0',
+            borderRadius: '24px',
+            padding: '36px',
+            width: '100%',
+            maxWidth: '420px',
+            boxShadow: isDark
+                ? '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)'
+                : '0 24px 60px rgba(15,23,42,0.08)'
+        },
+        header: { textAlign: 'center', marginBottom: '28px' },
+        logo: {
+            width: '58px',
+            height: '58px',
+            borderRadius: '16px',
+            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '24px',
+            color: '#fff',
+            fontWeight: '700',
+            marginBottom: '16px',
+            boxShadow: '0 8px 24px rgba(34,197,94,0.35)'
+        },
+        title: {
+            color: isDark ? '#f4f7fc' : '#0f172a',
+            fontSize: '24px',
+            fontWeight: '800',
+            margin: 0
+        },
+        subtitle: {
+            color: isDark ? '#93a1bd' : '#64748b',
+            fontSize: '14px',
+            marginTop: '10px'
+        },
+        form: { display: 'grid', gap: '16px' },
+        fieldGroup: { display: 'flex', flexDirection: 'column', gap: '8px' },
+        label: {
+            color: isDark ? '#cbd5e1' : '#334155',
+            fontSize: '13px',
+            fontWeight: '600',
+            letterSpacing: '0.5px'
+        },
+        input: {
+            background: isDark ? 'rgba(255,255,255,0.07)' : '#f8fafc',
+            border: isDark ? '1px solid rgba(255,255,255,0.15)' : '1px solid #e2e8f0',
+            borderRadius: '12px',
+            color: isDark ? '#ffffff' : '#0f172a',
+            fontSize: '15px',
+            padding: '14px 16px',
+            outline: 'none',
+            boxSizing: 'border-box'
+        },
+        disabledInput: {
+            background: isDark ? 'rgba(255,255,255,0.04)' : '#f1f5f9',
+            border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e2e8f0',
+            borderRadius: '12px',
+            color: isDark ? '#cbd5e1' : '#475569',
+            fontSize: '15px',
+            padding: '14px 16px',
+            outline: 'none',
+            cursor: 'not-allowed',
+            opacity: 1,
+            boxSizing: 'border-box'
+        },
+        passwordWrapper: { position: 'relative', display: 'flex', alignItems: 'center', width: '100%' },
+        eyeIcon: {
+            position: 'absolute',
+            right: '14px',
+            background: 'none',
+            border: 'none',
+            color: isDark ? '#94a3b8' : '#64748b',
+            cursor: 'pointer',
+            padding: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '16px'
+        },
+        btn: {
+            width: '100%',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '14px',
+            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+            color: '#fff',
+            fontWeight: '700',
+            cursor: 'pointer',
+            transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+            boxShadow: '0 8px 24px rgba(34,197,94,0.35)'
+        },
+        errorBox: {
+            background: isDark ? 'rgba(239,68,68,0.15)' : '#fef2f2',
+            border: isDark ? '1px solid rgba(239,68,68,0.4)' : '1px solid #fca5a5',
+            color: isDark ? '#fca5a5' : '#b91c1c',
+            padding: '14px 16px',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '14px'
+        },
+        successBox: {
+            background: isDark ? 'rgba(34,197,94,0.15)' : '#f0fdf4',
+            border: isDark ? '1px solid rgba(34,197,94,0.4)' : '1px solid #86efac',
+            color: isDark ? '#86efac' : '#166534',
+            padding: '14px 16px',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '14px'
+        },
+        resendContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginTop: '16px' },
+        expiryNotice: {
+            background: isDark ? 'rgba(34,197,94,0.12)' : '#f0fdf4',
+            border: isDark ? '1px solid rgba(34,197,94,0.3)' : '1px solid #bbf7d0',
+            borderRadius: '12px',
+            color: isDark ? '#86efac' : '#15803d',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            fontSize: '13px',
+            textAlign: 'center'
+        },
+        resendText: { color: isDark ? '#93a1bd' : '#64748b', fontSize: '13px', margin: 0 },
+        resendBtn: {
+            width: '100%',
+            border: isDark ? '1px solid rgba(34,197,94,0.35)' : '1px solid #86efac',
+            background: isDark ? 'rgba(34,197,94,0.1)' : 'transparent',
+            borderRadius: '12px',
+            padding: '12px',
+            color: isDark ? '#4ade80' : '#16a34a',
+            fontWeight: '700',
+            cursor: 'pointer',
+            transition: 'background 0.2s ease'
+        },
+        noteText: { color: isDark ? '#93a1bd' : '#64748b', textAlign: 'center', marginTop: '16px', fontSize: '13px' },
+        link: { color: isDark ? '#4ade80' : '#16a34a', textDecoration: 'none', fontWeight: '600' }
+    };
 
     return (
         <div style={styles.page}>
@@ -210,7 +380,7 @@ export default function VerifyEmailPage() {
                             value={form.accountEmail}
                             onChange={handleChange}
                             disabled
-                            style={{ ...styles.input, backgroundColor: '#f3f4f6', color: '#111' }}
+                            style={styles.disabledInput}
                         />
                     </div>
 
@@ -223,9 +393,9 @@ export default function VerifyEmailPage() {
                                 value={form.verificationCode}
                                 onChange={handleChange}
                                 placeholder="Enter 6-digit code"
-                                style={{ ...styles.input, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }}
+                                style={{ ...styles.input, width: '100%', paddingRight: '40px' }}
                             />
-                            <button type="button" onClick={() => setShowCode(!showCode)} style={styles.eyeIcon}>
+                            <button type="button" onClick={() => setShowCode(!showCode)} style={styles.eyeIcon} aria-label={showCode ? 'Hide verification code' : 'Show verification code'}>
                                 {showCode ? <FaEyeSlash /> : <FaEye />}
                             </button>
                         </div>
@@ -258,28 +428,3 @@ export default function VerifyEmailPage() {
         </div>
     );
 }
-
-const styles = {
-    page: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#f0fdf4 0%,#f8fafc 100%)', padding: '20px' },
-    backButton: { position: 'absolute', top: '24px', left: '24px', display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#475569', textDecoration: 'none', fontSize: '14px', fontWeight: '600', padding: '10px 14px', background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' },
-    card: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '24px', padding: '36px', width: '100%', maxWidth: '420px', boxShadow: '0 24px 60px rgba(15,23,42,0.08)' },
-    header: { textAlign: 'center', marginBottom: '28px' },
-    logo: { width: '58px', height: '58px', borderRadius: '16px', background: 'linear-gradient(135deg,#22c55e,#22c55e)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#fff', fontWeight: '700', marginBottom: '16px' },
-    title: { color: '#0f172a', fontSize: '24px', fontWeight: '800', margin: 0 },
-    subtitle: { color: '#64748b', fontSize: '14px', marginTop: '10px' },
-    form: { display: 'grid', gap: '16px' },
-    fieldGroup: { display: 'flex', flexDirection: 'column', gap: '8px' },
-    label: { color: '#334155', fontSize: '13px', fontWeight: '600', letterSpacing: '0.5px' },
-    input: { background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#0f172a', fontSize: '15px', padding: '14px 16px', outline: 'none' },
-    passwordWrapper: { position: 'relative', display: 'flex', alignItems: 'center' },
-    eyeIcon: { position: 'absolute', right: '12px', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' },
-    btn: { width: '100%', border: 'none', borderRadius: '12px', padding: '14px', background: 'linear-gradient(135deg,#22c55e,#22c55e)', color: '#fff', fontWeight: '700', cursor: 'pointer', transition: 'transform 0.15s ease, box-shadow 0.15s ease', boxShadow: '0 12px 28px rgba(34,197,94,0.35)' },
-    errorBox: { background: '#fef2f2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '14px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' },
-    successBox: { background: '#f0fdf4', border: '1px solid #86efac', color: '#166534', padding: '14px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' },
-    resendContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginTop: '16px' },
-    expiryNotice: { background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', color: '#15803d', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', textAlign: 'center' },
-    resendText: { color: '#64748b', fontSize: '13px', margin: 0 },
-    resendBtn: { width: '100%', border: '1px solid #86efac', background: 'transparent', borderRadius: '12px', padding: '12px', color: '#16a34a', fontWeight: '700', cursor: 'pointer' },
-    noteText: { color: '#64748b', textAlign: 'center', marginTop: '16px', fontSize: '13px' },
-    link: { color: '#16a34a', textDecoration: 'none', fontWeight: '600' }
-};

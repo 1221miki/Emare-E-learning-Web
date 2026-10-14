@@ -37,8 +37,10 @@ export default function MessagePanel({ student, course, onClose }) {
                 // Create/find conversation then send
                 await messageService.sendMessageDirect({
                     recipientId: student.studentId,
+                    receiverId: student.studentId,
                     subject,
                     content: body.trim(),
+                    body: body.trim(),
                     courseId: course?._id,
                 });
             } else {

@@ -387,7 +387,6 @@ export default function PaymentPage() {
                     { label: '▶ Learning', path: '/student/dashboard?tab=learning' },
                     { label: '▤ Assignments', path: '/student/dashboard?tab=assignments' },
                     { label: '◈ Messages', path: '/student/dashboard?tab=messages' },
-                    { label: ' Leaderboard', path: '/student/dashboard?tab=leaderboard' },
                     { label: '◈ Certificates', path: '/student/dashboard?tab=certificates' },
                     { label: '◈ Payments', path: '/student/payments' },
                     { label: '◈ Settings', path: '/student/dashboard?tab=settings' }

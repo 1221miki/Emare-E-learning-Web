@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     Eye, MessageSquare, TrendingUp, Trash2, MoreHorizontal,
-    CheckCircle, Clock, Activity, AlertTriangle, GraduationCap
+    CheckCircle, Clock, Activity, AlertTriangle, GraduationCap, RefreshCw
 } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 
@@ -130,7 +130,7 @@ const COLS = [
     { label: 'Actions',         width: '60px' },
 ];
 
-export default function StudentTable({ students = [], onViewProfile, onMessage, onRemove }) {
+export default function StudentTable({ students = [], onViewProfile, onMessage, onRemove, loading = false, hasFilters = false, onClearFilters }) {
     const { colors, theme } = useTheme();
 
     return (
@@ -157,11 +157,39 @@ export default function StudentTable({ students = [], onViewProfile, onMessage, 
                     </thead>
 
                     <tbody>
-                        {students.length === 0 && (
+                        {loading && (
+                            <tr>
+                                <td colSpan={COLS.length} style={{ padding: '60px 20px', textAlign: 'center' }}>
+                                    <RefreshCw size={28} color={colors.primary} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} aria-hidden="true" />
+                                    <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>Loading enrolled students…</p>
+                                </td>
+                            </tr>
+                        )}
+
+                        {!loading && students.length === 0 && (
                             <tr>
                                 <td colSpan={COLS.length} style={{ padding: '60px 20px', textAlign: 'center' }}>
                                     <GraduationCap size={40} color={colors.textMuted} style={{ display: 'block', margin: '0 auto 12px' }} aria-hidden="true" />
-                                    <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>No students found. Try adjusting the filters.</p>
+                                    <p style={{ color: colors.textMuted, fontSize: '14px', margin: '0 0 10px' }}>
+                                        {hasFilters ? 'No students match your search or filter criteria.' : 'No students found enrolled in this course.'}
+                                    </p>
+                                    {hasFilters && onClearFilters && (
+                                        <button
+                                            onClick={onClearFilters}
+                                            style={{
+                                                background: colors.bgInput,
+                                                border: `1px solid ${colors.border}`,
+                                                color: colors.primary,
+                                                borderRadius: '8px',
+                                                padding: '6px 14px',
+                                                fontSize: '12px',
+                                                fontWeight: '700',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            Clear Filters
+                                        </button>
+                                    )}
                                 </td>
                             </tr>
                         )}

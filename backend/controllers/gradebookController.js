@@ -1,5 +1,8 @@
 const GradeBook = require('../models/GradeBook');
 const Course = require('../models/Course');
+const Assignment = require('../models/Assignment');
+const Submission = require('../models/Submission');
+const InVideoQuizAttempt = require('../models/InVideoQuizAttempt');
 
 // ─────────────────────────────────────────────
 // @desc    Submit an assignment (student uploads file/URL)
@@ -41,30 +44,88 @@ const submitAssignment = async (req, res, next) => {
 // ─────────────────────────────────────────────
 // @desc    Get all submissions for a course (Instructor view)
 // @route   GET /api/submissions/course/:courseId
-// @access  Private (Instructor only)
+// @access  Private (Instructor & Admin)
 // ─────────────────────────────────────────────
 const getSubmissionsForCourse = async (req, res, next) => {
     try {
-        // Verify the instructor owns this course
+        // Verify the instructor owns or is assigned to this course (or Admin)
         const course = await Course.findById(req.params.courseId);
         if (!course) {
             return res.status(404).json({ success: false, message: 'Course not found.' });
         }
-        if (course.creatorRef.toString() !== req.user.id) {
-            return res.status(403).json({ success: false, message: 'Access denied. You do not own this course.' });
+
+        const isOwner = course.creatorRef && course.creatorRef.toString() === req.user.id;
+        const isAssigned = course.assignedInstructorRef && course.assignedInstructorRef.toString() === req.user.id;
+        const isAdmin = req.user.assignedRole === 'Admin';
+
+        if (!isOwner && !isAssigned && !isAdmin) {
+            return res.status(403).json({ success: false, message: 'Access denied. You do not teach this course.' });
         }
 
-        // Retrieve all submissions linked to quizzes/assessments of this course
+        // 1. Retrieve all GradeBook submissions linked to this course
         const submissions = await GradeBook.find()
             .populate({ path: 'studentRef', select: 'fullName accountEmail' })
             .populate({ path: 'assessmentRef', match: { courseRef: req.params.courseId }, select: 'quizTitle courseRef' })
             .sort({ submissionTimestamp: -1 })
             .lean();
 
-        // Filter out entries where assessmentRef didn't match (populate returns null for non-matches)
-        const filtered = submissions.filter(s => s.assessmentRef !== null);
+        const gbFiltered = submissions.filter(s => s.assessmentRef !== null);
 
-        res.status(200).json({ success: true, count: filtered.length, data: filtered });
+        // 2. Retrieve assignment submissions for this course
+        const assignments = await Assignment.find({ courseRef: req.params.courseId }).select('_id title maxScore passingScore').lean();
+        const assignmentIds = assignments.map(a => a._id);
+        const assignMap = new Map(assignments.map(a => [a._id.toString(), a]));
+
+        let mappedAssignSubs = [];
+        if (assignmentIds.length > 0) {
+            const assignSubs = await Submission.find({ assignmentRef: { $in: assignmentIds } })
+                .populate({ path: 'studentRef', select: 'fullName accountEmail' })
+                .sort({ submittedAt: -1 })
+                .lean();
+
+            mappedAssignSubs = assignSubs.map(s => {
+                const assign = assignMap.get(s.assignmentRef.toString()) || {};
+                return {
+                    _id: s._id,
+                    studentRef: s.studentRef,
+                    assessmentRef: {
+                        _id: s.assignmentRef,
+                        quizTitle: assign.title || 'Assignment',
+                        courseRef: req.params.courseId
+                    },
+                    numericalScoreEarned: typeof s.grade === 'number' ? s.grade : 0,
+                    isGraded: s.status === 'Graded' || typeof s.grade === 'number',
+                    submissionTimestamp: s.submittedAt || s.createdAt,
+                    gradingTimestamp: s.gradedAt || s.updatedAt,
+                    passingScore: assign.passingScore || 60
+                };
+            });
+        }
+
+        // 3. Retrieve InVideo Quiz attempts for this course
+        const inVideoAttempts = await InVideoQuizAttempt.find({ courseRef: req.params.courseId })
+            .populate({ path: 'studentRef', select: 'fullName accountEmail' })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const mappedQuizSubs = inVideoAttempts.map(q => ({
+            _id: q._id,
+            studentRef: q.studentRef,
+            assessmentRef: {
+                _id: q.lessonId,
+                quizTitle: `Checkpoint Quiz (${q.checkpointId})`,
+                courseRef: req.params.courseId
+            },
+            numericalScoreEarned: q.scorePercent || 0,
+            isGraded: true,
+            submissionTimestamp: q.createdAt,
+            gradingTimestamp: q.createdAt,
+            passingScore: 60
+        }));
+
+        const allResults = [...gbFiltered, ...mappedAssignSubs, ...mappedQuizSubs];
+
+        res.status(200).json({ success: true, count: allResults.length, data: allResults });
     } catch (err) {
         next(err);
     }

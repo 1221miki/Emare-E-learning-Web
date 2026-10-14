@@ -76,7 +76,7 @@ const buildCompletionReport = async ({ studentRef, course, enrollment }) => {
         LearningProgress.findOne({ studentRef, courseRef: courseId }).lean(),
         GradeBook.find({ studentRef }).lean(),
         Submission.find({ studentRef }).lean(),
-        InVideoQuizAttempt.find({ studentRef, courseRef, passed: true }).lean()
+        InVideoQuizAttempt.find({ studentRef, courseRef: courseId, passed: true }).lean()
     ]);
 
     // ── 1. Lessons ────────────────────────────────────────────────────────────

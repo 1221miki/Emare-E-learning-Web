@@ -137,7 +137,30 @@ export default function AssignmentPage() {
                                         </div>
                                     )}
                                     
-                                    <p style={{ color: colors.text, fontSize: '15px', lineHeight: 1.6, marginBottom: '20px' }}>{a.description}</p>
+                                    <p style={{ color: colors.text, fontSize: '15px', lineHeight: 1.6, marginBottom: '16px' }}>{a.description}</p>
+                                    
+                                    {a.instructions && (
+                                        <div style={{ marginBottom: '20px', background: colors.bgInput, padding: '16px 18px', borderRadius: '10px', border: `1px solid ${colors.border}` }}>
+                                            <h4 style={{ color: colors.text, margin: '0 0 10px', fontSize: '14px', fontWeight: '700' }}>📋 Instructions & Requirements</h4>
+                                            <div style={{ color: colors.text, fontSize: '13.5px', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                                                {String(a.instructions).replace(/^Instructions\s*\(Optional\)\s*/i, '').trim()}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {Array.isArray(a.attachments) && a.attachments.length > 0 && (
+                                        <div style={{ marginBottom: '20px', background: colors.bgInput, padding: '14px 18px', borderRadius: '10px', border: `1px solid ${colors.border}` }}>
+                                            <h4 style={{ color: colors.text, margin: '0 0 10px', fontSize: '14px', fontWeight: '700' }}>📎 Starter Files & Resources</h4>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                {a.attachments.map((att, i) => (
+                                                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                                                        <span style={{ fontSize: '13px', color: colors.text }}>📄 {att.filename || `File ${i + 1}`}</span>
+                                                        <a href={att.url} download={att.filename || true} target="_blank" rel="noopener noreferrer" style={{ color: colors.primary, fontSize: '12.5px', fontWeight: '700', textDecoration: 'none' }}>Download ⬇</a>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                     
                                     {a.rubricItems?.length > 0 && (
                                         <div style={{ marginBottom: '20px', background: colors.bgInput, padding: '16px', borderRadius: '8px' }}>

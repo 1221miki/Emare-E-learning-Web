@@ -265,25 +265,47 @@ const updateCourse = async (req, res, next) => {
             delete req.body.assignments;
         }
 
-        // Normalise per-lesson requirement fields so empty strings become null
-        // (Mongoose ObjectId fields must be null or a valid id, not '').
+        // Normalise per-lesson requirement fields and title mappings so chapters and lessons
+        // gracefully support both chapterTitle/title and lessonTitle/title formats.
         if (req.body.curriculumTree && Array.isArray(req.body.curriculumTree)) {
-            req.body.curriculumTree = req.body.curriculumTree.map(ch => ({
-                ...ch,
-                lessons: (ch.lessons || []).map(l => ({
-                    ...l,
-                    clientId:           l.clientId && String(l.clientId).trim() ? String(l.clientId).trim() : null,
-                    linkedQuizId:       l.linkedQuizId       && String(l.linkedQuizId).trim()       ? l.linkedQuizId       : null,
-                    linkedAssignmentId: l.linkedAssignmentId && String(l.linkedAssignmentId).trim() ? l.linkedAssignmentId : null,
-                    quizRequired:       !!l.quizRequired,
-                    assignmentRequired: !!l.assignmentRequired,
-                    // Normalise checkpoint startSeconds (default 0 for backwards compatibility)
-                    quizCheckpoints: Array.isArray(l.quizCheckpoints) ? l.quizCheckpoints.map(cp => ({
-                        ...cp,
-                        startSeconds: Number(cp.startSeconds) || 0
-                    })) : []
-                }))
-            }));
+            req.body.curriculumTree = req.body.curriculumTree.map((ch, chIdx) => {
+                const chapterTitle = (ch.chapterTitle || ch.title || `Chapter ${chIdx + 1}`).trim();
+                return {
+                    ...ch,
+                    chapterTitle,
+                    lessons: (ch.lessons || []).map((l, lIdx) => {
+                        const lessonTitle = (l.lessonTitle || l.title || `Lesson ${lIdx + 1}`).trim();
+                        const videoUrl = String(l.videoUrl || l.url || '').trim();
+                        let videoSource = l.videoSource;
+                        if (!videoSource) {
+                            videoSource = /youtube\.com|youtu\.be/i.test(videoUrl) ? 'youtube' : 'upload';
+                        }
+                        return {
+                            ...l,
+                            lessonTitle,
+                            videoUrl,
+                            videoSource,
+                            durationMinutes: Number(l.durationMinutes) || 0,
+                            isFreePreview: !!l.isFreePreview,
+                            notesPdfUrl: String(l.notesPdfUrl || l.content || '').trim(),
+                            resourceLink: String(l.resourceLink || '').trim(),
+                            clientId:           l.clientId && String(l.clientId).trim() ? String(l.clientId).trim() : null,
+                            linkedQuizId:       l.linkedQuizId       && String(l.linkedQuizId).trim()       ? l.linkedQuizId       : null,
+                            linkedAssignmentId: l.linkedAssignmentId && String(l.linkedAssignmentId).trim() ? l.linkedAssignmentId : null,
+                            quizRequired:       !!l.quizRequired,
+                            assignmentRequired: !!l.assignmentRequired,
+                            // Normalise checkpoint startSeconds (default 0 for backwards compatibility)
+                            quizCheckpoints: Array.isArray(l.quizCheckpoints) ? l.quizCheckpoints.map(cp => ({
+                                ...cp,
+                                startSeconds: Number(cp.startSeconds) || 0,
+                                timestampSeconds: Number(cp.timestampSeconds) || 0,
+                                passingScorePercent: Number(cp.passingScorePercent) || 60,
+                                questions: Array.isArray(cp.questions) ? cp.questions : []
+                            })) : []
+                        };
+                    })
+                };
+            });
         }
 
         course = await Course.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
@@ -763,8 +785,27 @@ const enrollInCourse = async (req, res, next) => {
 // ─────────────────────────────────────────────
 const getInstructorCourses = async (req, res, next) => {
     try {
-        const courses = await Course.find({ creatorRef: req.user.id }).sort({ creationTimestamp: -1 });
-        res.status(200).json({ success: true, count: courses.length, data: courses });
+        const courses = await Course.find({
+            $or: [
+                { creatorRef: req.user.id },
+                { assignedInstructorRef: req.user.id }
+            ]
+        }).sort({ creationTimestamp: -1, createdAt: -1 }).lean();
+
+        const courseIds = courses.map(c => c._id);
+        const enrollmentCounts = await Enrollment.aggregate([
+            { $match: { courseRef: { $in: courseIds } } },
+            { $group: { _id: '$courseRef', count: { $sum: 1 } } }
+        ]);
+
+        const countMap = new Map(enrollmentCounts.map(item => [item._id.toString(), item.count]));
+
+        const enrichedCourses = courses.map(c => ({
+            ...c,
+            totalEnrollments: countMap.get(c._id.toString()) || 0
+        }));
+
+        res.status(200).json({ success: true, count: enrichedCourses.length, data: enrichedCourses });
     } catch (err) {
         next(err);
     }
@@ -998,7 +1039,12 @@ const duplicateCourse = async (req, res, next) => {
 // ─────────────────────────────────────────────
 const getInstructorAnalytics = async (req, res, next) => {
     try {
-        const courses = await Course.find({ creatorRef: req.user.id }).lean();
+        const courses = await Course.find({
+            $or: [
+                { creatorRef: req.user.id },
+                { assignedInstructorRef: req.user.id }
+            ]
+        }).lean();
         const courseIds = courses.map(c => c._id);
 
         const [totalStudents, clearedStudents] = await Promise.all([

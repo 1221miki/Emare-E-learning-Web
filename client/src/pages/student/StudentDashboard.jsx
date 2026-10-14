@@ -18,7 +18,6 @@ import {
     assignmentService,
     quizService,
     uploadService,
-    leaderboardService,
     messageService,
     discussionService,
     projectService,
@@ -50,7 +49,6 @@ import QuizzesTab from '../../components/dashboard/tabs/QuizzesTab';
 import CertificatesTab from '../../components/dashboard/tabs/CertificatesTab';
 import LiveSessionsTab from '../../components/dashboard/tabs/LiveSessionsTab';
 import DiscussionsTab from '../../components/dashboard/tabs/DiscussionsTab';
-import LeaderboardTab from '../../components/dashboard/tabs/LeaderboardTab';
 import MessagesTab from '../../components/dashboard/tabs/MessagesTab';
 import PaymentsTab from '../../components/dashboard/tabs/PaymentsTab';
 import SettingsTab from '../../components/dashboard/tabs/SettingsTab';
@@ -75,7 +73,7 @@ export default function StudentDashboard() {
             quizzes: 'quizzes',
             live: 'live',
             discussions: 'discussions',
-            leaderboard: 'leaderboard',
+            leaderboard: 'overview',
             messages: 'messages',
             certificates: 'certificates',
             payments: 'payments',
@@ -134,9 +132,6 @@ export default function StudentDashboard() {
     const [replyText, setReplyText] = useState({});
     const [expandedDiscussion, setExpandedDiscussion] = useState(null);
     const [discussionMsg, setDiscussionMsg] = useState('');
-
-    // Leaderboard Tab States
-    const [leaderboard, setLeaderboard] = useState([]);
 
     // Messages sub-section state (controls which sub-tab is shown in MessagesTab)
     // Values: 'inbox' | 'sent' | 'discussions' | 'notifications' | 'ai'
@@ -269,7 +264,6 @@ export default function StudentDashboard() {
                 recentPurchases,
                 allCourses,
                 notifications,
-                leaderboard,
                 conversations,
                 myLiveSessions,
                 ...perCourseResults
@@ -291,7 +285,6 @@ export default function StudentDashboard() {
                 safe(paymentService.history(), 'payment history'),
                 safe(courseService.getAll(), 'courses'),
                 safe(notificationService.getAll(), 'notifications'),
-                safe(leaderboardService.getTop(), 'leaderboard'),
                 safe(messageService.getConversations(), 'conversations'),
                 safe(liveSessionService.getMySessions(), 'live sessions'),
                 ...perCoursePromises
@@ -337,7 +330,6 @@ export default function StudentDashboard() {
             setState(setRecentPurchases)(recentPurchases);
             setState(setAllCourses)(allCourses);
             setState(setNotifications)(notifications);
-            setState(setLeaderboard)(leaderboard);
             setState(setConversations)(conversations);
 
             // Load recently viewed from local storage
@@ -620,8 +612,6 @@ export default function StudentDashboard() {
         setExpandedDiscussion,
         discussionMsg,
         setDiscussionMsg,
-        leaderboard,
-        setLeaderboard,
         conversations,
         setConversations,
         activeConversation,
@@ -741,7 +731,6 @@ export default function StudentDashboard() {
             case 'quizzes': return <QuizzesTab {...dash} />;
             case 'live': return <LiveSessionsTab {...dash} />;
             case 'discussions': return <DiscussionsTab {...dash} />;
-            case 'leaderboard': return <LeaderboardTab {...dash} />;
             case 'messages': return <MessagesTab {...dash} />;
             case 'certificates': return <CertificatesTab {...dash} />;
             case 'payments': return <PaymentsTab {...dash} />;

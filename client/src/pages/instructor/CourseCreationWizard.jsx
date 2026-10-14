@@ -354,25 +354,8 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                                         📄 {lesson.notesPdfUrl}
                                     </div>
                                 )}
-                                {/* Completion requirement badges */}
-                                <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                                    <span style={{
-                                        padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700,
-                                        background: lesson.quizRequired ? 'rgba(245,158,11,0.18)' : 'rgba(71,85,105,0.18)',
-                                        color: lesson.quizRequired ? '#f59e0b' : '#64748b',
-                                        border: `1px solid ${lesson.quizRequired ? 'rgba(245,158,11,0.35)' : 'rgba(71,85,105,0.25)'}`
-                                    }}>
-                                        Quiz: {lesson.quizRequired ? 'ON' : 'OFF'}
-                                    </span>
-                                    <span style={{
-                                        padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700,
-                                        background: lesson.assignmentRequired ? 'rgba(139,92,246,0.18)' : 'rgba(71,85,105,0.18)',
-                                        color: lesson.assignmentRequired ? '#4ade80' : '#64748b',
-                                        border: `1px solid ${lesson.assignmentRequired ? 'rgba(139,92,246,0.35)' : 'rgba(71,85,105,0.25)'}`
-                                    }}>
-                                        Assignment: {lesson.assignmentRequired ? 'ON' : 'OFF'}
-                                    </span>
-                                    {(lesson.quizCheckpoints || []).length > 0 && (
+                                {(lesson.quizCheckpoints || []).length > 0 && (
+                                    <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
                                         <span style={{
                                             padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700,
                                             background: 'rgba(34,197,94,0.18)', color: '#86efac',
@@ -380,8 +363,8 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                                         }}>
                                             ⏸ {lesson.quizCheckpoints.length} in-video quiz{(lesson.quizCheckpoints.length > 1) ? 'zes' : ''}
                                         </span>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                             </div>
                             <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
                                 <span style={styles.badge}>
@@ -428,82 +411,6 @@ function ChapterCard({ chapter, chapterIndex, totalChapters, onUpdate, onRemove,
                             <option value="true">Yes</option>
                         </select>
                     </div>
-                </div>
-
-                {/* Row 1b: Completion requirements — Quiz + Assignment toggles */}
-                <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, border: '1px solid rgba(71,85,105,0.35)', padding: '12px 14px' }}>
-                    <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        Completion Requirements
-                    </p>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                        {/* Quiz toggle */}
-                        <div style={styles.formGroup}>
-                            <label style={styles.label}>Quiz Requirement</label>
-                            <select
-                                style={{
-                                    ...styles.input,
-                                    color: draft.quizRequired ? '#f59e0b' : undefined,
-                                    borderColor: draft.quizRequired ? 'rgba(245,158,11,0.5)' : undefined
-                                }}
-                                value={draft.quizRequired}
-                                onChange={e => setDraftField('quizRequired', e.target.value === 'true')}
-                            >
-                                <option value="false">OFF — Not required</option>
-                                <option value="true">ON — Must complete quiz</option>
-                            </select>
-                        </div>
-                        {/* Assignment toggle */}
-                        <div style={styles.formGroup}>
-                            <label style={styles.label}>Assignment Requirement</label>
-                            <select
-                                style={{
-                                    ...styles.input,
-                                    color: draft.assignmentRequired ? '#4ade80' : undefined,
-                                    borderColor: draft.assignmentRequired ? 'rgba(139,92,246,0.5)' : undefined
-                                }}
-                                value={draft.assignmentRequired}
-                                onChange={e => setDraftField('assignmentRequired', e.target.value === 'true')}
-                            >
-                                <option value="false">OFF — Not required</option>
-                                <option value="true">ON — Must submit assignment</option>
-                            </select>
-                        </div>
-                        {/* Linked Quiz ID (shown only when ON) */}
-                        {draft.quizRequired && (
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>Linked Quiz ID (optional)</label>
-                                <input
-                                    style={{ ...styles.input, borderColor: 'rgba(245,158,11,0.4)' }}
-                                    value={draft.linkedQuizId}
-                                    onChange={e => setDraftField('linkedQuizId', e.target.value)}
-                                    placeholder="Paste Quiz _id from Quiz Manager"
-                                />
-                                <p style={{ margin: '3px 0 0', fontSize: 10, color: '#94a3b8' }}>
-                                    Leave blank to block completion until you link a quiz later.
-                                </p>
-                            </div>
-                        )}
-                        {/* Linked Assignment ID (shown only when ON) */}
-                        {draft.assignmentRequired && (
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>Linked Assignment ID (optional)</label>
-                                <input
-                                    style={{ ...styles.input, borderColor: 'rgba(139,92,246,0.4)' }}
-                                    value={draft.linkedAssignmentId}
-                                    onChange={e => setDraftField('linkedAssignmentId', e.target.value)}
-                                    placeholder="Paste Assignment _id from Assignment Builder"
-                                />
-                                <p style={{ margin: '3px 0 0', fontSize: 10, color: '#94a3b8' }}>
-                                    Leave blank to block completion until you link an assignment later.
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                    {(draft.quizRequired || draft.assignmentRequired) && (
-                        <p style={{ margin: '10px 0 0', fontSize: 11, color: '#f59e0b', fontWeight: 600 }}>
-                            ⚠ Students must complete {[draft.quizRequired && 'the quiz', draft.assignmentRequired && 'the assignment'].filter(Boolean).join(' and ')} before this lesson can be marked complete.
-                        </p>
-                    )}
                 </div>
 
                 {/* Row 2: Video Source Selector */}
@@ -1606,9 +1513,7 @@ export default function CourseCreationWizard({ adminMode = false, onComplete = n
                                                 <span style={{ color: colors.textMuted, fontSize: 12, display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                                                     {l.videoUrl ? '▶ Video' : '⚠ No video'} &nbsp;
                                                     {l.notesPdfUrl ? '📄 PDF' : ''} &nbsp;
-                                                    {l.isFreePreview ? '🆓' : '🔒'} &nbsp;
-                                                    {l.quizRequired && <span style={{ color: '#f59e0b' }}>Quiz: ON</span>}
-                                                    {l.assignmentRequired && <span style={{ color: '#4ade80' }}>Assignment: ON</span>}
+                                                    {l.isFreePreview ? '🆓' : '🔒'}
                                                 </span>
                                             </div>
                                         ))}

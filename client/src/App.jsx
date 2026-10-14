@@ -64,7 +64,6 @@ import QuizPage              from './pages/student/QuizPage';
 import PaymentPage           from './pages/student/PaymentPage';
 import CertificatesPage      from './pages/student/CertificatesPage';
 import ProfilePage           from './pages/student/ProfilePage';
-import LeaderboardPage       from './pages/student/LeaderboardPage';
 import DiscussionPage        from './pages/student/DiscussionPage';
 import AssignmentPage        from './pages/student/AssignmentPage';
 import MockCheckoutPage      from './pages/student/MockCheckoutPage';
@@ -130,7 +129,7 @@ function AppRoutes() {
                 <Route path="/categories"            element={<CategoriesPage />} />
                 <Route path="/instructors/:id"       element={<InstructorProfilePage />} />
                 <Route path="/instructors"           element={<SearchPage />} />
-                <Route path="/leaderboard"           element={<LeaderboardPage />} />
+                <Route path="/leaderboard"           element={<Navigate to="/student/dashboard" replace />} />
                 <Route path="/verify-certificate"           element={<VerifyCertificatePage />} />
                 <Route path="/verify-certificate/:certificateId" element={<VerifyCertificatePage />} />
 
