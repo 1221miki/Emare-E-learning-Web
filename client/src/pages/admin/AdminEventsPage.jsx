@@ -981,7 +981,7 @@ export default function AdminEventsPage() {
                                                     <div className="flex items-center gap-3">
                                                         <img src={event.image || '/images/education-hero.jpg'} alt="" className={`h-11 w-11 shrink-0 rounded-xl border object-cover ${isDark ? 'border-white/10' : 'border-slate-200'}`} />
                                                         <div className="min-w-0">
-                                                            <p className={`max-w-[240px] truncate font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{event.title}</p>
+                                                            <p title={event.title} className={`max-w-[240px] truncate font-bold cursor-help ${isDark ? 'text-white' : 'text-slate-900'}`}>{event.title}</p>
                                                             <span className={`mt-1 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'border-white/10 bg-white/5 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-700'}`}>
                                                                 {event.eventType === 'Online' ? <Video className="h-3 w-3 text-green-500" /> : <MapPin className="h-3 w-3 text-green-500" />}
                                                                 {event.eventType}
@@ -1007,9 +1007,16 @@ export default function AdminEventsPage() {
                                                         <>
                                                             <p className={`text-xs font-semibold ${isDark ? 'text-gray-200' : 'text-slate-800'}`}>Online Live Stream</p>
                                                             {event.meetingUrl || event.streamUrl ? (
-                                                                <a href={event.meetingUrl || event.streamUrl} target="_blank" rel="noopener noreferrer" className="mt-1 flex max-w-[220px] items-center gap-1 truncate text-xs text-sky-500 hover:text-sky-600">
-                                                                    <ExternalLink className="h-3 w-3 shrink-0" />
-                                                                    <span className="truncate">{event.meetingUrl || event.streamUrl}</span>
+                                                                <a
+                                                                    href={event.meetingUrl || event.streamUrl}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    title={`Join meeting: ${event.meetingUrl || event.streamUrl}`}
+                                                                    className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-400 transition hover:bg-emerald-500/25 hover:border-emerald-500/60"
+                                                                >
+                                                                    <Video className="h-3 w-3 shrink-0" />
+                                                                    <span>Join Link</span>
+                                                                    <ExternalLink className="h-3 w-3 shrink-0 opacity-70" />
                                                                 </a>
                                                             ) : null}
                                                         </>
@@ -1017,9 +1024,16 @@ export default function AdminEventsPage() {
                                                         <>
                                                             <p className={`max-w-[220px] truncate text-xs ${isDark ? 'text-gray-200' : 'text-slate-800'}`}>{[event.venue, event.city].filter(Boolean).join(', ') || 'Venue TBD'}</p>
                                                             {event.meetingUrl || event.streamUrl ? (
-                                                                <a href={event.meetingUrl || event.streamUrl} target="_blank" rel="noopener noreferrer" className="mt-1 flex max-w-[220px] items-center gap-1 truncate text-xs text-sky-500 hover:text-sky-600">
+                                                                <a
+                                                                    href={event.meetingUrl || event.streamUrl}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    title={`Join meeting: ${event.meetingUrl || event.streamUrl}`}
+                                                                    className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-400 transition hover:bg-emerald-500/25 hover:border-emerald-500/60"
+                                                                >
                                                                     <Video className="h-3 w-3 shrink-0" />
-                                                                    <span className="truncate">{event.meetingUrl || event.streamUrl}</span>
+                                                                    <span>Join Link</span>
+                                                                    <ExternalLink className="h-3 w-3 shrink-0 opacity-70" />
                                                                 </a>
                                                             ) : null}
                                                         </>

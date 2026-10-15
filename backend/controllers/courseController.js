@@ -77,16 +77,26 @@ const getAllCourses = async (req, res, next) => {
         const courses = await Course.find({})
             .populate('creatorRef', 'fullName accountEmail')
             .populate('assignedInstructorRef', 'fullName accountEmail')
-            .sort({ creationTimestamp: -1 })
+            .sort({ creationTimestamp: -1, createdAt: -1 })
             .lean();
 
-        // Ensure all courses have thumbnailUrl included
+        const courseIds = courses.map(c => c._id);
+        const enrollmentCounts = await Enrollment.aggregate([
+            { $match: { courseRef: { $in: courseIds } } },
+            { $group: { _id: '$courseRef', count: { $sum: 1 } } }
+        ]);
+
+        const countMap = new Map(enrollmentCounts.map(item => [item._id.toString(), item.count]));
+
+        // Ensure all courses have thumbnailUrl, accurate totalEnrollments, and creation timestamps
         const coursesWithThumbnails = courses.map(c => ({
             ...c,
-            thumbnailUrl: c.thumbnailUrl || null
+            thumbnailUrl: c.thumbnailUrl || null,
+            totalEnrollments: countMap.get(c._id.toString()) || c.totalEnrollments || 0,
+            createdAt: c.creationTimestamp || c.createdAt || null
         }));
 
-        console.log('getAllCourses: Returning', coursesWithThumbnails.length, 'courses with thumbnails');
+        console.log('getAllCourses: Returning', coursesWithThumbnails.length, 'courses with thumbnails and enrollments');
 
         res.status(200).json({ success: true, count: coursesWithThumbnails.length, data: coursesWithThumbnails });
     } catch (err) {
@@ -475,10 +485,12 @@ const approveCourse = async (req, res, next) => {
         const course = await Course.findById(req.params.id);
 
         if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
-        if (course.publicationState !== 'Pending Review') return res.status(400).json({ success: false, message: `Course must be in 'Pending Review' state to publish.` });
 
         course.publicationState = 'Published';
         await course.save();
+
+        await course.populate('creatorRef', 'fullName accountEmail avatarUrl');
+        await course.populate('assignedInstructorRef', 'fullName accountEmail avatarUrl');
 
         // Audit: course approved
         audit.course({ req, user: req.user, action: 'COURSE_APPROVED', severity: 'info',
@@ -575,12 +587,12 @@ const publishCourse = async (req, res, next) => {
         const course = await Course.findById(req.params.id);
 
         if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
-        if (course.publicationState !== 'Pending Review') {
-            return res.status(400).json({ success: false, message: 'Course must be pending review to publish.' });
-        }
 
         course.publicationState = 'Published';
         await course.save();
+
+        await course.populate('creatorRef', 'fullName accountEmail avatarUrl');
+        await course.populate('assignedInstructorRef', 'fullName accountEmail avatarUrl');
 
         // Audit: course published
         audit.course({ req, user: req.user, action: 'COURSE_PUBLISHED', severity: 'info',
@@ -603,12 +615,12 @@ const restoreCourse = async (req, res, next) => {
         const course = await Course.findById(req.params.id);
 
         if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
-        if (course.publicationState !== 'Archived') {
-            return res.status(400).json({ success: false, message: 'Only archived courses can be restored.' });
-        }
 
         course.publicationState = 'Draft';
         await course.save();
+
+        await course.populate('creatorRef', 'fullName accountEmail avatarUrl');
+        await course.populate('assignedInstructorRef', 'fullName accountEmail avatarUrl');
 
         res.status(200).json({ success: true, message: 'Course restored to Draft state.', data: course });
     } catch (err) {
@@ -686,12 +698,15 @@ const assignInstructor = async (req, res, next) => {
         ]);
 
         if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
-        if (!instructor || instructor.assignedRole !== 'Instructor') {
+        if (!instructor || (instructor.assignedRole !== 'Instructor' && instructor.role !== 'Instructor' && instructor.assignedRole !== 'Admin')) {
             return res.status(400).json({ success: false, message: 'Valid instructor not found.' });
         }
 
         course.assignedInstructorRef = instructor._id;
         await course.save();
+
+        await course.populate('creatorRef', 'fullName accountEmail avatarUrl');
+        await course.populate('assignedInstructorRef', 'fullName accountEmail avatarUrl');
 
         res.status(200).json({ success: true, message: `Instructor ${instructor.fullName} has been assigned to the course.`, data: course });
     } catch (err) {
@@ -712,6 +727,8 @@ const removeInstructor = async (req, res, next) => {
 
         course.assignedInstructorRef = null;
         await course.save();
+
+        await course.populate('creatorRef', 'fullName accountEmail avatarUrl');
 
         res.status(200).json({ success: true, message: 'Instructor assignment removed from the course.', data: course });
     } catch (err) {
@@ -754,24 +771,55 @@ const enrollInCourse = async (req, res, next) => {
         const course = await Course.findById(req.params.id);
 
         if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
-        if (!['Published', 'Active'].includes(course.publicationState)) return res.status(400).json({ success: false, message: 'This course is not available for enrollment.' });
+
+        const isAdmin = req.user.assignedRole === 'Admin' || req.user.role === 'Admin';
+        let targetStudentId = req.user.id;
+
+        if (isAdmin && (req.body.studentId || req.body.email)) {
+            let targetUser = null;
+            const inputVal = (req.body.studentId || req.body.email || '').trim();
+            // Try by ID first if valid Mongo ObjectId format
+            if (inputVal.match(/^[0-9a-fA-F]{24}$/)) {
+                targetUser = await User.findById(inputVal).catch(() => null);
+            }
+            if (!targetUser) {
+                targetUser = await User.findOne({ accountEmail: inputVal.toLowerCase() }).catch(() => null);
+            }
+            if (!targetUser) {
+                targetUser = await User.findOne({ fullName: new RegExp(`^${inputVal}$`, 'i') }).catch(() => null);
+            }
+            if (!targetUser) {
+                return res.status(404).json({ success: false, message: `Student '${inputVal}' not found.` });
+            }
+            targetStudentId = targetUser._id;
+        } else if (!isAdmin && !['Published', 'Active'].includes(course.publicationState)) {
+            return res.status(400).json({ success: false, message: 'This course is not available for enrollment.' });
+        }
 
         // Prevent duplicate enrollments
-        const existing = await Enrollment.findOne({ studentRef: req.user.id, courseRef: course._id });
-        if (existing) return res.status(400).json({ success: false, message: 'You are already enrolled in this course.' });
+        const existing = await Enrollment.findOne({ studentRef: targetStudentId, courseRef: course._id });
+        if (existing) return res.status(400).json({ success: false, message: 'Student is already enrolled in this course.' });
 
+        const isFree = (course.price || 0) === 0 || isAdmin;
         const enrollment = await Enrollment.create({
-            studentRef: req.user.id,
+            studentRef: targetStudentId,
             courseRef: course._id,
-            tuitionClearanceFlag: (course.price || 0) === 0
+            tuitionClearanceFlag: isFree,
+            paymentStatus: isFree ? 'Cleared' : 'Unpaid'
         });
+
+        await Course.findByIdAndUpdate(course._id, { $inc: { totalEnrollments: 1 } });
+
+        const populated = await Enrollment.findById(enrollment._id)
+            .populate('studentRef', 'fullName accountEmail avatarUrl assignedRole')
+            .populate('courseRef', 'courseTitle technicalCategory price level thumbnailUrl creatorRef assignedInstructorRef');
 
         res.status(201).json({
             success: true,
-            message: (course.price || 0) === 0
-                ? 'Enrolled successfully. This is a free course — all materials are unlocked.'
+            message: isFree
+                ? 'Student enrolled successfully with full course access.'
                 : 'Enrolled successfully. Please complete payment clearance to access course materials.',
-            data: enrollment
+            data: populated
         });
     } catch (err) {
         next(err);
@@ -978,6 +1026,10 @@ const archiveCourse = async (req, res, next) => {
 
         course.publicationState = 'Archived';
         await course.save();
+
+        await course.populate('creatorRef', 'fullName accountEmail avatarUrl');
+        await course.populate('assignedInstructorRef', 'fullName accountEmail avatarUrl');
+
         res.status(200).json({ success: true, message: 'Course archived.', data: course });
     } catch (err) {
         next(err);
@@ -999,6 +1051,10 @@ const unpublishCourse = async (req, res, next) => {
 
         course.publicationState = 'Draft';
         await course.save();
+
+        await course.populate('creatorRef', 'fullName accountEmail avatarUrl');
+        await course.populate('assignedInstructorRef', 'fullName accountEmail avatarUrl');
+
         res.status(200).json({ success: true, message: 'Course unpublished.', data: course });
     } catch (err) {
         next(err);
@@ -1008,17 +1064,23 @@ const unpublishCourse = async (req, res, next) => {
 // ─────────────────────────────────────────────
 // @desc    Duplicate a course (creates a copy in Draft)
 // @route   POST /api/courses/:id/duplicate
-// @access  Private (Instructor - must be owner)
+// @access  Private (Instructor owner or Admin)
 // ─────────────────────────────────────────────
 const duplicateCourse = async (req, res, next) => {
     try {
         const source = await Course.findById(req.params.id).lean();
         if (!source) return res.status(404).json({ success: false, message: 'Course not found.' });
-        if (source.creatorRef.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Access denied.' });
+        
+        const isAdmin = req.user.assignedRole === 'Admin' || req.user.role === 'Admin';
+        const isOwner = source.creatorRef?.toString() === req.user.id || source.creatorRef?.toString() === req.user._id?.toString();
+        if (!isAdmin && !isOwner) {
+            return res.status(403).json({ success: false, message: 'Access denied.' });
+        }
 
         delete source._id;
         delete source.creationTimestamp;
         delete source.updatedAt;
+        delete source.createdAt;
         source.courseTitle = `${source.courseTitle} (Copy)`;
         source.publicationState = 'Draft';
         source.totalEnrollments = 0;
@@ -1026,7 +1088,10 @@ const duplicateCourse = async (req, res, next) => {
         source.totalReviews = 0;
 
         const duplicate = await Course.create(source);
-        res.status(201).json({ success: true, message: 'Course duplicated.', data: duplicate });
+        await duplicate.populate('creatorRef', 'fullName accountEmail avatarUrl');
+        await duplicate.populate('assignedInstructorRef', 'fullName accountEmail avatarUrl');
+
+        res.status(201).json({ success: true, message: 'Course duplicated successfully.', data: duplicate });
     } catch (err) {
         next(err);
     }

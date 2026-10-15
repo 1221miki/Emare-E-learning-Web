@@ -249,4 +249,26 @@ const getStudentPaymentStatus = async (req, res, next) => {
     }
 };
 
-module.exports = { getAllEnrollments, approvePayment, rejectPayment, uploadPaymentSlip, getStudentPaymentStatus };
+// ─────────────────────────────────────────────
+// @desc    Delete/Revoke an enrollment
+// @route   DELETE /api/enrollments/:id
+// @access  Private (Admin only)
+// ─────────────────────────────────────────────
+const deleteEnrollment = async (req, res, next) => {
+    try {
+        const enrollment = await Enrollment.findById(req.params.id);
+        if (!enrollment) {
+            return res.status(404).json({ success: false, message: 'Enrollment not found.' });
+        }
+        await Enrollment.findByIdAndDelete(req.params.id);
+        await LearningProgress.deleteMany({ studentRef: enrollment.studentRef, courseRef: enrollment.courseRef });
+        await Course.findByIdAndUpdate(enrollment.courseRef, { $inc: { totalEnrollments: -1 } });
+
+        res.status(200).json({ success: true, message: 'Enrollment revoked successfully.' });
+    } catch (err) {
+        next(err);
+    }
+};
+
+module.exports = { getAllEnrollments, approvePayment, rejectPayment, uploadPaymentSlip, getStudentPaymentStatus, deleteEnrollment };
+

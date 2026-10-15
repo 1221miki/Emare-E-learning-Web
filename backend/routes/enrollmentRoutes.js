@@ -7,7 +7,8 @@ const {
     approvePayment,
     rejectPayment,
     uploadPaymentSlip,
-    getStudentPaymentStatus
+    getStudentPaymentStatus,
+    deleteEnrollment
 } = require('../controllers/enrollmentController');
 
 // ── Student Routes ──────────────────────────────────────────
@@ -18,5 +19,6 @@ router.post('/:id/payment-slip', protect, authorizeRoles('Student'), upload.sing
 router.get('/', protect, authorizeRoles('Admin', 'Instructor'), getAllEnrollments);
 router.patch('/:id/approve', protect, authorizeRoles('Admin'), approvePayment);
 router.patch('/:id/reject', protect, authorizeRoles('Admin'), rejectPayment);
+router.delete('/:id', protect, authorizeRoles('Admin'), deleteEnrollment);
 
 module.exports = router;

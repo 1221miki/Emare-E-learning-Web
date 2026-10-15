@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { courseService, quizService, assignmentService, userService, enrollmentService, analyticsService, systemService, notificationService, authService, reportService, certificateService, contentService, uploadService, auditService, calendarService, eventService } from '../../services/api';
+import { courseService, quizService, assignmentService, userService, enrollmentService, analyticsService, systemService, notificationService, authService, reportService, certificateService, contentService, uploadService, auditService, calendarService, eventService, reviewService } from '../../services/api';
 import Sidebar from '../../components/Sidebar';
 import StatCard from '../../components/StatCard';
 import Modal from '../../components/Modal';
@@ -14,6 +14,7 @@ import CourseCreationWizard from '../instructor/CourseCreationWizard';
 import AdminContactMessages from './AdminContactMessages';
 import { DevelopersPanel } from '../AdminDevelopers';
 import AdminProfilePanel from '../../components/admin/AdminProfilePanel';
+import { categoryMatchesCourse } from '../../utils/categoryMatching';
 
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
 const combineDateAndTime = (dateStr, timeStr) => {
@@ -213,9 +214,14 @@ export default function AdminDashboard() {
     const [isManageStudentsModalOpen, setIsManageStudentsModalOpen] = useState(false);
     const [isCourseAnalyticsModalOpen, setIsCourseAnalyticsModalOpen] = useState(false);
     const [isCourseReviewsModalOpen, setIsCourseReviewsModalOpen] = useState(false);
+    const [courseReviewsList, setCourseReviewsList] = useState([]);
+    const [isLoadingCourseReviews, setIsLoadingCourseReviews] = useState(false);
     const [activeCourseId, setActiveCourseId] = useState(null);
+    const [courseCategoryFilter, setCourseCategoryFilter] = useState('All Categories');
     const [courseStatusFilter, setCourseStatusFilter] = useState('All Status');
     const [courseSearchQuery, setCourseSearchQuery] = useState('');
+    const [coursePage, setCoursePage] = useState(1);
+    const [coursePageSize, setCoursePageSize] = useState(10);
     const [managedStudents, setManagedStudents] = useState([]);
     const [managedStudentsLoading, setManagedStudentsLoading] = useState(false);
     const [enrollStudentId, setEnrollStudentId] = useState('');
@@ -453,6 +459,23 @@ export default function AdminDashboard() {
     const [eventCategoryFilter, setEventCategoryFilter] = useState('all');
     const [eventVisibilityFilter, setEventVisibilityFilter] = useState('all');
     const [eventDateFilter, setEventDateFilter] = useState('all');
+    const [eventCurrentPage, setEventCurrentPage] = useState(1);
+    const [eventPageSize, setEventPageSize] = useState(10);
+    const [selectedEvents, setSelectedEvents] = useState([]);
+    const [eventMenuOpenId, setEventMenuOpenId] = useState(null);
+    const [eventMenuPos, setEventMenuPos] = useState({ top: 0, right: 0 });
+
+    useEffect(() => {
+        if (!eventMenuOpenId) return;
+        const close = () => setEventMenuOpenId(null);
+        document.addEventListener('mousedown', close);
+        document.addEventListener('scroll', close, true);
+        return () => {
+            document.removeEventListener('mousedown', close);
+            document.removeEventListener('scroll', close, true);
+        };
+    }, [eventMenuOpenId]);
+
     const [isEventModalOpen, setIsEventModalOpen] = useState(false);
     const [viewingEvent, setViewingEvent] = useState(null);
     const [cancelTarget, setCancelTarget] = useState(null);
@@ -544,6 +567,24 @@ export default function AdminDashboard() {
         }
     }, [isManageStudentsModalOpen, activeCourseId]);
 
+    useEffect(() => {
+        if (isCourseReviewsModalOpen && activeCourseId) {
+            const loadReviews = async () => {
+                setIsLoadingCourseReviews(true);
+                try {
+                    const res = await reviewService.getCourseReviews(activeCourseId);
+                    setCourseReviewsList(res.data?.data || []);
+                } catch (err) {
+                    console.error('Failed to load course reviews:', err);
+                    setCourseReviewsList([]);
+                } finally {
+                    setIsLoadingCourseReviews(false);
+                }
+            };
+            loadReviews();
+        }
+    }, [isCourseReviewsModalOpen, activeCourseId]);
+
     const fetchCertificates = async () => {
         try {
             const response = await certificateService.getAllAdmin();
@@ -623,10 +664,16 @@ export default function AdminDashboard() {
     const confirmCancelPublicEvent = async () => {
         if (!cancelTarget) return;
         try {
-            await eventService.cancel(cancelTarget._id, { reason: cancelReason || 'Cancelled by administrator' });
-            showNotification(`"${cancelTarget.title}" has been cancelled.`);
+            if (cancelTarget.visibility === 'internal') {
+                await calendarService.updateEvent(cancelTarget._id, { eventStatus: 'CANCELLED', status: 'CANCELLED' });
+                showNotification(`"${cancelTarget.title}" has been cancelled.`);
+                fetchCalendarEvents();
+            } else {
+                await eventService.cancel(cancelTarget._id, { reason: cancelReason || 'Cancelled by administrator' });
+                showNotification(`"${cancelTarget.title}" has been cancelled.`);
+                fetchPublicEvents();
+            }
             setCancelTarget(null);
-            fetchPublicEvents();
         } catch (error) {
             alert(error.response?.data?.message || 'Failed to cancel event.');
         }
@@ -1297,7 +1344,7 @@ export default function AdminDashboard() {
         if (!assignInstructorIdInput.trim()) return;
         try {
             const res = await courseService.assignInstructor(assignInstructorCourseId, assignInstructorIdInput.trim());
-            setAllCourses(prev => prev.map(c => c._id === assignInstructorCourseId ? res.data.data : c));
+            setAllCourses(prev => prev.map(c => c._id === assignInstructorCourseId ? { ...c, ...res.data.data } : c));
             showNotification('Instructor assigned successfully');
             setIsAssignInstructorModalOpen(false);
         } catch (err) {
@@ -1309,7 +1356,7 @@ export default function AdminDashboard() {
         if (!window.confirm('Remove assigned instructor from this course?')) return;
         try {
             const res = await courseService.removeInstructor(id);
-            setAllCourses(prev => prev.map(c => c._id === id ? res.data.data : c));
+            setAllCourses(prev => prev.map(c => c._id === id ? { ...c, ...res.data.data, assignedInstructorRef: null } : c));
             showNotification('Instructor removed successfully');
         } catch (err) {
             alert(err.response?.data?.message || 'Failed to remove instructor.');
@@ -1493,11 +1540,16 @@ export default function AdminDashboard() {
     const handleRevokeAccess = async (enrId) => {
         if (!window.confirm('Revoke access for this student?')) return;
         try {
-            await enrollmentService.rejectPayment(enrId);
-            showNotification('Student access revoked.');
+            if (enrollmentService.delete) {
+                await enrollmentService.delete(enrId);
+            } else {
+                await enrollmentService.rejectPayment(enrId);
+            }
+            showNotification('Student access revoked successfully.');
             setManagedStudents(prev => prev.filter(s => s._id !== enrId));
+            setAllCourses(prev => prev.map(c => c._id === activeCourseId ? { ...c, totalEnrollments: Math.max(0, (c.totalEnrollments || 1) - 1) } : c));
         } catch (err) {
-            alert('Failed to revoke access.');
+            alert(err.response?.data?.message || 'Failed to revoke access.');
         }
     };
 
@@ -1880,8 +1932,24 @@ const resetCalendarForm = () => {
 
     const handleEditCalendarEvent = (event) => {
         const isPublic = event.visibility === 'public';
-        const toDatePart = (d) => (d ? new Date(d).toISOString().slice(0, 10) : '');
-        const toTimePart = (d) => (d ? new Date(d).toISOString().slice(11, 16) : '');
+        const toDatePart = (d) => {
+            if (!d) return '';
+            try {
+                const dt = new Date(d);
+                return isNaN(dt.getTime()) ? '' : dt.toISOString().slice(0, 10);
+            } catch {
+                return '';
+            }
+        };
+        const toTimePart = (d) => {
+            if (!d) return '';
+            try {
+                const dt = new Date(d);
+                return isNaN(dt.getTime()) ? '' : dt.toISOString().slice(11, 16);
+            } catch {
+                return '';
+            }
+        };
         setCalendarEditingId(event._id);
         setCalendarForm({
             title: event.title || '',
@@ -2004,6 +2072,53 @@ const resetCalendarForm = () => {
             setDeleteTarget(null);
         } catch (error) {
             showNotification(error.response?.data?.message || 'Failed to delete event.');
+        }
+    };
+
+    const handleBulkApproveEvents = async () => {
+        if (!selectedEvents.length) return;
+        const publicToApprove = publicEvents.filter(e => 
+            selectedEvents.includes(`public-${e._id}`) && e.status !== 'APPROVED' && e.status !== 'CANCELLED'
+        );
+        if (!publicToApprove.length) {
+            return showNotification('None of the selected events require approval.');
+        }
+        try {
+            for (const ev of publicToApprove) {
+                await eventService.setStatus(ev._id, { status: 'APPROVED' });
+            }
+            showNotification(`Successfully approved ${publicToApprove.length} event(s).`);
+            setSelectedEvents([]);
+            fetchPublicEvents();
+        } catch (error) {
+            showNotification(error.response?.data?.message || 'Bulk approval failed.');
+        }
+    };
+
+    const handleBulkDeleteEvents = async () => {
+        if (!selectedEvents.length) return;
+        if (!window.confirm(`Are you sure you want to delete ${selectedEvents.length} selected event(s)? This action cannot be undone.`)) {
+            return;
+        }
+        try {
+            let deletedCount = 0;
+            for (const key of selectedEvents) {
+                const [vis, ...idParts] = key.split('-');
+                const id = idParts.join('-');
+                if (vis === 'internal') {
+                    await calendarService.deleteEvent(id);
+                    deletedCount++;
+                } else if (vis === 'public') {
+                    await eventService.remove(id);
+                    deletedCount++;
+                }
+            }
+            showNotification(`Successfully deleted ${deletedCount} event(s).`);
+            setSelectedEvents([]);
+            fetchCalendarEvents();
+            fetchPublicEvents();
+        } catch (error) {
+            showNotification(error.response?.data?.message || 'Bulk delete failed.');
         }
     };
 
@@ -3101,41 +3216,114 @@ const resetCalendarForm = () => {
 
     const handleSelectAllCourses = (e, list) => {
         if (e.target.checked) {
-            setSelectedCourses(list.map(c => c._id).filter(Boolean));
+            const idsToAdd = list.map(c => c._id).filter(Boolean);
+            setSelectedCourses(prev => Array.from(new Set([...prev, ...idsToAdd])));
         } else {
-            setSelectedCourses([]);
+            const idsToRemove = new Set(list.map(c => c._id).filter(Boolean));
+            setSelectedCourses(prev => prev.filter(id => !idsToRemove.has(id)));
         }
     };
 
     const renderCourses = () => {
         const screenshotData = [];
 
+        // Build course enrollment mapping from enrollments state for guaranteed consistency
+        const courseEnrollmentMap = {};
+        (enrollments || []).forEach(e => {
+            const cId = (e.courseRef?._id || e.courseRef || '').toString();
+            if (cId) courseEnrollmentMap[cId] = (courseEnrollmentMap[cId] || 0) + 1;
+        });
+
         const totalCourses = analytics?.totalCourses || allCourses.length || 0;
         const publishedCourses = analytics?.activeCourses || allCourses.filter(c => ['Published', 'Active'].includes(c.publicationState)).length || 0;
         const draftCourses = analytics?.draftCourses || allCourses.filter(c => c.publicationState === 'Draft').length || 0;
         const totalEnrollments = enrollments.length || 0;
 
-        // Apply status filter
-        let filteredCourses = allCourses.length > 0 ? [...allCourses] : [];
-        if (courseStatusFilter !== 'All Status' && filteredCourses.length > 0) {
-            filteredCourses = filteredCourses.filter(c => {
-                const state = c.publicationState || 'Draft';
-                if (courseStatusFilter === 'Published') return ['Published', 'Active'].includes(state);
-                if (courseStatusFilter === 'Archived') return state === 'Archived';
-                return state === courseStatusFilter;
-            });
-        }
-        // Apply search filter
-        if (courseSearchQuery.trim() && filteredCourses.length > 0) {
-            const q = courseSearchQuery.trim().toLowerCase();
-            filteredCourses = filteredCourses.filter(c =>
-                (c.courseTitle || '').toLowerCase().includes(q) ||
-                (c.technicalCategory || '').toLowerCase().includes(q) ||
-                (c.creatorRef?.fullName || '').toLowerCase().includes(q) ||
-                (c.assignedInstructorRef?.fullName || '').toLowerCase().includes(q) ||
-                (c.courseCode || '').toLowerCase().includes(q)
+        // Integrated Course Filtering: Category + Status + Search Query
+        const matchesCategory = (course, filter) => {
+            if (!filter || filter === 'All Categories') return true;
+            const cat = course.technicalCategory || '';
+            const title = course.courseTitle || '';
+            
+            if (categoryMatchesCourse(filter, cat)) return true;
+            
+            const f = filter.toLowerCase().trim();
+            const c = cat.toLowerCase().trim();
+            const t = title.toLowerCase().trim();
+
+            if (c === f || c.includes(f) || f.includes(c)) return true;
+
+            if (f === 'ai & ml' || f === 'ai ml' || f === 'ai') {
+                return c.includes('ai') || c.includes('artificial') || c.includes('data science') || c.includes('machine learning') || c.includes('deep learning') ||
+                       t.includes('ai') || t.includes('artificial intelligence') || t.includes('machine learning') || t.includes('data science');
+            }
+            if (f === 'programming') {
+                return c.includes('coding') || c.includes('programming') || c.includes('software') || c.includes('developer') || c.includes('web') ||
+                       t.includes('programming') || t.includes('coding') || t.includes('developer') || t.includes('javascript') || t.includes('python');
+            }
+            if (f === 'database') {
+                return c.includes('database') || c.includes('databases') || c.includes('sql') || c.includes('mongo') || c.includes('postgres') || c.includes('data') ||
+                       t.includes('database') || t.includes('sql') || t.includes('mongodb');
+            }
+            if (f === 'design') {
+                return c.includes('design') || c.includes('media') || c.includes('creative') || c.includes('ux') || c.includes('ui') ||
+                       t.includes('design') || t.includes('ui') || t.includes('ux');
+            }
+            if (f === 'security') {
+                return c.includes('security') || c.includes('cyber') || c.includes('hacking') ||
+                       t.includes('security') || t.includes('cybersecurity');
+            }
+            return false;
+        };
+
+        const matchesStatus = (course, filter) => {
+            if (!filter || filter === 'All Status') return true;
+            const state = course.publicationState || 'Draft';
+            if (filter === 'Published') {
+                return ['Published', 'Active', 'published', 'active'].includes(state);
+            }
+            if (filter === 'Draft') {
+                return ['Draft', 'draft'].includes(state);
+            }
+            if (filter === 'Pending Review') {
+                return ['Pending Review', 'Under Evaluation', 'Pending', 'pending review', 'pending', 'Revision Needed'].includes(state);
+            }
+            if (filter === 'Archived') {
+                return ['Archived', 'archived'].includes(state);
+            }
+            return state.toLowerCase() === filter.toLowerCase();
+        };
+
+        const matchesSearch = (course, query) => {
+            if (!query || !query.trim()) return true;
+            const q = query.trim().toLowerCase();
+            return (
+                (course.courseTitle || '').toLowerCase().includes(q) ||
+                (course.technicalCategory || '').toLowerCase().includes(q) ||
+                (course.creatorRef?.fullName || '').toLowerCase().includes(q) ||
+                (course.assignedInstructorRef?.fullName || '').toLowerCase().includes(q) ||
+                (course.courseCode || '').toLowerCase().includes(q) ||
+                (course.publicationState || '').toLowerCase().includes(q)
             );
-        }
+        };
+
+        let filteredCourses = allCourses.length > 0 ? [...allCourses] : [];
+        filteredCourses = filteredCourses.filter(c => 
+            matchesCategory(c, courseCategoryFilter) &&
+            matchesStatus(c, courseStatusFilter) &&
+            matchesSearch(c, courseSearchQuery)
+        );
+
+        const defaultCategories = ['All Categories', 'Programming', 'AI & ML', 'Database', 'Design', 'Security'];
+        const extraCategories = Array.from(new Set(allCourses.map(c => c.technicalCategory).filter(Boolean)))
+            .filter(cat => !defaultCategories.some(d => d !== 'All Categories' && matchesCategory({ technicalCategory: cat }, d)));
+
+        const totalFilteredCourses = filteredCourses.length;
+        const totalPages = Math.max(1, Math.ceil(totalFilteredCourses / coursePageSize));
+        const safePage = Math.min(Math.max(1, coursePage), totalPages);
+        const startIndex = totalFilteredCourses === 0 ? 0 : (safePage - 1) * coursePageSize;
+        const endIndex = Math.min(startIndex + coursePageSize, totalFilteredCourses);
+        const paginatedCourses = filteredCourses.slice(startIndex, endIndex);
 
         const statusColorMap = {
             'Published': { color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
@@ -3145,9 +3333,21 @@ const resetCalendarForm = () => {
             'Archived': { color: colors.textMuted, bg: 'rgba(100,116,139,0.12)' },
         };
 
-        const liveData = filteredCourses.length > 0 ? filteredCourses.slice(0, 20).map(c => {
+        const liveData = paginatedCourses.length > 0 ? paginatedCourses.map(c => {
             const st = c.publicationState || 'Draft';
             const sc = statusColorMap[st] || statusColorMap['Draft'];
+            const studentCount = Math.max(courseEnrollmentMap[c._id?.toString()] || 0, c.totalEnrollments || 0);
+
+            // Format creation timestamp
+            const rawDate = c.creationTimestamp || c.createdAt;
+            let formattedDate = '—';
+            if (rawDate) {
+                const parsedDate = new Date(rawDate);
+                if (!isNaN(parsedDate.getTime())) {
+                    formattedDate = parsedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                }
+            }
+
             return {
                 id: c.courseCode || ('CRSE-' + (c._id?.slice(-4)?.toUpperCase() || '??')),
                 title: c.courseTitle,
@@ -3155,11 +3355,11 @@ const resetCalendarForm = () => {
                 img: c.creatorRef?.avatarUrl || `https://i.pravatar.cc/150?u=${c._id}`,
                 category: c.technicalCategory || 'General',
                 catColor: '#22c55e', catBg: 'rgba(34,197,94,0.12)',
-                students: c.totalEnrollments || 0,
+                students: studentCount,
                 status: st,
                 statusColor: sc.color,
                 statusBg: sc.bg,
-                date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '-"',
+                date: formattedDate,
                 iconBg: '#14532d', icon: <BookOpen size={20} color="#4ade80" />,
                 _id: c._id, isFeatured: c.isFeatured, raw: c
             };
@@ -3184,11 +3384,11 @@ const resetCalendarForm = () => {
                         </div>
                         {selectedCourses.length > 0 ? (
                             /* Contextual Multi-Select Bulk Actions Bar */
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '6px 14px', borderRadius: '12px', animation: 'fadeIn 0.2s' }}>
-                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#15803d', paddingRight: '8px', borderRight: '1px solid #bbf7d0' }}>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: theme === 'dark' ? '#14532d33' : '#f0fdf4', border: `1px solid ${theme === 'dark' ? '#166534' : '#bbf7d0'}`, padding: '6px 14px', borderRadius: '12px', animation: 'fadeIn 0.2s' }}>
+                                <span style={{ fontSize: '13px', fontWeight: '700', color: theme === 'dark' ? '#4ade80' : '#15803d', paddingRight: '8px', borderRight: `1px solid ${theme === 'dark' ? '#166534' : '#bbf7d0'}` }}>
                                     {selectedCourses.length} Selected
                                 </span>
-                                <button onClick={handleBulkPublish} title="Publish Selected" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#10b981', color: colors.text, border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                                <button onClick={handleBulkPublish} title="Publish Selected" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#10b981', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
                                     <Upload size={14} /> Publish
                                 </button>
                                 <button onClick={handleBulkArchive} title="Archive Selected" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.35)', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
@@ -3200,7 +3400,7 @@ const resetCalendarForm = () => {
                                 <button onClick={handleExportSelectedCSV} title="Export Selected CSV" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: colors.bgCard, color: colors.text, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
                                     <Download size={14} /> Export
                                 </button>
-                                <button onClick={handleBulkDelete} title="Delete Selected" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#ef4444', color: colors.text, border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                                <button onClick={handleBulkDelete} title="Delete Selected" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#ef4444', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
                                     <Trash2 size={14} /> Delete
                                 </button>
                                 <button onClick={() => setSelectedCourses([])} title="Clear Selection" style={{ background: 'transparent', border: 'none', color: colors.textMuted, fontSize: '12px', cursor: 'pointer', marginLeft: '4px', textDecoration: 'underline' }}>
@@ -3210,7 +3410,7 @@ const resetCalendarForm = () => {
                         ) : (
                             /* Standard Enterprise Header Toolbar */
                             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                <button onClick={() => setCourseStatusFilter(prev => prev === 'Archived' ? 'All Status' : 'Archived')} title={courseStatusFilter === 'Archived' ? 'Show All Courses' : 'View Archived Courses Bin'} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', background: courseStatusFilter === 'Archived' ? `${colors.primary}15` : colors.bgCard, border: `1px solid ${courseStatusFilter === 'Archived' ? colors.primary : colors.border}`, borderRadius: '10px', color: courseStatusFilter === 'Archived' ? colors.primary : colors.text, cursor: 'pointer', transition: 'all 0.2s' }}>
+                                <button onClick={() => { setCourseStatusFilter(prev => prev === 'Archived' ? 'All Status' : 'Archived'); setCoursePage(1); }} title={courseStatusFilter === 'Archived' ? 'Show All Courses' : 'View Archived Courses Bin'} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', background: courseStatusFilter === 'Archived' ? `${colors.primary}15` : colors.bgCard, border: `1px solid ${courseStatusFilter === 'Archived' ? colors.primary : colors.border}`, borderRadius: '10px', color: courseStatusFilter === 'Archived' ? colors.primary : colors.text, cursor: 'pointer', transition: 'all 0.2s' }}>
                                     <Archive size={18} />
                                 </button>
                                 <button onClick={() => setIsSmartImportWizardOpen(true)} title="Smart Import Wizard" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '10px', padding: '0 14px', height: '40px', color: colors.text, fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
@@ -3224,13 +3424,13 @@ const resetCalendarForm = () => {
                                 <div style={{ position: 'relative', display: 'flex' }}>
                                     <button
                                         onClick={() => setActiveTab('course_builder')}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#16a34a', border: 'none', borderTopLeftRadius: '10px', borderBottomLeftRadius: '10px', padding: '0 18px', height: '40px', color: colors.text, fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 15px rgba(22,163,74,0.3)' }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#16a34a', border: 'none', borderTopLeftRadius: '10px', borderBottomLeftRadius: '10px', padding: '0 18px', height: '40px', color: '#ffffff', fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 15px rgba(22,163,74,0.3)' }}
                                     >
                                         <PlusCircle size={16} /> Add New Course
                                     </button>
                                     <button
                                         onClick={() => setIsAddCourseDropdownOpen(!isAddCourseDropdownOpen)}
-                                        style={{ background: '#15803d', border: 'none', borderLeft: '1px solid rgba(255,255,255,0.2)', borderTopRightRadius: '10px', borderBottomRightRadius: '10px', padding: '0 10px', height: '40px', color: colors.text, cursor: 'pointer' }}
+                                        style={{ background: '#15803d', border: 'none', borderLeft: '1px solid rgba(255,255,255,0.2)', borderTopRightRadius: '10px', borderBottomRightRadius: '10px', padding: '0 10px', height: '40px', color: '#ffffff', cursor: 'pointer' }}
                                     >
                                         <ChevronDown size={16} />
                                     </button>
@@ -3241,7 +3441,7 @@ const resetCalendarForm = () => {
                                             <button
                                                 onClick={() => { setIsAddCourseDropdownOpen(false); setActiveTab('course_builder'); }}
                                                 style={{ width: '100%', textAlign: 'left', padding: '9px 12px', background: 'transparent', border: 'none', borderRadius: '8px', fontSize: '13px', color: colors.text, fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
-                                                onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                                onMouseEnter={e => e.currentTarget.style.background = colors.bgInput}
                                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                             >
                                                 <PlusCircle size={15} color="#16a34a" /> Create Blank Course
@@ -3249,7 +3449,7 @@ const resetCalendarForm = () => {
                                             <button
                                                 onClick={() => { setIsAddCourseDropdownOpen(false); setIsAiCourseGenModalOpen(true); }}
                                                 style={{ width: '100%', textAlign: 'left', padding: '9px 12px', background: 'transparent', border: 'none', borderRadius: '8px', fontSize: '13px', color: colors.text, fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
-                                                onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                                onMouseEnter={e => e.currentTarget.style.background = colors.bgInput}
                                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                             >
                                                 <Bot size={15} color="#22c55e" /> Generate with AI  <Wand2 size={16} style={{ marginRight: '6px' }} /> 
@@ -3257,7 +3457,7 @@ const resetCalendarForm = () => {
                                             <button
                                                 onClick={() => { setIsAddCourseDropdownOpen(false); alert('Course Layout Templates loaded.'); }}
                                                 style={{ width: '100%', textAlign: 'left', padding: '9px 12px', background: 'transparent', border: 'none', borderRadius: '8px', fontSize: '13px', color: colors.text, fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
-                                                onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                                onMouseEnter={e => e.currentTarget.style.background = colors.bgInput}
                                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                             >
                                                 <Copy size={15} color="#10b981" /> Duplicate from Template
@@ -3291,34 +3491,139 @@ const resetCalendarForm = () => {
                     <div style={{ background: colors.bgCard, borderRadius: '16px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
 
                         {/* Filters Row */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
-                            <h3 style={{ fontSize: '18px', fontWeight: '700', color: colors.text, margin: 0 }}>All Courses</h3>
-                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: `1px solid ${colors.border}`, flexWrap: 'wrap', gap: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <h3 style={{ fontSize: '18px', fontWeight: '700', color: colors.text, margin: 0 }}>All Courses</h3>
+                                <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '12px', background: `${colors.primary}15`, color: colors.primary, fontWeight: '600' }}>
+                                    {totalFilteredCourses} {totalFilteredCourses === 1 ? 'course' : 'courses'}
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                {/* Category Filter */}
                                 <div style={{ position: 'relative' }}>
-                                    <select style={{ appearance: 'none', WebkitAppearance: 'none', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '9px 36px 9px 14px', fontSize: '14px', color: colors.text, outline: 'none', cursor: 'pointer', minWidth: '160px', fontWeight: '500' }}>
-                                        <option style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Categories</option>
-                                        <option style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Programming</option>
-                                        <option style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>AI &amp; ML</option>
-                                        <option style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Database</option>
-                                        <option style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Design</option>
-                                        <option style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Security</option>
+                                    <select
+                                        value={courseCategoryFilter}
+                                        onChange={(e) => {
+                                            setCourseCategoryFilter(e.target.value);
+                                            setCoursePage(1);
+                                        }}
+                                        style={{
+                                            appearance: 'none',
+                                            WebkitAppearance: 'none',
+                                            background: colors.bgCard,
+                                            border: `1.5px solid ${courseCategoryFilter !== 'All Categories' ? '#10b981' : colors.border}`,
+                                            borderRadius: '8px',
+                                            padding: '9px 36px 9px 14px',
+                                            fontSize: '14px',
+                                            color: colors.text,
+                                            outline: 'none',
+                                            cursor: 'pointer',
+                                            minWidth: '160px',
+                                            fontWeight: '500',
+                                            boxShadow: courseCategoryFilter !== 'All Categories' ? '0 0 0 2px rgba(16,185,129,0.15)' : 'none'
+                                        }}
+                                    >
+                                        {defaultCategories.map(cat => (
+                                            <option key={cat} value={cat} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>
+                                                {cat}
+                                            </option>
+                                        ))}
+                                        {extraCategories.map(cat => (
+                                            <option key={cat} value={cat} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>
+                                                {cat}
+                                            </option>
+                                        ))}
                                     </select>
-                                    <ChevronDown size={15} color="#94a3b8" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                                    <ChevronDown size={15} color={courseCategoryFilter !== 'All Categories' ? '#10b981' : "#94a3b8"} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                                 </div>
+
+                                {/* Status Filter */}
                                 <div style={{ position: 'relative' }}>
-                                    <select value={courseStatusFilter} onChange={(e) => setCourseStatusFilter(e.target.value)} style={{ appearance: 'none', WebkitAppearance: 'none', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '9px 36px 9px 14px', fontSize: '14px', color: colors.text, outline: 'none', cursor: 'pointer', minWidth: '130px', fontWeight: '500' }}>
+                                    <select
+                                        value={courseStatusFilter}
+                                        onChange={(e) => {
+                                            setCourseStatusFilter(e.target.value);
+                                            setCoursePage(1);
+                                        }}
+                                        style={{
+                                            appearance: 'none',
+                                            WebkitAppearance: 'none',
+                                            background: colors.bgCard,
+                                            border: `1.5px solid ${courseStatusFilter !== 'All Status' ? '#10b981' : colors.border}`,
+                                            borderRadius: '8px',
+                                            padding: '9px 36px 9px 14px',
+                                            fontSize: '14px',
+                                            color: colors.text,
+                                            outline: 'none',
+                                            cursor: 'pointer',
+                                            minWidth: '130px',
+                                            fontWeight: '500',
+                                            boxShadow: courseStatusFilter !== 'All Status' ? '0 0 0 2px rgba(16,185,129,0.15)' : 'none'
+                                        }}
+                                    >
                                         <option value="All Status" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Status</option>
                                         <option value="Published" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Published</option>
                                         <option value="Draft" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Draft</option>
                                         <option value="Pending Review" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Pending Review</option>
                                         <option value="Archived" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Archived</option>
                                     </select>
-                                    <ChevronDown size={15} color="#94a3b8" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                                    <ChevronDown size={15} color={courseStatusFilter !== 'All Status' ? '#10b981' : "#94a3b8"} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                                 </div>
+
+                                {/* Search Filter */}
                                 <div style={{ position: 'relative' }}>
                                     <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                                    <input type="text" value={courseSearchQuery} onChange={(e) => setCourseSearchQuery(e.target.value)} placeholder="Search courses..." style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '9px 16px 9px 38px', fontSize: '14px', color: colors.text, outline: 'none', minWidth: '220px' }} />
+                                    <input
+                                        type="text"
+                                        value={courseSearchQuery}
+                                        onChange={(e) => {
+                                            setCourseSearchQuery(e.target.value);
+                                            setCoursePage(1);
+                                        }}
+                                        placeholder="Search courses..."
+                                        style={{
+                                            background: colors.bgCard,
+                                            border: `1.5px solid ${courseSearchQuery ? '#10b981' : colors.border}`,
+                                            borderRadius: '8px',
+                                            padding: '9px 16px 9px 38px',
+                                            fontSize: '14px',
+                                            color: colors.text,
+                                            outline: 'none',
+                                            minWidth: '220px',
+                                            boxShadow: courseSearchQuery ? '0 0 0 2px rgba(16,185,129,0.15)' : 'none'
+                                        }}
+                                    />
                                 </div>
+
+                                {/* Quick Reset Active Filters */}
+                                {(courseCategoryFilter !== 'All Categories' || courseStatusFilter !== 'All Status' || courseSearchQuery.trim() !== '') && (
+                                    <button
+                                        onClick={() => {
+                                            setCourseCategoryFilter('All Categories');
+                                            setCourseStatusFilter('All Status');
+                                            setCourseSearchQuery('');
+                                            setCoursePage(1);
+                                        }}
+                                        title="Clear all active filters"
+                                        style={{
+                                            background: 'transparent',
+                                            border: `1px dashed ${colors.border}`,
+                                            borderRadius: '8px',
+                                            padding: '8px 12px',
+                                            fontSize: '13px',
+                                            color: colors.textMuted,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px'
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.color = '#10b981'; e.currentTarget.style.borderColor = '#10b981'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.color = colors.textMuted; e.currentTarget.style.borderColor = colors.border; }}
+                                    >
+                                        <RotateCcw size={13} />
+                                        Reset
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -3327,90 +3632,308 @@ const resetCalendarForm = () => {
                             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                                 <thead>
                                     <tr style={{ background: colors.bg }}>
-                                        <th style={{ padding: '14px 24px', width: '40px' }}><input type="checkbox" checked={selectedCourses.length > 0 && selectedCourses.length === liveData.filter(c => c._id).length} onChange={(e) => handleSelectAllCourses(e, liveData)} style={{ cursor: 'pointer' }} /></th>
+                                        <th style={{ padding: '14px 24px', width: '40px' }}><input type="checkbox" checked={liveData.length > 0 && liveData.every(c => selectedCourses.includes(c._id))} onChange={(e) => handleSelectAllCourses(e, liveData)} style={{ cursor: 'pointer', accentColor: '#16a34a' }} /></th>
                                         {['Course', 'Instructor', 'Category', 'Students', 'Status', 'Created At', 'Actions'].map((h, i) => (
                                             <th key={h} style={{ padding: '14px 24px', fontSize: '13px', fontWeight: '600', color: colors.textMuted, letterSpacing: '0.02em', textAlign: i === 6 ? 'center' : 'left' }}>{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {liveData.map((course, idx, arr) => (
-                                        <tr key={course._id || idx}
-                                            style={{ borderBottom: idx < arr.length - 1 ? '1px solid #f1f5f9' : 'none', transition: 'background 0.15s' }}
-                                            onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
-                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                        >
-                                            <td style={{ padding: '16px 24px' }}><input type="checkbox" checked={selectedCourses.includes(course._id)} onChange={() => handleSelectCourse(course._id)} style={{ cursor: 'pointer' }} /></td>
-                                            <td style={{ padding: '16px 24px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                                                    <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: course.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                        {course.icon}
+                                    {liveData.map((course, idx, arr) => {
+                                        const isSelected = selectedCourses.includes(course._id);
+                                        const rowBg = isSelected
+                                            ? (theme === 'dark' ? '#1e293b' : '#f0fdf4')
+                                            : 'transparent';
+                                        const rowHoverBg = isSelected
+                                            ? (theme === 'dark' ? '#24344d' : '#dcfce7')
+                                            : (theme === 'dark' ? 'rgba(30, 41, 59, 0.6)' : '#f8fafc');
+
+                                        return (
+                                            <tr key={course._id || idx}
+                                                style={{
+                                                    borderBottom: idx < arr.length - 1 ? `1px solid ${colors.border}` : 'none',
+                                                    background: rowBg,
+                                                    transition: 'background 0.15s ease'
+                                                }}
+                                                onMouseEnter={e => e.currentTarget.style.background = rowHoverBg}
+                                                onMouseLeave={e => e.currentTarget.style.background = rowBg}
+                                            >
+                                                <td style={{ padding: '16px 24px' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => handleSelectCourse(course._id)}
+                                                        style={{ cursor: 'pointer', accentColor: '#16a34a' }}
+                                                    />
+                                                </td>
+                                                <td style={{ padding: '16px 24px', minWidth: '280px', maxWidth: '380px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                                        <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: course.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                            {course.icon}
+                                                        </div>
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <div
+                                                                title={course.title}
+                                                                style={{
+                                                                    fontSize: '14px',
+                                                                    fontWeight: '600',
+                                                                    color: colors.text,
+                                                                    marginBottom: '3px',
+                                                                    wordBreak: 'break-word',
+                                                                    whiteSpace: 'normal',
+                                                                    lineHeight: '1.4'
+                                                                }}
+                                                            >
+                                                                {course.title}
+                                                            </div>
+                                                            <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '500' }}>{course.id}</div>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <div style={{ fontSize: '14px', fontWeight: '600', color: colors.text, marginBottom: '3px', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{course.title}</div>
-                                                        <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '500' }}>{course.id}</div>
+                                                </td>
+                                                <td style={{ padding: '16px 24px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: theme === 'dark' ? 'rgba(34, 197, 94, 0.15)' : '#f0fdf4', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+                                                            <User size={16} />
+                                                        </div>
+                                                        <span style={{ fontSize: '14px', color: colors.text, fontWeight: '500', whiteSpace: 'nowrap' }}>{course.instructor}</span>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: '16px 24px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#f0fdf4', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #bbf7d0' }}>
-                                                        <User size={16} />
+                                                </td>
+                                                <td style={{ padding: '16px 24px' }}>
+                                                    <span style={{ background: course.catBg, color: course.catColor, padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>{course.category}</span>
+                                                </td>
+                                                <td style={{ padding: '16px 24px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: colors.text, fontSize: '14px', fontWeight: '500' }}>
+                                                        <Users size={15} color="#94a3b8" /> {Number(course.students).toLocaleString()}
                                                     </div>
-                                                    <span style={{ fontSize: '14px', color: '#374151', fontWeight: '500', whiteSpace: 'nowrap' }}>{course.instructor}</span>
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: '16px 24px' }}>
-                                                <span style={{ background: course.catBg, color: course.catColor, padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>{course.category}</span>
-                                            </td>
-                                            <td style={{ padding: '16px 24px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: colors.text, fontSize: '14px', fontWeight: '500' }}>
-                                                    <Users size={15} color="#94a3b8" /> {Number(course.students).toLocaleString()}
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: '16px 24px' }}>
-                                                <span style={{ background: course.statusBg, color: course.statusColor, padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>{course.status}</span>
-                                            </td>
-                                            <td style={{ padding: '16px 24px', color: colors.text, fontSize: '14px', fontWeight: '500', whiteSpace: 'nowrap' }}>{course.date}</td>
-                                            <td style={{ padding: '16px 24px', textAlign: 'center' }}>
-                                                <div style={{ position: 'relative', display: 'inline-block' }}>
-                                                    <button
-                                                        title="More actions"
-                                                        style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '7px', padding: '7px', color: colors.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
-                                                        onMouseEnter={e => { e.currentTarget.style.background='#f8fafc'; e.currentTarget.style.color='#0f172a'; }}
-                                                        onMouseLeave={e => { e.currentTarget.style.background=colors.bgCard; e.currentTarget.style.color=colors.textMuted; }}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (courseMenuOpenId === course._id) { setCourseMenuOpenId(null); return; }
-                                                            const rect = e.currentTarget.getBoundingClientRect();
-                                                            setCourseMenuPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
-                                                            setCourseMenuOpenId(course._id);
-                                                        }}
-                                                    >
-                                                        <MoreVertical size={15} />
-                                                    </button>
+                                                </td>
+                                                <td style={{ padding: '16px 24px' }}>
+                                                    <span style={{ background: course.statusBg, color: course.statusColor, padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>{course.status}</span>
+                                                </td>
+                                                <td style={{ padding: '16px 24px', color: colors.text, fontSize: '14px', fontWeight: '500', whiteSpace: 'nowrap' }}>{course.date}</td>
+                                                <td style={{ padding: '16px 24px', textAlign: 'center' }}>
+                                                    <div style={{ position: 'relative', display: 'inline-block' }}>
+                                                        <button
+                                                            title="More actions"
+                                                            style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '7px', padding: '7px', color: colors.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
+                                                            onMouseEnter={e => { e.currentTarget.style.background = colors.bgInput; e.currentTarget.style.color = colors.text; }}
+                                                            onMouseLeave={e => { e.currentTarget.style.background = colors.bgCard; e.currentTarget.style.color = colors.textMuted; }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (courseMenuOpenId === course._id) { setCourseMenuOpenId(null); return; }
+                                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                                setCourseMenuPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+                                                                setCourseMenuOpenId(course._id);
+                                                            }}
+                                                        >
+                                                            <MoreVertical size={15} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {liveData.length === 0 && (
+                                        <tr>
+                                            <td colSpan="8" style={{ padding: '60px 24px', textAlign: 'center', color: colors.textMuted }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                                                    <BookOpen size={44} style={{ opacity: 0.35, color: colors.textMuted }} />
+                                                    <div style={{ fontSize: '16px', fontWeight: '600', color: colors.text }}>No courses match your filter criteria</div>
+                                                    <div style={{ fontSize: '13px', color: colors.textMuted, maxWidth: '420px', lineHeight: '1.5' }}>
+                                                        {courseCategoryFilter !== 'All Categories' ? `Category: "${courseCategoryFilter}"  •  ` : ''}
+                                                        {courseStatusFilter !== 'All Status' ? `Status: "${courseStatusFilter}"  •  ` : ''}
+                                                        {courseSearchQuery ? `Search: "${courseSearchQuery}"` : ''}
+                                                        {!courseSearchQuery && courseCategoryFilter === 'All Categories' && courseStatusFilter === 'All Status' ? 'No course records found in the system.' : 'Try adjusting your category, status, or search query.'}
+                                                    </div>
+                                                    {(courseCategoryFilter !== 'All Categories' || courseStatusFilter !== 'All Status' || courseSearchQuery.trim() !== '') && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setCourseCategoryFilter('All Categories');
+                                                                setCourseStatusFilter('All Status');
+                                                                setCourseSearchQuery('');
+                                                                setCoursePage(1);
+                                                            }}
+                                                            style={{
+                                                                marginTop: '8px',
+                                                                padding: '8px 18px',
+                                                                borderRadius: '8px',
+                                                                border: `1px solid ${colors.border}`,
+                                                                background: colors.bgCard,
+                                                                color: '#10b981',
+                                                                fontSize: '13px',
+                                                                fontWeight: '600',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '8px'
+                                                            }}
+                                                        >
+                                                            <RotateCcw size={14} />
+                                                            Reset All Filters
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))}
+                                    )}
                                 </tbody>
                             </table>
                         </div>
 
                         {/* Pagination */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderTop: '1px solid #f1f5f9' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderTop: `1px solid ${colors.border}` }}>
                             <div style={{ fontSize: '14px', color: colors.textMuted, fontWeight: '500' }}>
-                                Showing 1 to {liveData.length} of {totalCourses} courses
+                                {totalFilteredCourses === 0
+                                    ? 'Showing 0 to 0 of 0 courses'
+                                    : `Showing ${startIndex + 1} to ${endIndex} of ${totalFilteredCourses} courses`
+                                }
                             </div>
-                            <div style={{ display: 'flex', gap: '6px' }}>
-                                <button style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.textMuted, cursor: 'pointer' }}><ChevronLeft size={16} /></button>
-                                {[1, 2, 3].map(n => (
-                                    <button key={n} style={{ background: n === 1 ? '#16a34a' : '#fff', border: n === 1 ? 'none' : '1px solid #e2e8f0', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: n === 1 ? '#fff' : '#475569', fontWeight: n === 1 ? '700' : '500', fontSize: '14px', cursor: 'pointer', boxShadow: n === 1 ? '0 2px 8px rgba(22,163,74,0.3)' : 'none' }}>{n}</button>
-                                ))}
-                                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', color: colors.textMuted, fontSize: '18px', fontWeight: '700' }}>...</span>
-                                <button style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text, fontWeight: '500', fontSize: '14px', cursor: 'pointer' }}>12</button>
-                                <button style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.textMuted, cursor: 'pointer' }}><ChevronRight size={16} /></button>
-                            </div>
+                            {totalPages > 1 ? (
+                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                    <button
+                                        disabled={safePage <= 1}
+                                        onClick={() => setCoursePage(p => Math.max(1, p - 1))}
+                                        title="Previous Page"
+                                        style={{
+                                            background: colors.bgCard,
+                                            border: `1px solid ${colors.border}`,
+                                            borderRadius: '8px',
+                                            width: '36px',
+                                            height: '36px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: safePage <= 1 ? colors.textMuted : colors.text,
+                                            cursor: safePage <= 1 ? 'not-allowed' : 'pointer',
+                                            opacity: safePage <= 1 ? 0.4 : 1
+                                        }}
+                                    >
+                                        <ChevronLeft size={16} />
+                                    </button>
+                                    {(() => {
+                                        const pages = [];
+                                        if (totalPages <= 5) {
+                                            for (let i = 1; i <= totalPages; i++) pages.push(i);
+                                        } else if (safePage <= 3) {
+                                            pages.push(1, 2, 3, '...', totalPages);
+                                        } else if (safePage >= totalPages - 2) {
+                                            pages.push(1, '...', totalPages - 2, totalPages - 1, totalPages);
+                                        } else {
+                                            pages.push(1, '...', safePage, '...', totalPages);
+                                        }
+                                        return pages.map((p, pIdx) => {
+                                            if (p === '...') {
+                                                return (
+                                                    <span key={`ellipsis-${pIdx}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', color: colors.textMuted, fontSize: '16px', fontWeight: '700' }}>
+                                                        ...
+                                                    </span>
+                                                );
+                                            }
+                                            const isActive = p === safePage;
+                                            return (
+                                                <button
+                                                    key={p}
+                                                    onClick={() => setCoursePage(p)}
+                                                    style={{
+                                                        background: isActive ? '#16a34a' : colors.bgCard,
+                                                        border: isActive ? 'none' : `1px solid ${colors.border}`,
+                                                        borderRadius: '8px',
+                                                        width: '36px',
+                                                        height: '36px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: isActive ? '#fff' : colors.text,
+                                                        fontWeight: isActive ? '700' : '500',
+                                                        fontSize: '14px',
+                                                        cursor: 'pointer',
+                                                        boxShadow: isActive ? '0 2px 8px rgba(22,163,74,0.3)' : 'none',
+                                                        transition: 'all 0.15s ease'
+                                                    }}
+                                                >
+                                                    {p}
+                                                </button>
+                                            );
+                                        });
+                                    })()}
+                                    <button
+                                        disabled={safePage >= totalPages}
+                                        onClick={() => setCoursePage(p => Math.min(totalPages, p + 1))}
+                                        title="Next Page"
+                                        style={{
+                                            background: colors.bgCard,
+                                            border: `1px solid ${colors.border}`,
+                                            borderRadius: '8px',
+                                            width: '36px',
+                                            height: '36px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: safePage >= totalPages ? colors.textMuted : colors.text,
+                                            cursor: safePage >= totalPages ? 'not-allowed' : 'pointer',
+                                            opacity: safePage >= totalPages ? 0.4 : 1
+                                        }}
+                                    >
+                                        <ChevronRight size={16} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                    <button
+                                        disabled
+                                        style={{
+                                            background: colors.bgCard,
+                                            border: `1px solid ${colors.border}`,
+                                            borderRadius: '8px',
+                                            width: '36px',
+                                            height: '36px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: colors.textMuted,
+                                            cursor: 'not-allowed',
+                                            opacity: 0.4
+                                        }}
+                                    >
+                                        <ChevronLeft size={16} />
+                                    </button>
+                                    <button
+                                        style={{
+                                            background: '#16a34a',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            width: '36px',
+                                            height: '36px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#fff',
+                                            fontWeight: '700',
+                                            fontSize: '14px',
+                                            boxShadow: '0 2px 8px rgba(22,163,74,0.3)'
+                                        }}
+                                    >
+                                        1
+                                    </button>
+                                    <button
+                                        disabled
+                                        style={{
+                                            background: colors.bgCard,
+                                            border: `1px solid ${colors.border}`,
+                                            borderRadius: '8px',
+                                            width: '36px',
+                                            height: '36px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: colors.textMuted,
+                                            cursor: 'not-allowed',
+                                            opacity: 0.4
+                                        }}
+                                    >
+                                        <ChevronRight size={16} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                     </div>
@@ -3639,6 +4162,11 @@ const resetCalendarForm = () => {
             ? <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: colors.danger }}>{formErrors[key]}</div>
             : null;
         const isFormPublic = calendarForm.visibility === 'public';
+        const segBtn = (active, activeColor) => ({
+            flex: 1, padding: '9px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
+            border: active ? 'none' : `1px solid ${colors.border}`, background: active ? activeColor : 'transparent', color: active ? '#ffffff' : colors.textMuted, transition: 'all 0.15s'
+        });
+        const segWrap = { display: 'flex', gap: 6, padding: 4, borderRadius: 10, background: colors.bgInput, border: `1px solid ${colors.border}` };
 
         // Unified event data (Internal + Public)
         const internalRows = calendarEvents.map((e) => ({
@@ -3654,14 +4182,14 @@ const resetCalendarForm = () => {
         const allEvents = [...internalRows, ...publicRows];
         const eventLive = (e) => getLiveStatus(e);
 
-        // -"?-"? Filters -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?
+        // ── Event Filters & Pagination ──────────────────────────────────
         const q = eventSearch.trim().toLowerCase();
         const filteredEvents = allEvents.filter((e) => {
-            const titleOk = !q || (e.title || '').toLowerCase().includes(q);
+            const titleOk = !q || (e.title || '').toLowerCase().includes(q) || (e.location || '').toLowerCase().includes(q) || (e.speaker?.name || '').toLowerCase().includes(q);
             const catOk = eventCategoryFilter === 'all' || (e.category || '').toLowerCase() === eventCategoryFilter;
             const visOk = eventVisibilityFilter === 'all' || e.visibility === eventVisibilityFilter;
             const live = eventLive(e);
-            const statusOk = eventStatusFilter === 'all' || live === eventStatusFilter;
+            const statusOk = eventStatusFilter === 'all' || live === eventStatusFilter || (e.status && e.status.toLowerCase() === eventStatusFilter);
             let dateOk = true;
             if (eventDateFilter === 'today') dateOk = e.startDate && isSameDay(new Date(e.startDate), new Date());
             else if (eventDateFilter === 'week') dateOk = e.startDate && dateInRange(e.startDate, 0, 7);
@@ -3669,6 +4197,21 @@ const resetCalendarForm = () => {
             else if (eventDateFilter === 'next30') dateOk = e.startDate && dateInRange(e.startDate, 1, 30);
             return titleOk && catOk && visOk && statusOk && dateOk;
         });
+
+        const isFilterActive = Boolean(
+            eventSearch.trim() ||
+            eventCategoryFilter !== 'all' ||
+            eventStatusFilter !== 'all' ||
+            eventVisibilityFilter !== 'all' ||
+            eventDateFilter !== 'all'
+        );
+
+        const totalFilteredEvents = filteredEvents.length;
+        const totalPages = Math.max(1, Math.ceil(totalFilteredEvents / eventPageSize));
+        const safePage = Math.min(Math.max(1, eventCurrentPage), totalPages);
+        const startIndex = totalFilteredEvents === 0 ? 0 : (safePage - 1) * eventPageSize;
+        const endIndex = Math.min(startIndex + eventPageSize, totalFilteredEvents);
+        const paginatedEvents = filteredEvents.slice(startIndex, endIndex);
 
         const stats = {
             total: allEvents.length,
@@ -3684,22 +4227,7 @@ const resetCalendarForm = () => {
         ])).sort();
         const catLabel = (c) => c === 'all' ? 'All Categories' : c.charAt(0).toUpperCase() + c.slice(1);
 
-        const filterSelectStyle = { ...s.select, width: '100%', minWidth: '150px' };
-        const filterInputStyle = { ...s.input, width: '100%', minWidth: '180px' };
-        const filterStyle = { display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' };
-
-        const segBtn = (active, activeColor) => ({
-            flex: 1, padding: '9px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
-            border: active ? 'none' : `1px solid ${colors.border}`, background: active ? activeColor : 'transparent', color: active ? '#ffffff' : colors.textMuted, transition: 'all 0.15s'
-        });
-        const segWrap = { display: 'flex', gap: 6, padding: 4, borderRadius: 10, background: colors.bgInput, border: `1px solid ${colors.border}` };
-
         const chip = (color, bg) => ({ padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, color, background: bg, textTransform: 'capitalize', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 });
-
-        const iconBtn = (color) => ({
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8,
-            border: `1px solid ${colors.border}`, background: 'transparent', color, cursor: 'pointer', transition: 'all 0.15s'
-        });
 
         const statCard = (label, value, color) => (
             <div style={{ padding: '16px 18px', borderRadius: 14, background: colors.bgCard, border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -3708,32 +4236,104 @@ const resetCalendarForm = () => {
             </div>
         );
 
-        const emptyState = (
-            <div style={{ textAlign: 'center', padding: '48px 24px' }}>
-                <div style={{ width: 56, height: 56, margin: '0 auto 16px', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${colors.primary}12`, color: colors.primary, fontSize: 26 }}>
-                    <Calendar size={26} />
-                </div>
-                <h3 style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 800, color: colors.text }}>No events found.</h3>
-                <p style={{ margin: '0 auto 18px', maxWidth: 360, fontSize: 14, color: colors.textMuted }}>Create your first event to start managing the calendar.</p>
-                <button type="button" onClick={openCreateEvent} style={{ ...s.primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                    <Plus size={16} /> Create Event
-                </button>
-            </div>
-        );
-
-        const renderRowActions = (event) => {
+        // Color-Coded Status System: Green for Ongoing, Blue for Upcoming, Grey for Completed, Red for Cancelled
+        const getEventStatusBadge = (event) => {
+            if (event.status === 'CANCELLED' || event.eventStatus === 'CANCELLED') {
+                return { label: 'Cancelled', color: '#ef4444', bg: 'rgba(239,68,68,0.14)', border: 'rgba(239,68,68,0.3)', dot: '#ef4444' };
+            }
             const live = eventLive(event);
+            if (live === 'live' || live === 'ongoing') {
+                return { label: 'Ongoing', color: '#10b981', bg: 'rgba(16,185,129,0.14)', border: 'rgba(16,185,129,0.3)', dot: '#10b981' };
+            }
+            if (live === 'upcoming') {
+                return { label: 'Upcoming', color: '#38bdf8', bg: 'rgba(56,189,248,0.14)', border: 'rgba(56,189,248,0.3)', dot: '#38bdf8' };
+            }
+            if (live === 'completed') {
+                return { label: 'Completed', color: '#94a3b8', bg: 'rgba(148,163,184,0.14)', border: 'rgba(148,163,184,0.3)', dot: '#94a3b8' };
+            }
+            return { label: live ? (live.charAt(0).toUpperCase() + live.slice(1)) : 'Upcoming', color: '#38bdf8', bg: 'rgba(56,189,248,0.14)', border: 'rgba(56,189,248,0.3)', dot: '#38bdf8' };
+        };
+
+        // Consolidated Actions: Approve button remains visible; view, edit, sync, delete in three-dots kebab menu
+        const renderRowActions = (event) => {
+            const eventKey = `${event.visibility}-${event._id}`;
+            const isMenuOpen = eventMenuOpenId === eventKey;
+            const canApprove = event.visibility === 'public' && event.status !== 'APPROVED' && event.status !== 'CANCELLED';
+
             return (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button type="button" title="View" onClick={() => setViewingEvent(event)} style={iconBtn(colors.textMuted)}><Eye size={15} /></button>
-                    <button type="button" title="Edit" onClick={() => handleEditCalendarEvent(event)} style={iconBtn('#f59e0b')}><Edit size={15} /></button>
-                    {event.visibility === 'public' && event.status !== 'APPROVED' && event.status !== 'CANCELLED' && (
-                        <button type="button" title="Approve & publish" onClick={() => publishPublicEvent(event)} style={{ ...s.primaryBtn, padding: '6px 12px', fontSize: 12, borderRadius: 8 }}>Approve</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
+                    {canApprove && (
+                        <button
+                            type="button"
+                            title="Approve & publish event"
+                            onClick={() => publishPublicEvent(event)}
+                            style={{
+                                padding: '6px 14px',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                borderRadius: '8px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 5,
+                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                color: '#ffffff',
+                                border: 'none',
+                                cursor: 'pointer',
+                                boxShadow: '0 2px 8px rgba(16,185,129,0.25)',
+                                transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(16,185,129,0.4)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(16,185,129,0.25)'; }}
+                        >
+                            <Check size={13} />
+                            Approve
+                        </button>
                     )}
-                    {event.visibility === 'public' && event.status !== 'CANCELLED' && (
-                        <button type="button" title="Cancel event" onClick={() => cancelPublicEvent(event)} style={iconBtn('#f59e0b')}><Ban size={15} /></button>
-                    )}
-                    <button type="button" title="Delete" onClick={() => openDeleteEvent(event)} style={iconBtn(colors.danger)}><Trash2 size={15} /></button>
+                    <button
+                        type="button"
+                        title="More actions"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (isMenuOpen) {
+                                setEventMenuOpenId(null);
+                                return;
+                            }
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const menuHeight = 220;
+                            const fitsBelow = rect.bottom + menuHeight <= window.innerHeight;
+                            setEventMenuPos({
+                                top: fitsBelow ? (rect.bottom + 6) : Math.max(10, rect.top - menuHeight - 6),
+                                right: Math.max(16, window.innerWidth - rect.right)
+                            });
+                            setEventMenuOpenId(eventKey);
+                        }}
+                        style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: '8px',
+                            border: `1px solid ${isMenuOpen ? '#10b981' : colors.border}`,
+                            background: isMenuOpen ? 'rgba(16,185,129,0.12)' : colors.bgInput,
+                            color: isMenuOpen ? '#10b981' : colors.textMuted,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = '#10b981';
+                            e.currentTarget.style.color = '#10b981';
+                        }}
+                        onMouseLeave={(e) => {
+                            if (!isMenuOpen) {
+                                e.currentTarget.style.borderColor = colors.border;
+                                e.currentTarget.style.color = colors.textMuted;
+                            }
+                        }}
+                    >
+                        <MoreVertical size={16} />
+                    </button>
                 </div>
             );
         };
@@ -3750,19 +4350,99 @@ const resetCalendarForm = () => {
             );
         };
 
+        // Location Column: Replaced raw long URLs with video/link icon and clickable "Join Link"
         const renderLocationCell = (event) => {
-            const showStream = event.eventType !== 'Physical' && event.streamUrl;
+            const streamUrl = event.streamUrl || event.meetingUrl;
+            const showStream = event.eventType !== 'Physical' && streamUrl;
             const loc = event.location || (event.eventType === 'Online' ? 'Online Live Stream' : '');
+
             return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 200 }}>
-                    {loc && <span style={{ color: colors.text, fontSize: 13 }}>{loc}</span>}
-                    {showStream && (
-                        <a href={event.streamUrl} target="_blank" rel="noopener noreferrer" style={{ color: colors.primary, fontSize: 12, fontWeight: 600, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.streamUrl}</a>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 140, maxWidth: 190 }}>
+                    {loc && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: colors.text, fontSize: 13, fontWeight: 500 }} title={loc}>
+                            <MapPin size={13} style={{ color: colors.textMuted, flexShrink: 0 }} />
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loc}</span>
+                        </div>
                     )}
-                    {!loc && !showStream && <span style={{ color: colors.textMuted, fontSize: 13 }}>-</span>}
+                    {showStream && (
+                        <a
+                            href={streamUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`Join meeting: ${streamUrl}`}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                color: '#10b981',
+                                background: 'rgba(16,185,129,0.1)',
+                                border: '1px solid rgba(16,185,129,0.25)',
+                                padding: '4px 9px',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                textDecoration: 'none',
+                                width: 'fit-content',
+                                transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(16,185,129,0.2)'; e.currentTarget.style.borderColor = '#10b981'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(16,185,129,0.1)'; e.currentTarget.style.borderColor = 'rgba(16,185,129,0.25)'; }}
+                        >
+                            <Video size={13} style={{ flexShrink: 0 }} />
+                            <span>Join Link</span>
+                            <ExternalLink size={11} style={{ flexShrink: 0, opacity: 0.7 }} />
+                        </a>
+                    )}
+                    {!loc && !showStream && <span style={{ color: colors.textMuted, fontSize: 13 }}>—</span>}
                 </div>
             );
         };
+
+        // Empty State Component
+        const emptyState = (
+            <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+                <div style={{ width: 64, height: 64, margin: '0 auto 16px', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${colors.primary}12`, color: colors.primary, boxShadow: `0 0 24px ${colors.primary}20` }}>
+                    <Calendar size={30} />
+                </div>
+                <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 800, color: colors.text }}>
+                    {isFilterActive ? 'No events found matching your filters.' : 'No events found.'}
+                </h3>
+                <p style={{ margin: '0 auto 20px', maxWidth: 420, fontSize: 14, color: colors.textMuted, lineHeight: '1.5' }}>
+                    {isFilterActive
+                        ? 'Try adjusting your search keywords, category, or status dropdown selections.'
+                        : 'Click "Create Event" to schedule workshops, masterclasses, exams, or live stream sessions.'}
+                </p>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', alignItems: 'center' }}>
+                    <button type="button" onClick={openCreateEvent} style={{ ...s.primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px' }}>
+                        <Plus size={16} /> Create Event
+                    </button>
+                    {isFilterActive && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setEventSearch('');
+                                setEventCategoryFilter('all');
+                                setEventStatusFilter('all');
+                                setEventVisibilityFilter('all');
+                                setEventDateFilter('all');
+                                setEventCurrentPage(1);
+                            }}
+                            style={{
+                                ...s.secondaryBtn,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '10px 18px',
+                                border: '1px solid #10b981',
+                                color: '#10b981'
+                            }}
+                        >
+                            <RotateCcw size={14} /> Clear Filters
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
 
         return (
         <div style={s.tabContent}>
@@ -3772,7 +4452,7 @@ const resetCalendarForm = () => {
                 @media (min-width: 960px) { .em-cal-table { display: block; } .em-cal-cards { display: none; } }
             `}</style>
 
-            {/* -"?-"? Header -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"? */}
+            {/* Header */}
             <div style={{ ...s.sectionHeader, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
                 <div>
                     <h2 style={s.sectionTitle}>Event Management</h2>
@@ -3783,107 +4463,422 @@ const resetCalendarForm = () => {
                 </button>
             </div>
 
-            {/* -"?-"? Statistics row -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"? */}
+            {/* Statistics row */}
             <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', marginBottom: 20 }}>
                 {statCard('Total Events', stats.total, colors.text)}
-                {statCard('Upcoming', stats.upcoming, '#22c55e')}
+                {statCard('Upcoming', stats.upcoming, '#38bdf8')}
                 {statCard('Ongoing', stats.ongoing, '#10b981')}
                 {statCard('Completed', stats.completed, '#64748b')}
             </div>
 
-            {/* -"?-"? Filter toolbar -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"? */}
-            <div style={s.card}>
-                <div style={filterStyle}>
-                    <input value={eventSearch} onChange={(e) => setEventSearch(e.target.value)} placeholder="Search events--" style={filterInputStyle} />
-                    <select value={eventCategoryFilter} onChange={(e) => setEventCategoryFilter(e.target.value)} style={filterSelectStyle}>
-                        <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Categories</option>
-                        {allCatKeys.map((c) => (
-                            <option key={c} value={c} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{catLabel(c)}</option>
-                        ))}
-                    </select>
-                    <select value={eventStatusFilter} onChange={(e) => setEventStatusFilter(e.target.value)} style={filterSelectStyle}>
-                        <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Statuses</option>
-                        <option value="upcoming" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Upcoming</option>
-                        <option value="live" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Ongoing</option>
-                        <option value="completed" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Completed</option>
-                        <option value="cancelled" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Cancelled</option>
-                    </select>
-                    <select value={eventVisibilityFilter} onChange={(e) => setEventVisibilityFilter(e.target.value)} style={filterSelectStyle}>
-                        <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Visibility</option>
-                        <option value="internal" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Internal</option>
-                        <option value="public" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Public</option>
-                    </select>
-                    <select value={eventDateFilter} onChange={(e) => setEventDateFilter(e.target.value)} style={filterSelectStyle}>
-                        <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Dates</option>
-                        <option value="today" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Today</option>
-                        <option value="week" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>This Week</option>
-                        <option value="month" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>This Month</option>
-                        <option value="next30" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Next 30 Days</option>
-                    </select>
+            {/* Filter toolbar: Wider search bar and uniform width for all 4 dropdowns + Clear Filters button */}
+            <div style={{ ...s.card, marginBottom: 20, padding: '18px 24px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+                    {/* Wider Search Bar */}
+                    <div style={{ position: 'relative', flex: '2 1 280px', minWidth: '240px' }}>
+                        <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                        <input
+                            value={eventSearch}
+                            onChange={(e) => { setEventSearch(e.target.value); setEventCurrentPage(1); }}
+                            placeholder="Search event title, venue, or instructor..."
+                            style={{
+                                ...s.input,
+                                width: '100%',
+                                padding: '10px 14px 10px 40px',
+                                fontSize: '14px',
+                                borderRadius: '10px',
+                                height: '42px',
+                                boxSizing: 'border-box',
+                                border: `1.5px solid ${eventSearch ? '#10b981' : colors.border}`
+                            }}
+                        />
+                    </div>
+
+                    {/* Uniform Dropdown 1: Category */}
+                    <div style={{ position: 'relative', flex: '1 1 150px', minWidth: '150px' }}>
+                        <select
+                            value={eventCategoryFilter}
+                            onChange={(e) => { setEventCategoryFilter(e.target.value); setEventCurrentPage(1); }}
+                            style={{
+                                ...s.select,
+                                width: '100%',
+                                height: '42px',
+                                appearance: 'none',
+                                WebkitAppearance: 'none',
+                                padding: '9px 34px 9px 14px',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                borderRadius: '10px',
+                                boxSizing: 'border-box',
+                                border: `1.5px solid ${eventCategoryFilter !== 'all' ? '#10b981' : colors.border}`
+                            }}
+                        >
+                            <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Categories</option>
+                            {allCatKeys.map((c) => (
+                                <option key={c} value={c} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{catLabel(c)}</option>
+                            ))}
+                        </select>
+                        <ChevronDown size={15} color={eventCategoryFilter !== 'all' ? '#10b981' : "#94a3b8"} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    </div>
+
+                    {/* Uniform Dropdown 2: Status */}
+                    <div style={{ position: 'relative', flex: '1 1 150px', minWidth: '150px' }}>
+                        <select
+                            value={eventStatusFilter}
+                            onChange={(e) => { setEventStatusFilter(e.target.value); setEventCurrentPage(1); }}
+                            style={{
+                                ...s.select,
+                                width: '100%',
+                                height: '42px',
+                                appearance: 'none',
+                                WebkitAppearance: 'none',
+                                padding: '9px 34px 9px 14px',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                borderRadius: '10px',
+                                boxSizing: 'border-box',
+                                border: `1.5px solid ${eventStatusFilter !== 'all' ? '#10b981' : colors.border}`
+                            }}
+                        >
+                            <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Statuses</option>
+                            <option value="upcoming" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Upcoming</option>
+                            <option value="live" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Ongoing</option>
+                            <option value="completed" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Completed</option>
+                            <option value="cancelled" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Cancelled</option>
+                        </select>
+                        <ChevronDown size={15} color={eventStatusFilter !== 'all' ? '#10b981' : "#94a3b8"} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    </div>
+
+                    {/* Uniform Dropdown 3: Visibility */}
+                    <div style={{ position: 'relative', flex: '1 1 150px', minWidth: '150px' }}>
+                        <select
+                            value={eventVisibilityFilter}
+                            onChange={(e) => { setEventVisibilityFilter(e.target.value); setEventCurrentPage(1); }}
+                            style={{
+                                ...s.select,
+                                width: '100%',
+                                height: '42px',
+                                appearance: 'none',
+                                WebkitAppearance: 'none',
+                                padding: '9px 34px 9px 14px',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                borderRadius: '10px',
+                                boxSizing: 'border-box',
+                                border: `1.5px solid ${eventVisibilityFilter !== 'all' ? '#10b981' : colors.border}`
+                            }}
+                        >
+                            <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Visibility</option>
+                            <option value="internal" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Internal</option>
+                            <option value="public" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Public</option>
+                        </select>
+                        <ChevronDown size={15} color={eventVisibilityFilter !== 'all' ? '#10b981' : "#94a3b8"} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    </div>
+
+                    {/* Uniform Dropdown 4: Date */}
+                    <div style={{ position: 'relative', flex: '1 1 150px', minWidth: '150px' }}>
+                        <select
+                            value={eventDateFilter}
+                            onChange={(e) => { setEventDateFilter(e.target.value); setEventCurrentPage(1); }}
+                            style={{
+                                ...s.select,
+                                width: '100%',
+                                height: '42px',
+                                appearance: 'none',
+                                WebkitAppearance: 'none',
+                                padding: '9px 34px 9px 14px',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                borderRadius: '10px',
+                                boxSizing: 'border-box',
+                                border: `1.5px solid ${eventDateFilter !== 'all' ? '#10b981' : colors.border}`
+                            }}
+                        >
+                            <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Dates</option>
+                            <option value="today" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Today</option>
+                            <option value="week" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>This Week</option>
+                            <option value="month" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>This Month</option>
+                            <option value="next30" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Next 30 Days</option>
+                        </select>
+                        <ChevronDown size={15} color={eventDateFilter !== 'all' ? '#10b981' : "#94a3b8"} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    </div>
+
+                    {/* Clear Filters Button (appears only when user typed or changed a dropdown) */}
+                    {isFilterActive && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setEventSearch('');
+                                setEventCategoryFilter('all');
+                                setEventStatusFilter('all');
+                                setEventVisibilityFilter('all');
+                                setEventDateFilter('all');
+                                setEventCurrentPage(1);
+                            }}
+                            title="Reset all active filters"
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                height: '42px',
+                                padding: '0 16px',
+                                borderRadius: '10px',
+                                border: '1px dashed #10b981',
+                                background: 'rgba(16,185,129,0.08)',
+                                color: '#10b981',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(16,185,129,0.16)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(16,185,129,0.08)'; }}
+                        >
+                            <RotateCcw size={13} />
+                            Clear Filters
+                        </button>
+                    )}
                 </div>
             </div>
 
-            {/* -"?-"? Event Management -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"? */}
-            <div style={{ ...s.card, marginTop: 20, padding: 0, overflow: 'hidden' }}>
-                <div style={{ padding: '20px 24px', borderBottom: `1px solid ${colors.border}` }}>
-                    <h3 style={{ ...s.cardTitle, margin: 0 }}>Event Management</h3>
+            {/* Floating Bulk Actions Bar (Bulk Approve / Bulk Delete) */}
+            {selectedEvents.length > 0 && (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 20px',
+                    background: theme === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                    border: '1.5px solid #10b981',
+                    borderRadius: '14px',
+                    marginBottom: '16px',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                    backdropFilter: 'blur(12px)',
+                    gap: 12,
+                    flexWrap: 'wrap'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <CheckSquare size={18} style={{ color: '#10b981' }} />
+                        <span style={{ fontSize: '14px', fontWeight: '700', color: colors.text }}>
+                            {selectedEvents.length} {selectedEvents.length === 1 ? 'event' : 'events'} selected
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <button
+                            type="button"
+                            onClick={handleBulkApproveEvents}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                color: '#ffffff',
+                                fontWeight: '700',
+                                fontSize: '13px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                boxShadow: '0 2px 8px rgba(16,185,129,0.3)'
+                            }}
+                        >
+                            <CheckCircle2 size={15} />
+                            Bulk Approve
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleBulkDeleteEvents}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                background: 'rgba(239,68,68,0.15)',
+                                border: '1px solid rgba(239,68,68,0.4)',
+                                color: '#ef4444',
+                                fontWeight: '700',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6
+                            }}
+                        >
+                            <Trash2 size={15} />
+                            Bulk Delete
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setSelectedEvents([])}
+                            style={{
+                                padding: '8px 14px',
+                                borderRadius: '8px',
+                                background: 'transparent',
+                                border: `1px solid ${colors.border}`,
+                                color: colors.textMuted,
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Deselect All
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Table Card */}
+            <div style={{ ...s.card, marginTop: 10, padding: 0, overflow: 'hidden' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: `1px solid ${colors.border}`, flexWrap: 'wrap', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <h3 style={{ ...s.cardTitle, margin: 0 }}>All Events</h3>
+                        <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '12px', background: `${colors.primary}15`, color: colors.primary, fontWeight: '600' }}>
+                            {totalFilteredEvents} {totalFilteredEvents === 1 ? 'event' : 'events'}
+                        </span>
+                    </div>
                 </div>
 
-                {filteredEvents.length === 0 ? emptyState : (
+                {totalFilteredEvents === 0 ? emptyState : (
                     <>
                         {/* Desktop table */}
                         <div className="em-cal-table" style={s.instructorTableCard}>
                             <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
-                                <table style={{ ...s.instructorTable, minWidth: 1020 }}>
+                                <table style={{ ...s.instructorTable, minWidth: 1060 }}>
                                     <thead>
                                         <tr style={s.instructorThRow}>
-                                            <th style={{ ...s.instructorTh, textAlign: 'left', minWidth: 200 }}>Event</th>
+                                            <th style={{ ...s.instructorTh, width: 44, padding: '14px 16px' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={paginatedEvents.length > 0 && paginatedEvents.every(e => selectedEvents.includes(`${e.visibility}-${e._id}`))}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            const pageKeys = paginatedEvents.map(ev => `${ev.visibility}-${ev._id}`);
+                                                            setSelectedEvents(prev => Array.from(new Set([...prev, ...pageKeys])));
+                                                        } else {
+                                                            const pageKeys = new Set(paginatedEvents.map(ev => `${ev.visibility}-${ev._id}`));
+                                                            setSelectedEvents(prev => prev.filter(k => !pageKeys.has(k)));
+                                                        }
+                                                    }}
+                                                    style={{ cursor: 'pointer', accentColor: '#10b981', width: 16, height: 16 }}
+                                                />
+                                            </th>
+                                            <th style={{ ...s.instructorTh, textAlign: 'left', minWidth: 220 }}>Event</th>
                                             <th style={{ ...s.instructorTh, textAlign: 'left', minWidth: 110 }}>Category</th>
-                                            <th style={{ ...s.instructorTh, textAlign: 'left', minWidth: 220 }}>Date &amp; Time</th>
-                                            <th style={{ ...s.instructorTh, textAlign: 'left', minWidth: 160 }}>Location</th>
-                                            <th style={{ ...s.instructorTh, textAlign: 'left', minWidth: 100 }}>Status</th>
+                                            <th style={{ ...s.instructorTh, textAlign: 'left', minWidth: 200 }}>Date &amp; Time</th>
+                                            <th style={{ ...s.instructorTh, textAlign: 'left', minWidth: 170 }}>Location</th>
+                                            <th style={{ ...s.instructorTh, textAlign: 'left', minWidth: 110 }}>Status</th>
                                             <th style={{ ...s.instructorTh, textAlign: 'left', minWidth: 100 }}>Visibility</th>
                                             <th style={{ ...s.instructorTh, textAlign: 'right', minWidth: 130 }}>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                    {filteredEvents.map((event) => {
-                                        const live = eventLive(event);
-                                        const sc = statusChip(live);
+                                    {paginatedEvents.map((event) => {
+                                        const eventKey = `${event.visibility}-${event._id}`;
+                                        const isSelected = selectedEvents.includes(eventKey);
+                                        const sc = getEventStatusBadge(event);
                                         return (
-                                            <tr key={`${event.visibility}-${event._id}`} style={s.instructorTr}>
-                                                <td style={s.instructorTd}>
+                                            <tr
+                                                key={eventKey}
+                                                style={{
+                                                    ...s.instructorTr,
+                                                    background: isSelected ? (theme === 'dark' ? 'rgba(16,185,129,0.12)' : '#f0fdf4') : 'transparent',
+                                                    transition: 'background 0.15s ease'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (!isSelected) e.currentTarget.style.background = theme === 'dark' ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.015)';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (!isSelected) e.currentTarget.style.background = 'transparent';
+                                                }}
+                                            >
+                                                <td style={{ ...s.instructorTd, width: 44, padding: '14px 16px' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedEvents(prev => [...prev, eventKey]);
+                                                            } else {
+                                                                setSelectedEvents(prev => prev.filter(k => k !== eventKey));
+                                                            }
+                                                        }}
+                                                        style={{ cursor: 'pointer', accentColor: '#10b981', width: 16, height: 16 }}
+                                                    />
+                                                </td>
+                                                {/* Title Truncation with Tooltip on Hover */}
+                                                <td style={{ ...s.instructorTd, maxWidth: 260 }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                         {event.image ? (
-                                                            <img src={event.image} alt="" style={{ width: 52, height: 52, borderRadius: 14, objectFit: 'cover', border: `1px solid ${colors.border}` }} />
+                                                            <img src={event.image} alt="" style={{ width: 46, height: 46, borderRadius: 12, objectFit: 'cover', border: `1px solid ${colors.border}`, flexShrink: 0 }} />
                                                         ) : (
-                                                            <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700' }}>
-                                                                {event.title?.charAt(0)?.toUpperCase()}
+                                                            <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', fontWeight: '800', flexShrink: 0, fontSize: 16 }}>
+                                                                {event.title?.charAt(0)?.toUpperCase() || 'E'}
                                                             </div>
                                                         )}
-                                                        <div>
-                                                            <strong style={{ color: colors.text, display: 'block', fontSize: '14px' }}>{event.title}</strong>
-                                                            <span style={{ color: colors.textMuted, fontSize: '12px' }}>{event.visibility === 'public' ? (event.eventType || 'Hybrid') : 'Internal'}</span>
+                                                        <div style={{ minWidth: 0, flex: 1 }}>
+                                                            <strong
+                                                                title={event.title}
+                                                                style={{
+                                                                    color: colors.text,
+                                                                    display: 'block',
+                                                                    fontSize: '14px',
+                                                                    fontWeight: '700',
+                                                                    overflow: 'hidden',
+                                                                    textOverflow: 'ellipsis',
+                                                                    whiteSpace: 'nowrap',
+                                                                    cursor: 'help'
+                                                                }}
+                                                            >
+                                                                {event.title}
+                                                            </strong>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                                                                <span style={{ color: colors.textMuted, fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                                                    {event.visibility === 'public' ? (event.eventType || 'Hybrid') : 'Internal'}
+                                                                </span>
+                                                                {event.speaker?.name && (
+                                                                    <span style={{ color: colors.textMuted, fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`Speaker: ${event.speaker.name}`}>
+                                                                        • {event.speaker.name}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td style={s.instructorTd}>
-                                                    <span style={{ ...chip(colors.primary, `${colors.primary}14`), textTransform: 'capitalize' }}>{event.category || 'Event'}</span>
+                                                    <span style={{ ...chip(colors.primary, `${colors.primary}14`), textTransform: 'capitalize' }}>
+                                                        {event.category || 'Event'}
+                                                    </span>
                                                 </td>
                                                 <td style={s.instructorTd}>{renderDateCell(event)}</td>
                                                 <td style={s.instructorTd}>{renderLocationCell(event)}</td>
+                                                {/* Color-Coded Status Badge */}
                                                 <td style={s.instructorTd}>
-                                                    <span style={chip(sc.color, sc.bg)}>{sc.label}</span>
+                                                    <span
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: 6,
+                                                            padding: '4px 10px',
+                                                            borderRadius: 999,
+                                                            fontSize: '11px',
+                                                            fontWeight: 700,
+                                                            color: sc.color,
+                                                            background: sc.bg,
+                                                            border: `1px solid ${sc.border}`,
+                                                            whiteSpace: 'nowrap'
+                                                        }}
+                                                    >
+                                                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot }} />
+                                                        {sc.label}
+                                                    </span>
                                                 </td>
                                                 <td style={s.instructorTd}>
                                                     <span style={event.visibility === 'public' ? chip('#10b981', 'rgba(16,185,129,0.12)') : chip('#94a3b8', 'rgba(148,163,184,0.14)')}>
                                                         {event.visibility === 'public' ? 'Public' : 'Internal'}
                                                     </span>
                                                 </td>
+                                                {/* Consolidated Actions (Approve + Three-Dots Dropdown) */}
                                                 <td style={s.instructorTd}>
-                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'flex-end' }}>
-                                                        {renderRowActions(event)}
-                                                    </div>
+                                                    {renderRowActions(event)}
                                                 </td>
                                             </tr>
                                         );
@@ -3896,14 +4891,33 @@ const resetCalendarForm = () => {
                         {/* Mobile cards */}
                         <div className="em-cal-cards">
                             <div style={{ display: 'grid', gap: 12, padding: '16px 20px 24px' }}>
-                                {filteredEvents.map((event) => {
-                                    const live = eventLive(event);
-                                    const sc = statusChip(live);
+                                {paginatedEvents.map((event) => {
+                                    const eventKey = `${event.visibility}-${event._id}`;
+                                    const isSelected = selectedEvents.includes(eventKey);
+                                    const sc = getEventStatusBadge(event);
                                     return (
-                                        <div key={`${event.visibility}-${event._id}`} style={{ padding: 16, borderRadius: 12, background: colors.bgInput, border: `1px solid ${colors.border}` }}>
+                                        <div key={eventKey} style={{ padding: 16, borderRadius: 12, background: colors.bgInput, border: `1px solid ${isSelected ? '#10b981' : colors.border}` }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
-                                                <strong style={{ fontSize: 14, color: colors.text }}>{event.title}</strong>
-                                                <span style={chip(sc.color, sc.bg)}>{sc.label}</span>
+                                                <strong title={event.title} style={{ fontSize: 14, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                                                    {event.title}
+                                                </strong>
+                                                <span
+                                                    style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: 6,
+                                                        padding: '3px 8px',
+                                                        borderRadius: 999,
+                                                        fontSize: '11px',
+                                                        fontWeight: 700,
+                                                        color: sc.color,
+                                                        background: sc.bg,
+                                                        border: `1px solid ${sc.border}`
+                                                    }}
+                                                >
+                                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot }} />
+                                                    {sc.label}
+                                                </span>
                                             </div>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
                                                 <span style={{ ...chip(colors.primary, `${colors.primary}14`), textTransform: 'capitalize' }}>{event.category || 'Event'}</span>
@@ -3913,9 +4927,9 @@ const resetCalendarForm = () => {
                                             </div>
                                             <div style={{ display: 'grid', gap: 4, fontSize: 13, color: colors.textMuted }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Calendar size={13} style={{ flexShrink: 0 }} /> {renderDateCell(event)}</div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MapPin size={13} style={{ flexShrink: 0 }} /> {(event.location || (event.eventType === 'Online' ? 'Online Live Stream' : '-"'))}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MapPin size={13} style={{ flexShrink: 0 }} /> {renderLocationCell(event)}</div>
                                             </div>
-                                            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                                            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                                                 {renderRowActions(event)}
                                             </div>
                                         </div>
@@ -3923,9 +4937,216 @@ const resetCalendarForm = () => {
                                 })}
                             </div>
                         </div>
+
+                        {/* Pagination Bar */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderTop: `1px solid ${colors.border}`, flexWrap: 'wrap', gap: 12 }}>
+                            <div style={{ fontSize: '14px', color: colors.textMuted, fontWeight: '500' }}>
+                                {totalFilteredEvents === 0
+                                    ? 'Showing 0 of 0 events'
+                                    : `Showing ${startIndex + 1} to ${endIndex} of ${totalFilteredEvents} events`
+                                }
+                            </div>
+                            {totalPages > 1 && (
+                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                    <button
+                                        type="button"
+                                        disabled={safePage <= 1}
+                                        onClick={() => setEventCurrentPage(p => Math.max(1, p - 1))}
+                                        title="Previous Page"
+                                        style={{
+                                            background: colors.bgCard,
+                                            border: `1px solid ${colors.border}`,
+                                            borderRadius: '8px',
+                                            width: '36px',
+                                            height: '36px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: safePage <= 1 ? colors.textMuted : colors.text,
+                                            cursor: safePage <= 1 ? 'not-allowed' : 'pointer',
+                                            opacity: safePage <= 1 ? 0.4 : 1
+                                        }}
+                                    >
+                                        <ChevronLeft size={16} />
+                                    </button>
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                                        <button
+                                            key={p}
+                                            type="button"
+                                            onClick={() => setEventCurrentPage(p)}
+                                            style={{
+                                                background: p === safePage ? '#10b981' : colors.bgCard,
+                                                color: p === safePage ? '#ffffff' : colors.text,
+                                                border: `1px solid ${p === safePage ? '#10b981' : colors.border}`,
+                                                borderRadius: '8px',
+                                                minWidth: '36px',
+                                                height: '36px',
+                                                padding: '0 8px',
+                                                fontSize: '13px',
+                                                fontWeight: p === safePage ? '700' : '500',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            {p}
+                                        </button>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        disabled={safePage >= totalPages}
+                                        onClick={() => setEventCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        title="Next Page"
+                                        style={{
+                                            background: colors.bgCard,
+                                            border: `1px solid ${colors.border}`,
+                                            borderRadius: '8px',
+                                            width: '36px',
+                                            height: '36px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: safePage >= totalPages ? colors.textMuted : colors.text,
+                                            cursor: safePage >= totalPages ? 'not-allowed' : 'pointer',
+                                            opacity: safePage >= totalPages ? 0.4 : 1
+                                        }}
+                                    >
+                                        <ChevronRight size={16} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </>
                 )}
             </div>
+
+            {/* Floating Action Menu for Three-Dots Kebab */}
+            {eventMenuOpenId && (() => {
+                const ev = allEvents.find(e => `${e.visibility}-${e._id}` === eventMenuOpenId);
+                if (!ev) return null;
+                const canCancel = ev.status !== 'CANCELLED' && ev.eventStatus !== 'CANCELLED';
+                return (
+                    <div
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            position: 'fixed',
+                            top: eventMenuPos.top,
+                            right: eventMenuPos.right,
+                            background: colors.bgCard || '#12141f',
+                            border: `1px solid ${colors.border}`,
+                            borderRadius: '12px',
+                            padding: '6px',
+                            boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
+                            zIndex: 99999,
+                            minWidth: '180px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '2px',
+                            backdropFilter: 'blur(16px)'
+                        }}
+                    >
+                        <button
+                            type="button"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setEventMenuOpenId(null);
+                                setViewingEvent(ev);
+                            }}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: '8px',
+                                background: 'transparent', border: 'none', color: colors.text, fontSize: '13px', fontWeight: '500',
+                                cursor: 'pointer', textAlign: 'left', width: '100%'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <Eye size={15} style={{ color: colors.textMuted }} />
+                            View Details
+                        </button>
+                        <button
+                            type="button"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setEventMenuOpenId(null);
+                                handleEditCalendarEvent(ev);
+                            }}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: '8px',
+                                background: 'transparent', border: 'none', color: colors.text, fontSize: '13px', fontWeight: '500',
+                                cursor: 'pointer', textAlign: 'left', width: '100%'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <Edit size={15} style={{ color: '#f59e0b' }} />
+                            Edit Event
+                        </button>
+                        <button
+                            type="button"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setEventMenuOpenId(null);
+                                fetchCalendarEvents();
+                                fetchPublicEvents();
+                                showNotification('Event data synchronized.');
+                            }}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: '8px',
+                                background: 'transparent', border: 'none', color: colors.text, fontSize: '13px', fontWeight: '500',
+                                cursor: 'pointer', textAlign: 'left', width: '100%'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <RefreshCw size={15} style={{ color: '#38bdf8' }} />
+                            Sync / Refresh
+                        </button>
+                        {canCancel && (
+                            <button
+                                type="button"
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEventMenuOpenId(null);
+                                    cancelPublicEvent(ev);
+                                }}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: '8px',
+                                    background: 'transparent', border: 'none', color: '#f59e0b', fontSize: '13px', fontWeight: '500',
+                                    cursor: 'pointer', textAlign: 'left', width: '100%'
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.1)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                            >
+                                <Ban size={15} />
+                                Cancel Event
+                            </button>
+                        )}
+                        <div style={{ height: 1, background: colors.border, margin: '4px 0' }} />
+                        <button
+                            type="button"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setEventMenuOpenId(null);
+                                openDeleteEvent(ev);
+                            }}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: '8px',
+                                background: 'transparent', border: 'none', color: '#ef4444', fontSize: '13px', fontWeight: '600',
+                                cursor: 'pointer', textAlign: 'left', width: '100%'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <Trash2 size={15} />
+                            Delete Event
+                        </button>
+                    </div>
+                );
+            })()}
 
             {/* -"?-"? Create / Edit Event Modal -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"? */}
             <Modal isOpen={isEventModalOpen} onClose={resetCalendarForm} title={calendarEditingId ? 'Edit Event' : 'Create Event'} maxWidth="680px" scrollable closeOnBackdrop={false}>
@@ -5151,11 +6372,13 @@ const resetCalendarForm = () => {
 
                         {/* Search Autocomplete Dropdown List */}
                         {instructorSearchQuery.trim() && !selectedInstructorObj && (
-                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '220px', overflowY: 'auto' }}>
+                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.25)', zIndex: 100, maxHeight: '220px', overflowY: 'auto' }}>
                                 {users.filter(u => {
                                     const q = instructorSearchQuery.toLowerCase();
-                                    return (u.fullName || '').toLowerCase().includes(q) || (u.accountEmail || '').toLowerCase().includes(q) || (u.specialization || '').toLowerCase().includes(q) || u.role === 'Instructor';
-                                }).slice(0, 6).map(user => (
+                                    const isInstructor = u.assignedRole === 'Instructor' || u.role === 'Instructor' || u.assignedRole === 'Admin';
+                                    const matches = (u.fullName || '').toLowerCase().includes(q) || (u.accountEmail || '').toLowerCase().includes(q) || (u.specialization || '').toLowerCase().includes(q);
+                                    return isInstructor && matches;
+                                }).slice(0, 8).map(user => (
                                     <div
                                         key={user._id}
                                         onClick={() => {
@@ -5163,11 +6386,11 @@ const resetCalendarForm = () => {
                                             setAssignInstructorIdInput(user._id);
                                             setInstructorSearchQuery(user.fullName);
                                         }}
-                                        style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' }}
-                                        onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                                        style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: `1px solid ${colors.border}`, transition: 'background 0.15s' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = colors.bgInput}
                                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                     >
-                                        <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: '#f0fdf4', color: '#16a34a', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                        <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'rgba(34,197,94,0.15)', color: '#16a34a', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                                             {user.avatarUrl ? (
                                                 <img src={user.avatarUrl} alt={user.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} crossOrigin="anonymous" />
                                             ) : (
@@ -5176,11 +6399,15 @@ const resetCalendarForm = () => {
                                         </div>
                                         <div>
                                             <div style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>{user.fullName}</div>
-                                            <div style={{ fontSize: '12px', color: colors.textMuted }}>{user.accountEmail} -- <span style={{ color: '#16a34a', fontWeight: '500' }}>{user.specialization || user.role || 'Instructor'}</span></div>
+                                            <div style={{ fontSize: '12px', color: colors.textMuted }}>{user.accountEmail} • <span style={{ color: '#16a34a', fontWeight: '500' }}>{user.specialization || user.assignedRole || user.role || 'Instructor'}</span></div>
                                         </div>
                                     </div>
                                 ))}
-                                {users.filter(u => (u.fullName || '').toLowerCase().includes(instructorSearchQuery.toLowerCase())).length === 0 && (
+                                {users.filter(u => {
+                                    const q = instructorSearchQuery.toLowerCase();
+                                    const isInstructor = u.assignedRole === 'Instructor' || u.role === 'Instructor' || u.assignedRole === 'Admin';
+                                    return isInstructor && ((u.fullName || '').toLowerCase().includes(q) || (u.accountEmail || '').toLowerCase().includes(q));
+                                }).length === 0 && (
                                     <div style={{ padding: '14px', fontSize: '13px', color: colors.textMuted, textAlign: 'center' }}>No matching instructors found</div>
                                 )}
                             </div>
@@ -5190,7 +6417,7 @@ const resetCalendarForm = () => {
                     {/* Rich Instructor Preview Card */}
                     {selectedInstructorObj && (
                         <div style={{ padding: '16px', borderRadius: '12px', background: colors.bg, border: `1px solid ${colors.border}`, display: 'flex', gap: '14px', alignItems: 'center' }}>
-                            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#dcfce7', color: '#15803d', fontWeight: '800', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #22c55e', flexShrink: 0, overflow: 'hidden' }}>
+                            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(34,197,94,0.15)', color: '#22c55e', fontWeight: '800', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #22c55e', flexShrink: 0, overflow: 'hidden' }}>
                                 {selectedInstructorObj.avatarUrl ? (
                                     <img src={selectedInstructorObj.avatarUrl} alt={selectedInstructorObj.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} crossOrigin="anonymous" />
                                 ) : (
@@ -5203,13 +6430,13 @@ const resetCalendarForm = () => {
                                         <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: colors.text }}>{selectedInstructorObj.fullName}</h4>
                                         <div style={{ fontSize: '12px', color: colors.textMuted }}>{selectedInstructorObj.accountEmail}</div>
                                     </div>
-                                    <span style={{ padding: '2px 8px', borderRadius: '12px', background: '#fef3c7', color: '#d97706', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                    <span style={{ padding: '2px 8px', borderRadius: '12px', background: 'rgba(245,158,11,0.15)', color: '#d97706', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}>
                                         <Star size={12} fill="#d97706" /> 4.9 Rating
                                     </span>
                                 </div>
                                 <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '12px', color: colors.text }}>
                                     <span><strong>Dept:</strong> {selectedInstructorObj.department || selectedInstructorObj.specialization || 'Computer Science'}</span>
-                                    <span><strong>Workload:</strong> 3 Active Courses</span>
+                                    <span><strong>Role:</strong> {selectedInstructorObj.assignedRole || 'Instructor'}</span>
                                 </div>
                             </div>
                         </div>
@@ -5219,7 +6446,7 @@ const resetCalendarForm = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         <div>
                             <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: colors.text, marginBottom: '6px' }}>Assignment Role</label>
-                            <select value={instructorRole} onChange={e => setInstructorRole(e.target.value)} style={{ width: '100%', padding: '9px 12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '13px', outline: 'none', background: colors.bgCard }}>
+                            <select value={instructorRole} onChange={e => setInstructorRole(e.target.value)} style={{ width: '100%', padding: '9px 12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '13px', outline: 'none', background: colors.bgCard, color: colors.text }}>
                                 <option value="Lead Instructor" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Lead Instructor (Full Control)</option>
                                 <option value="Co-Instructor" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Co-Instructor (Shared Control)</option>
                                 <option value="Teaching Assistant (TA)" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Teaching Assistant (TA - Grading Only)</option>
@@ -5227,7 +6454,7 @@ const resetCalendarForm = () => {
                         </div>
                         <div>
                             <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: colors.text, marginBottom: '6px' }}>Compensation Model</label>
-                            <select value={compensationModel} onChange={e => setCompensationModel(e.target.value)} style={{ width: '100%', padding: '9px 12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '13px', outline: 'none', background: colors.bgCard }}>
+                            <select value={compensationModel} onChange={e => setCompensationModel(e.target.value)} style={{ width: '100%', padding: '9px 12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '13px', outline: 'none', background: colors.bgCard, color: colors.text }}>
                                 <option value="70% Revenue Share" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>70% Revenue Share (Standard)</option>
                                 <option value="80% Revenue Share" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>80% Revenue Share (Premium)</option>
                                 <option value="50% Revenue Share" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>50% Revenue Share (Partner)</option>
@@ -5251,7 +6478,7 @@ const resetCalendarForm = () => {
                                 if (!targetId) return alert('Please select or search for an instructor.');
                                 try {
                                     const res = await courseService.assignInstructor(assignInstructorCourseId, targetId);
-                                    setAllCourses(prev => prev.map(c => c._id === assignInstructorCourseId ? res.data.data : c));
+                                    setAllCourses(prev => prev.map(c => c._id === assignInstructorCourseId ? { ...c, ...res.data.data } : c));
                                     showNotification(`Assigned as ${instructorRole} (${compensationModel}). Notification sent.`);
                                     setIsAssignInstructorModalOpen(false);
                                     setSelectedInstructorObj(null);
@@ -5261,7 +6488,7 @@ const resetCalendarForm = () => {
                                     alert(err.response?.data?.message || 'Failed to assign instructor.');
                                 }
                             }}
-                            style={{ background: '#16a34a', border: 'none', color: colors.text, padding: '9px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(22,163,74,0.25)' }}
+                            style={{ background: '#16a34a', border: 'none', color: '#ffffff', padding: '9px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(22,163,74,0.25)' }}
                         >
                             Assign Instructor
                         </button>
@@ -5334,20 +6561,21 @@ const resetCalendarForm = () => {
                                 value={enrollStudentId}
                                 onChange={e => setEnrollStudentId(e.target.value)}
                                 placeholder="Search student name, email, or enter Student ID..."
-                                style={{ flex: 1, padding: '9px 14px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '13px', outline: 'none' }}
+                                style={{ flex: 1, padding: '9px 14px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '13px', outline: 'none', background: colors.bgCard, color: colors.text }}
                             />
                             <button
                                 onClick={async () => {
                                     if (!enrollStudentId.trim()) return alert('Enter a student ID or email.');
                                     try {
-                                        await courseService.enroll(activeCourseId);
+                                        await courseService.enroll(activeCourseId, { studentId: enrollStudentId.trim() });
                                         showNotification(`Enrolled student in ${cohortTag} (${enrollmentAccessType}). Access: ${accessExpirationDate}`);
                                         setEnrollStudentId('');
                                         const res = await enrollmentService.getAll({ courseId: activeCourseId });
                                         setManagedStudents(res.data?.data || res.data || []);
+                                        setAllCourses(prev => prev.map(c => c._id === activeCourseId ? { ...c, totalEnrollments: (c.totalEnrollments || 0) + 1 } : c));
                                     } catch (err) { alert(err.response?.data?.message || 'Failed to enroll student.'); }
                                 }}
-                                style={{ background: '#10b981', border: 'none', color: colors.text, padding: '9px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                style={{ background: '#10b981', border: 'none', color: '#ffffff', padding: '9px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
                             >
                                 + Enroll Student
                             </button>
@@ -5361,16 +6589,30 @@ const resetCalendarForm = () => {
                                 onChange={e => setBulkStudentEmails(e.target.value)}
                                 placeholder="Paste list of student emails (comma or line separated)...&#10;e.g. john@example.com, sara@example.com"
                                 rows={3}
-                                style={{ width: '100%', padding: '10px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '12px', outline: 'none', resize: 'vertical' }}
+                                style={{ width: '100%', padding: '10px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '12px', outline: 'none', resize: 'vertical', background: colors.bgCard, color: colors.text }}
                             />
                             <button
-                                onClick={() => {
+                                onClick={async () => {
                                     if (!bulkStudentEmails.trim()) return alert('Paste emails first.');
-                                    const count = bulkStudentEmails.split(/[\n,]+/).filter(e => e.trim()).length;
-                                    showNotification(`Batch enrolled ${count} students into ${cohortTag}`);
+                                    const emails = bulkStudentEmails.split(/[\n,]+/).map(e => e.trim()).filter(Boolean);
+                                    let successCount = 0;
+                                    for (const email of emails) {
+                                        try {
+                                            await courseService.enroll(activeCourseId, { email });
+                                            successCount++;
+                                        } catch (err) {
+                                            console.warn('Failed enrolling email', email, err);
+                                        }
+                                    }
+                                    showNotification(`Batch enrolled ${successCount} student(s) into ${cohortTag}`);
                                     setBulkStudentEmails('');
+                                    const res = await enrollmentService.getAll({ courseId: activeCourseId });
+                                    setManagedStudents(res.data?.data || res.data || []);
+                                    if (successCount > 0) {
+                                        setAllCourses(prev => prev.map(c => c._id === activeCourseId ? { ...c, totalEnrollments: (c.totalEnrollments || 0) + successCount } : c));
+                                    }
                                 }}
-                                style={{ background: '#16a34a', border: 'none', color: colors.text, padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', alignSelf: 'flex-end' }}
+                                style={{ background: '#16a34a', border: 'none', color: '#ffffff', padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', alignSelf: 'flex-end' }}
                             >
                                 Batch Enroll Emails
                             </button>
@@ -5403,7 +6645,7 @@ const resetCalendarForm = () => {
                                 </thead>
                                 <tbody>
                                     {managedStudents.map((enr, i) => (
-                                        <tr key={enr._id || i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                        <tr key={enr._id || i} style={{ borderBottom: `1px solid ${colors.border}` }}>
                                             <td style={{ padding: '10px 14px', color: colors.text, fontWeight: '600' }}>
                                                 {enr.studentRef?.fullName || enr.student?.fullName || enr.studentId || 'Enrolled Learner'}
                                                 <div style={{ fontSize: '11px', color: colors.textMuted, fontWeight: '400' }}>{enr.studentRef?.accountEmail || 'student@domain.com'}</div>
@@ -5666,7 +6908,7 @@ const resetCalendarForm = () => {
                 </div>
             </Modal>
 
-            {/* -"?-"? Course Analytics Modal -"?-"? */}
+            {/* ── Course Analytics Modal ── */}
             <Modal isOpen={isCourseAnalyticsModalOpen} onClose={() => { setIsCourseAnalyticsModalOpen(false); setActiveCourseId(null); }} title="Course Analytics Overview">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>
@@ -5674,40 +6916,46 @@ const resetCalendarForm = () => {
                     </p>
                     {(() => {
                         const course = allCourses.find(c => c._id === activeCourseId);
-                        const enrolled = course?.totalEnrollments || enrollments.filter(e => e.courseId === activeCourseId || e.course === activeCourseId).length || 0;
+                        const enrolled = course?.totalEnrollments || enrollments.filter(e => (e.courseRef?._id || e.courseRef || e.courseId || e.course) === activeCourseId).length || 0;
                         const status = course?.publicationState || 'Draft';
+                        const chaptersCount = course?.curriculumTree?.length || course?.modules?.length || course?.curriculum?.length || 0;
+                        const lessonsCount = (course?.curriculumTree || []).reduce((acc, ch) => acc + (ch.lessons?.length || 0), 0);
+                        const cardBg = theme === 'dark' ? 'rgba(34, 197, 94, 0.08)' : '#f0fdf4';
+                        const statusBg = theme === 'dark' ? (status === 'Published' || status === 'Active' ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)') : (status === 'Published' || status === 'Active' ? '#f0fdf4' : '#fefce8');
+                        const statusColor = (status === 'Published' || status === 'Active') ? '#10b981' : '#f59e0b';
+
                         return (
                             <>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                                    <div style={{ padding: '16px', border: `1px solid ${colors.border}`, borderRadius: '8px', textAlign: 'center', background: '#f0fdf4' }}>
+                                    <div style={{ padding: '16px', border: `1px solid ${colors.border}`, borderRadius: '10px', textAlign: 'center', background: cardBg }}>
                                         <div style={{ fontSize: '24px', fontWeight: '700', color: '#10b981' }}>{enrolled}</div>
                                         <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '500' }}>Total Enrolled</div>
                                     </div>
-                                    <div style={{ padding: '16px', border: `1px solid ${colors.border}`, borderRadius: '8px', textAlign: 'center', background: '#f0fdf4' }}>
-                                        <div style={{ fontSize: '24px', fontWeight: '700', color: '#22c55e' }}>{course?.modules?.length || course?.curriculum?.length || 0}</div>
-                                        <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '500' }}>Modules</div>
+                                    <div style={{ padding: '16px', border: `1px solid ${colors.border}`, borderRadius: '10px', textAlign: 'center', background: cardBg }}>
+                                        <div style={{ fontSize: '24px', fontWeight: '700', color: '#22c55e' }}>{chaptersCount} <span style={{ fontSize: '13px', fontWeight: '500', color: colors.textMuted }}>({lessonsCount} lessons)</span></div>
+                                        <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '500' }}>Chapters / Modules</div>
                                     </div>
-                                    <div style={{ padding: '16px', border: `1px solid ${colors.border}`, borderRadius: '8px', textAlign: 'center', background: status === 'Published' ? '#f0fdf4' : '#fefce8' }}>
-                                        <div style={{ fontSize: '16px', fontWeight: '700', color: status === 'Published' ? '#10b981' : '#f59e0b' }}>{status}</div>
-                                        <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '500' }}>Status</div>
+                                    <div style={{ padding: '16px', border: `1px solid ${colors.border}`, borderRadius: '10px', textAlign: 'center', background: statusBg }}>
+                                        <div style={{ fontSize: '16px', fontWeight: '700', color: statusColor }}>{status}</div>
+                                        <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '500' }}>Current Status</div>
                                     </div>
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                    <div style={{ padding: '14px', border: `1px solid ${colors.border}`, borderRadius: '8px' }}>
+                                    <div style={{ padding: '14px', border: `1px solid ${colors.border}`, borderRadius: '8px', background: colors.bgCard }}>
                                         <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Category</div>
                                         <div style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>{course?.technicalCategory || 'N/A'}</div>
                                     </div>
-                                    <div style={{ padding: '14px', border: `1px solid ${colors.border}`, borderRadius: '8px' }}>
+                                    <div style={{ padding: '14px', border: `1px solid ${colors.border}`, borderRadius: '8px', background: colors.bgCard }}>
                                         <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Instructor</div>
-                                        <div style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>{course?.creatorRef?.fullName || course?.assignedInstructorRef?.fullName || 'Unassigned'}</div>
+                                        <div style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>{course?.assignedInstructorRef?.fullName || course?.creatorRef?.fullName || 'Unassigned'}</div>
                                     </div>
-                                    <div style={{ padding: '14px', border: `1px solid ${colors.border}`, borderRadius: '8px' }}>
+                                    <div style={{ padding: '14px', border: `1px solid ${colors.border}`, borderRadius: '8px', background: colors.bgCard }}>
                                         <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Price</div>
                                         <div style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>{course?.price ? `$${course.price}` : 'Free'}</div>
                                     </div>
-                                    <div style={{ padding: '14px', border: `1px solid ${colors.border}`, borderRadius: '8px' }}>
-                                        <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Created</div>
-                                        <div style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>{course?.createdAt ? new Date(course.createdAt).toLocaleDateString() : 'N/A'}</div>
+                                    <div style={{ padding: '14px', border: `1px solid ${colors.border}`, borderRadius: '8px', background: colors.bgCard }}>
+                                        <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px' }}>Created Date</div>
+                                        <div style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>{course?.createdAt || course?.creationTimestamp ? new Date(course.createdAt || course.creationTimestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</div>
                                     </div>
                                 </div>
                             </>
@@ -5719,8 +6967,8 @@ const resetCalendarForm = () => {
                 </div>
             </Modal>
 
-            {/* -"?-"? Course Reviews Modal -"?-"? */}
-            <Modal isOpen={isCourseReviewsModalOpen} onClose={() => { setIsCourseReviewsModalOpen(false); setActiveCourseId(null); }} title="Course Reviews & Feedback">
+            {/* ── Course Reviews Modal ── */}
+            <Modal isOpen={isCourseReviewsModalOpen} onClose={() => { setIsCourseReviewsModalOpen(false); setActiveCourseId(null); setCourseReviewsList([]); }} title="Course Reviews & Feedback">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: colors.textMuted, fontSize: '14px', margin: 0 }}>
                         Reviews for: <strong style={{ color: colors.text }}>{allCourses.find(c => c._id === activeCourseId)?.courseTitle || activeCourseId}</strong>
@@ -5728,10 +6976,13 @@ const resetCalendarForm = () => {
                     {(() => {
                         const course = allCourses.find(c => c._id === activeCourseId);
                         const avgRating = course?.averageRating || course?.rating || 0;
-                        const totalReviews = course?.totalReviews || course?.reviewCount || 0;
+                        const totalReviews = courseReviewsList.length || course?.totalReviews || 0;
+                        const ratingBoxBg = theme === 'dark' ? 'rgba(245,158,11,0.1)' : '#fefce8';
+                        const ratingBoxBorder = theme === 'dark' ? 'rgba(245,158,11,0.25)' : '#fef08a';
+
                         return (
                             <>
-                                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', padding: '16px', background: '#fefce8', borderRadius: '10px', border: '1px solid #fef08a' }}>
+                                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', padding: '16px', background: ratingBoxBg, borderRadius: '10px', border: `1px solid ${ratingBoxBorder}` }}>
                                     <div style={{ textAlign: 'center' }}>
                                         <div style={{ fontSize: '36px', fontWeight: '800', color: '#f59e0b' }}>{avgRating.toFixed(1)}</div>
                                         <div style={{ display: 'flex', gap: '2px', justifyContent: 'center' }}>
@@ -5740,21 +6991,51 @@ const resetCalendarForm = () => {
                                     </div>
                                     <div>
                                         <div style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>{totalReviews} total review(s)</div>
-                                        <div style={{ fontSize: '12px', color: colors.textMuted }}>Average rating from enrolled students</div>
+                                        <div style={{ fontSize: '12px', color: colors.textMuted }}>Average rating from enrolled learners</div>
                                     </div>
                                 </div>
-                                {totalReviews === 0 && (
-                                    <div style={{ padding: '24px', textAlign: 'center', color: colors.textMuted, fontSize: '14px', border: `1px solid ${colors.border}`, borderRadius: '8px', background: '#fafafa' }}>
-                                        <Star size={32} color="#cbd5e1" style={{ marginBottom: '8px' }} />
-                                        <div>No reviews yet for this course.</div>
-                                        <div style={{ fontSize: '12px', marginTop: '4px' }}>Students can leave reviews after completing modules.</div>
+
+                                {isLoadingCourseReviews ? (
+                                    <div style={{ padding: '24px', textAlign: 'center', color: '#22c55e', fontSize: '13px' }}>
+                                        Loading reviews...
+                                    </div>
+                                ) : courseReviewsList.length > 0 ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '280px', overflowY: 'auto' }}>
+                                        {courseReviewsList.map((rev, idx) => (
+                                            <div key={rev._id || idx} style={{ padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', background: colors.bgCard }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                    <div style={{ fontWeight: '600', fontSize: '13px', color: colors.text }}>
+                                                        {rev.studentRef?.fullName || rev.user?.fullName || 'Anonymous Student'}
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: '2px' }}>
+                                                        {[1,2,3,4,5].map(s => (
+                                                            <Star key={s} size={12} color={s <= rev.rating ? '#f59e0b' : '#cbd5e1'} fill={s <= rev.rating ? '#f59e0b' : 'none'} />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <div style={{ fontSize: '13px', color: colors.text, lineHeight: '1.4' }}>
+                                                    {rev.comment || rev.reviewText || 'No comment provided.'}
+                                                </div>
+                                                {rev.createdAt && (
+                                                    <div style={{ fontSize: '11px', color: colors.textMuted, marginTop: '6px' }}>
+                                                        {new Date(rev.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div style={{ padding: '24px', textAlign: 'center', color: colors.textMuted, fontSize: '14px', border: `1px solid ${colors.border}`, borderRadius: '8px', background: colors.bgCard }}>
+                                        <Star size={32} color="#94a3b8" style={{ marginBottom: '8px', opacity: 0.5 }} />
+                                        <div style={{ fontWeight: '600', color: colors.text }}>No reviews submitted yet</div>
+                                        <div style={{ fontSize: '12px', marginTop: '4px' }}>Learners can leave ratings and feedback once enrolled.</div>
                                     </div>
                                 )}
                             </>
                         );
                     })()}
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
-                        <button onClick={() => setIsCourseReviewsModalOpen(false)} style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, color: colors.text, padding: '9px 18px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Close</button>
+                        <button onClick={() => { setIsCourseReviewsModalOpen(false); setCourseReviewsList([]); }} style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, color: colors.text, padding: '9px 18px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Close</button>
                     </div>
                 </div>
             </Modal>
@@ -5821,7 +7102,7 @@ const resetCalendarForm = () => {
                 </form>
             </Modal>
 
-            {/* -"?-"? Fixed-position course action menu (renders above all overflow contexts) -"?-"? */}
+            {/* ── Fixed-position course action menu (renders above all overflow contexts) ── */}
             {courseMenuOpenId && (() => {
                 const course = allCourses.find(c => c._id === courseMenuOpenId);
                 if (!course) return null;
@@ -5830,16 +7111,32 @@ const resetCalendarForm = () => {
                 const menuText   = colors.text    || '#f1f5f9';
                 const menuHover  = colors.bg      || 'rgba(100,116,139,0.15)';
                 const btnStyle   = { width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '13px', color: menuText, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' };
+                const isPublished = course.publicationState === 'Published' || course.publicationState === 'Active';
+                const isArchived = course.publicationState === 'Archived';
+
                 return (
                     <div
                         onMouseDown={e => e.stopPropagation()}
-                        style={{ position: 'fixed', top: courseMenuPos.top, right: courseMenuPos.right, width: '200px', background: menuBg, border: `1px solid ${menuBorder}`, borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.25)', padding: '8px', zIndex: 99999, textAlign: 'left' }}
+                        style={{ position: 'fixed', top: courseMenuPos.top, right: courseMenuPos.right, width: '200px', background: menuBg, border: `1px solid ${menuBorder}`, borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.3)', padding: '8px', zIndex: 99999, textAlign: 'left' }}
                     >
                         <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); course._id && navigate(`/courses/${course._id}`); }}><Eye size={14} /> View</button>
                         <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); course._id && handleAssignInstructor(course._id); }}><Edit size={14} /> Assign Instructor</button>
                         <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); course._id && handleDuplicateCourse(course._id); }}><Copy size={14} /> Duplicate</button>
-                        <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); course._id && handleApproveCourse(course._id); }}><Upload size={14} /> Publish</button>
-                        <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); course._id && handleArchiveCourse(course._id); }}><Archive size={14} /> Archive</button>
+
+                        {/* Dynamic Publish / Unpublish */}
+                        {isPublished ? (
+                            <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); course._id && handleUnpublishCourse(course._id); }}><Download size={14} /> Unpublish</button>
+                        ) : (
+                            <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); course._id && handleApproveCourse(course._id); }}><Upload size={14} /> Publish</button>
+                        )}
+
+                        {/* Dynamic Archive / Restore */}
+                        {isArchived ? (
+                            <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); course._id && handleRestoreCourse(course._id); }}><RotateCcw size={14} /> Restore to Draft</button>
+                        ) : (
+                            <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); course._id && handleArchiveCourse(course._id); }}><Archive size={14} /> Archive</button>
+                        )}
+
                         <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); setActiveCourseId(course._id); setIsManageStudentsModalOpen(true); }}><Users size={14} /> Manage Students</button>
                         <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); setActiveCourseId(course._id); setIsCourseAnalyticsModalOpen(true); }}><BarChart3 size={14} /> Analytics</button>
                         <button style={btnStyle} onMouseEnter={e => e.currentTarget.style.background=menuHover} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { setCourseMenuOpenId(null); setActiveCourseId(course._id); setIsCourseReviewsModalOpen(true); }}><Star size={14} /> Reviews</button>

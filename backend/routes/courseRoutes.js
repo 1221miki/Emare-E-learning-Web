@@ -56,7 +56,7 @@ router.patch('/:id/change-category', protect, denySuspendedActions, authorizeRol
 
 // ── Student Routes (must be above /:id to avoid param capture) ──
 router.get('/student/enrolled', protect, authorizeRoles('Student'), getStudentEnrollments);
-router.post('/:id/enroll', protect, denySuspendedActions, authorizeRoles('Student'), enrollInCourse);
+router.post('/:id/enroll', protect, denySuspendedActions, authorizeRoles('Student', 'Admin'), enrollInCourse);
 
 // ── Instructor Routes (must be above /:id to avoid param capture) ──
 router.get('/instructor/mine', protect, authorizeRoles('Instructor'), getInstructorCourses);

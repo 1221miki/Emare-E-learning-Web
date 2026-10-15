@@ -105,7 +105,7 @@ export const courseService = {
     archive: (id) => API.patch(`/courses/${id}/archive`),
     unpublish: (id) => API.patch(`/courses/${id}/unpublish`),
     duplicate: (id) => API.post(`/courses/${id}/duplicate`),
-    enroll: (id) => API.post(`/courses/${id}/enroll`),
+    enroll: (id, data = {}) => API.post(`/courses/${id}/enroll`, data),
     getInstructorCourses: () => API.get('/courses/instructor/mine'),
     getInstructorAnalytics: () => API.get('/courses/instructor/analytics'),
     getStudentEnrollments: () => API.get('/courses/student/enrolled'),
@@ -149,7 +149,8 @@ export const enrollmentService = {
     }),
     getMyStatus: () => API.get('/enrollments/my-status'),
     approvePayment: (enrollmentId) => API.patch(`/enrollments/${enrollmentId}/approve`),
-    rejectPayment: (enrollmentId) => API.patch(`/enrollments/${enrollmentId}/reject`)
+    rejectPayment: (enrollmentId) => API.patch(`/enrollments/${enrollmentId}/reject`),
+    delete: (enrollmentId) => API.delete(`/enrollments/${enrollmentId}`)
 };
 
 // ── Gradebook & Submissions API Calls ──────────────────────
