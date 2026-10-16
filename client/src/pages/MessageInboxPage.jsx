@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { messageService, userService } from '../services/api';
@@ -14,10 +15,18 @@ import {
     offConversationUpdated
 } from '../services/socket';
 import Sidebar from '../components/Sidebar';
+import {
+    LayoutDashboard, BookOpen, Users, Video, BarChart3,
+    MessagesSquare, Star, Settings, ShieldCheck, Wallet,
+    Megaphone, ClipboardCheck, Clock3, Award, GraduationCap,
+    CreditCard, MessageSquare, Code2, Inbox
+} from 'lucide-react';
 
 export default function MessageInboxPage() {
     const { user } = useAuth();
     const { colors } = useTheme();
+    const navigate = useNavigate();
+    const location = useLocation();
     const [conversations, setConversations] = useState([]);
     const [activeConvo, setActiveConvo] = useState(null);
     const [messages, setMessages] = useState([]);
@@ -87,11 +96,86 @@ export default function MessageInboxPage() {
         return Boolean(receiverId && other?.userRef?.fullName !== 'Unavailable User');
     }, [getOtherParticipant]);
 
-    const navItems = [
-        { label: 'Dashboard', path: `/${user?.assignedRole?.toLowerCase() || 'student'}/dashboard`, key: 'dashboard' },
-        { label: 'Direct Messages', path: '/messages', key: 'messages' },
-        { label: 'Live Sessions', path: '/live-sessions', key: 'live' }
-    ];
+    // Full role-based navigation so the user can see all their workspace items while messaging
+    const navItems = useMemo(() => {
+        const role = user?.assignedRole;
+        if (role === 'Instructor') {
+            return [
+                { key: 'overview', label: 'Dashboard', path: '/instructor/dashboard', state: { activeTab: 'overview' }, icon: <LayoutDashboard size={20} /> },
+                { key: 'courses', label: 'My Courses', path: '/instructor/dashboard', state: { activeTab: 'courses' }, icon: <BookOpen size={20} /> },
+                { key: 'students', label: 'Students', path: '/instructor/dashboard', state: { activeTab: 'students' }, icon: <Users size={20} /> },
+                { key: 'live', label: 'Live Classes', path: '/instructor/dashboard', state: { activeTab: 'live' }, icon: <Video size={20} /> },
+                { key: 'analytics', label: 'Analytics', path: '/instructor/dashboard', state: { activeTab: 'analytics' }, icon: <BarChart3 size={20} /> },
+                { key: 'messages', label: 'Messages', path: '/messages', state: { activeTab: 'messages' }, icon: <MessagesSquare size={20} /> },
+                { key: 'reviews', label: 'Reviews', path: '/instructor/dashboard', state: { activeTab: 'reviews' }, icon: <Star size={20} /> },
+                { key: 'settings', label: 'Settings', path: '/instructor/settings', state: { activeTab: 'settings' }, icon: <Settings size={20} /> }
+            ];
+        }
+        if (role === 'Admin') {
+            return [
+                { key: 'overview', label: 'Overview', path: '/admin/dashboard', state: { activeTab: 'overview' }, icon: <LayoutDashboard size={20} /> },
+                { key: 'users', label: 'User Management', path: '/admin/dashboard', state: { activeTab: 'users' }, icon: <Users size={20} /> },
+                { key: 'security', label: 'Security & Roles', path: '/admin/dashboard', state: { activeTab: 'security' }, icon: <ShieldCheck size={20} /> },
+                { key: 'courses', label: 'Course Management', path: '/admin/dashboard', state: { activeTab: 'courses' }, icon: <BookOpen size={20} /> },
+                { key: 'analytics', label: 'Analytics Dashboard', path: '/admin/dashboard', state: { activeTab: 'analytics' }, icon: <BarChart3 size={20} /> },
+                { key: 'finances', label: 'Finances & Revenue', path: '/admin/dashboard', state: { activeTab: 'finances' }, icon: <Wallet size={20} /> },
+                { key: 'cms', label: 'CMS & Comms', path: '/admin/dashboard', state: { activeTab: 'cms' }, icon: <Megaphone size={20} /> },
+                { key: 'audit', label: 'Audit Logs', path: '/admin/audit-logs', icon: <ClipboardCheck size={20} /> },
+                { key: 'contact-messages', label: 'Contact Messages', path: '/admin/contact-messages', icon: <Inbox size={20} /> },
+                { key: 'messages', label: 'Direct Messages', path: '/messages', state: { activeTab: 'messages' }, icon: <MessagesSquare size={20} /> },
+                { key: 'developers', label: 'Developers', path: '/admin/dashboard', state: { activeTab: 'developers' }, icon: <Code2 size={20} /> },
+                { key: 'calendar', label: 'Event Management', path: '/admin/dashboard', state: { activeTab: 'calendar' }, icon: <Clock3 size={20} /> },
+                { key: 'system', label: 'System Settings', path: '/admin/dashboard', state: { activeTab: 'system' }, icon: <Settings size={20} /> }
+            ];
+        }
+        // Student / Default
+        return [
+            { key: 'overview', label: 'Overview', path: '/student/dashboard', state: { activeTab: 'overview' }, icon: <LayoutDashboard size={20} /> },
+            { key: 'learning', label: 'My Learning', path: '/student/dashboard?tab=my_courses', state: { activeTab: 'learning' }, icon: <GraduationCap size={20} /> },
+            { key: 'live', label: 'Live Sessions', path: '/live-sessions', state: { activeTab: 'live' }, icon: <Video size={20} /> },
+            { key: 'discussions', label: 'Discussions', path: '/student/dashboard?tab=discussions', state: { activeTab: 'discussions' }, icon: <MessageSquare size={20} /> },
+            { key: 'messages', label: 'Messages', path: '/messages', state: { activeTab: 'messages' }, icon: <MessagesSquare size={20} /> },
+            { key: 'certificates', label: 'Certificates', path: '/student/certificates', icon: <Award size={20} /> },
+            { key: 'payments', label: 'Payments', path: '/student/dashboard?tab=payments', state: { activeTab: 'payments' }, icon: <CreditCard size={20} /> },
+            { key: 'settings', label: 'Settings', path: '/student/profile', icon: <Settings size={20} /> }
+        ];
+    }, [user?.assignedRole]);
+
+    const handleTabChange = useCallback((key) => {
+        if (key === 'messages') return;
+        const role = user?.assignedRole;
+        if (role === 'Instructor') {
+            if (key === 'settings') {
+                navigate('/instructor/settings');
+            } else {
+                navigate('/instructor/dashboard', { state: { activeTab: key } });
+            }
+        } else if (role === 'Admin') {
+            if (key === 'audit') {
+                navigate('/admin/audit-logs');
+            } else if (key === 'contact-messages') {
+                navigate('/admin/contact-messages');
+            } else {
+                navigate('/admin/dashboard', { state: { activeTab: key } });
+            }
+        } else {
+            if (key === 'certificates') {
+                navigate('/student/certificates');
+            } else if (key === 'live') {
+                navigate('/live-sessions');
+            } else if (key === 'learning') {
+                navigate('/student/dashboard?tab=my_courses', { state: { activeTab: 'learning' } });
+            } else if (key === 'discussions') {
+                navigate('/student/dashboard?tab=discussions', { state: { activeTab: 'discussions' } });
+            } else if (key === 'payments') {
+                navigate('/student/dashboard?tab=payments', { state: { activeTab: 'payments' } });
+            } else if (key === 'settings') {
+                navigate('/student/profile');
+            } else {
+                navigate('/student/dashboard', { state: { activeTab: key } });
+            }
+        }
+    }, [user?.assignedRole, navigate]);
 
     const fetchConversations = useCallback(async () => {
         try {
@@ -239,7 +323,12 @@ export default function MessageInboxPage() {
 
     return (
         <div style={{ display: 'flex', height: '100vh', background: colors.bg, overflow: 'hidden' }}>
-            <Sidebar navItems={navItems} activeTab="messages" />
+            <Sidebar
+                navItems={navItems}
+                activeTab="messages"
+                onTabChange={handleTabChange}
+                forceExpanded={true}
+            />
             
             {/* Styled Notification Banner */}
             {notification && (
@@ -268,7 +357,7 @@ export default function MessageInboxPage() {
                 </div>
             )}
 
-            <main style={{ marginLeft: 'var(--sidebar-width, 260px)', flex: 1, display: 'flex' }}>
+            <main style={{ marginLeft: 'var(--sidebar-width, 270px)', flex: 1, display: 'flex', height: '100vh', overflow: 'hidden' }}>
                 {/* Inbox Sidebar */}
                 <div style={{ width: '350px', background: colors.bgCard, borderRight: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ padding: '24px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

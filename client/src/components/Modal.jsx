@@ -61,7 +61,9 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = '48
                 {/* Header */}
                 <div style={{ ...styles.header, ...(scrollable ? { flexShrink: 0 } : {}) }}>
                     <h3 style={styles.title}>{title}</h3>
-                    <button onClick={onClose} style={styles.closeBtn}></button>
+                    <button onClick={onClose} style={styles.closeBtn} title="Close" aria-label="Close dialog">
+                        <span style={{ fontSize: '16px', lineHeight: 1, fontWeight: '700' }}>✕</span>
+                    </button>
                 </div>
 
                 {/* Body */}

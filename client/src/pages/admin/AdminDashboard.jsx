@@ -398,6 +398,10 @@ export default function AdminDashboard() {
     const [newPassword, setNewPassword] = useState('');
     const [notificationMsg, setNotificationMsg] = useState('');
     const [userFilter, setUserFilter] = useState('All');
+    const [userSearch, setUserSearch] = useState('');
+    const [userToSuspend, setUserToSuspend] = useState(null);
+    const [userToDelete, setUserToDelete] = useState(null);
+    const [isSubmittingUserAction, setIsSubmittingUserAction] = useState(false);
     const [createForm, setCreateForm] = useState({
         fullName: '', accountEmail: '', securedPassword: '', confirmPassword: '', assignedRole: 'Instructor', contactPhone: '', isActive: true, requirePasswordChange: true, sendWelcomeEmail: true,
         username: '', gender: '', dateOfBirth: '', avatarUrl: '',
@@ -502,21 +506,28 @@ export default function AdminDashboard() {
     const [isCreatingRole, setIsCreatingRole] = useState(false);
     const [isManagePermissionsModalOpen, setIsManagePermissionsModalOpen] = useState(false);
     const [isSavingPermissions, setIsSavingPermissions] = useState(false);
+    const [roleToDelete, setRoleToDelete] = useState(null);
     const [newRoleForm, setNewRoleForm] = useState({ name: '', description: '', selectedPerms: ['View Analytics'], scope: 'Custom' });
-    const availablePerms = ['View Analytics', 'User Management', 'Course Creation', 'Content Moderation', 'Financial Reports', 'System Settings'];
+    const availablePerms = [
+        'View Analytics', 'User Management', 'Course Creation', 'Content Moderation',
+        'Financial Reports', 'System Settings', 'Direct Messaging', 'Helpdesk Support',
+        'Student Support', 'Assessment Grading', 'Review Moderation', 'Live Stream Access'
+    ];
     const [customRoles, setCustomRoles] = useState([
-        { icon: Eye, color: '#f59e0b', bg: 'rgba(245,158,11,0.15)', name: 'Moderator', desc: 'Content moderation', users: 15, perms: 14, scope: 'Content', isCore: false },
-        { icon: LifeBuoy, color: '#ef4444', bg: 'rgba(239,68,68,0.15)', name: 'Support Staff', desc: 'Student support', users: 59, perms: 10, scope: 'Support', isCore: false }
+        { icon: Eye, color: '#f59e0b', bg: 'rgba(245,158,11,0.15)', name: 'Moderator', desc: 'Content & discussion moderation, course review inspection', users: 0, perms: 12, scope: 'Content & Forums', isCore: false },
+        { icon: LifeBuoy, color: '#38bdf8', bg: 'rgba(56,189,248,0.15)', name: 'Support Staff', desc: 'Student ticket resolution, inquiries & technical helpdesk', users: 0, perms: 8, scope: 'Helpdesk & Support', isCore: false }
     ]);
     const [roleSearch, setRoleSearch] = useState('');
     const [isSecurityStatusExpanded, setIsSecurityStatusExpanded] = useState(false);
     const [permissionsMatrix, setPermissionsMatrix] = useState([
-        { id: 'view_analytics', label: 'View Analytics', a: true, i: true, s: false },
-        { id: 'manage_users', label: 'Manage Users', a: true, i: false, s: false },
-        { id: 'create_courses', label: 'Create Courses', a: true, i: true, s: false },
-        { id: 'take_quizzes', label: 'Take Quizzes', a: true, i: true, s: true },
-        { id: 'system_settings', label: 'System Settings', a: true, i: false, s: false },
-        { id: 'export_reports', label: 'Export Reports', a: true, i: true, s: false },
+        { id: 'view_analytics', label: 'View Platform Analytics', category: 'Analytics', a: true, i: true, s: false, m: true, st: false },
+        { id: 'manage_users', label: 'Manage User Accounts & Roles', category: 'Administration', a: true, i: false, s: false, m: false, st: false },
+        { id: 'create_courses', label: 'Create & Publish Courses', category: 'Academics', a: true, i: true, s: false, m: false, st: false },
+        { id: 'take_quizzes', label: 'Access Learning Materials & Quizzes', category: 'Learning', a: true, i: true, s: true, m: false, st: false },
+        { id: 'moderate_content', label: 'Moderate Discussions & Reviews', category: 'Moderation', a: true, i: false, s: false, m: true, st: false },
+        { id: 'support_tickets', label: 'Handle Helpdesk & Inquiries', category: 'Support', a: true, i: false, s: false, m: false, st: true },
+        { id: 'system_settings', label: 'Manage System Settings & Keys', category: 'Administration', a: true, i: false, s: false, m: false, st: false },
+        { id: 'export_reports', label: 'Export Audit & Financial Reports', category: 'Reports', a: true, i: true, s: false, m: false, st: false },
     ]);
 
     useEffect(() => {
@@ -630,7 +641,7 @@ export default function AdminDashboard() {
 
     const fetchCalendarEvents = async () => {
         try {
-            const response = await calendarService.getEvents({ from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), to: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() });
+            const response = await calendarService.getEvents();
             setCalendarEvents(response.data?.data || []);
         } catch (error) {
             console.error('Error fetching calendar events:', error);
@@ -983,14 +994,23 @@ export default function AdminDashboard() {
 
     // -"?-"? User Management -"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?-"?
 
-    const handleToggleUserStatus = async (user) => {
+    const handleToggleUserStatus = (user) => {
+        setUserToSuspend(user);
+    };
+
+    const confirmToggleUserStatus = async () => {
+        if (!userToSuspend) return;
+        setIsSubmittingUserAction(true);
         try {
-            const newStatus = !user.isActive;
-            await userService.update(user._id, { isActive: newStatus });
-            setUsers(prev => prev.map(u => u._id === user._id ? { ...u, isActive: newStatus } : u));
-            showNotification(`User ${newStatus ? 'activated' : 'deactivated'}`);
+            const newStatus = !userToSuspend.isActive;
+            await userService.update(userToSuspend._id, { isActive: newStatus });
+            setUsers(prev => prev.map(u => u._id === userToSuspend._id ? { ...u, isActive: newStatus } : u));
+            showNotification(`User "${userToSuspend.fullName}" ${newStatus ? 'activated' : 'suspended'} successfully.`);
+            setUserToSuspend(null);
         } catch (err) {
-            alert('Failed to update user status.');
+            alert(err.response?.data?.message || 'Failed to update user status.');
+        } finally {
+            setIsSubmittingUserAction(false);
         }
     };
 
@@ -1189,16 +1209,22 @@ export default function AdminDashboard() {
         }
     };
 
-    const handleDeleteUser = async (user) => {
-        if (!window.confirm(`Delete ${user.fullName}? This action cannot be undone.`)) {
-            return;
-        }
+    const handleDeleteUser = (user) => {
+        setUserToDelete(user);
+    };
+
+    const confirmDeleteUser = async () => {
+        if (!userToDelete) return;
+        setIsSubmittingUserAction(true);
         try {
-            await userService.deactivate(user._id);
-            setUsers(prev => prev.filter(item => item._id !== user._id));
-            showNotification(`${user.fullName} has been deleted.`);
+            await userService.deactivate(userToDelete._id);
+            setUsers(prev => prev.filter(item => item._id !== userToDelete._id));
+            showNotification(`User "${userToDelete.fullName}" has been deleted.`);
+            setUserToDelete(null);
         } catch (err) {
             alert(err.response?.data?.message || 'Failed to delete account.');
+        } finally {
+            setIsSubmittingUserAction(false);
         }
     };
 
@@ -1811,7 +1837,7 @@ const resetCalendarForm = () => {
         return {
             title: calendarForm.title,
             tagline: '',
-            category: calendarForm.eventCategory || 'Masterclass',
+            category: calendarForm.category || calendarForm.eventCategory || 'Masterclass',
             description: calendarForm.description ? calendarForm.description.split('\n').filter(Boolean) : [],
             eventType: calendarForm.eventType || 'Hybrid',
             venue: calendarForm.location || (calendarForm.eventType !== 'Physical' ? 'Online Live Stream' : ''),
@@ -1850,7 +1876,7 @@ const resetCalendarForm = () => {
             : (platformToProvider[calendarForm.meetingPlatform] || calendarForm.meetingProvider || 'zoom');
         return {
             title: calendarForm.title,
-            category: calendarForm.category,
+            category: (calendarForm.category || 'academic').toLowerCase(),
             description: calendarForm.description || '',
             startDate: start.toISOString(),
             endDate: end ? end.toISOString() : null,
@@ -2338,7 +2364,16 @@ const resetCalendarForm = () => {
     };
 
     const renderUsers = () => {
-        const filteredUsers = users.filter((user) => userFilter === 'All' || user.assignedRole === userFilter);
+        const filteredUsers = users.filter((user) => {
+            const matchesRole = userFilter === 'All' || user.assignedRole === userFilter;
+            const q = userSearch.trim().toLowerCase();
+            const matchesSearch = !q || 
+                (user.fullName && user.fullName.toLowerCase().includes(q)) || 
+                (user.accountEmail && user.accountEmail.toLowerCase().includes(q)) ||
+                (user.username && user.username.toLowerCase().includes(q));
+            return matchesRole && matchesSearch;
+        });
+
         const totalUsers = users.length;
         const totalAdmins = users.filter((u) => u.assignedRole === 'Admin').length;
         const totalInstructors = users.filter((u) => u.assignedRole === 'Instructor').length;
@@ -2346,13 +2381,43 @@ const resetCalendarForm = () => {
         const activeUsers = users.filter((u) => u.isActive && !u.isSuspended).length;
         const suspendedUsers = users.filter((u) => !u.isActive || u.isSuspended).length;
 
+        const getUserStatus = (u) => {
+            if (!u.isActive || u.isSuspended) {
+                return { label: 'Suspended', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.3)', dot: '#ef4444' };
+            }
+            if (u.isEmailVerified === false) {
+                return { label: 'Pending', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.3)', dot: '#f59e0b' };
+            }
+            return { label: 'Active', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.3)', dot: '#10b981' };
+        };
+
+        const getRoleBadgeStyle = (role) => {
+            switch (role) {
+                case 'Admin':
+                    return { bg: 'rgba(168, 85, 247, 0.12)', color: '#c084fc', border: 'rgba(168, 85, 247, 0.3)', icon: <ShieldCheck size={13} /> };
+                case 'Instructor':
+                    return { bg: 'rgba(59, 130, 246, 0.12)', color: '#60a5fa', border: 'rgba(59, 130, 246, 0.3)', icon: <BookOpen size={13} /> };
+                default:
+                    return { bg: 'rgba(16, 185, 129, 0.12)', color: '#34d399', border: 'rgba(16, 185, 129, 0.3)', icon: <GraduationCap size={13} /> };
+            }
+        };
+
+        const getInitials = (name) => {
+            if (!name) return 'U';
+            const parts = name.trim().split(/\s+/);
+            if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        };
+
         return (
             <div style={s.tabContent}>
+                {/* Header */}
                 <div style={s.sectionHeader}>
                     <h2 style={s.sectionTitle}>User Management</h2>
-                    <p style={s.sectionSub}>Create, review, edit, suspend, activate, and manage students, instructors, and administrators.</p>
+                    <p style={s.sectionSub}>Create, review, edit, suspend, activate, and manage platform students, instructors, and administrators.</p>
                 </div>
 
+                {/* Sub Tab Pills */}
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '24px' }}>
                     {[
                         { key: 'accounts', label: 'User Accounts', icon: <Users size={16} aria-hidden="true" /> }
@@ -2364,11 +2429,12 @@ const resetCalendarForm = () => {
                                 onClick={() => setUserSubTab(t.key)}
                                 style={{
                                     display: 'inline-flex', alignItems: 'center', gap: '8px',
-                                    padding: '10px 22px', borderRadius: '999px', cursor: 'pointer',
+                                    padding: '9px 20px', borderRadius: '999px', cursor: 'pointer',
                                     fontWeight: '700', fontSize: '13px',
                                     border: `1px solid ${isActive ? colors.primary : colors.border}`,
                                     background: isActive ? colors.primary : 'transparent',
-                                    color: isActive ? '#fff' : colors.text
+                                    color: isActive ? '#fff' : colors.text,
+                                    transition: 'all 0.2s'
                                 }}
                             >
                                 {t.icon}{t.label}
@@ -2378,78 +2444,411 @@ const resetCalendarForm = () => {
                 </div>
 
                 <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                    <StatCard icon={<Users size={24} aria-hidden="true" />} label="Total Users" value={totalUsers} color={colors.primary} />
-                    <StatCard icon={<ShieldCheck size={24} aria-hidden="true" />} label="Total Admins" value={totalAdmins} color={colors.accent} />
-                    <StatCard icon={<BookOpen size={24} aria-hidden="true" />} label="Total Instructors" value={totalInstructors} color={colors.info} />
-                    <StatCard icon={<GraduationCap size={24} aria-hidden="true" />} label="Total Students" value={`${totalStudents} (Read Only)`} color={colors.textMuted} />
-                    <StatCard icon={<CircleCheck size={24} aria-hidden="true" />} label="Active Users" value={activeUsers} color={colors.success} />
-                    <StatCard icon={<AlertTriangle size={24} aria-hidden="true" />} label="Suspended Users" value={suspendedUsers} color={colors.danger} />
+                {/* 1. Statistics Cards - Compact, Responsive, Aligned */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '24px' }}>
+                    <StatCard icon={<Users size={20} aria-hidden="true" />} label="Total Users" value={totalUsers} color={colors.primary} />
+                    <StatCard icon={<ShieldCheck size={20} aria-hidden="true" />} label="Total Admins" value={totalAdmins} color={colors.accent || '#16a34a'} />
+                    <StatCard icon={<BookOpen size={20} aria-hidden="true" />} label="Total Instructors" value={totalInstructors} color={colors.info || '#0284c7'} />
+                    <StatCard icon={<GraduationCap size={20} aria-hidden="true" />} label="Total Students" value={`${totalStudents} (Read Only)`} color={colors.textMuted} />
+                    <StatCard icon={<CircleCheck size={20} aria-hidden="true" />} label="Active Users" value={activeUsers} color={colors.success || '#16a34a'} />
+                    <StatCard icon={<AlertTriangle size={20} aria-hidden="true" />} label="Suspended Users" value={suspendedUsers} color={colors.danger || '#ef4444'} />
                 </div>
 
-                <div style={{ ...s.card, marginBottom: '24px' }}>
+                {/* 2. User Roster Toolbar */}
+                <div style={{ ...s.card, marginBottom: '20px', padding: '18px 22px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
                         <div>
-                            <div style={{ color: colors.text, fontWeight: '800', marginBottom: '6px' }}>User Roster</div>
-                            <div style={{ color: colors.textMuted, fontSize: '14px' }}>Manage platform access and permissions.</div>
+                            <div style={{ color: colors.text, fontWeight: '800', fontSize: '17px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span>User Roster</span>
+                                <span style={{
+                                    fontSize: '11px',
+                                    fontWeight: '700',
+                                    padding: '2px 8px',
+                                    borderRadius: '999px',
+                                    background: `${colors.primary}20`,
+                                    color: colors.primary,
+                                    border: `1px solid ${colors.primary}40`
+                                }}>
+                                    {filteredUsers.length} {filteredUsers.length === 1 ? 'account' : 'accounts'}
+                                </span>
+                            </div>
+                            <div style={{ color: colors.textMuted, fontSize: '13px' }}>
+                                Manage platform access, roles, and account security.
+                            </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                            <select value={userFilter} onChange={(e) => setUserFilter(e.target.value)} style={s.select}>
-                                <option value="All" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All accounts</option>
+
+                        {/* Controls Toolbar */}
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            {/* Search Input */}
+                            <div style={{ position: 'relative', minWidth: '220px', flex: '1 1 200px' }}>
+                                <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: colors.textMuted, pointerEvents: 'none' }} />
+                                <input
+                                    type="text"
+                                    value={userSearch}
+                                    onChange={(e) => setUserSearch(e.target.value)}
+                                    placeholder="Search by name or email..."
+                                    style={{
+                                        ...s.input,
+                                        height: '40px',
+                                        paddingLeft: '36px',
+                                        paddingRight: userSearch ? '32px' : '12px',
+                                        fontSize: '13px',
+                                        borderRadius: '10px',
+                                        boxSizing: 'border-box'
+                                    }}
+                                />
+                                {userSearch && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setUserSearch('')}
+                                        style={{
+                                            position: 'absolute',
+                                            right: '8px',
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: colors.textMuted,
+                                            cursor: 'pointer',
+                                            padding: '4px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}
+                                        title="Clear search"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Role Filter Select */}
+                            <select
+                                value={userFilter}
+                                onChange={(e) => setUserFilter(e.target.value)}
+                                style={{
+                                    ...s.select,
+                                    width: 'auto',
+                                    minWidth: '145px',
+                                    height: '40px',
+                                    borderRadius: '10px',
+                                    fontSize: '13px',
+                                    padding: '0 12px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <option value="All" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All roles</option>
                                 <option value="Student" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Students</option>
                                 <option value="Instructor" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Instructors</option>
                                 <option value="Admin" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Admins</option>
                             </select>
-                            <button onClick={() => { setLoading(true); userService.getAll({ limit: 500 }).then(r => setUsers(r.data.data || [])).catch(() => {}).finally(() => setLoading(false)); }} style={{ ...s.secondaryBtn, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <RefreshCw size={14} /> Refresh
+
+                            {/* Refresh Button */}
+                            <button
+                                onClick={() => {
+                                    setLoading(true);
+                                    userService.getAll({ limit: 500 })
+                                        .then(r => {
+                                            setUsers(r.data.data || []);
+                                            showNotification('User accounts list refreshed');
+                                        })
+                                        .catch(() => showNotification('Failed to refresh user list'))
+                                        .finally(() => setLoading(false));
+                                }}
+                                disabled={loading}
+                                style={{
+                                    ...s.secondaryBtn,
+                                    height: '40px',
+                                    padding: '0 14px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '7px',
+                                    borderRadius: '10px',
+                                    fontSize: '13px',
+                                    cursor: loading ? 'not-allowed' : 'pointer'
+                                }}
+                                title="Refresh accounts list from server"
+                            >
+                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                                <span>Refresh</span>
                             </button>
-                            <button onClick={() => setIsCreateModalOpen(true)} style={s.primaryBtn}>Create account</button>
+
+                            {/* Create Account Button */}
+                            <button
+                                onClick={() => setIsCreateModalOpen(true)}
+                                style={{
+                                    ...s.primaryBtn,
+                                    height: '40px',
+                                    padding: '0 16px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '7px',
+                                    borderRadius: '10px',
+                                    fontSize: '13px'
+                                }}
+                            >
+                                <UserPlus size={15} />
+                                <span>Create account</span>
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <div style={s.tableContainer}>
-                    <table style={s.table}>
+                {/* 3. User Management Table with Horizontal Scroll Support */}
+                <div style={{
+                    background: colors.bgCard,
+                    borderRadius: '16px',
+                    border: `1px solid ${colors.border}`,
+                    overflowX: 'auto',
+                    WebkitOverflowScrolling: 'touch',
+                    boxShadow: theme === 'dark' ? '0 4px 20px rgba(0,0,0,0.2)' : '0 2px 10px rgba(0,0,0,0.03)'
+                }}>
+                    <table style={{ width: '100%', minWidth: '820px', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
-                            <tr>
-                                <th style={s.th}>Name</th>
-                                <th style={s.th}>Email</th>
-                                <th style={s.th}>Role</th>
-                                <th style={s.th}>Status</th>
-                                <th style={s.th}>Actions</th>
+                            <tr style={{
+                                background: theme === 'dark' ? 'rgba(15, 23, 42, 0.6)' : 'rgba(241, 245, 249, 0.7)',
+                                borderBottom: `1px solid ${colors.border}`
+                            }}>
+                                <th style={{ padding: '14px 20px', color: colors.textMuted, fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
+                                <th style={{ padding: '14px 20px', color: colors.textMuted, fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email</th>
+                                <th style={{ padding: '14px 20px', color: colors.textMuted, fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Role</th>
+                                <th style={{ padding: '14px 20px', color: colors.textMuted, fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
+                                <th style={{ padding: '14px 20px', color: colors.textMuted, fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredUsers.map((u) => (
-                                <tr key={u._id}>
-                                    <td style={s.td}>{u.fullName}</td>
-                                    <td style={{ ...s.td, color: colors.textMuted }}>{u.accountEmail}</td>
-                                    <td style={s.td}>
-                                        <span style={{ color: colors.text, fontWeight: '700' }}>{u.assignedRole}</span>
-                                    </td>
-                                    <td style={s.td}>
-                                        <span style={{...s.badge, background: u.isActive ? `${colors.success}15` : `${colors.danger}15`, color: u.isActive ? colors.success : colors.danger}}>
-                                            {u.isActive ? 'Active' : 'Suspended'}
-                                        </span>
-                                    </td>
-                                    <td style={s.td}>
-                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                            <button onClick={() => navigate(`/admin/users/${u._id}`)} style={{...s.actionBtn, color: colors.accent}}>
-                                                View Profile
-                                            </button>
-                                            <button onClick={() => handleToggleUserStatus(u)} style={{...s.actionBtn, color: u.isActive ? colors.danger : colors.success}}>
-                                                {u.isActive ? 'Suspend' : 'Activate'}
-                                            </button>
-                                            <button onClick={() => { setSelectedUser(u); setIsPasswordModalOpen(true); }} style={{...s.actionBtn, color: colors.primary}}>
-                                                Reset password
-                                            </button>
-                                            <button onClick={() => handleDeleteUser(u)} style={{...s.actionBtn, color: colors.danger}}>
-                                                Delete
-                                            </button>
+                            {filteredUsers.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} style={{ padding: '48px 24px', textAlign: 'center', color: colors.textMuted }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: `${colors.primary}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.primary }}>
+                                                <Users size={24} />
+                                            </div>
+                                            <div style={{ fontSize: '16px', fontWeight: '700', color: colors.text }}>No users found</div>
+                                            <p style={{ fontSize: '13px', margin: 0, maxWidth: '360px' }}>
+                                                {userSearch || userFilter !== 'All' 
+                                                    ? 'No user accounts match the current filter criteria or search query.'
+                                                    : 'No users have been registered yet.'}
+                                            </p>
+                                            {(userSearch || userFilter !== 'All') && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setUserFilter('All'); setUserSearch(''); }}
+                                                    style={{ ...s.secondaryBtn, height: '34px', padding: '0 14px', fontSize: '12px', marginTop: '6px' }}
+                                                >
+                                                    Clear filters
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                filteredUsers.map((u) => {
+                                    const status = getUserStatus(u);
+                                    const roleBadge = getRoleBadgeStyle(u.assignedRole);
+                                    return (
+                                        <tr
+                                            key={u._id}
+                                            style={{
+                                                borderBottom: `1px solid ${colors.border}`,
+                                                transition: 'background-color 0.15s ease'
+                                            }}
+                                            className="hover:bg-slate-800/20 dark:hover:bg-slate-800/30"
+                                        >
+                                            {/* Column 1: Name with avatar */}
+                                            <td style={{ padding: '14px 20px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <div style={{
+                                                        width: '38px',
+                                                        height: '38px',
+                                                        borderRadius: '50%',
+                                                        background: u.avatarUrl ? 'transparent' : 'linear-gradient(135deg, #16a34a, #15803d)',
+                                                        color: '#ffffff',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontWeight: '700',
+                                                        fontSize: '13px',
+                                                        overflow: 'hidden',
+                                                        flexShrink: 0,
+                                                        border: `1.5px solid ${colors.border}`
+                                                    }}>
+                                                        {u.avatarUrl ? (
+                                                            <img src={u.avatarUrl} alt={u.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} crossOrigin="anonymous" />
+                                                        ) : (
+                                                            getInitials(u.fullName)
+                                                        )}
+                                                    </div>
+                                                    <div style={{ minWidth: 0 }}>
+                                                        <div style={{ fontWeight: '700', fontSize: '14px', color: colors.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                            {u.fullName}
+                                                        </div>
+                                                        {u.username && (
+                                                            <div style={{ fontSize: '12px', color: colors.textMuted }}>
+                                                                @{u.username}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            {/* Column 2: Email */}
+                                            <td style={{ padding: '14px 20px', color: colors.textMuted, fontSize: '13px', whiteSpace: 'nowrap' }}>
+                                                {u.accountEmail}
+                                            </td>
+
+                                            {/* Column 3: Role */}
+                                            <td style={{ padding: '14px 20px', whiteSpace: 'nowrap' }}>
+                                                <span style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '5px',
+                                                    padding: '4px 10px',
+                                                    borderRadius: '8px',
+                                                    fontSize: '12px',
+                                                    fontWeight: '700',
+                                                    background: roleBadge.bg,
+                                                    color: roleBadge.color,
+                                                    border: `1px solid ${roleBadge.border}`
+                                                }}>
+                                                    {roleBadge.icon}
+                                                    <span>{u.assignedRole}</span>
+                                                </span>
+                                            </td>
+
+                                            {/* Column 4: Status Badge (Active: Green, Suspended: Red, Pending: Amber) */}
+                                            <td style={{ padding: '14px 20px', whiteSpace: 'nowrap' }}>
+                                                <span style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px',
+                                                    padding: '4px 10px',
+                                                    borderRadius: '999px',
+                                                    fontSize: '12px',
+                                                    fontWeight: '700',
+                                                    background: status.bg,
+                                                    color: status.color,
+                                                    border: `1px solid ${status.border}`
+                                                }}>
+                                                    <span style={{
+                                                        width: '6px',
+                                                        height: '6px',
+                                                        borderRadius: '50%',
+                                                        background: status.dot,
+                                                        boxShadow: `0 0 6px ${status.dot}`
+                                                    }} />
+                                                    <span>{status.label}</span>
+                                                </span>
+                                            </td>
+
+                                            {/* Column 5: Redesigned Action Buttons */}
+                                            <td style={{ padding: '14px 20px', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                                    {/* View Profile: Green button with eye icon */}
+                                                    <button
+                                                        onClick={() => navigate(`/admin/users/${u._id}`)}
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '5px',
+                                                            padding: '6px 11px',
+                                                            borderRadius: '8px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            background: 'rgba(16, 185, 129, 0.12)',
+                                                            color: '#10b981',
+                                                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.15s ease'
+                                                        }}
+                                                        title={`View profile for ${u.fullName}`}
+                                                        aria-label={`View profile for ${u.fullName}`}
+                                                        className="hover:opacity-90 hover:scale-105 active:scale-95"
+                                                    >
+                                                        <Eye size={14} strokeWidth={2.2} />
+                                                        <span>Profile</span>
+                                                    </button>
+
+                                                    {/* Suspend: Amber button with ban icon */}
+                                                    <button
+                                                        onClick={() => setUserToSuspend(u)}
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '5px',
+                                                            padding: '6px 11px',
+                                                            borderRadius: '8px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            background: u.isActive ? 'rgba(245, 158, 11, 0.12)' : 'rgba(34, 197, 94, 0.12)',
+                                                            color: u.isActive ? '#f59e0b' : '#22c55e',
+                                                            border: `1px solid ${u.isActive ? 'rgba(245, 158, 11, 0.35)' : 'rgba(34, 197, 94, 0.35)'}`,
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.15s ease'
+                                                        }}
+                                                        title={u.isActive ? `Suspend ${u.fullName}` : `Activate ${u.fullName}`}
+                                                        aria-label={u.isActive ? `Suspend ${u.fullName}` : `Activate ${u.fullName}`}
+                                                        className="hover:opacity-90 hover:scale-105 active:scale-95"
+                                                    >
+                                                        {u.isActive ? <Ban size={14} strokeWidth={2.2} /> : <CheckCircle2 size={14} strokeWidth={2.2} />}
+                                                        <span>{u.isActive ? 'Suspend' : 'Activate'}</span>
+                                                    </button>
+
+                                                    {/* Reset Password: Blue button with key icon */}
+                                                    <button
+                                                        onClick={() => { setSelectedUser(u); setIsPasswordModalOpen(true); }}
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '5px',
+                                                            padding: '6px 11px',
+                                                            borderRadius: '8px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            background: 'rgba(59, 130, 246, 0.12)',
+                                                            color: '#3b82f6',
+                                                            border: '1px solid rgba(59, 130, 246, 0.35)',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.15s ease'
+                                                        }}
+                                                        title={`Reset password for ${u.fullName}`}
+                                                        aria-label={`Reset password for ${u.fullName}`}
+                                                        className="hover:opacity-90 hover:scale-105 active:scale-95"
+                                                    >
+                                                        <KeyRound size={14} strokeWidth={2.2} />
+                                                        <span>Reset</span>
+                                                    </button>
+
+                                                    {/* Delete: Red button with trash icon */}
+                                                    <button
+                                                        onClick={() => setUserToDelete(u)}
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '5px',
+                                                            padding: '6px 11px',
+                                                            borderRadius: '8px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            background: 'rgba(239, 68, 68, 0.12)',
+                                                            color: '#ef4444',
+                                                            border: '1px solid rgba(239, 68, 68, 0.35)',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.15s ease'
+                                                        }}
+                                                        title={`Delete ${u.fullName}`}
+                                                        aria-label={`Delete ${u.fullName}`}
+                                                        className="hover:opacity-90 hover:scale-105 active:scale-95"
+                                                    >
+                                                        <Trash2 size={14} strokeWidth={2.2} />
+                                                        <span>Delete</span>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -2464,44 +2863,79 @@ const resetCalendarForm = () => {
     ];
 
     const renderSecurity = () => {
+        const adminCount = users.filter(u => u.assignedRole === 'Admin').length;
+        const instructorCount = users.filter(u => u.assignedRole === 'Instructor').length;
+        const studentCount = users.filter(u => u.assignedRole === 'Student').length;
+        const moderatorCount = users.filter(u => u.assignedRole === 'Moderator').length;
+        const supportCount = users.filter(u => u.assignedRole === 'Support Staff' || u.assignedRole === 'Support').length;
+        const verifiedUsers = users.filter(u => u.isEmailVerified).length;
+        const verifiedPercent = users.length > 0 ? Math.round((verifiedUsers / users.length) * 100) : 100;
+
         const coreRoles = [
-            { icon: ShieldCheck, color: '#22c55e', bg: 'rgba(34,197,94,0.15)', name: 'Super Admin', desc: 'Full system access & administrative controls', users: users.filter(u => u.assignedRole === 'Admin').length || 3, perms: '32', scope: 'System Wide', isCore: true },
-            { icon: Users, color: '#3b82f6', bg: 'rgba(59,130,246,0.15)', name: 'Instructor', desc: 'Course creation, grading & student management', users: users.filter(u => u.assignedRole === 'Instructor').length || 126, perms: '18', scope: 'Courses', isCore: true },
-            { icon: GraduationCap, color: '#10b981', bg: 'rgba(16,185,129,0.15)', name: 'Student', desc: 'Access enrolled learning materials & quizzes', users: users.filter(u => u.assignedRole === 'Student').length || 1045, perms: '8', scope: 'Enrolled Courses', isCore: true },
+            { icon: ShieldCheck, color: '#22c55e', bg: 'rgba(34,197,94,0.12)', name: 'Super Admin', desc: 'Full system access, administration & platform security controls', users: adminCount, perms: 'Full (All Modules)', scope: 'System-Wide', isCore: true },
+            { icon: Users, color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', name: 'Instructor', desc: 'Course creation, student progress tracking & curriculum delivery', users: instructorCount, perms: '18 Capabilities', scope: 'Courses & Students', isCore: true },
+            { icon: GraduationCap, color: '#10b981', bg: 'rgba(16,185,129,0.12)', name: 'Student', desc: 'Enrolled learning materials, interactive quizzes & certificate access', users: studentCount, perms: '8 Capabilities', scope: 'Enrolled Courses', isCore: true },
         ];
-        const allRolesList = [...coreRoles, ...customRoles];
+
+        // Enrich custom roles with real assigned user count
+        const enrichedCustomRoles = customRoles.map(r => {
+            let count = 0;
+            if (r.name.toLowerCase().includes('moderator')) count = moderatorCount;
+            else if (r.name.toLowerCase().includes('support')) count = supportCount;
+            else count = users.filter(u => u.assignedRole?.toLowerCase() === r.name.toLowerCase()).length;
+            return { ...r, users: count };
+        });
+
+        const allRolesList = [...coreRoles, ...enrichedCustomRoles];
         const filteredRoles = allRolesList.filter(r => 
             r.name.toLowerCase().includes(roleSearch.toLowerCase()) || 
             r.desc.toLowerCase().includes(roleSearch.toLowerCase()) ||
             r.scope.toLowerCase().includes(roleSearch.toLowerCase())
         );
 
+        // Security events filtered from real live audit logs
+        const securityLogs = auditLogs.filter(l => 
+            l.category === 'User Security & Activity' || 
+            (l.action && (
+                l.action.toUpperCase().includes('LOGIN') || 
+                l.action.toUpperCase().includes('REGISTER') || 
+                l.action.toUpperCase().includes('AUTH') || 
+                l.action.toUpperCase().includes('SECURITY') || 
+                l.action.toUpperCase().includes('PASSWORD') || 
+                l.action.toUpperCase().includes('ROLE') ||
+                l.action.toUpperCase().includes('BLOCKED')
+            )) ||
+            l.severity === 'warning' || 
+            l.severity === 'critical'
+        );
+        const displaySecurityLogs = (securityLogs.length > 0 ? securityLogs : auditLogs).slice(0, 6);
+
         const handleSaveNewRole = () => {
-            if (!newRoleForm.name) return showNotification('Role name is required.');
+            if (!newRoleForm.name?.trim()) return showNotification('Role name is required.');
             setIsCreatingRole(true);
             setTimeout(() => {
                 setCustomRoles([...customRoles, {
                     icon: Shield, 
                     color: '#10b981', 
-                    bg: 'rgba(16,185,129,0.15)', 
-                    name: newRoleForm.name, 
-                    desc: newRoleForm.description || 'Custom defined role', 
+                    bg: 'rgba(16,185,129,0.12)', 
+                    name: newRoleForm.name.trim(), 
+                    desc: newRoleForm.description?.trim() || 'Custom defined role', 
                     users: 0, 
-                    perms: newRoleForm.selectedPerms.length, 
-                    scope: newRoleForm.scope, 
+                    perms: `${newRoleForm.selectedPerms.length} Capabilities`, 
+                    scope: newRoleForm.scope || 'Custom', 
                     isCore: false 
                 }]);
                 setIsCreatingRole(false);
                 setIsAddRoleModalOpen(false);
                 setNewRoleForm({ name: '', description: '', selectedPerms: ['View Analytics'], scope: 'Custom' });
-                showNotification(`Role ${newRoleForm.name} created successfully.`);
-            }, 600);
+                showNotification(`Role '${newRoleForm.name.trim()}' created successfully.`);
+            }, 500);
         };
 
         const handleExportSystemReport = () => {
             setSelectedReportType('system');
             setSelectedReportFormat('pdf');
-            handleExportReport(); // Re-use existing export logic
+            handleExportReport();
         };
 
         const handlePermissionToggle = (index, roleKey, value) => {
@@ -2516,184 +2950,183 @@ const resetCalendarForm = () => {
                 setIsSavingPermissions(false);
                 setIsManagePermissionsModalOpen(false);
                 showNotification('Role permissions successfully updated across the platform.');
-            }, 800);
+            }, 600);
+        };
+
+        const confirmDeleteRole = () => {
+            if (!roleToDelete) return;
+            setCustomRoles(customRoles.filter(r => r.name !== roleToDelete.name));
+            showNotification(`Role '${roleToDelete.name}' deleted.`);
+            setRoleToDelete(null);
         };
 
         return (
-            <div style={{ ...s.tabContent, padding: 0 }}>
+            <div style={{ ...s.tabContent, padding: '4px 0 24px' }}>
                 {/* Header Area */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <h2 style={{ fontSize: '22px', fontWeight: '700', color: colors.text, margin: 0 }}>Security & Roles</h2>
-                            <span style={{ fontSize: '11px', fontWeight: '600', padding: '3px 8px', borderRadius: '12px', background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
-                                RBAC Active
-                            </span>
+                            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(34,197,94,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22c55e' }}>
+                                <ShieldCheck size={22} />
+                            </div>
+                            <div>
+                                <h2 style={{ fontSize: '22px', fontWeight: '800', color: colors.text, margin: 0, letterSpacing: '-0.3px' }}>Security & Roles</h2>
+                                <p style={{ fontSize: '13px', color: colors.textMuted, margin: '2px 0 0 0' }}>Role-based access control, cryptographic policies, and verified platform audit monitoring.</p>
+                            </div>
                         </div>
-                        <p style={{ fontSize: '13px', color: colors.textMuted, margin: '4px 0 0 0' }}>Role-based access control, system security safeguards, and live audit monitoring.</p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '20px', background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.25)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }} />
+                            RBAC Active
+                        </span>
                         <button 
                             onClick={handleExportSystemReport} 
                             disabled={isExportingReport} 
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '8px 14px', color: colors.text, fontSize: '13px', fontWeight: '500', cursor: 'pointer', opacity: isExportingReport ? 0.7 : 1, transition: 'all 0.2s' }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '9px 15px', color: colors.text, fontSize: '13px', fontWeight: '600', cursor: 'pointer', opacity: isExportingReport ? 0.7 : 1, transition: 'all 0.2s' }}
                         >
-                            <Download size={15} /> {isExportingReport ? 'Exporting...' : 'Export Security Report'}
+                            <Download size={15} /> {isExportingReport ? 'Exporting...' : 'Export Report'}
                         </button>
                         <button 
                             onClick={() => setIsManagePermissionsModalOpen(true)} 
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '8px 14px', color: colors.text, fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '9px 15px', color: colors.text, fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
                         >
-                            <Settings size={15} color="#22c55e" /> Manage Permissions
+                            <Settings size={15} color="#22c55e" /> Permissions Matrix
                         </button>
                         <button 
                             onClick={() => setIsAddRoleModalOpen(true)} 
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#22c55e', border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#ffffff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(34,197,94,0.3)', transition: 'all 0.2s' }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#22c55e', border: 'none', borderRadius: '8px', padding: '9px 18px', color: '#ffffff', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 2px 10px rgba(34,197,94,0.3)', transition: 'all 0.2s' }}
                         >
-                            <PlusCircle size={15} /> Add Role
+                            <PlusCircle size={15} /> Add Custom Role
                         </button>
                     </div>
                 </div>
 
-                {/* Compact Key Metrics Bar */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-                    {/* 1. Roles */}
-                    <div style={{ background: colors.bgCard, borderRadius: '10px', padding: '12px 16px', border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(34,197,94,0.12)', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Shield size={18} />
+                {/* 4 Consistent, 100% Real-Data Statistics Cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                    {/* 1. Active RBAC Roles */}
+                    <div style={{ background: colors.bgCard, borderRadius: '14px', padding: '18px 20px', border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                        <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'rgba(34,197,94,0.14)', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Shield size={22} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '11px', color: colors.textMuted, fontWeight: '500' }}>Active Roles</div>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                                <span style={{ fontSize: '18px', fontWeight: '700', color: colors.text }}>{allRolesList.length}</span>
-                                <span style={{ fontSize: '11px', color: colors.textMuted }}>({coreRoles.length} Core · {customRoles.length} Custom)</span>
-                            </div>
+                            <div style={{ fontSize: '11px', color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Active RBAC Roles</div>
+                            <div style={{ fontSize: '24px', fontWeight: '800', color: colors.text, margin: '2px 0' }}>{allRolesList.length}</div>
+                            <div style={{ fontSize: '12px', color: colors.textMuted }}>{coreRoles.length} Core System · {enrichedCustomRoles.length} Custom</div>
                         </div>
                     </div>
 
-                    {/* 2. Assigned Users */}
-                    <div style={{ background: colors.bgCard, borderRadius: '10px', padding: '12px 16px', border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(59,130,246,0.12)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Users size={18} />
+                    {/* 2. Protected Users */}
+                    <div style={{ background: colors.bgCard, borderRadius: '14px', padding: '18px 20px', border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                        <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'rgba(59,130,246,0.14)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Users size={22} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '11px', color: colors.textMuted, fontWeight: '500' }}>Protected Users</div>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                                <span style={{ fontSize: '18px', fontWeight: '700', color: colors.text }}>{users.length.toLocaleString() || '1,174'}</span>
-                                <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '500' }}>RBAC Enforced</span>
-                            </div>
+                            <div style={{ fontSize: '11px', color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Protected Accounts</div>
+                            <div style={{ fontSize: '24px', fontWeight: '800', color: colors.text, margin: '2px 0' }}>{users.length.toLocaleString()}</div>
+                            <div style={{ fontSize: '12px', color: '#10b981', fontWeight: '600' }}>{adminCount} Admin · {instructorCount} Inst · {studentCount} Student</div>
                         </div>
                     </div>
 
-                    {/* 3. Security Health Score */}
-                    <div style={{ background: colors.bgCard, borderRadius: '10px', padding: '12px 16px', border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(16,185,129,0.12)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <ShieldCheck size={18} />
+                    {/* 3. Verified Accounts Rate */}
+                    <div style={{ background: colors.bgCard, borderRadius: '14px', padding: '18px 20px', border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                        <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'rgba(16,185,129,0.14)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <CheckCircle2 size={22} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '11px', color: colors.textMuted, fontWeight: '500' }}>Security Health</div>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                                <span style={{ fontSize: '18px', fontWeight: '700', color: colors.text }}>92<span style={{ fontSize: '12px', color: colors.textMuted }}>/100</span></span>
-                                <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '600' }}>Optimal</span>
-                            </div>
+                            <div style={{ fontSize: '11px', color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Email Verification</div>
+                            <div style={{ fontSize: '24px', fontWeight: '800', color: colors.text, margin: '2px 0' }}>{verifiedPercent}%</div>
+                            <div style={{ fontSize: '12px', color: colors.textMuted }}>{verifiedUsers} of {users.length} verified</div>
                         </div>
                     </div>
 
-                    {/* 4. Active Safeguards */}
-                    <div style={{ background: colors.bgCard, borderRadius: '10px', padding: '12px 16px', border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <CheckCircle2 size={18} />
+                    {/* 4. Monitored Security Events */}
+                    <div style={{ background: colors.bgCard, borderRadius: '14px', padding: '18px 20px', border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                        <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'rgba(245,158,11,0.14)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Activity size={22} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '11px', color: colors.textMuted, fontWeight: '500' }}>System Safeguards</div>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                                <span style={{ fontSize: '18px', fontWeight: '700', color: colors.text }}>6 / 6 Active</span>
-                                <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '500' }}>Operational</span>
-                            </div>
+                            <div style={{ fontSize: '11px', color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Security Audit Events</div>
+                            <div style={{ fontSize: '24px', fontWeight: '800', color: colors.text, margin: '2px 0' }}>{securityLogs.length}</div>
+                            <div style={{ fontSize: '12px', color: colors.textMuted }}>{auditLogs.length} total platform audit logs</div>
                         </div>
                     </div>
                 </div>
 
-                {/* PRIMARY SECTION: Role & Permission Management */}
-                <div style={{ background: colors.bgCard, borderRadius: '12px', border: `1px solid ${colors.border}`, marginBottom: '20px', overflow: 'hidden' }}>
-                    {/* Section Header */}
-                    <div style={{ padding: '16px 20px', borderBottom: `1px solid ${colors.border}`, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                {/* PRIMARY SECTION: Role & Permission Management Table */}
+                <div style={{ background: colors.bgCard, borderRadius: '14px', border: `1px solid ${colors.border}`, marginBottom: '24px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.12)' }}>
+                    <div style={{ padding: '18px 22px', borderBottom: `1px solid ${colors.border}`, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '14px' }}>
                         <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <h3 style={{ fontSize: '16px', fontWeight: '700', color: colors.text, margin: 0 }}>Role & Permission Management</h3>
-                                <span style={{ fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '10px', background: colors.bg, color: colors.textMuted, border: `1px solid ${colors.border}` }}>
-                                    {filteredRoles.length} Roles
+                                <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '10px', background: colors.bg, color: colors.textMuted, border: `1px solid ${colors.border}` }}>
+                                    {filteredRoles.length} Roles Defined
                                 </span>
                             </div>
-                            <p style={{ fontSize: '12px', color: colors.textMuted, margin: '2px 0 0 0' }}>Configure granular access permissions, assignment scopes, and user capabilities.</p>
+                            <p style={{ fontSize: '12px', color: colors.textMuted, margin: '3px 0 0 0' }}>Role hierarchy, assigned user volumes, assignment boundaries, and granular permission sets.</p>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                             <div style={{ position: 'relative' }}>
-                                <Search size={14} style={{ position: 'absolute', left: 10, top: 9, color: colors.textMuted }} />
+                                <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: colors.textMuted }} />
                                 <input 
                                     type="text" 
                                     value={roleSearch} 
                                     onChange={(e) => setRoleSearch(e.target.value)} 
-                                    placeholder="Filter roles..." 
-                                    style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '6px', padding: '6px 12px 6px 30px', color: colors.text, fontSize: '12px', width: '160px', outline: 'none' }} 
+                                    placeholder="Filter roles or scope..." 
+                                    style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '7px 12px 7px 32px', color: colors.text, fontSize: '12px', width: '200px', outline: 'none' }} 
                                 />
                                 {roleSearch && (
-                                    <button onClick={() => setRoleSearch('')} style={{ position: 'absolute', right: 8, top: 7, background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: 0 }}>
-                                        <X size={12} />
+                                    <button onClick={() => setRoleSearch('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: 0 }}>
+                                        <X size={13} />
                                     </button>
                                 )}
                             </div>
                             <button 
                                 onClick={() => setIsManagePermissionsModalOpen(true)} 
-                                style={{ background: 'transparent', border: '1px solid #22c55e', color: '#22c55e', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all 0.2s' }}
+                                style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22c55e', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all 0.2s' }}
                             >
-                                <Settings size={13} /> Permissions Matrix
-                            </button>
-                            <button 
-                                onClick={() => setIsAddRoleModalOpen(true)} 
-                                style={{ background: '#22c55e', border: 'none', color: '#ffffff', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all 0.2s' }}
-                            >
-                                <Plus size={13} /> Add Role
+                                <Settings size={13} /> Edit Permissions Matrix
                             </button>
                         </div>
                     </div>
 
-                    {/* Table */}
                     <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                             <thead>
-                                <tr style={{ background: colors.bg, borderBottom: `1px solid ${colors.border}`, color: colors.textMuted, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                                    <th style={{ padding: '12px 20px', fontWeight: '600' }}>Role</th>
-                                    <th style={{ padding: '12px 16px', fontWeight: '600' }}>Users</th>
-                                    <th style={{ padding: '12px 16px', fontWeight: '600' }}>Permissions</th>
-                                    <th style={{ padding: '12px 16px', fontWeight: '600' }}>Scope</th>
-                                    <th style={{ padding: '12px 16px', fontWeight: '600' }}>Status</th>
-                                    <th style={{ padding: '12px 20px', fontWeight: '600', textAlign: 'right' }}>Actions</th>
+                                <tr style={{ background: colors.bg, borderBottom: `1px solid ${colors.border}`, color: colors.textMuted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    <th style={{ padding: '12px 22px', fontWeight: '700' }}>Role Definition</th>
+                                    <th style={{ padding: '12px 16px', fontWeight: '700' }}>Assigned Users</th>
+                                    <th style={{ padding: '12px 16px', fontWeight: '700' }}>Permissions Scope</th>
+                                    <th style={{ padding: '12px 16px', fontWeight: '700' }}>Operational Boundary</th>
+                                    <th style={{ padding: '12px 16px', fontWeight: '700' }}>Status</th>
+                                    <th style={{ padding: '12px 22px', fontWeight: '700', textAlign: 'right' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filteredRoles.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: colors.textMuted }}>
-                                            No roles match "{roleSearch}".
+                                        <td colSpan={6} style={{ padding: '40px 20px', textAlign: 'center', color: colors.textMuted }}>
+                                            <Shield size={32} style={{ opacity: 0.3, marginBottom: '8px' }} />
+                                            <div>No roles match "{roleSearch}".</div>
+                                            <button onClick={() => setRoleSearch('')} style={{ marginTop: '8px', background: 'none', border: 'none', color: '#22c55e', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>Clear filter</button>
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredRoles.map((role, idx) => (
-                                        <tr key={idx} style={{ borderBottom: idx < filteredRoles.length - 1 ? `1px solid ${colors.border}` : 'none' }}>
-                                            {/* Role column */}
-                                            <td style={{ padding: '14px 20px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: role.bg, color: role.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                        <role.icon size={17} />
+                                        <tr key={idx} style={{ borderBottom: idx < filteredRoles.length - 1 ? `1px solid ${colors.border}` : 'none', transition: 'background 0.15s' }}>
+                                            {/* Role Definition */}
+                                            <td style={{ padding: '16px 22px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: role.bg, color: role.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                        <role.icon size={19} />
                                                     </div>
                                                     <div>
-                                                        <div style={{ color: colors.text, fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <div style={{ color: colors.text, fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
                                                             {role.name}
                                                             <span style={{ 
                                                                 fontSize: '10px', 
-                                                                fontWeight: '600', 
-                                                                padding: '1px 6px', 
+                                                                fontWeight: '700', 
+                                                                padding: '1px 7px', 
                                                                 borderRadius: '4px',
                                                                 background: role.isCore ? 'rgba(59,130,246,0.12)' : 'rgba(245,158,11,0.12)', 
                                                                 color: role.isCore ? '#3b82f6' : '#f59e0b',
@@ -2702,57 +3135,51 @@ const resetCalendarForm = () => {
                                                                 {role.isCore ? 'Core System' : 'Custom'}
                                                             </span>
                                                         </div>
-                                                        <div style={{ color: colors.textMuted, fontSize: '12px', marginTop: '2px' }}>{role.desc}</div>
+                                                        <div style={{ color: colors.textMuted, fontSize: '12px', marginTop: '2px', maxWidth: '340px', lineHeight: 1.4 }}>{role.desc}</div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            {/* Users column */}
-                                            <td style={{ padding: '14px 16px', fontWeight: '600', color: colors.text }}>
-                                                <span style={{ background: colors.bg, padding: '4px 10px', borderRadius: '6px', border: `1px solid ${colors.border}`, fontSize: '12px' }}>
+                                            {/* Assigned Users */}
+                                            <td style={{ padding: '16px 16px' }}>
+                                                <span style={{ background: colors.bg, padding: '5px 12px', borderRadius: '8px', border: `1px solid ${colors.border}`, fontSize: '13px', fontWeight: '700', color: colors.text }}>
                                                     {Number(role.users).toLocaleString()}
                                                 </span>
                                             </td>
-                                            {/* Permissions column */}
-                                            <td style={{ padding: '14px 16px' }}>
-                                                <span style={{ color: colors.text, fontWeight: '500', fontSize: '13px' }}>
-                                                    {typeof role.perms === 'number' ? `${role.perms} active` : `${role.perms} permissions`}
+                                            {/* Permissions Scope */}
+                                            <td style={{ padding: '16px 16px' }}>
+                                                <span style={{ color: colors.text, fontWeight: '600', fontSize: '13px' }}>
+                                                    {typeof role.perms === 'number' ? `${role.perms} active modules` : role.perms}
                                                 </span>
                                             </td>
-                                            {/* Scope column */}
-                                            <td style={{ padding: '14px 16px' }}>
-                                                <span style={{ fontSize: '12px', color: colors.textMuted, background: colors.bg, padding: '3px 8px', borderRadius: '4px', border: `1px solid ${colors.border}` }}>
+                                            {/* Operational Boundary */}
+                                            <td style={{ padding: '16px 16px' }}>
+                                                <span style={{ fontSize: '12px', fontWeight: '500', color: colors.textMuted, background: colors.bg, padding: '4px 10px', borderRadius: '6px', border: `1px solid ${colors.border}` }}>
                                                     {role.scope}
                                                 </span>
                                             </td>
-                                            {/* Status column */}
-                                            <td style={{ padding: '14px 16px' }}>
-                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '3px 9px', borderRadius: '16px', fontSize: '11px', fontWeight: '600' }}>
+                                            {/* Status */}
+                                            <td style={{ padding: '16px 16px' }}>
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '4px 10px', borderRadius: '16px', fontSize: '11px', fontWeight: '700' }}>
                                                     <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
                                                     Active
                                                 </span>
                                             </td>
-                                            {/* Actions column */}
-                                            <td style={{ padding: '14px 20px', textAlign: 'right' }}>
+                                            {/* Actions */}
+                                            <td style={{ padding: '16px 22px', textAlign: 'right' }}>
                                                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                                                     <button 
                                                         onClick={() => setIsManagePermissionsModalOpen(true)}
-                                                        title="Configure Permissions"
-                                                        style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '6px', padding: '5px 10px', fontSize: '12px', fontWeight: '500', color: colors.text, display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                        title="Configure Permissions Matrix"
+                                                        style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '7px', padding: '6px 12px', fontSize: '12px', fontWeight: '600', color: colors.text, display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all 0.2s' }}
                                                     >
                                                         <Settings size={13} color="#22c55e" />
-                                                        <span>Permissions</span>
+                                                        <span>Configure</span>
                                                     </button>
                                                     {!role.isCore && (
                                                         <button 
-                                                            onClick={() => {
-                                                                const conf = window.confirm(`Delete custom role '${role.name}'?`);
-                                                                if (conf) {
-                                                                    setCustomRoles(customRoles.filter(r => r.name !== role.name));
-                                                                    showNotification(`Role '${role.name}' deleted.`);
-                                                                }
-                                                            }}
+                                                            onClick={() => setRoleToDelete(role)}
                                                             title="Delete custom role"
-                                                            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px', padding: '5px 8px', color: '#ef4444', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '7px', padding: '6px 9px', color: '#ef4444', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
                                                         >
                                                             <Trash2 size={13} />
                                                         </button>
@@ -2766,197 +3193,219 @@ const resetCalendarForm = () => {
                         </table>
                     </div>
 
-                    {/* Table Bottom Bar */}
-                    <div style={{ padding: '10px 20px', background: colors.bg, borderTop: `1px solid ${colors.border}`, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '8px', fontSize: '12px', color: colors.textMuted }}>
+                    <div style={{ padding: '12px 22px', background: colors.bg, borderTop: `1px solid ${colors.border}`, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '8px', fontSize: '12px', color: colors.textMuted }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <BadgeInfo size={14} />
-                            <span>Core system roles (Super Admin, Instructor, Student) are protected and strictly enforced server-side.</span>
+                            <BadgeInfo size={14} color="#22c55e" />
+                            <span>Core system roles (Super Admin, Instructor, Student) are protected and strictly enforced by backend middleware.</span>
                         </div>
-                        <button onClick={() => setIsManagePermissionsModalOpen(true)} style={{ background: 'none', border: 'none', color: '#22c55e', fontWeight: '600', cursor: 'pointer', padding: 0, fontSize: '12px' }}>
-                            Configure Full Permissions Matrix →
+                        <button onClick={() => setIsManagePermissionsModalOpen(true)} style={{ background: 'none', border: 'none', color: '#22c55e', fontWeight: '700', cursor: 'pointer', padding: 0, fontSize: '12px' }}>
+                            View Full 5-Role Matrix →
                         </button>
                     </div>
                 </div>
 
-                {/* COMPACT SECURITY STATUS & INFRASTRUCTURE SAFEGUARDS */}
-                <div style={{ background: colors.bgCard, borderRadius: '12px', border: `1px solid ${colors.border}`, marginBottom: '20px', padding: '16px 20px' }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+                {/* PLATFORM SECURITY SPECIFICATIONS & CONTROLS */}
+                <div style={{ background: colors.bgCard, borderRadius: '14px', border: `1px solid ${colors.border}`, marginBottom: '24px', padding: '20px 22px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <ShieldCheck size={16} color="#10b981" />
-                                <h3 style={{ fontSize: '15px', fontWeight: '700', color: colors.text, margin: 0 }}>Security Status & Infrastructure Safeguards</h3>
+                                <ShieldCheck size={18} color="#10b981" />
+                                <h3 style={{ fontSize: '16px', fontWeight: '700', color: colors.text, margin: 0 }}>Platform Security Architecture & Safeguards</h3>
                             </div>
-                            <p style={{ fontSize: '12px', color: colors.textMuted, margin: '2px 0 0 0' }}>Core compliance controls, encryption standards, and live system protections.</p>
+                            <p style={{ fontSize: '12px', color: colors.textMuted, margin: '3px 0 0 0' }}>Implemented application security controls, token specifications, and cryptographic guarantees.</p>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <button 
                                 onClick={() => setIsSecurityStatusExpanded(!isSecurityStatusExpanded)} 
-                                style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', color: colors.text, display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all 0.2s' }}
+                                style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '7px', padding: '6px 14px', fontSize: '12px', fontWeight: '600', color: colors.text, display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all 0.2s' }}
                             >
                                 {isSecurityStatusExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                                {isSecurityStatusExpanded ? 'Hide Specifications' : 'View Specifications'}
+                                {isSecurityStatusExpanded ? 'Hide Technical Specifications' : 'View Technical Specifications'}
                             </button>
-                            <button onClick={() => setActiveTab('audit')} style={{ background: 'none', border: 'none', color: '#22c55e', fontSize: '12px', fontWeight: '600', cursor: 'pointer', padding: 0 }}>
-                                Security Audit Logs →
+                            <button onClick={() => setActiveTab('audit')} style={{ background: 'none', border: 'none', color: '#22c55e', fontSize: '12px', fontWeight: '700', cursor: 'pointer', padding: 0 }}>
+                                Live Audit Logs →
                             </button>
                         </div>
                     </div>
 
-                    {/* Compact 6-Pill Safeguards Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                    {/* 6 Safeguard Architecture Cards */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px' }}>
                         {[
-                            { icon: ShieldCheck, name: 'SSL / TLS 1.3', status: 'Active', desc: 'Valid to Aug 2028' },
-                            { icon: Shield, name: 'Web Firewall (WAF)', status: 'Active', desc: 'DDOS & SQLi Guard' },
-                            { icon: Lock, name: '2FA Security', status: 'Enforced', desc: 'Admin & Staff Accounts' },
-                            { icon: DatabaseBackup, name: 'Automated Backup', status: 'Active', desc: 'Hourly Replication' },
-                            { icon: KeyRound, name: 'Password Policy', status: 'Enforced', desc: 'Strong Entropy Required' },
-                            { icon: Server, name: 'System Engine', status: 'v2.4.0', desc: 'All Patches Applied' }
+                            { icon: Lock, name: 'JWT Bearer Authentication', status: 'HMAC SHA-256', desc: 'Signed 24h expiration tokens' },
+                            { icon: KeyRound, name: 'Bcrypt Salted Hashing', status: '10 Rounds', desc: 'One-way irreversible passwords' },
+                            { icon: Shield, name: 'RBAC Authorization', status: 'Backend Enforced', desc: 'Middleware guards on every route' },
+                            { icon: DatabaseBackup, name: 'Tamper-Evident Audit', status: 'Active Log', desc: 'Read-only operational trail' },
+                            { icon: Activity, name: 'Rate Limiting Guard', status: '100 req / 15m', desc: 'Brute-force auth mitigation' },
+                            { icon: Server, name: 'Strict CORS & Headers', status: 'Configured', desc: 'Secure origin isolation' }
                         ].map((item, idx) => (
-                            <div key={idx} style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'rgba(16,185,129,0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                    <item.icon size={15} />
+                            <div key={idx} style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(16,185,129,0.12)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <item.icon size={16} />
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ color: colors.text, fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
+                                    <div style={{ color: colors.text, fontSize: '13px', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
                                     <div style={{ color: colors.textMuted, fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.desc}</div>
                                 </div>
-                                <CircleCheck size={14} color="#10b981" style={{ flexShrink: 0 }} />
+                                <CircleCheck size={15} color="#10b981" style={{ flexShrink: 0 }} />
                             </div>
                         ))}
                     </div>
 
                     {/* Expandable Specifications Panel */}
                     {isSecurityStatusExpanded && (
-                        <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: `1px solid ${colors.border}`, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
-                            <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '12px' }}>
-                                <div style={{ fontSize: '12px', fontWeight: '600', color: colors.text, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                                    <Lock size={14} color="#22c55e" /> Session & Token Security
+                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: `1px solid ${colors.border}`, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+                            <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '10px', padding: '14px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '700', color: colors.text, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                    <Lock size={15} color="#22c55e" /> Session & Token Security
                                 </div>
-                                <p style={{ fontSize: '11px', color: colors.textMuted, margin: 0, lineHeight: 1.5 }}>
-                                    Cryptographically signed JWT bearer tokens with 24-hour expiration, automated idle revocation, and CSRF token binding.
+                                <p style={{ fontSize: '12px', color: colors.textMuted, margin: 0, lineHeight: 1.6 }}>
+                                    Cryptographically signed JSON Web Tokens (JWT) using HMAC SHA-256 with 24-hour expiration. Protected endpoints verify authorization headers via backend middleware.
                                 </p>
                             </div>
-                            <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '12px' }}>
-                                <div style={{ fontSize: '12px', fontWeight: '600', color: colors.text, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                                    <DatabaseBackup size={14} color="#10b981" /> Data Encryption & Recovery
+                            <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '10px', padding: '14px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '700', color: colors.text, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                    <Shield size={15} color="#3b82f6" /> Role-Based Access Isolation
                                 </div>
-                                <p style={{ fontSize: '11px', color: colors.textMuted, margin: 0, lineHeight: 1.5 }}>
-                                    Database encrypted at rest using AES-256. Continuous point-in-time recovery with daily remote cloud archive snapshots.
+                                <p style={{ fontSize: '12px', color: colors.textMuted, margin: 0, lineHeight: 1.6 }}>
+                                    Endpoint protection enforces assigned roles (Admin, Instructor, Student) at the Express middleware layer before database queries execute, preventing privilege escalation.
                                 </p>
                             </div>
-                            <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '12px' }}>
-                                <div style={{ fontSize: '12px', fontWeight: '600', color: colors.text, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                                    <Activity size={14} color="#f59e0b" /> Access Rate Limiting & Audit
+                            <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '10px', padding: '14px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '700', color: colors.text, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                    <DatabaseBackup size={15} color="#10b981" /> Immutable Audit Trail
                                 </div>
-                                <p style={{ fontSize: '11px', color: colors.textMuted, margin: 0, lineHeight: 1.5 }}>
-                                    Strict 100 req/min rate limiting on authentication routes. Geolocation IP inspection and persistent tamper-evident audit logging.
+                                <p style={{ fontSize: '12px', color: colors.textMuted, margin: 0, lineHeight: 1.6 }}>
+                                    System events, course approvals, user logins, and financial payments are logged to a dedicated, read-only audit log collection with actor snapshots and IP addresses.
                                 </p>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* SECONDARY SECTION: Recent Security Events */}
-                <div style={{ background: colors.bgCard, borderRadius: '12px', border: `1px solid ${colors.border}`, overflow: 'hidden' }}>
-                    <div style={{ padding: '14px 20px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <h3 style={{ fontSize: '15px', fontWeight: '700', color: colors.text, margin: 0 }}>Recent Security Events</h3>
-                            <span style={{ fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '10px', background: colors.bg, color: colors.textMuted, border: `1px solid ${colors.border}` }}>
-                                Live Audit Feed
+                {/* SECONDARY SECTION: Recent Security & Auth Events (Real Database Data) */}
+                <div style={{ background: colors.bgCard, borderRadius: '14px', border: `1px solid ${colors.border}`, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+                    <div style={{ padding: '16px 22px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: colors.text, margin: 0 }}>Recent Security & Authentication Events</h3>
+                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '10px', background: colors.bg, color: colors.textMuted, border: `1px solid ${colors.border}` }}>
+                                Verified Live Feed
                             </span>
                         </div>
-                        <button onClick={() => setActiveTab('audit')} style={{ background: 'none', border: 'none', color: '#22c55e', fontSize: '12px', fontWeight: '600', cursor: 'pointer', padding: 0 }}>
+                        <button onClick={() => setActiveTab('audit')} style={{ background: 'none', border: 'none', color: '#22c55e', fontSize: '12px', fontWeight: '700', cursor: 'pointer', padding: 0 }}>
                             View All Audit Logs →
                         </button>
                     </div>
+
                     <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                             <thead>
-                                <tr style={{ background: colors.bg, borderBottom: `1px solid ${colors.border}`, color: colors.textMuted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                                    <th style={{ padding: '10px 20px', fontWeight: '600' }}>Event</th>
-                                    <th style={{ padding: '10px 16px', fontWeight: '600' }}>Account / Actor</th>
-                                    <th style={{ padding: '10px 16px', fontWeight: '600' }}>IP Address</th>
-                                    <th style={{ padding: '10px 16px', fontWeight: '600' }}>Location</th>
-                                    <th style={{ padding: '10px 16px', fontWeight: '600' }}>Timestamp</th>
-                                    <th style={{ padding: '10px 20px', fontWeight: '600', textAlign: 'right' }}>Status</th>
+                                <tr style={{ background: colors.bg, borderBottom: `1px solid ${colors.border}`, color: colors.textMuted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    <th style={{ padding: '12px 22px', fontWeight: '700' }}>Event Action</th>
+                                    <th style={{ padding: '12px 16px', fontWeight: '700' }}>Actor / Account</th>
+                                    <th style={{ padding: '12px 16px', fontWeight: '700' }}>IP Address</th>
+                                    <th style={{ padding: '12px 16px', fontWeight: '700' }}>Timestamp</th>
+                                    <th style={{ padding: '12px 22px', fontWeight: '700', textAlign: 'right' }}>Severity Status</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {[
-                                    { icon: ShieldCheck, color: '#10b981', name: 'Successful Admin Login', user: 'admin@emare.com', ip: '127.0.0.1', loc: 'Localhost', time: '2 min ago', status: 'Success', sColor: '#10b981', sBg: 'rgba(16,185,129,0.1)' },
-                                    { icon: AlertTriangle, color: '#ef4444', name: 'Failed Login Attempt', user: 'unknown@example.com', ip: '102.185.23.45', loc: 'Nairobi, KE', time: '6 min ago', status: 'Failed', sColor: '#ef4444', sBg: 'rgba(239,68,68,0.1)' },
-                                    { icon: UserPlus, color: '#22c55e', name: 'New User Account Created', user: 'admin@emare.com', ip: '127.0.0.1', loc: 'Localhost', time: '15 min ago', status: 'Success', sColor: '#10b981', sBg: 'rgba(16,185,129,0.1)' },
-                                    { icon: KeyRound, color: '#f59e0b', name: 'Role Permissions Modified', user: 'admin@emare.com', ip: '127.0.0.1', loc: 'Localhost', time: '32 min ago', status: 'Success', sColor: '#10b981', sBg: 'rgba(16,185,129,0.1)' },
-                                    { icon: Lock, color: '#22c55e', name: 'Password Changed', user: 'instructor@emare.com', ip: '197.234.12.10', loc: 'Addis Ababa, ET', time: '1 hr ago', status: 'Success', sColor: '#10b981', sBg: 'rgba(16,185,129,0.1)' },
-                                    { icon: ShieldAlert, color: '#ef4444', name: 'Brute-Force Threat Blocked', user: 'hacker@malicious.com', ip: '185.220.101.2', loc: 'Moscow, RU', time: '2 hr ago', status: 'Blocked', sColor: '#ef4444', sBg: 'rgba(239,68,68,0.1)' }
-                                ].map((log, idx, arr) => (
-                                    <tr key={idx} style={{ borderBottom: idx < arr.length - 1 ? `1px solid ${colors.border}` : 'none' }}>
-                                        <td style={{ padding: '12px 20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                            <log.icon size={15} color={log.color} />
-                                            <span style={{ color: colors.text, fontWeight: '500' }}>{log.name}</span>
-                                        </td>
-                                        <td style={{ padding: '12px 16px', color: colors.text, fontSize: '12px' }}>{log.user}</td>
-                                        <td style={{ padding: '12px 16px', color: colors.textMuted, fontSize: '12px', fontFamily: 'monospace' }}>{log.ip}</td>
-                                        <td style={{ padding: '12px 16px', color: colors.textMuted, fontSize: '12px' }}>{log.loc}</td>
-                                        <td style={{ padding: '12px 16px', color: colors.textMuted, fontSize: '12px' }}>{log.time}</td>
-                                        <td style={{ padding: '12px 20px', textAlign: 'right' }}>
-                                            <span style={{ color: log.sColor, background: log.sBg, border: `1px solid ${log.sBg.replace('0.1', '0.25')}`, padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '600' }}>
-                                                {log.status}
-                                            </span>
+                                {displaySecurityLogs.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} style={{ padding: '40px 20px', textAlign: 'center', color: colors.textMuted }}>
+                                            <ShieldCheck size={36} color="#22c55e" style={{ opacity: 0.6, marginBottom: '8px' }} />
+                                            <div style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>No Security Incidents Recorded</div>
+                                            <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '2px' }}>Authentication events and role changes will automatically appear here as they occur.</div>
                                         </td>
                                     </tr>
-                                ))}
+                                ) : (
+                                    displaySecurityLogs.map((log, idx, arr) => {
+                                        const isWarning = log.severity === 'warning';
+                                        const isCritical = log.severity === 'critical';
+                                        const sevColor = isCritical ? '#ef4444' : (isWarning ? '#f59e0b' : '#10b981');
+                                        const sevBg = isCritical ? 'rgba(239,68,68,0.1)' : (isWarning ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)');
+                                        const actorName = log.actorSnapshot?.fullName || log.userRef?.fullName || 'System';
+                                        const actorEmail = log.actorSnapshot?.email || log.userRef?.accountEmail || '—';
+
+                                        return (
+                                            <tr key={log._id || idx} style={{ borderBottom: idx < arr.length - 1 ? `1px solid ${colors.border}` : 'none', transition: 'background 0.15s' }}>
+                                                <td style={{ padding: '14px 22px' }}>
+                                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                                        {isCritical ? <ShieldAlert size={16} color="#ef4444" /> : (isWarning ? <AlertTriangle size={16} color="#f59e0b" /> : <ShieldCheck size={16} color="#22c55e" />)}
+                                                        <div>
+                                                            <div style={{ color: colors.text, fontWeight: '700', fontSize: '13px' }}>{log.action || 'SECURITY_EVENT'}</div>
+                                                            <div style={{ color: colors.textMuted, fontSize: '11px', marginTop: '1px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.description}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: '14px 16px' }}>
+                                                    <div style={{ color: colors.text, fontWeight: '600', fontSize: '12px' }}>{actorName}</div>
+                                                    <div style={{ color: colors.textMuted, fontSize: '11px' }}>{actorEmail}</div>
+                                                </td>
+                                                <td style={{ padding: '14px 16px', color: colors.textMuted, fontSize: '12px', fontFamily: 'monospace' }}>
+                                                    {log.ipAddress || '127.0.0.1'}
+                                                </td>
+                                                <td style={{ padding: '14px 16px', color: colors.textMuted, fontSize: '12px' }}>
+                                                    {log.timestamp ? new Date(log.timestamp).toLocaleString('en-ET', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+                                                </td>
+                                                <td style={{ padding: '14px 22px', textAlign: 'right' }}>
+                                                    <span style={{ color: sevColor, background: sevBg, border: `1px solid ${sevColor}40`, padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', textTransform: 'capitalize' }}>
+                                                        {log.severity || 'Normal'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                {/* Modals for Security & Roles interactions */}
+                {/* MODALS */}
                 
-                {/* 1. Add Role Modal */}
-                <Modal isOpen={isAddRoleModalOpen} onClose={() => setIsAddRoleModalOpen(false)} title="Create New Role">
-                    <div style={{ padding: '24px', minWidth: '450px' }}>
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', color: colors.textMuted, fontSize: '13px', fontWeight: '500', marginBottom: '8px' }}>Role Name <span style={{ color: '#ef4444' }}>*</span></label>
+                {/* 1. Add Custom Role Modal */}
+                <Modal isOpen={isAddRoleModalOpen} onClose={() => setIsAddRoleModalOpen(false)} title="Create Custom Functional Role">
+                    <div style={{ padding: '24px', minWidth: '460px', maxWidth: '540px' }}>
+                        <div style={{ marginBottom: '18px' }}>
+                            <label style={{ display: 'block', color: colors.textMuted, fontSize: '13px', fontWeight: '600', marginBottom: '8px' }}>Role Name <span style={{ color: '#ef4444' }}>*</span></label>
                             <input 
                                 type="text" 
                                 value={newRoleForm.name} 
                                 onChange={e => setNewRoleForm({...newRoleForm, name: e.target.value})} 
-                                placeholder="e.g. Content Moderator, Support Lead" 
-                                style={{ width: '100%', background: colors.bg, border: `1px solid ${colors.border}`, padding: '10px 14px', borderRadius: '8px', color: colors.text, fontSize: '14px', outline: 'none' }} 
+                                placeholder="e.g. Assessment Coordinator, Community Lead" 
+                                style={{ width: '100%', background: colors.bg, border: `1px solid ${colors.border}`, padding: '10px 14px', borderRadius: '8px', color: colors.text, fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} 
                             />
                         </div>
                         
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', color: colors.textMuted, fontSize: '13px', fontWeight: '500', marginBottom: '8px' }}>Description</label>
+                        <div style={{ marginBottom: '18px' }}>
+                            <label style={{ display: 'block', color: colors.textMuted, fontSize: '13px', fontWeight: '600', marginBottom: '8px' }}>Description</label>
                             <textarea 
                                 value={newRoleForm.description} 
                                 onChange={e => setNewRoleForm({...newRoleForm, description: e.target.value})} 
-                                placeholder="Briefly describe the responsibilities of this role..." 
+                                placeholder="Outline functional boundaries and accountabilities for this role..." 
                                 rows="3" 
-                                style={{ width: '100%', background: colors.bg, border: `1px solid ${colors.border}`, padding: '10px 14px', borderRadius: '8px', color: colors.text, fontSize: '14px', outline: 'none', resize: 'none' }} 
+                                style={{ width: '100%', background: colors.bg, border: `1px solid ${colors.border}`, padding: '10px 14px', borderRadius: '8px', color: colors.text, fontSize: '14px', outline: 'none', resize: 'none', boxSizing: 'border-box' }} 
                             />
                         </div>
                         
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', color: colors.textMuted, fontSize: '13px', fontWeight: '500', marginBottom: '8px' }}>Access Scope</label>
+                        <div style={{ marginBottom: '18px' }}>
+                            <label style={{ display: 'block', color: colors.textMuted, fontSize: '13px', fontWeight: '600', marginBottom: '8px' }}>Access Scope</label>
                             <select 
                                 value={newRoleForm.scope} 
                                 onChange={e => setNewRoleForm({...newRoleForm, scope: e.target.value})} 
-                                style={{ width: '100%', background: colors.bg, border: `1px solid ${colors.border}`, padding: '10px 14px', borderRadius: '8px', color: colors.text, fontSize: '14px', outline: 'none', cursor: 'pointer' }}
+                                style={{ width: '100%', background: colors.bg, border: `1px solid ${colors.border}`, padding: '10px 14px', borderRadius: '8px', color: colors.text, fontSize: '14px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
                             >
-                                <option value="Custom" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Custom - Selective Access</option>
-                                <option value="Courses" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Courses - Restricted to Learning</option>
-                                <option value="Reports" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Reports - Analytical Access Only</option>
-                                <option value="Content" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Content - Moderation Access Only</option>
-                                <option value="Support" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Support - Helpdesk Operations</option>
+                                <option value="Custom" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Custom - Granular Feature Access</option>
+                                <option value="Courses" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Courses - Restricted to Academics</option>
+                                <option value="Reports" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Reports - Analytical & Audit Access</option>
+                                <option value="Content & Forums" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Content - Discussion & Review Moderation</option>
+                                <option value="Helpdesk & Support" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Support - Helpdesk Operations</option>
                             </select>
                         </div>
 
                         <div style={{ marginBottom: '24px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                <label style={{ color: colors.textMuted, fontSize: '13px', fontWeight: '500' }}>Assigned Permissions</label>
-                                <span style={{ fontSize: '12px', color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '2px 8px', borderRadius: '12px', fontWeight: '600' }}>{newRoleForm.selectedPerms.length} Selected</span>
+                                <label style={{ color: colors.textMuted, fontSize: '13px', fontWeight: '600' }}>Select Role Capabilities</label>
+                                <span style={{ fontSize: '12px', color: '#22c55e', background: 'rgba(34,197,94,0.12)', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>{newRoleForm.selectedPerms.length} Selected</span>
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                 {availablePerms.map(perm => {
@@ -2970,13 +3419,13 @@ const resetCalendarForm = () => {
                                                 setNewRoleForm({...newRoleForm, selectedPerms: perms});
                                             }}
                                             style={{ 
-                                                background: isSelected ? 'rgba(34,197,94,0.15)' : colors.bg, 
+                                                background: isSelected ? 'rgba(34,197,94,0.16)' : colors.bg, 
                                                 border: `1px solid ${isSelected ? '#22c55e' : colors.border}`, 
                                                 color: isSelected ? '#22c55e' : colors.text, 
-                                                padding: '6px 12px', borderRadius: '16px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s'
+                                                padding: '6px 12px', borderRadius: '16px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s'
                                             }}
                                         >
-                                            {perm}
+                                            {isSelected ? '✓ ' : '+ '}{perm}
                                         </button>
                                     );
                                 })}
@@ -2984,41 +3433,59 @@ const resetCalendarForm = () => {
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '16px', borderTop: `1px solid ${colors.border}` }}>
-                            <button onClick={() => setIsAddRoleModalOpen(false)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.textMuted, padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>Cancel</button>
-                            <button onClick={handleSaveNewRole} disabled={isCreatingRole} style={{ background: '#22c55e', border: 'none', color: '#ffffff', padding: '8px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: isCreatingRole ? 'not-allowed' : 'pointer', opacity: isCreatingRole ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button onClick={() => setIsAddRoleModalOpen(false)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.textMuted, padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
+                            <button onClick={handleSaveNewRole} disabled={isCreatingRole} style={{ background: '#22c55e', border: 'none', color: '#ffffff', padding: '9px 22px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: isCreatingRole ? 'not-allowed' : 'pointer', opacity: isCreatingRole ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 {isCreatingRole ? 'Creating...' : <><PlusCircle size={15} /> Create Role</>}
                             </button>
                         </div>
                     </div>
                 </Modal>
 
-                {/* 2. Manage Permissions Modal */}
-                <Modal isOpen={isManagePermissionsModalOpen} onClose={() => setIsManagePermissionsModalOpen(false)} title="Manage Roles & Permissions Matrix">
-                    <div style={{ padding: '24px', minWidth: '600px' }}>
-                        <p style={{ color: colors.textMuted, fontSize: '13px', marginBottom: '20px', marginTop: 0 }}>Configure platform-wide permissions for core system roles. Note: Changing core permissions takes effect immediately.</p>
+                {/* 2. Manage 5-Role Permissions Matrix Modal */}
+                <Modal isOpen={isManagePermissionsModalOpen} onClose={() => setIsManagePermissionsModalOpen(false)} title="Platform Roles & Permissions Matrix (5 Roles)">
+                    <div style={{ padding: '24px', minWidth: '720px', maxWidth: '880px' }}>
+                        <p style={{ color: colors.textMuted, fontSize: '13px', marginBottom: '20px', marginTop: 0 }}>
+                            Configure granular platform capabilities across Super Admin, Instructor, Student, Moderator, and Support Staff roles. Changes are stored in active platform memory.
+                        </p>
                         
-                        <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '10px', overflow: 'hidden' }}>
+                        <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '12px', overflow: 'hidden' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                                 <thead>
                                     <tr style={{ borderBottom: `1px solid ${colors.border}`, background: colors.bgCard }}>
-                                        <th style={{ padding: '14px 16px', color: colors.text, fontWeight: '600' }}>Permission Module</th>
-                                        <th style={{ padding: '14px 16px', color: colors.text, fontWeight: '600', textAlign: 'center' }}>Super Admin</th>
-                                        <th style={{ padding: '14px 16px', color: colors.text, fontWeight: '600', textAlign: 'center' }}>Instructor</th>
-                                        <th style={{ padding: '14px 16px', color: colors.text, fontWeight: '600', textAlign: 'center' }}>Student</th>
+                                        <th style={{ padding: '14px 18px', color: colors.text, fontWeight: '700' }}>Permission Module</th>
+                                        <th style={{ padding: '14px 12px', color: '#22c55e', fontWeight: '700', textAlign: 'center' }}>Super Admin</th>
+                                        <th style={{ padding: '14px 12px', color: '#3b82f6', fontWeight: '700', textAlign: 'center' }}>Instructor</th>
+                                        <th style={{ padding: '14px 12px', color: '#10b981', fontWeight: '700', textAlign: 'center' }}>Student</th>
+                                        <th style={{ padding: '14px 12px', color: '#f59e0b', fontWeight: '700', textAlign: 'center' }}>Moderator</th>
+                                        <th style={{ padding: '14px 12px', color: '#38bdf8', fontWeight: '700', textAlign: 'center' }}>Support</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {permissionsMatrix.map((row, i) => (
-                                        <tr key={row.id} style={{ borderBottom: `1px solid ${colors.border}` }}>
-                                            <td style={{ padding: '12px 16px', color: colors.text, fontWeight: '500' }}>{row.label}</td>
-                                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                                                <input type="checkbox" checked={row.a} onChange={(e) => handlePermissionToggle(i, 'a', e.target.checked)} style={{ accentColor: '#22c55e', cursor: 'pointer', width: '16px', height: '16px' }} />
+                                        <tr key={row.id} style={{ borderBottom: `1px solid ${colors.border}`, background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
+                                            <td style={{ padding: '13px 18px' }}>
+                                                <div style={{ color: colors.text, fontWeight: '600' }}>{row.label}</div>
+                                                <span style={{ fontSize: '10px', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{row.category}</span>
                                             </td>
-                                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                                                <input type="checkbox" checked={row.i} onChange={(e) => handlePermissionToggle(i, 'i', e.target.checked)} style={{ accentColor: '#22c55e', cursor: 'pointer', width: '16px', height: '16px' }} />
+                                            {/* Super Admin */}
+                                            <td style={{ padding: '13px 12px', textAlign: 'center' }}>
+                                                <input type="checkbox" checked={row.a} onChange={(e) => handlePermissionToggle(i, 'a', e.target.checked)} style={{ accentColor: '#22c55e', cursor: 'pointer', width: '17px', height: '17px' }} />
                                             </td>
-                                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                                                <input type="checkbox" checked={row.s} onChange={(e) => handlePermissionToggle(i, 's', e.target.checked)} style={{ accentColor: '#22c55e', cursor: 'pointer', width: '16px', height: '16px' }} />
+                                            {/* Instructor */}
+                                            <td style={{ padding: '13px 12px', textAlign: 'center' }}>
+                                                <input type="checkbox" checked={row.i} onChange={(e) => handlePermissionToggle(i, 'i', e.target.checked)} style={{ accentColor: '#3b82f6', cursor: 'pointer', width: '17px', height: '17px' }} />
+                                            </td>
+                                            {/* Student */}
+                                            <td style={{ padding: '13px 12px', textAlign: 'center' }}>
+                                                <input type="checkbox" checked={row.s} onChange={(e) => handlePermissionToggle(i, 's', e.target.checked)} style={{ accentColor: '#10b981', cursor: 'pointer', width: '17px', height: '17px' }} />
+                                            </td>
+                                            {/* Moderator */}
+                                            <td style={{ padding: '13px 12px', textAlign: 'center' }}>
+                                                <input type="checkbox" checked={Boolean(row.m)} onChange={(e) => handlePermissionToggle(i, 'm', e.target.checked)} style={{ accentColor: '#f59e0b', cursor: 'pointer', width: '17px', height: '17px' }} />
+                                            </td>
+                                            {/* Support Staff */}
+                                            <td style={{ padding: '13px 12px', textAlign: 'center' }}>
+                                                <input type="checkbox" checked={Boolean(row.st)} onChange={(e) => handlePermissionToggle(i, 'st', e.target.checked)} style={{ accentColor: '#38bdf8', cursor: 'pointer', width: '17px', height: '17px' }} />
                                             </td>
                                         </tr>
                                     ))}
@@ -3026,10 +3493,34 @@ const resetCalendarForm = () => {
                             </table>
                         </div>
                         
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
-                            <button onClick={() => setIsManagePermissionsModalOpen(false)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.textMuted, padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>Cancel</button>
-                            <button onClick={handleSavePermissions} disabled={isSavingPermissions} style={{ background: '#22c55e', border: 'none', color: '#ffffff', padding: '8px 22px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: isSavingPermissions ? 'not-allowed' : 'pointer', opacity: isSavingPermissions ? 0.7 : 1 }}>
-                                {isSavingPermissions ? 'Saving...' : 'Apply Changes'}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '22px' }}>
+                            <button onClick={() => setIsManagePermissionsModalOpen(false)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.textMuted, padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
+                            <button onClick={handleSavePermissions} disabled={isSavingPermissions} style={{ background: '#22c55e', border: 'none', color: '#ffffff', padding: '9px 24px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: isSavingPermissions ? 'not-allowed' : 'pointer', opacity: isSavingPermissions ? 0.7 : 1 }}>
+                                {isSavingPermissions ? 'Saving...' : 'Apply RBAC Changes'}
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+
+                {/* 3. Delete Custom Role Confirmation Modal */}
+                <Modal isOpen={Boolean(roleToDelete)} onClose={() => setRoleToDelete(null)} title="Confirm Role Deletion">
+                    <div style={{ padding: '24px', maxWidth: '440px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+                            <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(239,68,68,0.12)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <AlertTriangle size={24} />
+                            </div>
+                            <div>
+                                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: colors.text }}>Delete Custom Role</h4>
+                                <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: colors.textMuted }}>Are you sure you want to remove this role?</p>
+                            </div>
+                        </div>
+                        <p style={{ fontSize: '13px', color: colors.textMuted, lineHeight: 1.5, margin: '0 0 20px 0' }}>
+                            The custom role <strong style={{ color: colors.text }}>{roleToDelete?.name}</strong> will be permanently removed from platform configuration.
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                            <button onClick={() => setRoleToDelete(null)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.textMuted, padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
+                            <button onClick={confirmDeleteRole} style={{ background: '#ef4444', border: 'none', color: '#ffffff', padding: '8px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
+                                Delete Role
                             </button>
                         </div>
                     </div>
@@ -4114,41 +4605,105 @@ const resetCalendarForm = () => {
     const renderAuditLogs = () => (
         <div style={s.tabContent}>
             <div style={s.sectionHeader}>
-                <h2 style={s.sectionTitle}>Audit Logs</h2>
-                <p style={s.sectionSub}>Review user activity, login events, course approvals, enrollment actions, system events, errors, and admin operations.</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', width: '100%' }}>
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <h2 style={s.sectionTitle}>Audit Logs & Security Trail</h2>
+                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '12px', background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.25)' }}>
+                                Read-Only
+                            </span>
+                        </div>
+                        <p style={s.sectionSub}>Review tamper-evident activity records, authentication attempts, course approvals, and financial transactions.</p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <button 
+                            onClick={() => fetchAuditLogs(auditFilter, auditSearch)}
+                            disabled={isAuditLoading}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '8px 14px', color: colors.text, fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+                        >
+                            <RefreshCw size={13} className={isAuditLoading ? 'audit-spin' : ''} /> Refresh
+                        </button>
+                        <button 
+                            onClick={() => navigate('/admin/audit-logs')}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 2px 8px rgba(34,197,94,0.3)' }}
+                        >
+                            <ShieldCheck size={15} /> Full Audit Console →
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <div style={s.card}>
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
-                    <select value={auditFilter} onChange={(e) => handleAuditFilterChange(e.target.value)} style={s.select}>
-                        <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Logs</option>
-                        <option value="login" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Login Logs</option>
-                        <option value="user" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>User Activity</option>
-                        <option value="course" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Course Approval Logs</option>
-                        <option value="enrollment" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Enrollment Logs</option>
-                        <option value="system" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>System Logs</option>
-                        <option value="error" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Error Logs</option>
-                        <option value="admin" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Admin Action Logs</option>
+            <div style={{ ...s.card, padding: '20px' }}>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '18px' }}>
+                    <select value={auditFilter} onChange={(e) => handleAuditFilterChange(e.target.value)} style={{ ...s.select, minWidth: '180px' }}>
+                        <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Categories</option>
+                        <option value="Enrollment & Financial" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Enrollment & Financial</option>
+                        <option value="Course Approvals & Content" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Course Approvals & Content</option>
+                        <option value="User Security & Activity" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>User Security & Activity</option>
+                        <option value="System & Diagnostics" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>System & Diagnostics</option>
                     </select>
-                    <input value={auditSearch} onChange={handleAuditSearch} placeholder="Search audit logs" style={s.input} />
+                    <div style={{ flex: 1, minWidth: '220px', position: 'relative' }}>
+                        <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: colors.textMuted }} />
+                        <input 
+                            value={auditSearch} 
+                            onChange={handleAuditSearch} 
+                            placeholder="Search logs by action, user, or IP..." 
+                            style={{ ...s.input, width: '100%', paddingLeft: '34px', boxSizing: 'border-box' }} 
+                        />
+                    </div>
                 </div>
 
                 {isAuditLoading ? (
-                    <div style={{ color: colors.textMuted }}>Loading audit entries...</div>
+                    <div style={{ padding: '36px', textAlign: 'center', color: colors.textMuted }}>
+                        <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', marginBottom: '10px', color: '#22c55e' }} />
+                        <div style={{ fontSize: '13px', fontWeight: '600' }}>Loading audit entries...</div>
+                    </div>
                 ) : (
                     <div style={{ display: 'grid', gap: '10px' }}>
-                        {auditLogs.length ? auditLogs.map((log) => (
-                            <div key={log._id} style={{ padding: '14px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
-                                    <strong>{log.action}</strong>
-                                    <span style={{ color: colors.textMuted, fontSize: '13px' }}>{new Date(log.timestamp).toLocaleString()}</span>
+                        {auditLogs.length ? auditLogs.map((log) => {
+                            const isWarning = log.severity === 'warning';
+                            const isCritical = log.severity === 'critical';
+                            const sevColor = isCritical ? '#ef4444' : (isWarning ? '#f59e0b' : '#10b981');
+                            const sevBg = isCritical ? 'rgba(239,68,68,0.12)' : (isWarning ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)');
+                            const actorName = log.actorSnapshot?.fullName || log.userRef?.fullName || 'System';
+                            const actorRole = log.actorSnapshot?.role || log.userRef?.assignedRole || 'System';
+
+                            return (
+                                <div key={log._id} style={{ padding: '16px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, transition: 'all 0.15s' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '10px', background: sevBg, color: sevColor, border: `1px solid ${sevColor}35`, textTransform: 'uppercase' }}>
+                                                {log.severity || 'info'}
+                                            </span>
+                                            <strong style={{ fontSize: '14px', color: colors.text }}>{log.action}</strong>
+                                            {log.category && (
+                                                <span style={{ fontSize: '11px', color: colors.textMuted, background: colors.bgCard, padding: '2px 8px', borderRadius: '6px', border: `1px solid ${colors.border}` }}>
+                                                    {log.category}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span style={{ color: colors.textMuted, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <Clock size={12} />
+                                            {new Date(log.timestamp).toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <div style={{ color: colors.text, fontSize: '13px', lineHeight: 1.5, marginBottom: '10px', wordBreak: 'break-word' }}>
+                                        {log.description || 'No description provided.'}
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: colors.textMuted, display: 'flex', flexWrap: 'wrap', gap: '14px', borderTop: `1px solid ${colors.border}`, paddingTop: '8px' }}>
+                                        <span><strong>Actor:</strong> {actorName} ({actorRole})</span>
+                                        <span><strong>IP Address:</strong> <code>{log.ipAddress || '127.0.0.1'}</code></span>
+                                        {log.targetLabel && <span><strong>Target:</strong> <code>{log.targetLabel}</code></span>}
+                                    </div>
                                 </div>
-                                <div style={{ color: colors.textMuted, fontSize: '14px', marginBottom: '6px' }}>{log.description || 'No description provided.'}</div>
-                                <div style={{ fontSize: '13px', color: colors.textMuted }}>
-                                    User: {log.userRef?.fullName || 'System'} • Role: {log.userRef?.assignedRole || 'N/A'} • IP: {log.ipAddress || 'N/A'}
-                                </div>
+                            );
+                        }) : (
+                            <div style={{ padding: '40px', textAlign: 'center', color: colors.textMuted }}>
+                                <ShieldCheck size={36} color="#22c55e" style={{ opacity: 0.5, marginBottom: '8px' }} />
+                                <div style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>No audit records match the current filter.</div>
+                                <p style={{ fontSize: '12px', margin: '4px 0 0 0' }}>Try changing the category or clearing the search query.</p>
                             </div>
-                        )) : <div style={{ color: colors.textMuted }}>No audit logs found for the selected filter.</div>}
+                        )}
                     </div>
                 )}
             </div>
@@ -4172,30 +4727,111 @@ const resetCalendarForm = () => {
         const internalRows = calendarEvents.map((e) => ({
             ...e,
             visibility: 'internal',
-            location: e.location || (e.eventType === 'Online' ? 'Online' : '')
+            location: e.location || (e.eventType === 'Online' ? 'Online' : ''),
+            allDay: Boolean(e.isAllDay || e.allDay)
         }));
         const publicRows = publicEvents.map((e) => ({
             ...e,
             visibility: 'public',
-            location: e.venue || (e.eventType !== 'Physical' ? 'Online Live Stream' : '')
+            location: e.venue || (e.eventType !== 'Physical' ? 'Online Live Stream' : ''),
+            allDay: Boolean(e.allDay || e.isAllDay)
         }));
         const allEvents = [...internalRows, ...publicRows];
         const eventLive = (e) => getLiveStatus(e);
 
-        // ── Event Filters & Pagination ──────────────────────────────────
-        const q = eventSearch.trim().toLowerCase();
-        const filteredEvents = allEvents.filter((e) => {
-            const titleOk = !q || (e.title || '').toLowerCase().includes(q) || (e.location || '').toLowerCase().includes(q) || (e.speaker?.name || '').toLowerCase().includes(q);
-            const catOk = eventCategoryFilter === 'all' || (e.category || '').toLowerCase() === eventCategoryFilter;
-            const visOk = eventVisibilityFilter === 'all' || e.visibility === eventVisibilityFilter;
+        // ── Helper filter functions ──────────────────────────────────────
+        const isCancelled = (e) => e.status === 'CANCELLED' || e.eventStatus === 'CANCELLED';
+
+        const eventMatchesDateFilter = (e, filter) => {
+            if (!filter || filter === 'all') return true;
+            if (!e.startDate) return false;
+            const start = new Date(e.startDate);
+            if (Number.isNaN(start.getTime())) return false;
+            const end = e.endDate ? new Date(e.endDate) : start;
+
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+            const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+            if (filter === 'today') {
+                return start <= todayEnd && end >= todayStart;
+            }
+            if (filter === 'week') {
+                const dayOfWeek = now.getDay();
+                const diffToMon = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;
+                const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMon, 0, 0, 0, 0);
+                const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
+                return start <= weekEnd && end >= weekStart;
+            }
+            if (filter === 'month') {
+                const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+                const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+                return start <= monthEnd && end >= monthStart;
+            }
+            if (filter === 'next30') {
+                const next30End = new Date(todayStart.getTime() + 30 * 24 * 60 * 60 * 1000);
+                return start <= next30End && end >= todayStart;
+            }
+            if (filter === 'past') {
+                return end < todayStart;
+            }
+            return true;
+        };
+
+        const eventMatchesStatusFilter = (e, filter) => {
+            if (!filter || filter === 'all') return true;
             const live = eventLive(e);
-            const statusOk = eventStatusFilter === 'all' || live === eventStatusFilter || (e.status && e.status.toLowerCase() === eventStatusFilter);
-            let dateOk = true;
-            if (eventDateFilter === 'today') dateOk = e.startDate && isSameDay(new Date(e.startDate), new Date());
-            else if (eventDateFilter === 'week') dateOk = e.startDate && dateInRange(e.startDate, 0, 7);
-            else if (eventDateFilter === 'month') dateOk = e.startDate && dateInRange(e.startDate, 0, 30);
-            else if (eventDateFilter === 'next30') dateOk = e.startDate && dateInRange(e.startDate, 1, 30);
-            return titleOk && catOk && visOk && statusOk && dateOk;
+            const cancelled = isCancelled(e);
+            const evStatus = (e.status || '').toLowerCase();
+
+            if (filter === 'upcoming') return !cancelled && live === 'upcoming';
+            if (filter === 'live' || filter === 'ongoing') return !cancelled && (live === 'live' || live === 'ongoing');
+            if (filter === 'completed') return !cancelled && live === 'completed';
+            if (filter === 'cancelled') return cancelled;
+            if (filter === 'pending') return e.visibility === 'public' && !cancelled && (evStatus === 'draft' || evStatus === 'pending_review');
+            if (filter === 'approved') return e.visibility === 'public' && !cancelled && evStatus === 'approved';
+            return live === filter || evStatus === filter;
+        };
+
+        const eventMatchesCategoryFilter = (e, filter) => {
+            if (!filter || filter === 'all') return true;
+            return (e.category || '').trim().toLowerCase() === filter.trim().toLowerCase();
+        };
+
+        const eventMatchesVisibilityFilter = (e, filter) => {
+            if (!filter || filter === 'all') return true;
+            return (e.visibility || 'internal').toLowerCase() === filter.toLowerCase();
+        };
+
+        const eventMatchesSearch = (e, query) => {
+            if (!query) return true;
+            const q = query.trim().toLowerCase();
+            const title = (e.title || '').toLowerCase();
+            const location = (e.location || e.venue || '').toLowerCase();
+            const category = (e.category || '').toLowerCase();
+            const speaker = (e.speaker?.name || '').toLowerCase();
+            const desc = Array.isArray(e.description)
+                ? e.description.join(' ').toLowerCase()
+                : (e.description || '').toLowerCase();
+            const visibility = (e.visibility || '').toLowerCase();
+            const platform = (e.meetingPlatform || e.meetingProvider || '').toLowerCase();
+
+            return title.includes(q) ||
+                location.includes(q) ||
+                category.includes(q) ||
+                speaker.includes(q) ||
+                desc.includes(q) ||
+                visibility.includes(q) ||
+                platform.includes(q);
+        };
+
+        // ── Event Filters & Pagination ──────────────────────────────────
+        const filteredEvents = allEvents.filter((e) => {
+            return eventMatchesSearch(e, eventSearch) &&
+                   eventMatchesCategoryFilter(e, eventCategoryFilter) &&
+                   eventMatchesStatusFilter(e, eventStatusFilter) &&
+                   eventMatchesVisibilityFilter(e, eventVisibilityFilter) &&
+                   eventMatchesDateFilter(e, eventDateFilter);
         });
 
         const isFilterActive = Boolean(
@@ -4215,9 +4851,13 @@ const resetCalendarForm = () => {
 
         const stats = {
             total: allEvents.length,
-            upcoming: allEvents.filter((e) => eventLive(e) === 'upcoming').length,
-            ongoing: allEvents.filter((e) => eventLive(e) === 'live').length,
-            completed: allEvents.filter((e) => eventLive(e) === 'completed').length
+            upcoming: allEvents.filter((e) => !isCancelled(e) && eventLive(e) === 'upcoming').length,
+            ongoing: allEvents.filter((e) => !isCancelled(e) && (eventLive(e) === 'live' || eventLive(e) === 'ongoing')).length,
+            completed: allEvents.filter((e) => !isCancelled(e) && eventLive(e) === 'completed').length,
+            pending: allEvents.filter((e) => e.visibility === 'public' && !isCancelled(e) && (e.status === 'DRAFT' || e.status === 'PENDING_REVIEW')).length,
+            cancelled: allEvents.filter((e) => isCancelled(e)).length,
+            internal: allEvents.filter((e) => e.visibility === 'internal').length,
+            public: allEvents.filter((e) => e.visibility === 'public').length
         };
 
         const allCatKeys = Array.from(new Set([
@@ -4225,16 +4865,89 @@ const resetCalendarForm = () => {
             ...EVENT_CATEGORIES.map((c) => c.toLowerCase()),
             ...allEvents.map((e) => (e.category || '').toLowerCase()).filter(Boolean)
         ])).sort();
-        const catLabel = (c) => c === 'all' ? 'All Categories' : c.charAt(0).toUpperCase() + c.slice(1);
+
+        const catLabel = (c) => {
+            if (!c || c === 'all') return 'All Categories';
+            return c.split(/[\s_-]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        };
+
+        const dateLabel = (d) => {
+            const labels = {
+                all: 'All Dates',
+                today: 'Today',
+                week: 'This Week',
+                month: 'This Month',
+                next30: 'Next 30 Days',
+                past: 'Past Events'
+            };
+            return labels[d] || d;
+        };
+
+        const statusLabel = (st) => {
+            const labels = {
+                all: 'All Statuses',
+                upcoming: 'Upcoming',
+                live: 'Ongoing',
+                completed: 'Completed',
+                pending: 'Needs Approval',
+                cancelled: 'Cancelled'
+            };
+            return labels[st] || st;
+        };
 
         const chip = (color, bg) => ({ padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, color, background: bg, textTransform: 'capitalize', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 });
 
-        const statCard = (label, value, color) => (
-            <div style={{ padding: '16px 18px', borderRadius: 14, background: colors.bgCard, border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: colors.textMuted }}>{label}</span>
-                <strong style={{ fontSize: 26, fontWeight: 800, color }}>{value}</strong>
-            </div>
-        );
+        const statCard = (label, value, color, statusKey) => {
+            const isCardActive = statusKey === 'all'
+                ? (eventStatusFilter === 'all' && eventDateFilter === 'all')
+                : (eventStatusFilter === statusKey);
+            return (
+                <div
+                    key={label}
+                    onClick={() => {
+                        if (statusKey === 'all') {
+                            setEventStatusFilter('all');
+                            setEventDateFilter('all');
+                        } else {
+                            setEventStatusFilter(prev => prev === statusKey ? 'all' : statusKey);
+                        }
+                        setEventCurrentPage(1);
+                    }}
+                    title={`Click to filter table by ${label}`}
+                    style={{
+                        padding: '16px 18px',
+                        borderRadius: 14,
+                        background: isCardActive ? (theme === 'dark' ? 'rgba(16,185,129,0.12)' : '#ecfdf5') : colors.bgCard,
+                        border: `1.5px solid ${isCardActive ? color : colors.border}`,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 4,
+                        cursor: 'pointer',
+                        transition: 'all 0.18s ease',
+                        boxShadow: isCardActive ? `0 4px 16px ${color}25` : 'none',
+                        userSelect: 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                        if (!isCardActive) e.currentTarget.style.borderColor = color;
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                        if (!isCardActive) e.currentTarget.style.borderColor = colors.border;
+                        e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: colors.textMuted }}>{label}</span>
+                        {isCardActive && (
+                            <span style={{ fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 999, background: color, color: '#fff', textTransform: 'uppercase' }}>
+                                Active
+                            </span>
+                        )}
+                    </div>
+                    <strong style={{ fontSize: 26, fontWeight: 800, color }}>{value}</strong>
+                </div>
+            );
+        };
 
         // Color-Coded Status System: Green for Ongoing, Blue for Upcoming, Grey for Completed, Red for Cancelled
         const getEventStatusBadge = (event) => {
@@ -4339,13 +5052,22 @@ const resetCalendarForm = () => {
         };
 
         const renderDateCell = (event) => {
-            const allDay = Boolean(event.isAllDay);
-            const startTxt = event.startDate ? `${formatDateShort(event.startDate)}${allDay ? '' : ` at ${formatTimeShort(event.startDate)}`}` : '-';
-            const endTxt = event.endDate ? `${formatDateShort(event.endDate)}${allDay ? '' : ` at ${formatTimeShort(event.endDate)}`}` : '';
+            const allDay = Boolean(event.isAllDay || event.allDay);
+            let timeTxt = '';
+            if (!allDay) {
+                if (event.startTime) {
+                    timeTxt = ` at ${event.startTime}${event.endTime ? ` - ${event.endTime}` : ''}`;
+                } else if (event.startDate) {
+                    timeTxt = ` at ${formatTimeShort(event.startDate)}`;
+                }
+            }
+            const startTxt = event.startDate ? `${formatDateShort(event.startDate)}${allDay ? ' (All Day)' : timeTxt}` : '-';
+            const hasDifferentEndDate = event.endDate && (!event.startDate || formatDateShort(event.startDate) !== formatDateShort(event.endDate));
+            const endTxt = hasDifferentEndDate ? `to ${formatDateShort(event.endDate)}` : '';
             return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 170, whiteSpace: 'nowrap' }}>
                     <span style={{ color: colors.text, fontSize: 13, fontWeight: 600 }}>{startTxt}</span>
-                    {endTxt && <span style={{ color: colors.textMuted, fontSize: 12 }}>to {endTxt}</span>}
+                    {endTxt && <span style={{ color: colors.textMuted, fontSize: 12 }}>{endTxt}</span>}
                 </div>
             );
         };
@@ -4354,7 +5076,7 @@ const resetCalendarForm = () => {
         const renderLocationCell = (event) => {
             const streamUrl = event.streamUrl || event.meetingUrl;
             const showStream = event.eventType !== 'Physical' && streamUrl;
-            const loc = event.location || (event.eventType === 'Online' ? 'Online Live Stream' : '');
+            const loc = event.location || event.venue || (event.eventType === 'Online' ? 'Online Live Stream' : '');
 
             return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 140, maxWidth: 190 }}>
@@ -4407,12 +5129,12 @@ const resetCalendarForm = () => {
                 <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 800, color: colors.text }}>
                     {isFilterActive ? 'No events found matching your filters.' : 'No events found.'}
                 </h3>
-                <p style={{ margin: '0 auto 20px', maxWidth: 420, fontSize: 14, color: colors.textMuted, lineHeight: '1.5' }}>
+                <p style={{ margin: '0 auto 20px', maxWidth: 460, fontSize: 14, color: colors.textMuted, lineHeight: '1.5' }}>
                     {isFilterActive
-                        ? 'Try adjusting your search keywords, category, or status dropdown selections.'
+                        ? `Found 0 matching events out of ${allEvents.length} total events. Try clearing or adjusting search keywords, category, status, or date selections.`
                         : 'Click "Create Event" to schedule workshops, masterclasses, exams, or live stream sessions.'}
                 </p>
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
                     <button type="button" onClick={openCreateEvent} style={{ ...s.primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px' }}>
                         <Plus size={16} /> Create Event
                     </button>
@@ -4437,7 +5159,7 @@ const resetCalendarForm = () => {
                                 color: '#10b981'
                             }}
                         >
-                            <RotateCcw size={14} /> Clear Filters
+                            <RotateCcw size={14} /> Clear All Filters ({allEvents.length} Total)
                         </button>
                     )}
                 </div>
@@ -4463,12 +5185,13 @@ const resetCalendarForm = () => {
                 </button>
             </div>
 
-            {/* Statistics row */}
+            {/* Statistics row with interactive click-to-filter */}
             <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', marginBottom: 20 }}>
-                {statCard('Total Events', stats.total, colors.text)}
-                {statCard('Upcoming', stats.upcoming, '#38bdf8')}
-                {statCard('Ongoing', stats.ongoing, '#10b981')}
-                {statCard('Completed', stats.completed, '#64748b')}
+                {statCard('Total Events', stats.total, colors.text, 'all')}
+                {statCard('Upcoming', stats.upcoming, '#38bdf8', 'upcoming')}
+                {statCard('Ongoing', stats.ongoing, '#10b981', 'live')}
+                {statCard('Completed', stats.completed, '#64748b', 'completed')}
+                {stats.pending > 0 && statCard('Needs Approval', stats.pending, '#f59e0b', 'pending')}
             </div>
 
             {/* Filter toolbar: Wider search bar and uniform width for all 4 dropdowns + Clear Filters button */}
@@ -4480,7 +5203,7 @@ const resetCalendarForm = () => {
                         <input
                             value={eventSearch}
                             onChange={(e) => { setEventSearch(e.target.value); setEventCurrentPage(1); }}
-                            placeholder="Search event title, venue, or instructor..."
+                            placeholder="Search event title, category, venue, or instructor..."
                             style={{
                                 ...s.input,
                                 width: '100%',
@@ -4510,13 +5233,21 @@ const resetCalendarForm = () => {
                                 fontWeight: '500',
                                 borderRadius: '10px',
                                 boxSizing: 'border-box',
-                                border: `1.5px solid ${eventCategoryFilter !== 'all' ? '#10b981' : colors.border}`
+                                border: `1.5px solid ${eventCategoryFilter !== 'all' ? '#10b981' : colors.border}`,
+                                background: eventCategoryFilter !== 'all' ? (theme === 'dark' ? 'rgba(16,185,129,0.08)' : '#f0fdf4') : (colors.bgInput || colors.bgCard)
                             }}
                         >
-                            <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Categories</option>
-                            {allCatKeys.map((c) => (
-                                <option key={c} value={c} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>{catLabel(c)}</option>
-                            ))}
+                            <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>
+                                All Categories ({allEvents.length})
+                            </option>
+                            {allCatKeys.map((c) => {
+                                const count = allEvents.filter(e => (e.category || '').toLowerCase() === c.toLowerCase()).length;
+                                return (
+                                    <option key={c} value={c} style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>
+                                        {catLabel(c)} ({count})
+                                    </option>
+                                );
+                            })}
                         </select>
                         <ChevronDown size={15} color={eventCategoryFilter !== 'all' ? '#10b981' : "#94a3b8"} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     </div>
@@ -4537,14 +5268,18 @@ const resetCalendarForm = () => {
                                 fontWeight: '500',
                                 borderRadius: '10px',
                                 boxSizing: 'border-box',
-                                border: `1.5px solid ${eventStatusFilter !== 'all' ? '#10b981' : colors.border}`
+                                border: `1.5px solid ${eventStatusFilter !== 'all' ? '#10b981' : colors.border}`,
+                                background: eventStatusFilter !== 'all' ? (theme === 'dark' ? 'rgba(16,185,129,0.08)' : '#f0fdf4') : (colors.bgInput || colors.bgCard)
                             }}
                         >
-                            <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Statuses</option>
-                            <option value="upcoming" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Upcoming</option>
-                            <option value="live" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Ongoing</option>
-                            <option value="completed" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Completed</option>
-                            <option value="cancelled" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Cancelled</option>
+                            <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Statuses ({allEvents.length})</option>
+                            <option value="upcoming" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Upcoming ({stats.upcoming})</option>
+                            <option value="live" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Ongoing ({stats.ongoing})</option>
+                            <option value="completed" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Completed ({stats.completed})</option>
+                            {stats.pending > 0 && (
+                                <option value="pending" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Needs Approval ({stats.pending})</option>
+                            )}
+                            <option value="cancelled" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Cancelled ({stats.cancelled})</option>
                         </select>
                         <ChevronDown size={15} color={eventStatusFilter !== 'all' ? '#10b981' : "#94a3b8"} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     </div>
@@ -4565,12 +5300,13 @@ const resetCalendarForm = () => {
                                 fontWeight: '500',
                                 borderRadius: '10px',
                                 boxSizing: 'border-box',
-                                border: `1.5px solid ${eventVisibilityFilter !== 'all' ? '#10b981' : colors.border}`
+                                border: `1.5px solid ${eventVisibilityFilter !== 'all' ? '#10b981' : colors.border}`,
+                                background: eventVisibilityFilter !== 'all' ? (theme === 'dark' ? 'rgba(16,185,129,0.08)' : '#f0fdf4') : (colors.bgInput || colors.bgCard)
                             }}
                         >
-                            <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Visibility</option>
-                            <option value="internal" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Internal</option>
-                            <option value="public" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Public</option>
+                            <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Visibility ({allEvents.length})</option>
+                            <option value="internal" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Internal ({stats.internal})</option>
+                            <option value="public" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Public ({stats.public})</option>
                         </select>
                         <ChevronDown size={15} color={eventVisibilityFilter !== 'all' ? '#10b981' : "#94a3b8"} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     </div>
@@ -4591,7 +5327,8 @@ const resetCalendarForm = () => {
                                 fontWeight: '500',
                                 borderRadius: '10px',
                                 boxSizing: 'border-box',
-                                border: `1.5px solid ${eventDateFilter !== 'all' ? '#10b981' : colors.border}`
+                                border: `1.5px solid ${eventDateFilter !== 'all' ? '#10b981' : colors.border}`,
+                                background: eventDateFilter !== 'all' ? (theme === 'dark' ? 'rgba(16,185,129,0.08)' : '#f0fdf4') : (colors.bgInput || colors.bgCard)
                             }}
                         >
                             <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Dates</option>
@@ -4599,6 +5336,7 @@ const resetCalendarForm = () => {
                             <option value="week" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>This Week</option>
                             <option value="month" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>This Month</option>
                             <option value="next30" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Next 30 Days</option>
+                            <option value="past" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Past Events</option>
                         </select>
                         <ChevronDown size={15} color={eventDateFilter !== 'all' ? '#10b981' : "#94a3b8"} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     </div>
@@ -4640,6 +5378,66 @@ const resetCalendarForm = () => {
                         </button>
                     )}
                 </div>
+
+                {/* Active Filter Chips with (x) to remove individually */}
+                {isFilterActive && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 14, paddingTop: 12, borderTop: `1px solid ${colors.border}` }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: colors.textMuted }}>Active Filters:</span>
+                        {eventSearch && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: colors.text, fontSize: '12px', fontWeight: '500' }}>
+                                <span>Search: <strong>"{eventSearch}"</strong></span>
+                                <X size={13} style={{ cursor: 'pointer', color: colors.textMuted }} onClick={() => setEventSearch('')} />
+                            </span>
+                        )}
+                        {eventCategoryFilter !== 'all' && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: colors.text, fontSize: '12px', fontWeight: '500' }}>
+                                <span>Category: <strong>{catLabel(eventCategoryFilter)}</strong></span>
+                                <X size={13} style={{ cursor: 'pointer', color: colors.textMuted }} onClick={() => setEventCategoryFilter('all')} />
+                            </span>
+                        )}
+                        {eventStatusFilter !== 'all' && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: colors.text, fontSize: '12px', fontWeight: '500' }}>
+                                <span>Status: <strong>{statusLabel(eventStatusFilter)}</strong></span>
+                                <X size={13} style={{ cursor: 'pointer', color: colors.textMuted }} onClick={() => setEventStatusFilter('all')} />
+                            </span>
+                        )}
+                        {eventVisibilityFilter !== 'all' && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: colors.text, fontSize: '12px', fontWeight: '500' }}>
+                                <span>Visibility: <strong>{eventVisibilityFilter.charAt(0).toUpperCase() + eventVisibilityFilter.slice(1)}</strong></span>
+                                <X size={13} style={{ cursor: 'pointer', color: colors.textMuted }} onClick={() => setEventVisibilityFilter('all')} />
+                            </span>
+                        )}
+                        {eventDateFilter !== 'all' && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: colors.text, fontSize: '12px', fontWeight: '500' }}>
+                                <span>Date: <strong>{dateLabel(eventDateFilter)}</strong></span>
+                                <X size={13} style={{ cursor: 'pointer', color: colors.textMuted }} onClick={() => setEventDateFilter('all')} />
+                            </span>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setEventSearch('');
+                                setEventCategoryFilter('all');
+                                setEventStatusFilter('all');
+                                setEventVisibilityFilter('all');
+                                setEventDateFilter('all');
+                                setEventCurrentPage(1);
+                            }}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: colors.primary,
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                padding: '2px 6px',
+                                textDecoration: 'underline'
+                            }}
+                        >
+                            Reset all
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Floating Bulk Actions Bar (Bulk Approve / Bulk Delete) */}
@@ -4731,9 +5529,16 @@ const resetCalendarForm = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: `1px solid ${colors.border}`, flexWrap: 'wrap', gap: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <h3 style={{ ...s.cardTitle, margin: 0 }}>All Events</h3>
-                        <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '12px', background: `${colors.primary}15`, color: colors.primary, fontWeight: '600' }}>
-                            {totalFilteredEvents} {totalFilteredEvents === 1 ? 'event' : 'events'}
+                        <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '12px', background: `${colors.primary}15`, color: colors.primary, fontWeight: '700' }}>
+                            {isFilterActive
+                                ? `Showing ${totalFilteredEvents} of ${allEvents.length} events`
+                                : `${totalFilteredEvents} ${totalFilteredEvents === 1 ? 'event' : 'events'}`}
                         </span>
+                        {isFilterActive && (
+                            <span style={{ fontSize: '12px', color: '#10b981', fontWeight: '600' }}>
+                                (Filter active)
+                            </span>
+                        )}
                     </div>
                 </div>
 
@@ -4844,32 +5649,50 @@ const resetCalendarForm = () => {
                                                     </div>
                                                 </td>
                                                 <td style={s.instructorTd}>
-                                                    <span style={{ ...chip(colors.primary, `${colors.primary}14`), textTransform: 'capitalize' }}>
-                                                        {event.category || 'Event'}
+                                                    <span style={{ ...chip(colors.primary, `${colors.primary}14`), textTransform: 'none' }}>
+                                                        {catLabel(event.category || 'Event')}
                                                     </span>
                                                 </td>
                                                 <td style={s.instructorTd}>{renderDateCell(event)}</td>
                                                 <td style={s.instructorTd}>{renderLocationCell(event)}</td>
-                                                {/* Color-Coded Status Badge */}
+                                                {/* Color-Coded Status Badge + Publication Pill */}
                                                 <td style={s.instructorTd}>
-                                                    <span
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            gap: 6,
-                                                            padding: '4px 10px',
-                                                            borderRadius: 999,
-                                                            fontSize: '11px',
-                                                            fontWeight: 700,
-                                                            color: sc.color,
-                                                            background: sc.bg,
-                                                            border: `1px solid ${sc.border}`,
-                                                            whiteSpace: 'nowrap'
-                                                        }}
-                                                    >
-                                                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot }} />
-                                                        {sc.label}
-                                                    </span>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                                                        <span
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: 6,
+                                                                padding: '4px 10px',
+                                                                borderRadius: 999,
+                                                                fontSize: '11px',
+                                                                fontWeight: 700,
+                                                                color: sc.color,
+                                                                background: sc.bg,
+                                                                border: `1px solid ${sc.border}`,
+                                                                whiteSpace: 'nowrap'
+                                                            }}
+                                                        >
+                                                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot }} />
+                                                            {sc.label}
+                                                        </span>
+                                                        {event.visibility === 'public' && event.status !== 'APPROVED' && event.status !== 'CANCELLED' && (
+                                                            <span style={{
+                                                                fontSize: '10px',
+                                                                fontWeight: 700,
+                                                                padding: '2px 7px',
+                                                                borderRadius: 4,
+                                                                background: 'rgba(245,158,11,0.15)',
+                                                                color: '#f59e0b',
+                                                                border: '1px solid rgba(245,158,11,0.3)',
+                                                                whiteSpace: 'nowrap',
+                                                                textTransform: 'uppercase',
+                                                                letterSpacing: '0.04em'
+                                                            }}>
+                                                                {event.status === 'DRAFT' ? 'Draft' : 'Pending Review'}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td style={s.instructorTd}>
                                                     <span style={event.visibility === 'public' ? chip('#10b981', 'rgba(16,185,129,0.12)') : chip('#94a3b8', 'rgba(148,163,184,0.14)')}>
@@ -4901,26 +5724,42 @@ const resetCalendarForm = () => {
                                                 <strong title={event.title} style={{ fontSize: 14, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
                                                     {event.title}
                                                 </strong>
-                                                <span
-                                                    style={{
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        gap: 6,
-                                                        padding: '3px 8px',
-                                                        borderRadius: 999,
-                                                        fontSize: '11px',
-                                                        fontWeight: 700,
-                                                        color: sc.color,
-                                                        background: sc.bg,
-                                                        border: `1px solid ${sc.border}`
-                                                    }}
-                                                >
-                                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot }} />
-                                                    {sc.label}
-                                                </span>
+                                                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                                    <span
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: 6,
+                                                            padding: '3px 8px',
+                                                            borderRadius: 999,
+                                                            fontSize: '11px',
+                                                            fontWeight: 700,
+                                                            color: sc.color,
+                                                            background: sc.bg,
+                                                            border: `1px solid ${sc.border}`
+                                                        }}
+                                                    >
+                                                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot }} />
+                                                        {sc.label}
+                                                    </span>
+                                                    {event.visibility === 'public' && event.status !== 'APPROVED' && event.status !== 'CANCELLED' && (
+                                                        <span style={{
+                                                            fontSize: '10px',
+                                                            fontWeight: 700,
+                                                            padding: '2px 6px',
+                                                            borderRadius: 4,
+                                                            background: 'rgba(245,158,11,0.15)',
+                                                            color: '#f59e0b',
+                                                            border: '1px solid rgba(245,158,11,0.3)',
+                                                            textTransform: 'uppercase'
+                                                        }}>
+                                                            {event.status === 'DRAFT' ? 'Draft' : 'Pending'}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-                                                <span style={{ ...chip(colors.primary, `${colors.primary}14`), textTransform: 'capitalize' }}>{event.category || 'Event'}</span>
+                                                <span style={{ ...chip(colors.primary, `${colors.primary}14`), textTransform: 'none' }}>{catLabel(event.category || 'Event')}</span>
                                                 <span style={event.visibility === 'public' ? chip('#10b981', 'rgba(16,185,129,0.12)') : chip('#94a3b8', 'rgba(148,163,184,0.14)')}>
                                                     {event.visibility === 'public' ? 'Public' : 'Internal'}
                                                 </span>
@@ -6291,9 +7130,39 @@ const resetCalendarForm = () => {
                 </form>
             </Modal>
 
-            <Modal isOpen={isPasswordModalOpen} onClose={() => { setIsPasswordModalOpen(false); setSelectedUser(null); setNewPassword(''); setShowResetPassword(false); }} title={`Reset Password for ${selectedUser?.fullName}`}>
+            {/* ── RESET PASSWORD MODAL ── */}
+            <Modal isOpen={isPasswordModalOpen} onClose={() => { setIsPasswordModalOpen(false); setSelectedUser(null); setNewPassword(''); setShowResetPassword(false); }} title={`Reset Password for ${selectedUser?.fullName || 'User'}`} maxWidth="480px">
                 <div style={{display:'flex', flexDirection:'column', gap:'16px'}}>
-                    <p style={{color:'#666', fontSize:'14px', margin:'0 0 12px'}}>Choose how to reset the password:</p>
+                    {selectedUser && (
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '12px 14px',
+                            borderRadius: '10px',
+                            background: `${colors.primary}12`,
+                            border: `1px solid ${colors.primary}30`
+                        }}>
+                            <div style={{
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '8px',
+                                background: `${colors.primary}20`,
+                                color: colors.primary,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                            }}>
+                                <KeyRound size={18} />
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: '14px', fontWeight: '700', color: colors.text }}>{selectedUser.fullName}</div>
+                                <div style={{ fontSize: '12px', color: colors.textMuted }}>{selectedUser.accountEmail} • <span style={{ fontWeight: '600' }}>{selectedUser.assignedRole}</span></div>
+                            </div>
+                        </div>
+                    )}
+                    <p style={{color: colors.textMuted, fontSize:'14px', margin:'0'}}>Choose how to reset the user's password:</p>
                     
                     {/* Option 1: Send Reset Email */}
                     <button 
@@ -6302,49 +7171,227 @@ const resetCalendarForm = () => {
                             setNewPassword('');
                             handlePasswordReset(e);
                         }}
-                        style={{...s.primaryBtn, background:'#10b981', marginBottom:'12px', display: 'inline-flex', alignItems: 'center', gap: '8px'}}
+                        style={{...s.primaryBtn, background:'#10b981', color: '#ffffff', fontWeight: '700', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(16,185,129,0.3)'}}
                     >
-                        <Mail size={18} aria-hidden="true" />
-                        Send Password Reset Email
+                        <Mail size={18} aria-hidden="true" color="#ffffff" />
+                        <span>Send Password Reset Email</span>
                     </button>
-                    <p style={{textAlign:'center', color:'#999', fontSize:'12px'}}>User receives email with reset link (expires in 15 mins)</p>
+                    <p style={{textAlign:'center', color: colors.textMuted, fontSize:'12px', margin: '-8px 0 0'}}>User receives an email with a secure reset link (valid for 15 mins)</p>
 
-                    <div style={{borderTop:'1px solid #eee', padding:'12px 0', textAlign:'center', color:'#999', fontSize:'12px'}}>
-                        OR
+                    <div style={{display: 'flex', alignItems: 'center', gap: '12px', margin: '4px 0'}}>
+                        <div style={{flex: 1, height: '1px', background: colors.border}} />
+                        <span style={{color: colors.textMuted, fontSize:'12px', fontWeight: '700'}}>OR</span>
+                        <div style={{flex: 1, height: '1px', background: colors.border}} />
                     </div>
 
                     {/* Option 2: Force Reset */}
                     <form onSubmit={handlePasswordReset} style={{display:'flex', flexDirection:'column', gap:'12px'}}>
-                        <label style={{fontSize:'13px', fontWeight:'500', color:'#333'}}>Force Reset with New Password:</label>
+                        <label style={{fontSize:'13px', fontWeight:'700', color: colors.text}}>Set New Temporary Password:</label>
                         <div style={{ position: 'relative' }}>
                             <input 
                                 type={showResetPassword ? 'text' : 'password'} 
                                 value={newPassword} 
                                 onChange={(e) => setNewPassword(e.target.value)} 
-                                placeholder="Enter new temporary password (min 8 chars)" 
-                                style={{ ...s.input, paddingRight: '44px' }} 
+                                placeholder="Enter temporary password (min 8 characters)" 
+                                style={{ ...s.input, paddingRight: '44px', color: colors.text, background: colors.bgInput }} 
                                 minLength={8} 
                             />
                             <button 
                                 type="button" 
                                 onClick={() => setShowResetPassword(!showResetPassword)} 
-                                style={{ ...s.iconBtn, position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)' }}
+                                style={{ ...s.iconBtn, position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', border: 'none', color: colors.textMuted }}
                                 aria-label={showResetPassword ? 'Hide password' : 'Show password'}
                             >
                                 {showResetPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
                             </button>
                         </div>
-                        <button type="submit" style={{...s.primaryBtn, background:'#f59e0b', opacity: newPassword.length >= 8 ? 1 : 0.5}} disabled={newPassword.length < 8}>
-                            <RotateCcw size={18} aria-hidden="true" />
-                            Force Reset Password
+                        <button type="submit" style={{...s.primaryBtn, background:'#2563eb', color: '#ffffff', fontWeight: '700', opacity: newPassword.length >= 8 ? 1 : 0.6, cursor: newPassword.length >= 8 ? 'pointer' : 'not-allowed', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: newPassword.length >= 8 ? '0 4px 12px rgba(37,99,235,0.3)' : 'none'}} disabled={newPassword.length < 8}>
+                            <RotateCcw size={18} aria-hidden="true" color="#ffffff" />
+                            <span>Force Reset Password</span>
                         </button>
                     </form>
-                    <p style={{fontSize:'12px', color:'#d32f2f', marginTop:'8px', display: 'flex', alignItems: 'center', gap: '6px'}}>
-                        <AlertTriangle size={16} aria-hidden="true" />
-                        Direct reset: User account is immediately changed. A confirmation email will be sent.
-                    </p>
+                    <div style={{fontSize:'12px', color:'#ef4444', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(239,68,68,0.08)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.2)'}}>
+                        <AlertTriangle size={16} style={{ flexShrink: 0 }} aria-hidden="true" />
+                        <span>Direct reset: User password is immediately overwritten. A confirmation notification will be sent.</span>
+                    </div>
                 </div>
             </Modal>
+
+            {/* ── SAFE SUSPEND USER CONFIRMATION MODAL ── */}
+            {userToSuspend && (
+                <Modal
+                    isOpen={Boolean(userToSuspend)}
+                    onClose={() => { if (!isSubmittingUserAction) setUserToSuspend(null); }}
+                    title={userToSuspend.isActive ? "Suspend User Account?" : "Reactivate User Account?"}
+                    maxWidth="480px"
+                >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '14px',
+                            borderRadius: '12px',
+                            background: userToSuspend.isActive ? 'rgba(245, 158, 11, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                            border: `1px solid ${userToSuspend.isActive ? 'rgba(245, 158, 11, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`
+                        }}>
+                            <div style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '50%',
+                                background: userToSuspend.isActive ? 'rgba(245, 158, 11, 0.2)' : 'rgba(34, 197, 94, 0.2)',
+                                color: userToSuspend.isActive ? '#f59e0b' : '#22c55e',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                            }}>
+                                {userToSuspend.isActive ? <Ban size={20} /> : <CheckCircle2 size={20} />}
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                                <div style={{ fontWeight: '700', fontSize: '15px', color: colors.text }}>
+                                    {userToSuspend.fullName}
+                                </div>
+                                <div style={{ fontSize: '12px', color: colors.textMuted }}>
+                                    {userToSuspend.accountEmail} • <span style={{ fontWeight: '600', color: colors.text }}>{userToSuspend.assignedRole}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p style={{ color: colors.textMuted, fontSize: '14px', lineHeight: '1.5', margin: 0 }}>
+                            {userToSuspend.isActive ? (
+                                <>
+                                    Are you sure you want to suspend this account? The user will be immediately logged out and blocked from enrolling in courses, taking quizzes, and accessing platform features.
+                                </>
+                            ) : (
+                                <>
+                                    Are you sure you want to reactivate this account? Platform access, course materials, and account privileges will be immediately restored.
+                                </>
+                            )}
+                        </p>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+                            <button
+                                type="button"
+                                onClick={() => setUserToSuspend(null)}
+                                disabled={isSubmittingUserAction}
+                                style={s.secondaryBtn}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmToggleUserStatus}
+                                disabled={isSubmittingUserAction}
+                                style={{
+                                    ...s.primaryBtn,
+                                    background: userToSuspend.isActive ? '#f59e0b' : '#16a34a',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}
+                            >
+                                {isSubmittingUserAction ? (
+                                    <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                    userToSuspend.isActive ? <Ban size={16} /> : <CheckCircle2 size={16} />
+                                )}
+                                <span>{userToSuspend.isActive ? 'Confirm Suspension' : 'Confirm Reactivation'}</span>
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {/* ── SAFE DELETE USER CONFIRMATION MODAL ── */}
+            {userToDelete && (
+                <Modal
+                    isOpen={Boolean(userToDelete)}
+                    onClose={() => { if (!isSubmittingUserAction) setUserToDelete(null); }}
+                    title="Delete User Account?"
+                    maxWidth="480px"
+                >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '14px',
+                            borderRadius: '12px',
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)'
+                        }}>
+                            <div style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '50%',
+                                background: 'rgba(239, 68, 68, 0.2)',
+                                color: '#ef4444',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                            }}>
+                                <AlertTriangle size={20} />
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                                <div style={{ fontWeight: '700', fontSize: '15px', color: colors.text }}>
+                                    {userToDelete.fullName}
+                                </div>
+                                <div style={{ fontSize: '12px', color: colors.textMuted }}>
+                                    {userToDelete.accountEmail} • <span style={{ fontWeight: '600', color: colors.text }}>{userToDelete.assignedRole}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{
+                            background: 'rgba(239, 68, 68, 0.08)',
+                            borderLeft: '4px solid #ef4444',
+                            padding: '10px 14px',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            color: '#ef4444',
+                            fontWeight: '600'
+                        }}>
+                            ⚠️ Warning: This action cannot be undone. Platform access and records for this user will be removed.
+                        </div>
+
+                        <p style={{ color: colors.textMuted, fontSize: '14px', lineHeight: '1.5', margin: 0 }}>
+                            Are you sure you want to permanently delete this user account?
+                        </p>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+                            <button
+                                type="button"
+                                onClick={() => setUserToDelete(null)}
+                                disabled={isSubmittingUserAction}
+                                style={s.secondaryBtn}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmDeleteUser}
+                                disabled={isSubmittingUserAction}
+                                style={{
+                                    ...s.primaryBtn,
+                                    background: '#dc2626',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}
+                            >
+                                {isSubmittingUserAction ? (
+                                    <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                    <Trash2 size={16} />
+                                )}
+                                <span>Confirm Delete</span>
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
 
             {/* -?-?-?-?-?-?-?-?-?-?-? ENTERPRISE ASSIGN INSTRUCTOR MODAL -?-?-?-?-?-?-?-?-?-?-? */}
             <Modal isOpen={isAssignInstructorModalOpen} onClose={() => { setIsAssignInstructorModalOpen(false); setSelectedInstructorObj(null); setInstructorSearchQuery(''); setAssignInstructorIdInput(''); }} title="Assign Instructor to Course">

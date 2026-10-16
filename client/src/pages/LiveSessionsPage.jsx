@@ -377,7 +377,7 @@ export default function LiveSessionsPage() {
 
     return (
         <div style={{ display: 'flex', minHeight: '100vh', background: colors.bg }}>
-            <Sidebar navItems={navItems} activeTab="live" />
+            <Sidebar activeTab="live" />
             
             <main style={{ marginLeft: 'var(--sidebar-width, 260px)', padding: '40px', flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>

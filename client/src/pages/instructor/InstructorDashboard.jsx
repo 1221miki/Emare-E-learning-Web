@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/Sidebar';
 import {
@@ -113,7 +113,18 @@ export default function InstructorDashboard() {
         modalBody: { padding: '20px 24px 24px' }
     };
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('overview');
+    const location = useLocation();
+    const [activeTab, setActiveTab] = useState(() => location.state?.activeTab || 'overview');
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const tabParam = params.get('tab');
+        if (tabParam) {
+            setActiveTab(tabParam);
+        } else if (location.state?.activeTab) {
+            setActiveTab(location.state.activeTab);
+        }
+    }, [location.state, location.search]);
 
     // Data States
     const [courses, setCourses] = useState([]);
@@ -1698,9 +1709,72 @@ export default function InstructorDashboard() {
                 <h2 style={s.tabTitle}>Messages</h2>
                 <p style={s.tabSubtitle}>Message enrolled students and manage conversations.</p>
             </div>
-            <div style={s.panelCard}>
-                <p style={{ color: colors.textMuted }}>Go to the messaging center for full conversation support.</p>
-                <button onClick={() => navigate('/messages')} style={s.primaryBtn}>Open Messaging</button>
+            <div style={{
+                ...s.panelCard,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px',
+                border: `1px solid ${colors.border}`,
+                boxShadow: theme === 'dark' ? '0 10px 30px rgba(0,0,0,0.3)' : '0 4px 16px rgba(0,0,0,0.04)'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{
+                        width: '52px',
+                        height: '52px',
+                        borderRadius: '14px',
+                        background: 'rgba(34,197,94,0.15)',
+                        border: '1px solid rgba(34,197,94,0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: colors.primary,
+                        flexShrink: 0
+                    }}>
+                        <MessagesSquare size={26} />
+                    </div>
+                    <div>
+                        <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: colors.text }}>Direct Messaging Center</h3>
+                        <p style={{ margin: '4px 0 0', color: colors.textMuted, fontSize: '13px', lineHeight: '1.5' }}>
+                            Communicate directly with enrolled learners, address course questions, and manage active discussions.
+                        </p>
+                    </div>
+                </div>
+
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '14px 18px',
+                    borderRadius: '10px',
+                    background: theme === 'dark' ? 'rgba(30,41,59,0.35)' : 'rgba(241,245,249,0.8)',
+                    border: `1px solid ${colors.border}`,
+                    width: '100%',
+                    boxSizing: 'border-box'
+                }}>
+                    <span style={{ fontSize: '13px', color: colors.textMuted, lineHeight: '1.5' }}>
+                        Your messaging workspace keeps the full dashboard sidebar static so you can navigate across courses, students, and live classes anytime.
+                    </span>
+                </div>
+
+                <div>
+                    <button
+                        onClick={() => navigate('/messages', { state: { fromTab: 'messages', role: 'Instructor' } })}
+                        style={{
+                            ...s.primaryBtn,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '12px 26px',
+                            fontSize: '14px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 14px rgba(22,163,74,0.3)'
+                        }}
+                    >
+                        <MessagesSquare size={18} />
+                        <span>Open Messaging</span>
+                    </button>
+                </div>
             </div>
         </div>
     );

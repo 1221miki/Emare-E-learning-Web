@@ -7,13 +7,14 @@ import NotificationBell from './NotificationBell';
 import { 
     Sun, Moon, BookOpen, LogOut, LayoutDashboard, Award, 
     MessageSquare, Video, User, Settings, PlusCircle, Shield, Inbox,
-    ChevronLeft, ChevronRight
+    ChevronLeft, ChevronRight, BarChart3, Users, Wallet, Megaphone,
+    ClipboardCheck, Code2, Clock3, GraduationCap, CreditCard, MessagesSquare, Star
 } from 'lucide-react';
 
 const SIDEBAR_WIDTH_EXPANDED = 270;
 const SIDEBAR_WIDTH_COLLAPSED = 76;
 
-export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBottomButtons }) {
+export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBottomButtons, forceExpanded = false }) {
     const { user, logout } = useAuth();
     const { theme, toggleTheme, colors } = useTheme();
     const { t } = useLanguage();
@@ -24,7 +25,9 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
     const [hoveredItemKey, setHoveredItemKey] = useState(null);
     const [isToggleHovered, setIsToggleHovered] = useState(false);
 
-    const SIDEBAR_WIDTH = isCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED;
+    // If forceExpanded is true (e.g. on Messaging page), sidebar stays static & fully visible
+    const isEffectiveCollapsed = forceExpanded ? false : isCollapsed;
+    const SIDEBAR_WIDTH = isEffectiveCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED;
 
     const getProfilePath = () => {
         switch (user?.assignedRole) {
@@ -44,29 +47,42 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
         const role = user?.assignedRole;
         if (role === 'Instructor') {
             return [
-                { key: 'dashboard', label: 'Dashboard', path: '/instructor/dashboard', icon: <LayoutDashboard size={20} /> },
-                { key: 'create-course', label: 'Create Course', path: '/instructor/courses/new', icon: <PlusCircle size={20} /> },
-                { key: 'messages', label: 'Messages', path: '/messages', icon: <MessageSquare size={20} /> },
-                { key: 'live', label: 'Live Sessions', path: '/live-sessions', icon: <Video size={20} /> },
-                { key: 'settings', label: 'Settings', path: '/instructor/settings', icon: <Settings size={20} /> },
+                { key: 'overview', label: 'Dashboard', path: '/instructor/dashboard', state: { activeTab: 'overview' }, icon: <LayoutDashboard size={20} /> },
+                { key: 'courses', label: 'My Courses', path: '/instructor/dashboard', state: { activeTab: 'courses' }, icon: <BookOpen size={20} /> },
+                { key: 'students', label: 'Students', path: '/instructor/dashboard', state: { activeTab: 'students' }, icon: <Users size={20} /> },
+                { key: 'live', label: 'Live Classes', path: '/instructor/dashboard', state: { activeTab: 'live' }, icon: <Video size={20} /> },
+                { key: 'analytics', label: 'Analytics', path: '/instructor/dashboard', state: { activeTab: 'analytics' }, icon: <BarChart3 size={20} /> },
+                { key: 'messages', label: 'Messages', path: '/messages', state: { activeTab: 'messages' }, icon: <MessagesSquare size={20} /> },
+                { key: 'reviews', label: 'Reviews', path: '/instructor/dashboard', state: { activeTab: 'reviews' }, icon: <Star size={20} /> },
+                { key: 'settings', label: 'Settings', path: '/instructor/settings', state: { activeTab: 'settings' }, icon: <Settings size={20} /> }
             ];
         } else if (role === 'Admin') {
             return [
-                { key: 'dashboard', label: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
-                { key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-logs', icon: <Shield size={20} /> },
+                { key: 'overview', label: 'Overview', path: '/admin/dashboard', state: { activeTab: 'overview' }, icon: <LayoutDashboard size={20} /> },
+                { key: 'users', label: 'User Management', path: '/admin/dashboard', state: { activeTab: 'users' }, icon: <Users size={20} /> },
+                { key: 'security', label: 'Security & Roles', path: '/admin/dashboard', state: { activeTab: 'security' }, icon: <Shield size={20} /> },
+                { key: 'courses', label: 'Course Management', path: '/admin/dashboard', state: { activeTab: 'courses' }, icon: <BookOpen size={20} /> },
+                { key: 'analytics', label: 'Analytics Dashboard', path: '/admin/dashboard', state: { activeTab: 'analytics' }, icon: <BarChart3 size={20} /> },
+                { key: 'finances', label: 'Finances & Revenue', path: '/admin/dashboard', state: { activeTab: 'finances' }, icon: <Wallet size={20} /> },
+                { key: 'cms', label: 'CMS & Comms', path: '/admin/dashboard', state: { activeTab: 'cms' }, icon: <Megaphone size={20} /> },
+                { key: 'audit', label: 'Audit Logs', path: '/admin/audit-logs', icon: <ClipboardCheck size={20} /> },
                 { key: 'contact-messages', label: 'Contact Messages', path: '/admin/contact-messages', icon: <Inbox size={20} /> },
-                { key: 'messages', label: 'Messages', path: '/messages', icon: <MessageSquare size={20} /> },
-                { key: 'live', label: 'Live Sessions', path: '/live-sessions', icon: <Video size={20} /> },
-                { key: 'catalog', label: 'Courses', path: '/courses', icon: <BookOpen size={20} /> },
+                { key: 'messages', label: 'Direct Messages', path: '/messages', state: { activeTab: 'messages' }, icon: <MessagesSquare size={20} /> },
+                { key: 'developers', label: 'Developers', path: '/admin/dashboard', state: { activeTab: 'developers' }, icon: <Code2 size={20} /> },
+                { key: 'calendar', label: 'Event Management', path: '/admin/dashboard', state: { activeTab: 'calendar' }, icon: <Clock3 size={20} /> },
+                { key: 'system', label: 'System Settings', path: '/admin/dashboard', state: { activeTab: 'system' }, icon: <Settings size={20} /> }
             ];
         } else {
             // Student or Default
             return [
-                { key: 'dashboard', label: 'Dashboard', path: '/student/dashboard', icon: <LayoutDashboard size={20} /> },
+                { key: 'overview', label: 'Overview', path: '/student/dashboard', state: { activeTab: 'overview' }, icon: <LayoutDashboard size={20} /> },
+                { key: 'learning', label: 'My Learning', path: '/student/dashboard?tab=my_courses', state: { activeTab: 'learning' }, icon: <GraduationCap size={20} /> },
+                { key: 'live', label: 'Live Sessions', path: '/live-sessions', state: { activeTab: 'live' }, icon: <Video size={20} /> },
+                { key: 'discussions', label: 'Discussions', path: '/student/dashboard?tab=discussions', state: { activeTab: 'discussions' }, icon: <MessageSquare size={20} /> },
+                { key: 'messages', label: 'Messages', path: '/messages', state: { activeTab: 'messages' }, icon: <MessagesSquare size={20} /> },
                 { key: 'certificates', label: 'Certificates', path: '/student/certificates', icon: <Award size={20} /> },
-                { key: 'messages', label: 'Messages', path: '/messages', icon: <MessageSquare size={20} /> },
-                { key: 'live', label: 'Live Sessions', path: '/live-sessions', icon: <Video size={20} /> },
-                { key: 'profile', label: 'Profile', path: '/student/profile', icon: <User size={20} /> },
+                { key: 'payments', label: 'Payments', path: '/student/dashboard?tab=payments', state: { activeTab: 'payments' }, icon: <CreditCard size={20} /> },
+                { key: 'settings', label: 'Settings', path: '/student/profile', icon: <Settings size={20} /> }
             ];
         }
     })();
@@ -78,17 +94,20 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
         document.body.classList.toggle('emare-sidebar-right', position === 'right');
         document.body.style.setProperty('--sidebar-width', `${SIDEBAR_WIDTH}px`);
         document.documentElement.style.setProperty('--sidebar-width', `${SIDEBAR_WIDTH}px`);
+        if (!forceExpanded) {
+            localStorage.setItem('emare-sidebar-collapsed', isCollapsed ? 'true' : 'false');
+        }
         localStorage.setItem('emare-sidebar-position', position);
-        localStorage.setItem('emare-sidebar-collapsed', isCollapsed ? 'true' : 'false');
         // Notify responsive containers (charts, grids, etc.)
         window.dispatchEvent(new Event('resize'));
         return () => {
             document.body.classList.remove('emare-sidebar-right');
         };
-    }, [position, isCollapsed, SIDEBAR_WIDTH]);
+    }, [position, isCollapsed, SIDEBAR_WIDTH, forceExpanded]);
 
-    // Keyboard shortcut: Ctrl + B / Cmd + B to toggle collapse/expand
+    // Keyboard shortcut: Ctrl + B / Cmd + B to toggle collapse/expand (disabled when forceExpanded)
     useEffect(() => {
+        if (forceExpanded) return;
         const handleKeyDown = (e) => {
             if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) {
                 // Don't trigger if focus is inside an input/textarea
@@ -102,9 +121,11 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
+    }, [forceExpanded]);
 
-    const toggleCollapse = () => setIsCollapsed(!isCollapsed);
+    const toggleCollapse = () => {
+        if (!forceExpanded) setIsCollapsed(!isCollapsed);
+    };
     const togglePosition = () => setPosition(position === 'left' ? 'right' : 'left');
 
     const handlePosition = position === 'right' ? 'left' : 'right';
@@ -112,9 +133,9 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
     // Smart chevron direction based on collapse state and sidebar position
     const renderCollapseIcon = () => {
         if (position === 'left') {
-            return isCollapsed ? <ChevronRight size={15} strokeWidth={2.5} /> : <ChevronLeft size={15} strokeWidth={2.5} />;
+            return isEffectiveCollapsed ? <ChevronRight size={15} strokeWidth={2.5} /> : <ChevronLeft size={15} strokeWidth={2.5} />;
         } else {
-            return isCollapsed ? <ChevronLeft size={15} strokeWidth={2.5} /> : <ChevronRight size={15} strokeWidth={2.5} />;
+            return isEffectiveCollapsed ? <ChevronLeft size={15} strokeWidth={2.5} /> : <ChevronRight size={15} strokeWidth={2.5} />;
         }
     };
 
@@ -123,7 +144,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
             style={{
                 ...styles.sidebar,
                 width: `${SIDEBAR_WIDTH}px`,
-                padding: isCollapsed ? '20px 10px 24px' : '24px 16px 32px',
+                padding: isEffectiveCollapsed ? '20px 10px 24px' : '24px 16px 32px',
                 background: colors.bgCard,
                 borderRight: position === 'left' ? `1px solid ${colors.border}` : 'none',
                 borderLeft: position === 'right' ? `1px solid ${colors.border}` : 'none',
@@ -132,37 +153,39 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                 transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), left 0.25s ease, right 0.25s ease, background 0.3s, border-color 0.3s'
             }}
         >
-            {/* ── SMART COLLAPSE / EXPAND BUTTON ──────────────────────────── */}
-            <button
-                onClick={toggleCollapse}
-                onMouseEnter={() => setIsToggleHovered(true)}
-                onMouseLeave={() => setIsToggleHovered(false)}
-                style={{
-                    position: 'absolute',
-                    top: '72px',
-                    [position === 'right' ? 'left' : 'right']: '-14px',
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    background: isToggleHovered ? colors.primary : colors.bgCard,
-                    border: `1.5px solid ${isToggleHovered ? colors.primary : colors.border}`,
-                    color: isToggleHovered ? '#ffffff' : colors.text,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    boxShadow: theme === 'dark' ? '0 4px 12px rgba(0,0,0,0.5)' : '0 2px 10px rgba(0,0,0,0.12)',
-                    zIndex: 40,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    transform: isToggleHovered ? 'scale(1.12)' : 'scale(1)',
-                    outline: 'none',
-                    padding: 0
-                }}
-                title={isCollapsed ? 'Expand sidebar (Ctrl+B)' : 'Collapse sidebar (Ctrl+B)'}
-                aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-                {renderCollapseIcon()}
-            </button>
+            {/* ── SMART COLLAPSE / EXPAND BUTTON (Hidden when forceExpanded) ──────────────── */}
+            {!forceExpanded && (
+                <button
+                    onClick={toggleCollapse}
+                    onMouseEnter={() => setIsToggleHovered(true)}
+                    onMouseLeave={() => setIsToggleHovered(false)}
+                    style={{
+                        position: 'absolute',
+                        top: '72px',
+                        [position === 'right' ? 'left' : 'right']: '-14px',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        background: isToggleHovered ? colors.primary : colors.bgCard,
+                        border: `1.5px solid ${isToggleHovered ? colors.primary : colors.border}`,
+                        color: isToggleHovered ? '#ffffff' : colors.text,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: theme === 'dark' ? '0 4px 12px rgba(0,0,0,0.5)' : '0 2px 10px rgba(0,0,0,0.12)',
+                        zIndex: 40,
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        transform: isToggleHovered ? 'scale(1.12)' : 'scale(1)',
+                        outline: 'none',
+                        padding: 0
+                    }}
+                    title={isEffectiveCollapsed ? 'Expand sidebar (Ctrl+B)' : 'Collapse sidebar (Ctrl+B)'}
+                    aria-label={isEffectiveCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                >
+                    {renderCollapseIcon()}
+                </button>
+            )}
 
             {/* Reposition Handle: Middle Edge of Sidebar */}
             <div
@@ -186,7 +209,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
             </div>
 
             {/* ── HEADER: LOGO & ACTIONS ─────────────────────────────────── */}
-            {!isCollapsed ? (
+            {!isEffectiveCollapsed ? (
                 <div style={styles.headerBox}>
                     <Link to="/" style={{ ...styles.logoBox, cursor: 'pointer', textDecoration: 'none' }} className="transition-opacity hover:opacity-90">
                         <img src="/images/Real Emare ICT Hub logo.png" alt="Emare ICT Hub Logo" className="h-9 w-9 bg-transparent object-contain" />
@@ -200,7 +223,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                     </div>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px', flexShrink: 0 }}>
                     <Link to="/" style={{ cursor: 'pointer', textDecoration: 'none' }} title="Emare ICT Hub" className="transition-opacity hover:opacity-90">
                         <img src="/images/Real Emare ICT Hub logo.png" alt="Emare ICT Hub Logo" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
                     </Link>
@@ -225,19 +248,19 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                         borderRight: `1px solid ${colors.border}`,
                         borderBottom: `1px solid ${colors.border}`,
                         borderLeft: isActive ? `4px solid ${colors.primary}` : `1px solid ${colors.border}`,
-                        padding: isCollapsed ? '10px 0' : '12px 14px',
-                        justifyContent: isCollapsed ? 'center' : 'space-between',
+                        padding: isEffectiveCollapsed ? '10px 0' : '12px 14px',
+                        justifyContent: isEffectiveCollapsed ? 'center' : 'space-between',
                         position: 'relative'
                     };
 
                     const labelContent = (
                         <>
-                            <span style={{ ...styles.navItemContent, justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
+                            <span style={{ ...styles.navItemContent, justifyContent: isEffectiveCollapsed ? 'center' : 'flex-start' }}>
                                 {item.icon && (
                                     <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0, position: 'relative' }}>
-                                        {React.cloneElement(item.icon, { size: isCollapsed ? 22 : 20 })}
+                                        {React.cloneElement(item.icon, { size: isEffectiveCollapsed ? 22 : 20 })}
                                         {/* Mini Badge indicator when collapsed */}
-                                        {isCollapsed && item.badge ? (
+                                        {isEffectiveCollapsed && item.badge ? (
                                             <span style={{
                                                 position: 'absolute',
                                                 top: '-6px',
@@ -260,14 +283,14 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                                         ) : null}
                                     </span>
                                 )}
-                                {!isCollapsed && <span>{item.label}</span>}
-                                {!isCollapsed && item.badge ? (
+                                {!isEffectiveCollapsed && <span>{item.label}</span>}
+                                {!isEffectiveCollapsed && item.badge ? (
                                     <span style={{ ...styles.navBadge, background: colors.primary }}>{item.badge}</span>
                                 ) : null}
                             </span>
 
                             {/* Smart floating tooltip when collapsed */}
-                            {isCollapsed && isHovered && (
+                            {isEffectiveCollapsed && isHovered && (
                                 <div style={{
                                     position: 'absolute',
                                     [position === 'right' ? 'right' : 'left']: 'calc(100% + 12px)',
@@ -304,6 +327,8 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                             <Link
                                 key={itemKey}
                                 to={item.path}
+                                state={item.state}
+                                onClick={() => onTabChange && onTabChange(item.key)}
                                 style={itemStyles}
                                 onMouseEnter={() => setHoveredItemKey(itemKey)}
                                 onMouseLeave={() => setHoveredItemKey(null)}
@@ -324,12 +349,10 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                         </button>
                     );
                 })}
-
-
             </nav>
 
             {/* Collapsed Mode Quick Actions */}
-            {isCollapsed && (
+            {isEffectiveCollapsed && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', paddingBottom: '12px', borderBottom: `1px solid ${colors.border}`, marginBottom: '10px' }}>
                     <NotificationBell />
                     <button onClick={toggleTheme} style={styles.iconBtn} title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'} aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
@@ -339,18 +362,18 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
             )}
 
             {/* ── USER INFO / ACCOUNT DROPDOWN ──────────────────────────── */}
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', flexShrink: 0, marginTop: 'auto' }}>
                 <div 
                     style={{ 
                         ...styles.userInfo, 
                         borderTop: `1px solid ${colors.border}`,
                         cursor: 'pointer',
                         transition: 'all 0.2s',
-                        padding: isCollapsed ? '12px 0 0 0' : '12px 10px',
-                        justifyContent: isCollapsed ? 'center' : 'flex-start'
+                        padding: isEffectiveCollapsed ? '12px 0 0 0' : '12px 10px',
+                        justifyContent: isEffectiveCollapsed ? 'center' : 'flex-start'
                     }}
                     onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
-                    title={isCollapsed ? `${user?.fullName || 'Profile'} (Click to open menu)` : 'Click to open account menu'}
+                    title={isEffectiveCollapsed ? `${user?.fullName || 'Profile'} (Click to open menu)` : 'Click to open account menu'}
                 >
                     <div style={{ position: 'relative' }}>
                         <div style={styles.userAvatar}>
@@ -373,7 +396,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                         }} />
                     </div>
 
-                    {!isCollapsed && (
+                    {!isEffectiveCollapsed && (
                         <>
                             <div style={styles.userMeta}>
                                 <span style={{ ...styles.userName, color: colors.text }}>{user?.fullName}</span>
@@ -392,9 +415,9 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                             background: colors.bgCard,
                             border: `1px solid ${colors.border}`,
                             boxShadow: theme === 'dark' ? '0 12px 36px rgba(0,0,0,0.5)' : '0 8px 32px rgba(0,0,0,0.12)',
-                            [position === 'right' ? 'right' : 'left']: isCollapsed ? (position === 'right' ? 'auto' : 'calc(100% + 10px)') : '-4px',
-                            [position === 'right' && isCollapsed ? 'right' : '']: isCollapsed && position === 'right' ? 'calc(100% + 10px)' : undefined,
-                            bottom: isCollapsed ? '0' : 'calc(100% + 8px)',
+                            [position === 'right' ? 'right' : 'left']: isEffectiveCollapsed ? (position === 'right' ? 'auto' : 'calc(100% + 10px)') : '-4px',
+                            [position === 'right' && isEffectiveCollapsed ? 'right' : '']: isEffectiveCollapsed && position === 'right' ? 'calc(100% + 10px)' : undefined,
+                            bottom: isEffectiveCollapsed ? '0' : 'calc(100% + 8px)',
                             minWidth: '220px'
                         }}
                     >
@@ -448,6 +471,8 @@ const styles = {
         left: 0,
         top: 0,
         height: '100vh',
+        maxHeight: '100vh',
+        overflow: 'hidden',
         zIndex: 20,
         boxSizing: 'border-box'
     },
@@ -482,7 +507,7 @@ const styles = {
         borderRadius: '50%',
         flexShrink: 0
     },
-    headerBox: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '24px', width: '100%', boxSizing: 'border-box' },
+    headerBox: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '24px', width: '100%', boxSizing: 'border-box', flexShrink: 0 },
     logoBox: { display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 },
     logo: {
         width: '38px', height: '38px', borderRadius: '10px',
@@ -493,7 +518,16 @@ const styles = {
     logoText: { fontWeight: '700', fontSize: '16px' },
     actionsBox: { display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 },
     iconBtn: { background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-    nav: { display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflowY: 'auto' },
+    nav: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        flex: 1,
+        minHeight: 0,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        scrollbarWidth: 'thin'
+    },
     navItem: {
         textDecoration: 'none',
         borderRadius: '10px',

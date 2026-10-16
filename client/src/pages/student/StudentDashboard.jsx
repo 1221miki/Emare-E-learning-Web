@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard, GraduationCap, ClipboardList, BrainCircuit,
     Video, MessageSquare, Trophy, Mail, Award, CreditCard,
@@ -57,11 +57,12 @@ export default function StudentDashboard() {
     const { theme, toggleTheme, colors } = useTheme();
     const { changeLanguage, t } = useLanguage();
     const navigate = useNavigate();
+    const location = useLocation();
     
     // Tab State
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTab] = useState(() => location.state?.activeTab || 'overview');
 
-    // Allow sidebar links like /student/dashboard?tab=my_courses to open a specific tab.
+    // Allow sidebar links like /student/dashboard?tab=my_courses or location.state to open a specific tab.
     const [searchParams] = useSearchParams();
     useEffect(() => {
         const tabMap = {
@@ -80,8 +81,12 @@ export default function StudentDashboard() {
             settings: 'settings'
         };
         const requested = searchParams.get('tab');
-        if (requested && tabMap[requested]) setActiveTab(tabMap[requested]);
-    }, [searchParams]);
+        if (requested && tabMap[requested]) {
+            setActiveTab(tabMap[requested]);
+        } else if (location.state?.activeTab) {
+            setActiveTab(location.state.activeTab);
+        }
+    }, [searchParams, location.state]);
 
     // Data States
     const [enrollments, setEnrollments] = useState([]);
