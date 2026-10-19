@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 
@@ -102,9 +102,47 @@ import InstructorProfilePage from './pages/InstructorProfilePage';
 const PrivateRoute = ({ children, allowedRoles }) => {
     const { isAuthenticated, user } = useAuth();
     if (!isAuthenticated) return <Navigate to="/login" replace />;
+    // Admin has superuser access across platform to inspect and review pages
+    if (user?.assignedRole === 'Admin') return children;
     if (allowedRoles && !allowedRoles.includes(user?.assignedRole)) return <Navigate to="/unauthorized" replace />;
     return children;
 };
+
+function UnauthorizedPage() {
+    const { isAuthenticated, user } = useAuth();
+    const dashboardPath = user?.assignedRole === 'Admin'
+        ? '/admin/dashboard'
+        : user?.assignedRole === 'Instructor'
+            ? '/instructor/dashboard'
+            : '/student/dashboard';
+
+    return (
+        <div style={{ color: '#0f172a', textAlign: 'center', padding: '80px 24px', background: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+            <div style={{ fontSize: '64px', marginBottom: '20px' }}>🚫</div>
+            <h2 style={{ fontSize: '32px', margin: '0 0 12px', fontWeight: '800' }}>403 — Access Denied</h2>
+            <p style={{ color: '#64748b', marginBottom: '28px', maxWidth: '440px', lineHeight: '1.6', fontSize: '15px' }}>
+                You do not have permission to view this specific page with your current account role ({user?.assignedRole || 'Guest'}).
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center' }}>
+                {isAuthenticated ? (
+                    <Link to={dashboardPath} style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', padding: '12px 24px', borderRadius: '12px', textDecoration: 'none', fontWeight: '700', boxShadow: '0 4px 14px rgba(34,197,94,0.3)' }}>
+                        Go to My Dashboard
+                    </Link>
+                ) : (
+                    <Link to="/login" style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', padding: '12px 24px', borderRadius: '12px', textDecoration: 'none', fontWeight: '700' }}>
+                        Sign In
+                    </Link>
+                )}
+                <Link to="/events" style={{ background: '#fff', color: '#1e293b', border: '1px solid #cbd5e1', padding: '12px 24px', borderRadius: '12px', textDecoration: 'none', fontWeight: '600' }}>
+                    Browse Events
+                </Link>
+                <Link to="/" style={{ background: '#fff', color: '#64748b', border: '1px solid #e2e8f0', padding: '12px 24px', borderRadius: '12px', textDecoration: 'none', fontWeight: '600' }}>
+                    Home
+                </Link>
+            </div>
+        </div>
+    );
+}
 
 function AppRoutes() {
     return (
@@ -171,14 +209,7 @@ function AppRoutes() {
                 <Route path="/admin/contact-messages"        element={<PrivateRoute allowedRoles={['Admin']}><AdminContactMessages /></PrivateRoute>} />
 
                 {/* ── Fallback ─────────────────────────────────────────── */}
-                <Route path="/unauthorized" element={
-                    <div style={{ color: '#0f172a', textAlign: 'center', padding: '80px', background: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{ fontSize: '64px', marginBottom: '20px' }}>🚫</div>
-                        <h2 style={{ fontSize: '32px', margin: '0 0 12px' }}>403 — Access Denied</h2>
-                        <p style={{ color: '#64748b', marginBottom: '24px' }}>You do not have permission to view this page.</p>
-                        <a href="/" style={{ background: 'linear-gradient(135deg,#22c55e,#22c55e)', color: '#fff', padding: '12px 24px', borderRadius: '10px', textDecoration: 'none', fontWeight: '700' }}>Go Home</a>
-                    </div>
-                } />
+                <Route path="/unauthorized" element={<UnauthorizedPage />} />
                 <Route path="*" element={
                     <div style={{ color: '#0f172a', textAlign: 'center', padding: '80px', background: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                         <div style={{ fontSize: '64px', marginBottom: '20px' }}>🔍</div>

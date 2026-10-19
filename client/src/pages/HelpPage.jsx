@@ -1,17 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useTheme } from '../context/ThemeContext';
+import { contentService } from '../services/api';
 
 export default function HelpPage() {
     const { colors } = useTheme();
     const [activeFaq, setActiveFaq] = useState(null);
-    const faqs = [
+    const [faqList, setFaqList] = useState([
         { q: 'How do I register?', a: 'Click the "Get Started" button on the top right, fill in your details, and verify your email address.' },
         { q: 'Can I download videos?', a: 'Currently, videos can only be streamed online to protect the intellectual property of our instructors. Downloadable resources like PDFs are available.' },
         { q: 'Are certificates accredited?', a: 'Our certificates verify your completion and the skills acquired, but they are not university degrees. They are widely recognized by local employers.' },
         { q: 'How do I reset my password?', a: 'On the login page, click "Forgot Password". Enter your email and follow the instructions sent to you.' }
-    ];
+    ]);
+
+    useEffect(() => {
+        let isMounted = true;
+        contentService.getPage('faq')
+            .then(res => {
+                const items = res.data?.data?.content?.items;
+                if (isMounted && Array.isArray(items) && items.length > 0) {
+                    const published = items.filter(i => i.isPublished !== false).map(i => ({
+                        q: i.question,
+                        a: i.answer
+                    }));
+                    if (published.length > 0) setFaqList(published);
+                }
+            })
+            .catch(err => console.error('Failed to load FAQ CMS content:', err));
+        return () => { isMounted = false; };
+    }, []);
 
     const s = {
         page: { minHeight: '100vh', fontFamily: "'Outfit', 'Inter', sans-serif" },
@@ -43,7 +61,7 @@ export default function HelpPage() {
                 <div style={s.card}>
                     <h2 style={s.sTitle}>Frequently Asked Questions</h2>
                     <div style={s.faqList}>
-                        {faqs.map((faq, i) => (
+                        {faqList.map((faq, i) => (
                             <div key={i} style={{ ...s.faqItem, cursor: 'pointer' }} onClick={() => setActiveFaq(activeFaq === i ? null : i)}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <h3 style={s.faqQ}>{faq.q}</h3>

@@ -13,7 +13,9 @@ const {
     validateStatusAdminEvent,
     cancelAdminEvent,
     regenerateMeetingUrl,
-    generateMeetingLink
+    generateMeetingLink,
+    getEventAttendees,
+    updateAttendeeAttendance
 } = require('../controllers/eventController');
 const { protect, authorizeRoles } = require('../middleware/auth');
 
@@ -24,6 +26,8 @@ router.get('/', getAdminEvents);
 router.get('/all', getAdminEvents);
 router.get('/stats', getAdminStats);
 router.post('/meetings/generate', generateMeetingLink);
+router.get('/:id/attendees', getEventAttendees);
+router.put('/:id/attendees/:registrationId/attendance', updateAttendeeAttendance);
 router.get('/:id', getAdminEvent);
 router.post('/', createAdminEvent);
 router.put('/:id', updateAdminEvent);

@@ -434,8 +434,20 @@ exports.verifyChapa = async (req, res) => {
                 console.error('Failed to send email from verify:', err);
             }
 
-            return res.json({ success: true, verified: true, transactionStatus: normalizedStatus, courseId: tx.courseRef, raw: chapaRes.data });
+            const isEvent = Boolean(tx.eventRef || (tx.metadata && tx.metadata.eventSlug));
+            return res.json({
+                success: true,
+                verified: true,
+                transactionStatus: normalizedStatus,
+                isEvent,
+                eventSlug: tx.metadata?.eventSlug || null,
+                bookingRef: tx.metadata?.bookingRef || null,
+                courseId: tx.courseRef,
+                raw: chapaRes.data
+            });
         }
+
+        const isEventTx = Boolean(tx.eventRef || (tx.metadata && tx.metadata.eventSlug));
 
         if (normalizedStatus === 'failed' || normalizedStatus === 'error') {
             tx.status = 'Failed';
@@ -444,14 +456,32 @@ exports.verifyChapa = async (req, res) => {
             if (tx.eventRef && tx.metadata?.registrationId) {
                 await EventRegistration.findByIdAndUpdate(tx.metadata.registrationId, { $set: { paymentStatus: 'failed' } });
             }
-            return res.json({ success: false, verified: false, transactionStatus: normalizedStatus, courseId: tx.courseRef, raw: chapaRes.data });
+            return res.json({
+                success: false,
+                verified: false,
+                transactionStatus: normalizedStatus,
+                isEvent: isEventTx,
+                eventSlug: tx.metadata?.eventSlug || null,
+                bookingRef: tx.metadata?.bookingRef || null,
+                courseId: tx.courseRef,
+                raw: chapaRes.data
+            });
         }
 
         // Pending or unknown status
         tx.status = 'Pending';
         await tx.save();
         if (tx.courseRef) await Payment.findOneAndUpdate({ tx_ref }, { $set: { status: 'Pending' } }, { upsert: true, new: true });
-        return res.json({ success: true, verified: false, transactionStatus: normalizedStatus || 'pending', courseId: tx.courseRef, raw: chapaRes.data });
+        return res.json({
+            success: true,
+            verified: false,
+            transactionStatus: normalizedStatus || 'pending',
+            isEvent: isEventTx,
+            eventSlug: tx.metadata?.eventSlug || null,
+            bookingRef: tx.metadata?.bookingRef || null,
+            courseId: tx.courseRef,
+            raw: chapaRes.data
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false });

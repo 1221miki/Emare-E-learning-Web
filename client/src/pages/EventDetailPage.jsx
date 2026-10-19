@@ -12,9 +12,11 @@ import {
     CheckCircle2,
     Clock,
     Loader2,
+    Lock,
     MapPin,
     ShieldCheck,
     Sparkles,
+    Star,
     Tag,
     Users,
     Video,
@@ -77,7 +79,7 @@ export default function EventDetailPage() {
         let cancelled = false;
         setLoading(true);
         publicEventService
-            .getBySlug(eventId)
+            .getBySlug(eventId, paidBookingRef ? { booking: paidBookingRef } : {})
             .then((res) => {
                 if (cancelled) return;
                 setApiEvent({ ...(res.data?.data || null), date: res.data?.data ? new Date(res.data.data.date) : null });
@@ -91,7 +93,10 @@ export default function EventDetailPage() {
             })
             .catch(() => { if (!cancelled) setApiEvents([]); });
         return () => { cancelled = true; };
-    }, [eventId]);
+    }, [eventId, paidBookingRef]);
+
+    const { isAuthenticated, user } = useAuth();
+    const navigate = useNavigate();
 
     const event = apiEvent;
     const eventDate = event ? new Date(event.date) : null;
@@ -104,8 +109,21 @@ export default function EventDetailPage() {
     const isLive = liveStatus === 'live';
     const isCancelled = liveStatus === 'cancelled';
     const isCompleted = liveStatus === 'completed';
-    const joinUrl = event ? (event.meetingUrl || event.streamUrl) : null;
-    const canJoin = isLive && joinUrl;
+
+    // Access control: only users who have registered/paid or are host/admin can see/join the meeting
+    const isHostOrAdmin = Boolean(
+        user?.assignedRole === 'Admin' ||
+        event?.isHost ||
+        (event?.submittedBy && String(event?.submittedBy) === String(user?._id || user?.id))
+    );
+    const isRegistered = Boolean(
+        event?.hasAccess ||
+        (event?.userRegistration && event?.userRegistration?.status === 'confirmed') ||
+        (paidSuccess && paidBookingRef)
+    );
+    const hasAccess = isHostOrAdmin || isRegistered;
+    const joinUrl = hasAccess ? (event ? (event.meetingUrl || event.streamUrl) : null) : null;
+    const canJoin = isLive && Boolean(joinUrl) && hasAccess;
 
     const otherEvents = useMemo(
         () => (apiEvents || []).filter((e) => e.id !== event?.id).slice(0, 2),
@@ -122,8 +140,13 @@ export default function EventDetailPage() {
     const [submitting, setSubmitting] = useState(false);
     const [bookingRef, setBookingRef] = useState(() => `EMR-${Math.random().toString(36).slice(2, 8).toUpperCase()}`);
 
-    const { isAuthenticated, user } = useAuth();
-    const navigate = useNavigate();
+    useEffect(() => {
+        if (event?.userRegistration?.bookingRef) {
+            setBookingRef(event.userRegistration.bookingRef);
+        } else if (paidBookingRef) {
+            setBookingRef(paidBookingRef);
+        }
+    }, [event?.userRegistration?.bookingRef, paidBookingRef]);
 
     // Pre-fill form with user data when authenticated
     useEffect(() => {
@@ -163,6 +186,68 @@ export default function EventDetailPage() {
         }
     }, [paidSuccess, apiEvent, paidBookingRef]);
 
+    const [feedbackRating, setFeedbackRating] = useState(5);
+    const [feedbackHoverRating, setFeedbackHoverRating] = useState(0);
+    const [feedbackComment, setFeedbackComment] = useState('');
+    const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+    const [editingFeedback, setEditingFeedback] = useState(false);
+
+    useEffect(() => {
+        if (event?.userRegistration?.feedback) {
+            setFeedbackRating(event.userRegistration.feedback.rating || 5);
+            setFeedbackComment(event.userRegistration.feedback.comment || '');
+        }
+    }, [event?.userRegistration?.feedback]);
+
+    const handleJoinMeeting = async () => {
+        if (!joinUrl) return;
+        try {
+            if (isAuthenticated && !isHostOrAdmin) {
+                await publicEventService.recordAttendance(event.id);
+                setApiEvent(prev => prev ? ({
+                    ...prev,
+                    userRegistration: {
+                        ...(prev.userRegistration || {}),
+                        attended: true,
+                        attendedAt: new Date().toISOString()
+                    }
+                }) : prev);
+            }
+        } catch (err) {
+            console.error('Failed to record attendance:', err);
+        }
+        window.open(joinUrl, '_blank', 'noopener,noreferrer');
+    };
+
+    const handleFeedbackSubmit = async (e) => {
+        e?.preventDefault();
+        if (!feedbackRating) return;
+        setFeedbackSubmitting(true);
+        try {
+            const res = await publicEventService.submitFeedback(event.id, {
+                rating: feedbackRating,
+                comment: feedbackComment
+            });
+            const savedFeedback = res.data?.data || {
+                rating: feedbackRating,
+                comment: feedbackComment,
+                submittedAt: new Date().toISOString()
+            };
+            setApiEvent(prev => prev ? ({
+                ...prev,
+                userRegistration: {
+                    ...(prev.userRegistration || {}),
+                    feedback: savedFeedback
+                }
+            }) : prev);
+            setEditingFeedback(false);
+        } catch (err) {
+            console.error('Failed to submit feedback:', err);
+        } finally {
+            setFeedbackSubmitting(false);
+        }
+    };
+
     const copyMeetingLink = async () => {
         if (!joinUrl) return;
         try {
@@ -178,20 +263,36 @@ export default function EventDetailPage() {
 
     const isEventPaid = isPaidEvent(event?.price);
 
+    const normalizePhone = (rawPhone) => {
+        let cleaned = String(rawPhone || '').replace(/\D/g, '');
+        if (cleaned.startsWith('251')) {
+            cleaned = '0' + cleaned.slice(3);
+        }
+        if (cleaned.length === 9 && (cleaned.startsWith('9') || cleaned.startsWith('7'))) {
+            cleaned = '0' + cleaned;
+        }
+        if (cleaned.length === 10 && (cleaned.startsWith('9') || cleaned.startsWith('7'))) {
+            cleaned = '0' + cleaned.slice(0, 9);
+        }
+        return cleaned;
+    };
+
     const validatePhone = (phone) => {
-        const cleaned = phone.replace(/\D/g, '');
-        return /^0[79]\d{8}$/.test(cleaned);
+        const normalized = normalizePhone(phone);
+        return /^0[79]\d{8}$/.test(normalized);
     };
 
     const handleConfirm = async () => {
-        if (!validatePhone(form.phone)) {
-            setModal({ view: 'success', warning: true, message: 'Invalid phone number. Must start with 09 or 07 and be exactly 10 digits (numbers only).' });
-            return;
-        }
-        // Require authentication for paid events
-        if (isEventPaid && !isAuthenticated) {
+        // Require authentication for all event registrations
+        if (!isAuthenticated) {
             const currentPath = window.location.pathname + window.location.search;
             navigate(`/login?redirect=${encodeURIComponent(currentPath)}`);
+            return;
+        }
+
+        const normalizedPhone = normalizePhone(form.phone);
+        if (!validatePhone(form.phone)) {
+            setModal({ view: 'success', warning: true, message: 'Invalid phone number. Please enter a valid 10-digit Ethiopian mobile number starting with 09 or 07 (e.g. 0912 345 678).' });
             return;
         }
 
@@ -199,7 +300,7 @@ export default function EventDetailPage() {
         try {
             const res = await publicEventService.register(event.id, {
                 fullName: form.name,
-                phone: form.phone,
+                phone: normalizedPhone,
                 email: form.email,
                 city: form.city,
                 selectedDate: `${selectedDate.year}-${padCount(selectedDate.month + 1)}-${padCount(selectedDate.day)}`,
@@ -212,21 +313,42 @@ export default function EventDetailPage() {
                 return;
             }
             if (payload?.bookingRef) setBookingRef(payload.bookingRef);
+            setApiEvent(prev => prev ? ({
+                ...prev,
+                hasAccess: true,
+                userRegistration: {
+                    bookingRef: payload?.bookingRef || bookingRef,
+                    status: 'confirmed',
+                    selectedDate: `${selectedDate.year}-${padCount(selectedDate.month + 1)}-${padCount(selectedDate.day)}`,
+                    selectedSlot
+                }
+            }) : prev);
             setModal({ view: 'success' });
         } catch (err) {
             const apiError = err.response?.data;
-            // Check if this is a free event that shouldn't have payment
+            if (apiError?.requiresLogin) {
+                const currentPath = window.location.pathname + window.location.search;
+                navigate(`/login?redirect=${encodeURIComponent(currentPath)}`);
+                return;
+            }
             const isFreeEvent = !isEventPaid;
             if (apiError?.alreadyRegistered) {
                 // User already has a confirmed booking for this event
                 if (apiError.data?.bookingRef) setBookingRef(apiError.data.bookingRef);
+                setApiEvent(prev => prev ? ({
+                    ...prev,
+                    hasAccess: true,
+                    userRegistration: {
+                        bookingRef: apiError.data?.bookingRef || bookingRef,
+                        status: 'confirmed'
+                    }
+                }) : prev);
                 setModal({ view: 'success', alreadyRegistered: true, message: apiError.message || 'You have already registered for this event.' });
             } else if (!err.response) {
-                // Network error - show error, not success
                 setModal({ view: 'success', warning: true, message: 'Network error. Please check your connection and try again.' });
             } else if (isFreeEvent && apiError?.message?.includes('Payment initialization')) {
-                // Free event should never reach payment - fallback to success
                 if (apiError.data?.bookingRef) setBookingRef(apiError.data.bookingRef);
+                setApiEvent(prev => prev ? ({ ...prev, hasAccess: true }) : prev);
                 setModal({ view: 'success' });
             } else {
                 setModal({ view: 'success', warning: true, message: apiError?.message || 'Registration could not be saved.' });
@@ -336,14 +458,24 @@ export default function EventDetailPage() {
                                     This event has ended.
                                 </div>
                             ) : canJoin ? (
-                                <a
-                                    href={joinUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex w-fit items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black shadow-[0_0_30px_rgba(16,185,129,0.45)] transition hover:shadow-[0_0_45px_rgba(16,185,129,0.6)]"
+                                <button
+                                    onClick={handleJoinMeeting}
+                                    className="inline-flex w-fit items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black shadow-[0_0_30px_rgba(16,185,129,0.45)] transition hover:shadow-[0_0_45px_rgba(16,185,129,0.6)] cursor-pointer"
                                 >
-                                    <Video className="h-4 w-4" /> Join Event Now
-                                </a>
+                                    <Video className="h-4 w-4 animate-pulse" /> {isHostOrAdmin ? 'Join Meeting as Host' : 'Join Event Now'}
+                                </button>
+                            ) : hasAccess ? (
+                                <div className="flex w-fit items-center gap-3 rounded-2xl border border-emerald-400/40 bg-emerald-500/20 px-6 py-4 text-sm font-bold text-emerald-200 shadow-[0_0_20px_rgba(16,185,129,0.25)]">
+                                    <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+                                    {isHostOrAdmin ? 'Organizer Access Confirmed' : `Registered ✓ (Ref: ${event?.userRegistration?.bookingRef || bookingRef})`}
+                                </div>
+                            ) : !isAuthenticated ? (
+                                <button
+                                    onClick={() => navigate(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`)}
+                                    className="inline-flex w-fit items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black shadow-[0_0_30px_rgba(74,222,128,0.45)] transition hover:shadow-[0_0_45px_rgba(74,222,128,0.6)]"
+                                >
+                                    {isEventPaid ? `Sign In to Register & Pay (${event.price})` : 'Sign In to Register Free'} <ArrowRight className="h-4 w-4" />
+                                </button>
                             ) : (
                                 <button
                                     onClick={scrollToSecureSpot}
@@ -460,9 +592,9 @@ export default function EventDetailPage() {
                                 <div className={`mt-6 w-full rounded-xl border py-3 text-center text-xs font-extrabold uppercase tracking-wide ${isDark ? 'border-white/10 bg-white/5 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-600'}`}>Event Ended</div>
                             ) : canJoin ? (
                                 <div className="mt-6 flex w-full flex-col gap-2">
-                                    <a href={joinUrl} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-emerald-500 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110">
-                                        <Video className="h-4 w-4" /> Join Event
-                                    </a>
+                                    <button onClick={handleJoinMeeting} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-emerald-500 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110 shadow-lg cursor-pointer">
+                                        <Video className="h-4 w-4" /> {isHostOrAdmin ? 'Join as Host' : 'Join Event'}
+                                    </button>
                                     <button onClick={copyMeetingLink} className="flex w-full items-center justify-center gap-2 rounded-xl border border-green-500/40 bg-green-500/10 py-2.5 text-xs font-bold uppercase tracking-wide text-green-600 dark:text-green-300 transition hover:bg-green-500/20">
                                         Copy Meeting Link
                                     </button>
@@ -471,6 +603,30 @@ export default function EventDetailPage() {
                                             Meeting password: <span className="font-mono font-bold text-green-600 dark:text-green-400">{event.meetingPassword}</span>
                                         </div>
                                     )}
+                                </div>
+                            ) : hasAccess ? (
+                                <div className={`mt-6 rounded-2xl border p-4 text-center ${isDark ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-emerald-200 bg-emerald-50'}`}>
+                                    <div className="flex items-center justify-center gap-2 font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                                        <CheckCircle2 className="h-4 w-4" /> You're Registered
+                                    </div>
+                                    <div className="mt-1 text-xs font-mono font-bold text-gray-400">
+                                        Ref: {event.userRegistration?.bookingRef || bookingRef}
+                                    </div>
+                                    <p className="mt-2 text-xs text-gray-400">
+                                        The live meeting link will unlock here automatically when the session goes live.
+                                    </p>
+                                </div>
+                            ) : !isAuthenticated ? (
+                                <div className="mt-6 flex w-full flex-col gap-2">
+                                    <button
+                                        onClick={() => navigate(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`)}
+                                        className="w-full rounded-xl bg-gradient-to-r from-green-500 to-green-600 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110 shadow-md"
+                                    >
+                                        {isEventPaid ? `Sign In to Register & Pay` : 'Sign In to Register'}
+                                    </button>
+                                    <p className={`text-center text-[11px] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>
+                                        Account required to attend &amp; join live session
+                                    </p>
                                 </div>
                             ) : (
                                 <button
@@ -520,18 +676,292 @@ export default function EventDetailPage() {
                             : 'Select your preferred date and complete the registration. Seats are limited and filling up fast.'}
                     </p>
 
-                    {isCancelled || isCompleted ? (
+                    {isCancelled ? (
                         <div className={`mt-10 overflow-hidden rounded-3xl border p-10 text-center shadow-lg ${isDark ? 'border-green-600/20 bg-[#12131A]' : 'border-slate-200 bg-white'}`}>
-                            <span className="text-5xl">{isCancelled ? '🚫' : '✅'}</span>
-                            <h3 className={`mt-4 text-xl font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>{isCancelled ? 'Registration Closed' : 'Event Completed'}</h3>
+                            <span className="text-5xl">🚫</span>
+                            <h3 className={`mt-4 text-xl font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>Registration Closed</h3>
                             <p className={`mx-auto mt-2 max-w-md text-sm ${isDark ? 'text-[#9CA3AF]' : 'text-slate-600'}`}>
-                                {isCancelled
-                                    ? 'This event was cancelled by the organizer and is no longer accepting registrations.'
-                                    : 'This event has ended. Thank you for your interest — check the events page for upcoming sessions.'}
+                                This event was cancelled by the organizer and is no longer accepting registrations.
                             </p>
                             <Link to="/events" className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110 shadow-md">
                                 Browse Upcoming Events <ArrowRight className="h-4 w-4" />
                             </Link>
+                        </div>
+                    ) : isCompleted ? (
+                        hasAccess ? (
+                            <div className={`mt-10 overflow-hidden rounded-3xl border shadow-xl ${isDark ? 'border-emerald-500/30 bg-[#12131A]' : 'border-emerald-200 bg-white'}`}>
+                                <div className="h-2 w-full bg-gradient-to-r from-emerald-500 via-green-500 to-teal-400" />
+                                <div className="p-8 sm:p-10">
+                                    <div className={`flex flex-wrap items-center justify-between gap-4 border-b pb-6 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.3)]">
+                                                <BadgeCheck className="h-8 w-8" />
+                                            </div>
+                                            <div>
+                                                <span className="inline-block rounded-full bg-emerald-500/20 px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-emerald-300">
+                                                    Stage 6: Event Completed
+                                                </span>
+                                                <h3 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                                    Participation Record &amp; Feedback
+                                                </h3>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {event?.userRegistration?.attended ? (
+                                                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-4 py-1.5 text-xs font-bold text-emerald-300 shadow-xs">
+                                                    <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Verified Attendance (Present)
+                                                </span>
+                                            ) : (
+                                                <span className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-bold ${isDark ? 'border-white/10 bg-white/5 text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-700'}`}>
+                                                    <CheckCircle2 className="h-4 w-4 text-gray-400" /> Registered Participant
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-8 grid gap-8 lg:grid-cols-2">
+                                        {/* Left: Participation Record */}
+                                        <div className={`rounded-2xl border p-6 ${isDark ? 'border-white/5 bg-[#171822]' : 'border-slate-200 bg-slate-50'}`}>
+                                            <h4 className="text-xs font-extrabold uppercase tracking-[0.2em] text-green-500">Participation Record</h4>
+                                            <div className="mt-4 space-y-3 text-sm">
+                                                <div className="flex items-center justify-between">
+                                                    <span className={isDark ? 'text-gray-400' : 'text-slate-500'}>Event Title</span>
+                                                    <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{event.title}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className={isDark ? 'text-gray-400' : 'text-slate-500'}>Booking Reference</span>
+                                                    <span className="font-mono font-bold text-green-400">{event?.userRegistration?.bookingRef || bookingRef}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className={isDark ? 'text-gray-400' : 'text-slate-500'}>Date &amp; Time</span>
+                                                    <span className={`font-semibold ${isDark ? 'text-gray-200' : 'text-slate-700'}`}>{eventDateISO} · {event.time}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className={isDark ? 'text-gray-400' : 'text-slate-500'}>Location / Format</span>
+                                                    <span className={`font-semibold ${isDark ? 'text-gray-200' : 'text-slate-700'}`}>{event.location}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className={isDark ? 'text-gray-400' : 'text-slate-500'}>Attendance Status</span>
+                                                    <span className={`font-bold ${event?.userRegistration?.attended ? 'text-emerald-400' : 'text-gray-400'}`}>
+                                                        {event?.userRegistration?.attended
+                                                            ? `Checked in ${event?.userRegistration?.attendedAt ? new Date(event.userRegistration.attendedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '✓'}`
+                                                            : 'Not recorded'}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-6 border-t pt-4 border-white/10 flex items-center justify-between">
+                                                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Proof of Attendance</span>
+                                                <span className="rounded-lg bg-green-500/10 px-3 py-1 text-xs font-bold text-green-400 border border-green-500/30">
+                                                    Verified Record
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Right: Feedback & Review */}
+                                        <div className={`rounded-2xl border p-6 ${isDark ? 'border-white/5 bg-[#171822]' : 'border-slate-200 bg-slate-50'}`}>
+                                            <h4 className="text-xs font-extrabold uppercase tracking-[0.2em] text-green-500">Session Feedback &amp; Rating</h4>
+
+                                            {event?.userRegistration?.feedback?.rating && !editingFeedback ? (
+                                                <div className="mt-4">
+                                                    <div className="flex items-center gap-1.5">
+                                                        {[1, 2, 3, 4, 5].map((s) => (
+                                                            <Star
+                                                                key={s}
+                                                                className={`h-5 w-5 ${s <= (event.userRegistration.feedback.rating || 0) ? 'fill-amber-400 text-amber-400' : isDark ? 'text-gray-600' : 'text-slate-300'}`}
+                                                            />
+                                                        ))}
+                                                        <span className="ml-2 font-bold text-amber-400">{event.userRegistration.feedback.rating}.0 / 5.0</span>
+                                                    </div>
+
+                                                    {event.userRegistration.feedback.comment ? (
+                                                        <p className={`mt-3 rounded-xl border p-3 text-sm italic leading-relaxed ${isDark ? 'border-white/10 bg-white/5 text-gray-200' : 'border-slate-200 bg-white text-slate-700'}`}>
+                                                            "{event.userRegistration.feedback.comment}"
+                                                        </p>
+                                                    ) : (
+                                                        <p className="mt-3 text-xs text-gray-400 italic">No written comment provided.</p>
+                                                    )}
+
+                                                    <div className="mt-4 flex items-center justify-between text-xs text-gray-400">
+                                                        <span>Submitted: {event.userRegistration.feedback.submittedAt ? new Date(event.userRegistration.feedback.submittedAt).toLocaleDateString() : 'Confirmed'}</span>
+                                                        <button
+                                                            onClick={() => setEditingFeedback(true)}
+                                                            className="font-bold text-green-400 hover:underline"
+                                                        >
+                                                            Update Review
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <form onSubmit={handleFeedbackSubmit} className="mt-4">
+                                                    <p className={`text-xs ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>
+                                                        How was the session? Rate your experience and share your feedback:
+                                                    </p>
+
+                                                    <div className="my-3 flex items-center gap-1">
+                                                        {[1, 2, 3, 4, 5].map((s) => (
+                                                            <button
+                                                                key={s}
+                                                                type="button"
+                                                                onClick={() => setFeedbackRating(s)}
+                                                                onMouseEnter={() => setFeedbackHoverRating(s)}
+                                                                onMouseLeave={() => setFeedbackHoverRating(0)}
+                                                                className="p-1 transition hover:scale-110"
+                                                            >
+                                                                <Star
+                                                                    className={`h-6 w-6 ${s <= (feedbackHoverRating || feedbackRating) ? 'fill-amber-400 text-amber-400' : isDark ? 'text-gray-600' : 'text-slate-300'}`}
+                                                                />
+                                                            </button>
+                                                        ))}
+                                                        <span className="ml-2 text-xs font-bold text-amber-400">
+                                                            {['', '1 - Poor', '2 - Fair', '3 - Good', '4 - Very Good', '5 - Outstanding!'][feedbackHoverRating || feedbackRating] || ''}
+                                                        </span>
+                                                    </div>
+
+                                                    <textarea
+                                                        value={feedbackComment}
+                                                        onChange={(e) => setFeedbackComment(e.target.value)}
+                                                        placeholder="Share your experience, what you learned, or suggestions for the organizer…"
+                                                        rows={3}
+                                                        className={`w-full rounded-xl border p-3 text-sm transition focus:ring-2 focus:ring-green-500/30 focus:outline-none ${isDark ? 'border-white/10 bg-[#10111A] text-white placeholder-gray-500' : 'border-slate-300 bg-white text-slate-900 placeholder-slate-400'}`}
+                                                    />
+
+                                                    <div className="mt-3 flex items-center gap-2">
+                                                        <button
+                                                            type="submit"
+                                                            disabled={feedbackSubmitting}
+                                                            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-green-500 to-green-600 px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider text-black shadow-md transition hover:brightness-110 disabled:opacity-50"
+                                                        >
+                                                            {feedbackSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                                                            Submit Feedback
+                                                        </button>
+                                                        {editingFeedback && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setEditingFeedback(false)}
+                                                                className={`rounded-xl border px-4 py-2.5 text-xs font-bold ${isDark ? 'border-white/10 text-gray-300' : 'border-slate-300 text-slate-700'}`}
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </form>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className={`mt-10 overflow-hidden rounded-3xl border p-10 text-center shadow-lg ${isDark ? 'border-green-600/20 bg-[#12131A]' : 'border-slate-200 bg-white'}`}>
+                                <span className="text-5xl">✅</span>
+                                <h3 className={`mt-4 text-xl font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>Event Completed</h3>
+                                <p className={`mx-auto mt-2 max-w-md text-sm ${isDark ? 'text-[#9CA3AF]' : 'text-slate-600'}`}>
+                                    This event has ended. Thank you for your interest — check the events page for upcoming sessions.
+                                </p>
+                                <Link to="/events" className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 px-6 py-3 text-sm font-extrabold uppercase tracking-wide text-black transition hover:brightness-110 shadow-md">
+                                    Browse Upcoming Events <ArrowRight className="h-4 w-4" />
+                                </Link>
+                            </div>
+                        )
+                    ) : hasAccess ? (
+                        <div className={`mt-10 overflow-hidden rounded-3xl border shadow-xl ${isDark ? 'border-emerald-500/30 bg-[#12131A]' : 'border-emerald-200 bg-white'}`}>
+                            <div className="h-2 w-full bg-gradient-to-r from-emerald-500 via-green-500 to-teal-400" />
+                            <div className="p-8 sm:p-10 text-center max-w-2xl mx-auto">
+                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.35)]">
+                                    <CheckCircle2 className="h-8 w-8" />
+                                </div>
+                                <span className="mt-4 inline-block rounded-full bg-emerald-500/20 px-3.5 py-1 text-xs font-extrabold uppercase tracking-widest text-emerald-300">
+                                    {isHostOrAdmin ? 'Host / Organizer Access' : 'Confirmed Registration'}
+                                </span>
+                                <h3 className={`mt-3 text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                    {isHostOrAdmin ? "You are hosting this session" : "You're all set for this event!"}
+                                </h3>
+                                <p className={`mt-2 text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>
+                                    {isHostOrAdmin
+                                        ? "You have full organizer access to run and broadcast this session."
+                                        : `Your spot for ${event.title} is secured. Access credentials are confirmed.`}
+                                </p>
+
+                                <div className={`mt-6 grid grid-cols-2 sm:grid-cols-3 gap-3 rounded-2xl border p-4 text-left text-xs ${isDark ? 'border-white/10 bg-[#1A1B23]' : 'border-slate-200 bg-slate-50'}`}>
+                                    <div>
+                                        <span className="block text-gray-400 uppercase font-bold text-[10px] tracking-wider">Booking Ref</span>
+                                        <span className="font-mono font-bold text-green-400 text-sm">{event?.userRegistration?.bookingRef || bookingRef}</span>
+                                    </div>
+                                    <div>
+                                        <span className="block text-gray-400 uppercase font-bold text-[10px] tracking-wider">Date</span>
+                                        <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{eventDateISO}</span>
+                                    </div>
+                                    <div>
+                                        <span className="block text-gray-400 uppercase font-bold text-[10px] tracking-wider">Time</span>
+                                        <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{event.time}</span>
+                                    </div>
+                                </div>
+
+                                {event?.userRegistration?.attended && (
+                                    <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-4 py-1.5 text-xs font-bold text-emerald-300">
+                                        <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Attendance Recorded (Checked-in)
+                                    </div>
+                                )}
+
+                                {canJoin ? (
+                                    <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                                        <button
+                                            onClick={handleJoinMeeting}
+                                            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black shadow-[0_0_30px_rgba(16,185,129,0.5)] transition hover:brightness-110 cursor-pointer"
+                                        >
+                                            <Video className="h-4 w-4" /> Enter Live Meeting Room
+                                        </button>
+                                        <button
+                                            onClick={copyMeetingLink}
+                                            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-6 py-4 text-sm font-bold uppercase tracking-wide text-emerald-300 transition hover:bg-emerald-500/20"
+                                        >
+                                            Copy Link
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="mt-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
+                                        <p className="text-sm font-semibold text-emerald-300">
+                                            🔒 The live meeting link will unlock automatically right here when the session goes live.
+                                        </p>
+                                        <p className="mt-1 text-xs text-gray-400">
+                                            A reminder will also be sent to your registered email and phone.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ) : !isAuthenticated ? (
+                        <div className={`mt-10 overflow-hidden rounded-3xl border shadow-xl ${isDark ? 'border-green-600/20 bg-[#12131A]' : 'border-slate-200 bg-white'}`}>
+                            <div className="h-1.5 w-full bg-gradient-to-r from-green-500 via-green-600 to-emerald-500" />
+                            <div className="p-8 sm:p-12 text-center max-w-xl mx-auto">
+                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-green-500/15 text-green-500 border border-green-500/30 shadow-[0_0_25px_rgba(34,197,94,0.3)]">
+                                    <Lock className="h-8 w-8" />
+                                </div>
+                                <h3 className={`mt-5 text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                    Sign In to Join This Event
+                                </h3>
+                                <p className={`mt-2 text-sm leading-relaxed ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>
+                                    To reserve your spot, process payment{isEventPaid ? ` of ${event.price}` : ''}, and receive your verified meeting access credentials, please sign in or create a free account.
+                                </p>
+
+                                <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+                                    <Link
+                                        to={`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                                        className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-black shadow-[0_0_25px_rgba(74,222,128,0.4)] transition hover:brightness-110"
+                                    >
+                                        Sign In to Account <ArrowRight className="h-4 w-4" />
+                                    </Link>
+                                    <Link
+                                        to={`/register?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                                        className={`inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border px-8 py-4 text-sm font-bold uppercase tracking-wide transition ${isDark ? 'border-white/15 bg-white/5 text-gray-200 hover:bg-white/10' : 'border-slate-300 bg-slate-50 text-slate-800 hover:bg-slate-100'}`}
+                                    >
+                                        Create New Account
+                                    </Link>
+                                </div>
+                                <p className={`mt-4 text-[11px] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>
+                                    After signing in, you will be brought straight back to finalize your registration.
+                                </p>
+                            </div>
                         </div>
                     ) : (
                     <div className={`mt-10 overflow-hidden rounded-3xl border shadow-xl ${isDark ? 'border-green-600/20 bg-[#12131A]' : 'border-slate-200 bg-white'}`}>
@@ -582,12 +1012,19 @@ export default function EventDetailPage() {
                                     <input
                                         value={form.phone}
                                         onChange={(e) => {
-                                            const cleaned = e.target.value.replace(/\D/g, '').slice(0, 10);
-                                            setForm(prev => ({ ...prev, phone: cleaned }));
+                                            const raw = e.target.value.replace(/[^\d+]/g, '').slice(0, 15);
+                                            setForm(prev => ({ ...prev, phone: raw }));
+                                        }}
+                                        onBlur={() => {
+                                            if (form.phone) {
+                                                const normalized = normalizePhone(form.phone);
+                                                if (normalized.length === 10) {
+                                                    setForm(prev => ({ ...prev, phone: normalized }));
+                                                }
+                                            }
                                         }}
                                         required
                                         placeholder="09XX XXX XXX"
-                                        maxLength={10}
                                         className={`w-full rounded-xl border px-4 py-3 text-sm transition focus:ring-2 focus:ring-green-500/30 focus:outline-none ${isDark ? 'border-green-600/20 bg-[#1A1B23] text-white placeholder-gray-500 focus:border-green-500' : 'border-slate-300 bg-slate-50 text-slate-900 placeholder-slate-400 focus:border-green-600 focus:bg-white'}`}
                                     />
                                     <p className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>Must start with 09 or 07, exactly 10 digits</p>

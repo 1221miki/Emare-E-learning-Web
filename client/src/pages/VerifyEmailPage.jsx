@@ -124,7 +124,9 @@ export default function VerifyEmailPage() {
         try {
             const response = await verifyEmail({ accountEmail: form.accountEmail.trim().toLowerCase(), verificationCode: form.verificationCode.trim() });
             setSuccess(response.message || 'Email verified successfully. Redirecting to login...');
-            setTimeout(() => navigate('/login', { state: { success: response.message || 'Email verified successfully. Please log in.' } }), 1300);
+            const redirectTarget = searchParams.get('redirect');
+            const loginUrl = redirectTarget ? `/login?redirect=${encodeURIComponent(redirectTarget)}` : '/login';
+            setTimeout(() => navigate(loginUrl, { state: { success: response.message || 'Email verified successfully. Please log in.' } }), 1300);
         } catch (err) {
             setError(extractErrorMessage(err, 'Failed to verify email. Please try again.'));
         } finally {

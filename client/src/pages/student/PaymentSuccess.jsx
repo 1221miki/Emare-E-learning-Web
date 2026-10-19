@@ -1,18 +1,27 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 
 export default function PaymentSuccess() {
     const { colors, theme } = useTheme();
+    const { user } = useAuth();
     const navigate = useNavigate();
     const { search } = useLocation();
     const params = new URLSearchParams(search);
     const courseId = params.get('courseId');
-    const txRef = params.get('tx_ref');
+    const txRef = params.get('tx_ref') || '';
+    const isEventTx = txRef.includes('-EVT-') || txRef.startsWith('EMARE-EVT');
     const [countdown, setCountdown] = useState(5);
     const [confetti, setConfetti] = useState([]);
     const intervalRef = useRef(null);
     const dark = theme === 'dark';
+
+    const dashboardPath = user?.assignedRole === 'Admin'
+        ? '/admin/dashboard'
+        : user?.assignedRole === 'Instructor'
+            ? '/instructor/dashboard'
+            : '/student/dashboard';
 
     // Generate confetti particles
     useEffect(() => {
@@ -31,13 +40,14 @@ export default function PaymentSuccess() {
     // Countdown + auto-redirect
     useEffect(() => {
         if (countdown <= 0) {
-            if (courseId) navigate(`/student/learn/${courseId}`);
-            else navigate('/student/dashboard');
+            if (isEventTx) navigate('/events');
+            else if (courseId) navigate(`/student/learn/${courseId}`);
+            else navigate(dashboardPath);
             return;
         }
         intervalRef.current = setTimeout(() => setCountdown(c => c - 1), 1000);
         return () => clearTimeout(intervalRef.current);
-    }, [countdown, courseId, navigate]);
+    }, [countdown, courseId, isEventTx, dashboardPath, navigate]);
 
     const cardBg = dark ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.97)';
     const muted = dark ? '#94a3b8' : '#64748b';
@@ -204,8 +214,9 @@ export default function PaymentSuccess() {
                     <button
                         onClick={() => {
                             clearTimeout(intervalRef.current);
-                            if (courseId) navigate(`/student/learn/${courseId}`);
-                            else navigate('/student/dashboard');
+                            if (isEventTx) navigate('/events');
+                            else if (courseId) navigate(`/student/learn/${courseId}`);
+                            else navigate(dashboardPath);
                         }}
                         style={{
                             width: '100%', padding: '17px',
@@ -219,10 +230,13 @@ export default function PaymentSuccess() {
                         onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
                         onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
                     >
-                        ▶ Start Learning Now
+                        {isEventTx ? '▶ View My Events' : '▶ Start Learning Now'}
                     </button>
                     <button
-                        onClick={() => navigate('/student/dashboard')}
+                        onClick={() => {
+                            clearTimeout(intervalRef.current);
+                            navigate(dashboardPath);
+                        }}
                         style={{
                             width: '100%', padding: '15px',
                             background: 'transparent',
@@ -234,7 +248,7 @@ export default function PaymentSuccess() {
                         onMouseEnter={e => { e.currentTarget.style.borderColor = green; e.currentTarget.style.color = green; }}
                         onMouseLeave={e => { e.currentTarget.style.borderColor = dark ? 'rgba(255,255,255,0.1)' : colors.border; e.currentTarget.style.color = muted; }}
                     >
-                        ▥ View My Dashboard
+                        ▥ Go to Dashboard
                     </button>
                 </div>
 

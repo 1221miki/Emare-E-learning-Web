@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useGoogleLogin } from '@react-oauth/google';
@@ -10,6 +10,8 @@ export default function RegisterPage() {
     const { theme, colors } = useTheme();
     const isDark = theme === 'dark';
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const redirectTarget = searchParams.get('redirect');
     const [form, setForm] = useState({
         firstName: '',
         middleName: '',
@@ -134,7 +136,7 @@ export default function RegisterPage() {
                 fullName: `${form.firstName} ${form.middleName ? form.middleName + ' ' : ''}${form.lastName}`.trim()
             };
             const response = await register(payload);
-            navigate(`/verify-email?email=${encodeURIComponent(form.accountEmail.trim().toLowerCase())}`);
+            navigate(`/verify-email?email=${encodeURIComponent(form.accountEmail.trim().toLowerCase())}${redirectTarget ? `&redirect=${encodeURIComponent(redirectTarget)}` : ''}`);
         } catch (err) {
             console.error('[Register] Registration failed:', err?.response?.data || err?.message || err);
             setError(getErrorMessage(err));
@@ -168,7 +170,9 @@ export default function RegisterPage() {
                     idToken: tokenResponse.access_token,
                     role: form.assignedRole || 'Student',
                 });
-                if (user.assignedRole === 'Admin') navigate('/admin/dashboard');
+                if (redirectTarget && redirectTarget.startsWith('/') && !redirectTarget.startsWith('//')) {
+                    navigate(redirectTarget);
+                } else if (user.assignedRole === 'Admin') navigate('/admin/dashboard');
                 else navigate('/student/dashboard');
             } catch (err) {
                 setSocialError(err.response?.data?.message || 'Google sign-in failed. Please try again.');
@@ -365,7 +369,7 @@ export default function RegisterPage() {
                 </div>
 
                 <p style={{ ...styles.footerText, color: colors.textMuted }}>
-                    Already have an account? <Link to="/login" style={{ ...styles.link, color: colors.primary }}>Sign in</Link>
+                    Already have an account? <Link to={redirectTarget ? `/login?redirect=${encodeURIComponent(redirectTarget)}` : '/login'} style={{ ...styles.link, color: colors.primary }}>Sign in</Link>
                 </p>
             </div>
         </div>

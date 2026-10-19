@@ -367,7 +367,7 @@ export default function LoginPage() {
                 </div>
 
                 <p style={{ ...styles.footerText, color: colors.textMuted }}>
-                    Don't have an account? <Link to="/register" style={{ ...styles.link, color: colors.primary }}>Register here</Link>
+                    Don't have an account? <Link to={searchParams.get('redirect') ? `/register?redirect=${encodeURIComponent(searchParams.get('redirect'))}` : '/register'} style={{ ...styles.link, color: colors.primary }}>Register here</Link>
                 </p>
                 </>
                 )}

@@ -11,6 +11,7 @@ import {
     Check,
     Clock,
     Copy,
+    Download,
     ExternalLink,
     Eye,
     Globe,
@@ -22,6 +23,7 @@ import {
     Search,
     ShieldAlert,
     ShieldCheck,
+    Star,
     Trash2,
     Users,
     Video,
@@ -240,6 +242,7 @@ const EMPTY_CREATE_FORM = {
     bannerImage: '',
     enableRegistration: true,
     eventCategory: 'Masterclass',
+    publishImmediately: true,
 };
 
 export default function AdminEventsPage() {
@@ -283,6 +286,108 @@ export default function AdminEventsPage() {
     const [meetingErrors, setMeetingErrors] = useState({});
     const [bannerUploading, setBannerUploading] = useState(false);
     const [bannerUploadError, setBannerUploadError] = useState('');
+
+    // attendees & attendance modal (Stage 6)
+    const [attendeesModalOpen, setAttendeesModalOpen] = useState(false);
+    const [attendeesTarget, setAttendeesTarget] = useState(null);
+    const [attendeesList, setAttendeesList] = useState([]);
+    const [attendeesStats, setAttendeesStats] = useState(null);
+    const [attendeesLoading, setAttendeesLoading] = useState(false);
+    const [attendeeSearch, setAttendeeSearch] = useState('');
+    const [attendeeFilter, setAttendeeFilter] = useState('all');
+    const [attendanceToggling, setAttendanceToggling] = useState({});
+
+    const openAttendeesModal = async (ev) => {
+        setAttendeesTarget(ev);
+        setAttendeesModalOpen(true);
+        setAttendeesLoading(true);
+        setAttendeeSearch('');
+        setAttendeeFilter('all');
+        try {
+            const res = await eventService.getAttendees(ev._id);
+            setAttendeesList(res.data?.data?.attendees || []);
+            setAttendeesStats(res.data?.data?.stats || null);
+        } catch (err) {
+            pushToast(err.response?.data?.message || 'Failed to load attendees', 'error');
+        } finally {
+            setAttendeesLoading(false);
+        }
+    };
+
+    const handleToggleAttendance = async (regId, currentAttended) => {
+        setAttendanceToggling((prev) => ({ ...prev, [regId]: true }));
+        try {
+            const newStatus = !currentAttended;
+            await eventService.updateAttendance(attendeesTarget._id, regId, { attended: newStatus });
+            setAttendeesList((prev) =>
+                prev.map((a) =>
+                    a._id === regId
+                        ? { ...a, attended: newStatus, attendedAt: newStatus ? new Date().toISOString() : null }
+                        : a
+                )
+            );
+            setAttendeesStats((prev) => {
+                if (!prev) return prev;
+                const delta = newStatus ? 1 : -1;
+                const newAttended = Math.max(0, (prev.totalAttended || 0) + delta);
+                const rate = prev.totalRegistrations > 0 ? Math.round((newAttended / prev.totalRegistrations) * 100) : 0;
+                return { ...prev, totalAttended: newAttended, attendanceRate: rate };
+            });
+            pushToast(`Attendance ${newStatus ? 'marked present' : 'unmarked'} successfully.`);
+        } catch (err) {
+            pushToast(err.response?.data?.message || 'Failed to update attendance', 'error');
+        } finally {
+            setAttendanceToggling((prev) => ({ ...prev, [regId]: false }));
+        }
+    };
+
+    const handleExportCSV = () => {
+        if (!attendeesList || attendeesList.length === 0) {
+            return pushToast('No attendees to export', 'error');
+        }
+        const headers = ['Booking Ref', 'Full Name', 'Email', 'Phone', 'City', 'Date', 'Slot', 'Payment Status', 'Amount Paid', 'Attended', 'Attended At', 'Rating', 'Feedback Comment'];
+        const rows = attendeesList.map((a) => [
+            `"${a.bookingRef || ''}"`,
+            `"${(a.fullName || a.userId?.fullName || '').replace(/"/g, '""')}"`,
+            `"${(a.email || a.userId?.accountEmail || '').replace(/"/g, '""')}"`,
+            `"${(a.phone || '').replace(/"/g, '""')}"`,
+            `"${(a.city || '').replace(/"/g, '""')}"`,
+            `"${a.selectedDate || ''}"`,
+            `"${a.selectedSlot || ''}"`,
+            `"${a.paymentStatus || 'none'}"`,
+            `"${a.amountPaid || 0}"`,
+            `"${a.attended ? 'Yes' : 'No'}"`,
+            `"${a.attendedAt ? new Date(a.attendedAt).toLocaleString() : ''}"`,
+            `"${a.feedback?.rating || ''}"`,
+            `"${(a.feedback?.comment || '').replace(/"/g, '""')}"`
+        ]);
+        const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', `attendees_${attendeesTarget?.slug || 'event'}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        pushToast('Attendees exported to CSV.', 'success');
+    };
+
+    const filteredAttendees = useMemo(() => {
+        return attendeesList.filter((a) => {
+            const matchesSearch = !attendeeSearch.trim() ||
+                (a.fullName || a.userId?.fullName || '').toLowerCase().includes(attendeeSearch.toLowerCase()) ||
+                (a.email || a.userId?.accountEmail || '').toLowerCase().includes(attendeeSearch.toLowerCase()) ||
+                (a.phone || '').includes(attendeeSearch) ||
+                (a.bookingRef || '').toLowerCase().includes(attendeeSearch.toLowerCase());
+
+            const matchesFilter =
+                attendeeFilter === 'all' ||
+                (attendeeFilter === 'attended' && a.attended) ||
+                (attendeeFilter === 'not_attended' && !a.attended);
+
+            return matchesSearch && matchesFilter;
+        });
+    }, [attendeesList, attendeeSearch, attendeeFilter]);
 
     const { toasts, pushToast } = useToasts();
 
@@ -633,7 +738,7 @@ export default function AdminEventsPage() {
                     price: createForm.price || 'FREE',
                     totalSlots: Number(createForm.capacity) || 0,
                     image: createForm.bannerImage || '',
-                    status: 'PENDING_REVIEW',
+                    status: createForm.publishImmediately === false ? 'DRAFT' : 'APPROVED',
                     isFeatured: false,
                     registrationEnabled: Boolean(createForm.enableRegistration),
                 };
@@ -1065,6 +1170,14 @@ export default function AdminEventsPage() {
                                                 </td>
                                                 <td className="px-5 py-4">
                                                     <div className="flex items-center justify-end gap-1.5">
+                                                        <button
+                                                            onClick={() => openAttendeesModal(event)}
+                                                            title="Attendees & Participation Records"
+                                                            className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border text-xs font-bold transition ${isDark ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20' : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 shadow-xs'}`}
+                                                        >
+                                                            <Users className="h-4 w-4" />
+                                                            <span>Attendees ({event.registeredCount || 0})</span>
+                                                        </button>
                                                         <button
                                                             onClick={() => openInspect(event)}
                                                             title="View event"
@@ -1606,6 +1719,13 @@ export default function AdminEventsPage() {
                                         <span style={{ fontSize: 14, fontWeight: 600, color: isDark ? '#e5e7eb' : '#1e293b' }}>Enable public registration</span>
                                         <input type="checkbox" checked={createForm.enableRegistration} onChange={(e) => setCreateForm({ ...createForm, enableRegistration: e.target.checked })} />
                                     </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 10, background: isDark ? 'rgba(255,255,255,0.04)' : '#f8fafc', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}`, cursor: 'pointer' }}>
+                                        <div>
+                                            <span style={{ fontSize: 14, fontWeight: 600, color: isDark ? '#e5e7eb' : '#1e293b' }}>Publish immediately</span>
+                                            <p style={{ margin: '2px 0 0', fontSize: 12, color: isDark ? '#9ca3af' : '#64748b' }}>Make visible to students on the public Events page right away</p>
+                                        </div>
+                                        <input type="checkbox" checked={createForm.publishImmediately !== false} onChange={(e) => setCreateForm({ ...createForm, publishImmediately: e.target.checked })} />
+                                    </label>
                                 </div>
                             </div>
                         </>
@@ -1810,6 +1930,199 @@ export default function AdminEventsPage() {
                         </button>
                     </div>
                 </Modal>
+            )}
+
+            {/* ── Attendees & Participation Records Modal (Stage 6) ─ */}
+            {attendeesModalOpen && attendeesTarget && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-6">
+                    <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setAttendeesModalOpen(false)} />
+                    <div className={`relative flex flex-col max-h-[92vh] w-full max-w-5xl rounded-3xl border shadow-2xl overflow-hidden ${isDark ? 'border-green-600/25 bg-[#10111A]' : 'border-slate-200 bg-white'}`}>
+                        {/* Header */}
+                        <div className={`flex items-center justify-between border-b px-6 py-4.5 ${isDark ? 'border-white/10 bg-[#141522]' : 'border-slate-200 bg-slate-50'}`}>
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-emerald-400">
+                                        Stage 6: Participation &amp; Attendance
+                                    </span>
+                                    <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>•</span>
+                                    <span className={`text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>{attendeesTarget.price || 'Free'}</span>
+                                </div>
+                                <h3 className={`mt-1 text-lg font-black truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{attendeesTarget.title}</h3>
+                            </div>
+                            <button
+                                onClick={() => setAttendeesModalOpen(false)}
+                                className={`flex h-9 w-9 items-center justify-center rounded-xl border transition ${isDark ? 'border-white/10 text-gray-400 hover:text-white' : 'border-slate-300 text-slate-500 hover:text-slate-900'}`}
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+
+                        {/* KPI Cards */}
+                        <div className={`grid grid-cols-2 sm:grid-cols-5 gap-3 p-5 border-b ${isDark ? 'border-white/10 bg-[#161725]' : 'border-slate-100 bg-slate-50/60'}`}>
+                            <div className={`rounded-2xl border p-3.5 ${isDark ? 'border-white/5 bg-[#12131F]' : 'border-slate-200 bg-white'}`}>
+                                <span className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Registrations</span>
+                                <span className={`text-xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{attendeesStats?.totalRegistrations ?? attendeesList.length}</span>
+                            </div>
+                            <div className={`rounded-2xl border p-3.5 ${isDark ? 'border-white/5 bg-[#12131F]' : 'border-slate-200 bg-white'}`}>
+                                <span className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Attended (Present)</span>
+                                <span className="text-xl font-black text-emerald-400">{attendeesStats?.totalAttended ?? attendeesList.filter(a => a.attended).length}</span>
+                            </div>
+                            <div className={`rounded-2xl border p-3.5 ${isDark ? 'border-white/5 bg-[#12131F]' : 'border-slate-200 bg-white'}`}>
+                                <span className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Attendance Rate</span>
+                                <span className="text-xl font-black text-green-500">{attendeesStats?.attendanceRate ?? 0}%</span>
+                            </div>
+                            <div className={`rounded-2xl border p-3.5 ${isDark ? 'border-white/5 bg-[#12131F]' : 'border-slate-200 bg-white'}`}>
+                                <span className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Paid Revenue</span>
+                                <span className="text-xl font-black text-emerald-400">{attendeesStats?.totalPaidAmount ?? 0} ETB</span>
+                            </div>
+                            <div className={`col-span-2 sm:col-span-1 rounded-2xl border p-3.5 ${isDark ? 'border-white/5 bg-[#12131F]' : 'border-slate-200 bg-white'}`}>
+                                <span className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Avg Feedback</span>
+                                <span className="text-xl font-black text-amber-400 flex items-center gap-1">
+                                    <Star className="h-4 w-4 fill-amber-400" />
+                                    {attendeesStats?.averageRating ? `${attendeesStats.averageRating}/5` : 'N/A'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Search & Actions Toolbar */}
+                        <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-4 border-b ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+                            <div className="flex flex-1 items-center gap-3 w-full sm:w-auto">
+                                <div className="relative flex-1 sm:max-w-xs">
+                                    <Search className={`absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 ${isDark ? 'text-gray-500' : 'text-slate-400'}`} />
+                                    <input
+                                        type="text"
+                                        value={attendeeSearch}
+                                        onChange={(e) => setAttendeeSearch(e.target.value)}
+                                        placeholder="Search name, email, booking ref…"
+                                        className={`w-full rounded-xl border pl-10 pr-4 py-2 text-xs transition focus:ring-2 focus:ring-green-500/30 focus:outline-none ${isDark ? 'border-white/10 bg-[#171825] text-white placeholder-gray-500' : 'border-slate-300 bg-slate-50 text-slate-900 placeholder-slate-400'}`}
+                                    />
+                                </div>
+                                <div className="flex gap-1 rounded-xl border p-1 text-xs">
+                                    {[
+                                        { key: 'all', label: 'All' },
+                                        { key: 'attended', label: 'Present' },
+                                        { key: 'not_attended', label: 'Absent' },
+                                    ].map((f) => (
+                                        <button
+                                            key={f.key}
+                                            onClick={() => setAttendeeFilter(f.key)}
+                                            className={`rounded-lg px-3 py-1 font-bold transition ${attendeeFilter === f.key ? 'bg-green-500 text-black' : isDark ? 'text-gray-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'}`}
+                                        >
+                                            {f.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleExportCSV}
+                                className="inline-flex items-center gap-2 rounded-xl border border-green-500/40 bg-green-500/10 px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-green-600 dark:text-green-300 transition hover:bg-green-500/20"
+                            >
+                                <Download className="h-3.5 w-3.5" /> Export CSV
+                            </button>
+                        </div>
+
+                        {/* Attendees Table */}
+                        <div className="flex-1 overflow-y-auto">
+                            {attendeesLoading ? (
+                                <div className="flex flex-col items-center justify-center py-16">
+                                    <Loader2 className="h-8 w-8 animate-spin text-green-500" />
+                                    <p className="mt-3 text-sm text-gray-400">Loading attendees…</p>
+                                </div>
+                            ) : filteredAttendees.length === 0 ? (
+                                <div className="py-16 text-center">
+                                    <Users className="mx-auto h-10 w-10 text-gray-500 opacity-40" />
+                                    <p className={`mt-3 text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>No attendees found</p>
+                                    <p className="mt-1 text-xs text-gray-400">No participants registered yet or match your search.</p>
+                                </div>
+                            ) : (
+                                <table className="w-full text-left text-xs">
+                                    <thead className={`sticky top-0 border-b uppercase font-extrabold tracking-wider ${isDark ? 'border-white/10 bg-[#141522] text-gray-400' : 'border-slate-200 bg-slate-100 text-slate-600'}`}>
+                                        <tr>
+                                            <th className="px-5 py-3">Participant</th>
+                                            <th className="px-5 py-3">Booking Ref</th>
+                                            <th className="px-5 py-3">Payment</th>
+                                            <th className="px-5 py-3">Attendance Check-in</th>
+                                            <th className="px-5 py-3">Feedback</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                        {filteredAttendees.map((a) => {
+                                            const pName = a.fullName || a.userId?.fullName || 'Guest Participant';
+                                            const pEmail = a.email || a.userId?.accountEmail || '—';
+                                            const isPaid = a.paymentStatus === 'completed';
+                                            return (
+                                                <tr key={a._id} className={`transition ${isDark ? 'hover:bg-white/[0.02]' : 'hover:bg-slate-50'}`}>
+                                                    <td className="px-5 py-3.5">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/10 font-bold text-green-400 border border-green-500/30">
+                                                                {pName.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <p className={`font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{pName}</p>
+                                                                <p className="text-[11px] text-gray-400 truncate">{pEmail} {a.phone ? `• ${a.phone}` : ''}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-5 py-3.5 font-mono text-green-400 font-bold">
+                                                        {a.bookingRef || '—'}
+                                                    </td>
+                                                    <td className="px-5 py-3.5">
+                                                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase ${isPaid ? 'bg-emerald-500/20 text-emerald-300' : a.paymentStatus === 'pending' ? 'bg-amber-500/20 text-amber-300' : 'bg-white/10 text-gray-300'}`}>
+                                                            {a.paymentStatus || 'Free'}
+                                                        </span>
+                                                        {a.amountPaid > 0 && (
+                                                            <span className="block text-[10px] text-gray-400 mt-0.5">{a.amountPaid} ETB</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-5 py-3.5">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${a.attended ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-white/10 text-gray-400'}`}>
+                                                                {a.attended ? <CheckCircle2 className="h-3 w-3 text-emerald-400" /> : <Clock className="h-3 w-3" />}
+                                                                {a.attended ? 'Present' : 'Absent'}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => handleToggleAttendance(a._id, a.attended)}
+                                                                disabled={attendanceToggling[a._id]}
+                                                                className={`rounded-lg px-2.5 py-1 text-[11px] font-bold border transition ${a.attended ? 'border-red-400/30 text-red-300 hover:bg-red-500/10' : 'border-emerald-400/30 text-emerald-300 hover:bg-emerald-500/10'}`}
+                                                            >
+                                                                {attendanceToggling[a._id] ? (
+                                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                                ) : a.attended ? (
+                                                                    'Mark Absent'
+                                                                ) : (
+                                                                    'Mark Present'
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                        {a.attendedAt && (
+                                                            <span className="block text-[10px] text-gray-400 mt-1">
+                                                                At: {new Date(a.attendedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-5 py-3.5">
+                                                        {a.feedback?.rating ? (
+                                                            <div>
+                                                                <span className="inline-flex items-center gap-1 font-bold text-amber-400">
+                                                                    <Star className="h-3.5 w-3.5 fill-amber-400" /> {a.feedback.rating}/5
+                                                                </span>
+                                                                {a.feedback.comment && (
+                                                                    <p className="text-[11px] text-gray-400 max-w-xs truncate italic">"{a.feedback.comment}"</p>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-gray-500">—</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* ── Toasts ────────────────────────────────────────────── */}

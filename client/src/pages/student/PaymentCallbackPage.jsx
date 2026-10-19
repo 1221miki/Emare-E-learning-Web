@@ -7,8 +7,9 @@ export default function PaymentCallbackPage() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { colors, theme } = useTheme();
-    const txRef = searchParams.get('tx_ref') || searchParams.get('trx_ref') || '';
-    const paymentType = searchParams.get('type') || 'course';
+    const txRef = searchParams.get('tx_ref') || searchParams.get('trx_ref') || searchParams.get('ref') || '';
+    const isEventTx = searchParams.get('type') === 'event' || txRef.includes('-EVT-') || txRef.startsWith('EMARE-EVT');
+    const paymentType = isEventTx ? 'event' : (searchParams.get('type') || 'course');
 
     const [status, setStatus] = useState('verifying'); // 'verifying' | 'success' | 'failed'
     const [errorMsg, setErrorMsg] = useState('');
@@ -36,26 +37,43 @@ export default function PaymentCallbackPage() {
                 let verified = false;
                 let statusKey = '';
                 let payload = null;
+                let isEvent = isEventTx;
+                let targetEventSlug = '';
+                let targetBookingRef = '';
 
-                if (paymentType === 'event') {
+                if (isEventTx) {
                     // Event payment verification
                     const res = await publicEventService.verifyPayment(txRef);
                     payload = res.data;
                     verified = payload?.verified === true;
                     statusKey = payload?.transactionStatus || '';
+                    targetEventSlug = payload?.eventSlug || '';
+                    targetBookingRef = payload?.bookingRef || '';
                     setEventInfo({
-                        bookingRef: payload?.bookingRef || '',
-                        eventSlug: payload?.eventSlug || '',
+                        bookingRef: targetBookingRef,
+                        eventSlug: targetEventSlug,
                         amount: payload?.amount || 0,
                         currency: payload?.currency || 'ETB'
                     });
                 } else {
-                    // Course payment verification (existing flow)
+                    // Course payment verification
                     const res = await paymentService.verifyChapa(txRef);
                     payload = res.data;
                     verified = payload?.verified === true;
                     statusKey = payload?.transactionStatus || '';
-                    setEnrolledCourseId(payload?.courseId || null);
+                    if (payload?.isEvent || payload?.eventSlug) {
+                        isEvent = true;
+                        targetEventSlug = payload.eventSlug || '';
+                        targetBookingRef = payload.bookingRef || '';
+                        setEventInfo({
+                            bookingRef: targetBookingRef,
+                            eventSlug: targetEventSlug,
+                            amount: payload?.amount || 0,
+                            currency: payload?.currency || 'ETB'
+                        });
+                    } else {
+                        setEnrolledCourseId(payload?.courseId || null);
+                    }
                 }
 
                 clearInterval(progressInterval);
@@ -64,10 +82,17 @@ export default function PaymentCallbackPage() {
                 if (verified) {
                     setStatus('success');
                     setTimeout(() => {
-                        if (paymentType === 'event' && payload?.eventSlug) {
-                            navigate(`/events/${payload.eventSlug}?paid=1&booking=${encodeURIComponent(payload?.bookingRef || '')}&tx_ref=${encodeURIComponent(txRef)}`);
-                        } else if (enrolledCourseId) {
-                            navigate(`/payment/success?courseId=${enrolledCourseId}&tx_ref=${encodeURIComponent(txRef)}`);
+                        if (isEvent) {
+                            const slug = targetEventSlug || payload?.eventSlug || eventInfo?.eventSlug;
+                            const bRef = targetBookingRef || payload?.bookingRef || eventInfo?.bookingRef || '';
+                            if (slug) {
+                                navigate(`/events/${slug}?paid=1&booking=${encodeURIComponent(bRef)}&tx_ref=${encodeURIComponent(txRef)}`);
+                            } else {
+                                navigate(`/events?paid=1&booking=${encodeURIComponent(bRef)}&tx_ref=${encodeURIComponent(txRef)}`);
+                            }
+                        } else if (enrolledCourseId || payload?.courseId) {
+                            const cId = enrolledCourseId || payload?.courseId;
+                            navigate(`/payment/success?courseId=${cId}&tx_ref=${encodeURIComponent(txRef)}`);
                         } else {
                             navigate(`/payment/success?tx_ref=${encodeURIComponent(txRef)}`);
                         }
@@ -99,14 +124,14 @@ export default function PaymentCallbackPage() {
         // Small delay to let the animation show
         const timer = setTimeout(verifyPayment, 1500);
         return () => { clearTimeout(timer); clearInterval(progressInterval); };
-    }, [txRef, paymentType, enrolledCourseId, navigate]);
+    }, [txRef, isEventTx, paymentType, enrolledCourseId, navigate]);
 
     const cardBg = theme === 'dark' ? 'rgba(30, 41, 59, 0.85)' : 'rgba(255, 255, 255, 0.95)';
     const textMuted = theme === 'dark' ? '#94a3b8' : '#64748b';
     const successGreen = '#10b981';
     const errorRed = '#ef4444';
 
-    const title = paymentType === 'event' ? 'Event Booking Payment' : 'Course Enrollment';
+    const title = (isEventTx || eventInfo) ? 'Event Booking Payment' : 'Course Enrollment';
 
     return (
         <div style={{

@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import API, { courseService, subscriptionService, userService, liveSessionService, eventService } from '../services/api.jsx';
+import API, { courseService, subscriptionService, userService, liveSessionService, eventService, contentService } from '../services/api.jsx';
 import Navbar from '../components/Navbar';
 import SiteFooter from '../components/SiteFooter';
 import HeroVideoControls from '../components/HeroVideoControls';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, Phone, Mail, Clock, Volume2 } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock, Volume2, Star, Megaphone, X } from 'lucide-react';
 import { FaFacebookF, FaTiktok, FaTelegramPlane, FaInstagram, FaLinkedinIn } from 'react-icons/fa';
 
 export default function LandingPage() {
@@ -28,8 +28,66 @@ export default function LandingPage() {
     const [upcomingSessions, setUpcomingSessions] = useState([]); // real live sessions from DB
     const [publicEvents, setPublicEvents] = useState([]); // published events created from the admin event form
     const [reservingId, setReservingId] = useState(null);
+    const [homeContent, setHomeContent] = useState(null);
+    const [cmsFaqs, setCmsFaqs] = useState([
+        { q: 'How do I enroll in a course?', a: 'Create an account, browse our catalog, and click "Enroll Now".' },
+        { q: 'Are there free courses available?', a: 'Yes! We offer several free courses across various categories.' },
+        { q: 'Do I receive a certificate?', a: 'Absolutely. Upon successful completion, you receive a digital certificate.' }
+    ]);
+    const [activeBanners, setActiveBanners] = useState([]);
+    const [bannerDismissed, setBannerDismissed] = useState(false);
+    const [activeTestimonials, setActiveTestimonials] = useState([]);
+    const [activeNews, setActiveNews] = useState([]);
+    const [activeBlogs, setActiveBlogs] = useState([]);
     const navigate = useNavigate();
     const location = useLocation();
+
+    // ── Load Dynamic CMS Content from MongoDB ──────────────────────────────
+    useEffect(() => {
+        let isMounted = true;
+
+        contentService.getPage('home').then(res => {
+            if (isMounted && res.data?.data?.content) setHomeContent(res.data.data.content);
+        }).catch(() => {});
+
+        contentService.getPage('faq').then(res => {
+            const items = res.data?.data?.content?.items;
+            if (isMounted && Array.isArray(items) && items.length > 0) {
+                const published = items.filter(i => i.isPublished !== false).map(i => ({ q: i.question, a: i.answer }));
+                if (published.length > 0) setCmsFaqs(published);
+            }
+        }).catch(() => {});
+
+        contentService.getPage('banners').then(res => {
+            const items = res.data?.data?.content?.items;
+            if (isMounted && Array.isArray(items)) {
+                setActiveBanners(items.filter(i => i.isPublished !== false));
+            }
+        }).catch(() => {});
+
+        contentService.getPage('testimonials').then(res => {
+            const items = res.data?.data?.content?.items;
+            if (isMounted && Array.isArray(items)) {
+                setActiveTestimonials(items.filter(i => i.isPublished !== false));
+            }
+        }).catch(() => {});
+
+        contentService.getPage('news').then(res => {
+            const items = res.data?.data?.content?.items;
+            if (isMounted && Array.isArray(items)) {
+                setActiveNews(items.filter(i => i.isPublished !== false));
+            }
+        }).catch(() => {});
+
+        contentService.getPage('blogs').then(res => {
+            const items = res.data?.data?.content?.items;
+            if (isMounted && Array.isArray(items)) {
+                setActiveBlogs(items.filter(i => i.isPublished !== false));
+            }
+        }).catch(() => {});
+
+        return () => { isMounted = false; };
+    }, []);
 
     // ── Scroll to a section when arriving via hash (#services, #contact) ────
     useEffect(() => {
@@ -518,6 +576,47 @@ export default function LandingPage() {
             {/* 1 & 2. Top Announcement Bar & Navigation Bar are inside the Navbar Component */}
             <Navbar />
 
+            {/* Top CMS Promotional Banner (from Admin CMS Banners module) */}
+            {activeBanners.length > 0 && !bannerDismissed && (
+                <div style={{
+                    marginTop: '74px',
+                    background: 'linear-gradient(90deg, #15803d 0%, #16a34a 50%, #22c55e 100%)',
+                    color: '#ffffff',
+                    padding: '10px 5%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    zIndex: 90,
+                    boxShadow: '0 4px 14px rgba(22,163,74,0.3)'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        {activeBanners[0].badge && (
+                            <span style={{ background: 'rgba(0,0,0,0.25)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '800', letterSpacing: '0.05em' }}>
+                                {activeBanners[0].badge}
+                            </span>
+                        )}
+                        <span><strong>{activeBanners[0].title}:</strong> {activeBanners[0].subtitle}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        {activeBanners[0].link && (
+                            <Link to={activeBanners[0].link} style={{ color: '#ffffff', textDecoration: 'underline', fontWeight: '700', fontSize: '13px' }}>
+                                Learn More →
+                            </Link>
+                        )}
+                        <button
+                            onClick={() => setBannerDismissed(true)}
+                            title="Dismiss announcement"
+                            style={{ background: 'transparent', border: 'none', color: '#ffffff', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* 3. Hero Section */}
             <section className="landing-hero" style={p.hero}>
                 {/* SVG sharpening filter for the upscaled background photo */}
@@ -550,10 +649,14 @@ export default function LandingPage() {
                 <div style={p.heroOverlay} />
                 
                 <div className="landing-hero-content" style={p.heroContent}>
-                    <div style={p.heroBadge}>🎓 Trusted by 2,500+ learners across Ethiopia</div>
-                    <h1 style={p.heroTitle}>Welcome to Emare ICT Hub</h1>
+                    <div style={p.heroBadge}>
+                        {homeContent?.heroBadge || '🎓 Trusted by 2,500+ learners across Ethiopia'}
+                    </div>
+                    <h1 style={p.heroTitle}>
+                        {homeContent?.heroTitle || 'Welcome to Emare ICT Hub'}
+                    </h1>
                     <h2 className="emare-hero-subtitle" style={p.heroSubtitleAnimated}>
-                        Master In-Demand Tech Skills, Build Your Future, and Become Job Ready.
+                        {homeContent?.heroSubtitle || 'Master In-Demand Tech Skills, Build Your Future, and Become Job Ready.'}
                     </h2>
                     <form onSubmit={handleSearch} style={p.searchForm}>
                         <input type="text" placeholder="Search for courses, paths, or instructors..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={p.searchInput} />
@@ -986,6 +1089,80 @@ export default function LandingPage() {
                 )}
             </section>
 
+            {/* 17.5. Student & Client Testimonials (CMS module) */}
+            {activeTestimonials.length > 0 && (
+                <section className="emare-section" style={{ ...p.section, background: colors.bg }}>
+                    <div style={p.sectionHeader}>
+                        <span style={p.sectionBadge}>Success Stories</span>
+                        <h2 style={p.sectionTitle}>What Our Students & Partners Say</h2>
+                        <p style={p.sectionSubtitle}>Real feedback from learners transforming their tech careers with Emare.</p>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+                        {activeTestimonials.map((t, idx) => (
+                            <div key={t.id || idx} style={{ background: colors.bgCard, borderRadius: '16px', padding: '28px', border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px', boxShadow: colors.shadowSm }}>
+                                <div>
+                                    <div style={{ display: 'flex', gap: '2px', color: '#f59e0b', fontSize: '16px', marginBottom: '12px' }}>
+                                        {'★'.repeat(t.rating || 5)}
+                                    </div>
+                                    <p style={{ margin: 0, fontSize: '15px', color: colors.text, lineHeight: 1.65, fontStyle: 'italic' }}>
+                                        "{t.quote}"
+                                    </p>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderTop: `1px solid ${colors.border}`, paddingTop: '14px' }}>
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '16px' }}>
+                                        {t.name ? t.name.charAt(0).toUpperCase() : 'S'}
+                                    </div>
+                                    <div>
+                                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: colors.text }}>{t.name}</h4>
+                                        <span style={{ fontSize: '12px', color: colors.textMuted }}>{t.role || 'Student'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* 17.6. News & Articles (CMS module) */}
+            {(activeNews.length > 0 || activeBlogs.length > 0) && (
+                <section className="emare-section" style={{ ...p.section, background: colors.bgCard }}>
+                    <div style={p.sectionHeader}>
+                        <span style={p.sectionBadge}>Updates & Insights</span>
+                        <h2 style={p.sectionTitle}>News & Tech Insights</h2>
+                        <p style={p.sectionSubtitle}>Stay informed with platform announcements and tech articles from our experts.</p>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+                        {activeNews.map((n, idx) => (
+                            <div key={n.id || `news_${idx}`} style={{ background: colors.bg, borderRadius: '16px', padding: '24px', border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: colors.shadowSm }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '6px', background: 'rgba(56,189,248,0.15)', color: '#38bdf8', textTransform: 'uppercase' }}>
+                                        {n.tag || 'News'}
+                                    </span>
+                                    {n.date && <span style={{ fontSize: '12px', color: colors.textMuted }}>{n.date}</span>}
+                                </div>
+                                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: colors.text, lineHeight: 1.4 }}>{n.title}</h3>
+                                <p style={{ margin: 0, fontSize: '14px', color: colors.textMuted, lineHeight: 1.6 }}>{n.body}</p>
+                            </div>
+                        ))}
+                        {activeBlogs.map((b, idx) => (
+                            <div key={b.id || `blog_${idx}`} style={{ background: colors.bg, borderRadius: '16px', padding: '24px', border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: colors.shadowSm }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '6px', background: 'rgba(168,85,247,0.15)', color: '#a855f7', textTransform: 'uppercase' }}>
+                                        {b.tag || 'Blog'}
+                                    </span>
+                                    {b.readTime && <span style={{ fontSize: '12px', color: colors.textMuted }}>{b.readTime}</span>}
+                                </div>
+                                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: colors.text, lineHeight: 1.4 }}>{b.title}</h3>
+                                <p style={{ margin: 0, fontSize: '14px', color: colors.textMuted, lineHeight: 1.6 }}>{b.body}</p>
+                                <span style={{ fontSize: '12px', color: colors.textMuted, marginTop: 'auto' }}>
+                                    By {b.author || 'Emare Team'} {b.date ? `• ${b.date}` : ''}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
             {/* 18. Frequently Asked Questions */}
             <section className="emare-section" style={{ ...p.section, background: colors.bgCard }}>
                 <div style={p.sectionHeader}>
@@ -993,7 +1170,7 @@ export default function LandingPage() {
                     <h2 style={p.sectionTitle}>Frequently Asked Questions</h2>
                 </div>
                 <div style={p.faqContainer}>
-                    {faqs.map((faq, i) => (
+                    {cmsFaqs.map((faq, i) => (
                         <div key={i} style={p.faqItem} onClick={() => setActiveFaq(activeFaq === i ? null : i)}>
                             <div style={p.faqQuestion}>
                                 <span>{faq.q}</span>

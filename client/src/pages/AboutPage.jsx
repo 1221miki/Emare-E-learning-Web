@@ -1,11 +1,25 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import SiteFooter from '../components/SiteFooter';
 import { useTheme } from '../context/ThemeContext';
+import { contentService } from '../services/api';
 
 export default function AboutPage() {
     const { colors, theme } = useTheme();
+    const [aboutContent, setAboutContent] = useState(null);
+
+    useEffect(() => {
+        let isMounted = true;
+        contentService.getPage('about')
+            .then(res => {
+                if (isMounted && res.data?.data?.content) {
+                    setAboutContent(res.data.data.content);
+                }
+            })
+            .catch(err => console.error('Failed to load about CMS content:', err));
+        return () => { isMounted = false; };
+    }, []);
 
     const galleryImages = {
         one: 'https://res.cloudinary.com/afthor2f/image/upload/v1787426018/1.jpg',
@@ -20,10 +34,13 @@ export default function AboutPage() {
         page: { minHeight: '100vh', fontFamily: "'Outfit', 'Inter', sans-serif" },
         wrapper: { maxWidth: '1200px', margin: '0 auto', padding: '100px 5%' },
         hero: { display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '40px', alignItems: 'center' },
-        left: { display: 'flex', flexDirection: 'column', gap: '28px' },
+        left: { display: 'flex', flexDirection: 'column', gap: '24px' },
         badge: { display: 'inline-block', padding: '8px 22px', background: 'rgba(34,197,94,0.12)', color: '#4ade80', borderRadius: '999px', fontWeight: '700', fontSize: '13px', letterSpacing: '0.12em', textTransform: 'uppercase', border: '1px solid rgba(34,197,94,0.24)' },
         title: { fontSize: '54px', fontWeight: '900', lineHeight: '1.03', margin: '0', color: colors.text, maxWidth: '700px' },
-        description: { fontSize: '17px', lineHeight: '1.9', color: colors.textMuted, maxWidth: '760px' },
+        description: { fontSize: '17px', lineHeight: '1.9', color: colors.textMuted, maxWidth: '760px', margin: 0 },
+        missionBox: { padding: '20px 24px', borderRadius: '16px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)', maxWidth: '760px' },
+        missionTitle: { fontSize: '13px', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.primary, margin: '0 0 8px' },
+        missionText: { fontSize: '15px', lineHeight: 1.7, color: colors.text, margin: 0, fontWeight: 500 },
         card: { background: 'transparent', border: 'none', borderRadius: '28px', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', minHeight: '420px' },
         cardLogo: { width: '100%', maxWidth: '560px', objectFit: 'contain', mixBlendMode: theme === 'dark' ? 'screen' : 'multiply' },
         cardTitle: { fontSize: '28px', fontWeight: '900', margin: '0', color: colors.text },
@@ -34,6 +51,10 @@ export default function AboutPage() {
         mobileStack: { display: 'grid', gap: '32px' }
     };
 
+    const headline = aboutContent?.headline || 'Digital Innovation and System Development Center';
+    const bodyText = aboutContent?.body;
+    const mission = aboutContent?.mission;
+
     return (
         <div style={{ ...s.page, background: colors.bg, color: colors.text }}>
             <Navbar />
@@ -41,13 +62,29 @@ export default function AboutPage() {
                 <div style={s.hero}>
                     <div style={s.left}>
                         <span style={s.badge}>About Us</span>
-                        <h1 style={s.title}>Digital Innovation and System Development Center</h1>
-                        <p style={s.description}>
-                            Emare ICT Hub is designed to become a leading platform for digital skills development, technology entrepreneurship, and innovation in Debre Birhan City. This center offers a comprehensive ecosystem for tech growth, providing accessible digital tools, training, mentorship, and collaboration opportunities to local tech professionals, startups, and businesses.
-                        </p>
-                        <p style={s.description}>
-                            Crucially, Emare ICT Hub also features its own high-skilled development team, focused on creating and delivering cutting-edge systems and solutions. This internal capacity allows us to drive innovation from within and support the wider community. With the growing importance of technology in driving economic development, the Emare ICT Hub will be a vital player in fostering a tech-savvy community, empowering young innovators, and creating job opportunities through digital literacy.
-                        </p>
+                        <h1 style={s.title}>{headline}</h1>
+                        {bodyText ? (
+                            bodyText.split(/\n\s*\n/).map((para, idx) => (
+                                <p key={idx} style={s.description}>
+                                    {para}
+                                </p>
+                            ))
+                        ) : (
+                            <>
+                                <p style={s.description}>
+                                    Emare ICT Hub is designed to become a leading platform for digital skills development, technology entrepreneurship, and innovation in Debre Birhan City. This center offers a comprehensive ecosystem for tech growth, providing accessible digital tools, training, mentorship, and collaboration opportunities to local tech professionals, startups, and businesses.
+                                </p>
+                                <p style={s.description}>
+                                    Crucially, Emare ICT Hub also features its own high-skilled development team, focused on creating and delivering cutting-edge systems and solutions. This internal capacity allows us to drive innovation from within and support the wider community. With the growing importance of technology in driving economic development, the Emare ICT Hub will be a vital player in fostering a tech-savvy community, empowering young innovators, and creating job opportunities through digital literacy.
+                                </p>
+                            </>
+                        )}
+                        {mission && (
+                            <div style={s.missionBox}>
+                                <div style={s.missionTitle}>Our Mission & Vision</div>
+                                <p style={s.missionText}>{mission}</p>
+                            </div>
+                        )}
                     </div>
 
                     <div style={s.card}>

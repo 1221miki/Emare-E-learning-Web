@@ -45,7 +45,14 @@ const EventRegistrationSchema = new mongoose.Schema({
     },
     amountPaid: { type: Number, default: 0 },
     currency: { type: String, trim: true, default: '' },
-    txRef: { type: String, trim: true, default: '' }
+    txRef: { type: String, trim: true, default: '' },
+    attended: { type: Boolean, default: false },
+    attendedAt: { type: Date, default: null },
+    feedback: {
+        rating: { type: Number, min: 1, max: 5, default: null },
+        comment: { type: String, trim: true, default: '' },
+        submittedAt: { type: Date, default: null }
+    }
 }, {
     timestamps: true
 });

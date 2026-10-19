@@ -116,7 +116,7 @@ const computeLiveStatus = (event, now = Date.now()) => {
     return 'live';
 };
 
-const serializePublic = (event, registered = 0) => {
+const serializePublic = (event, registered = 0, hasAccess = false) => {
     const slotsLeft = Math.max(0, Number(event.totalSlots || 0) - Number(registered || 0));
     const venue = event.venue || 'Online Live Stream';
     return {
@@ -139,15 +139,17 @@ const serializePublic = (event, registered = 0) => {
         description: event.description || [],
         speaker: event.speaker || null,
         eventType: event.eventType || 'Hybrid',
-        meetingUrl: event.meetingUrl || event.streamUrl || '',
+        // Protected fields: only provided when hasAccess is true (registered, paid, or admin/host)
+        meetingUrl: hasAccess ? (event.meetingUrl || event.streamUrl || '') : '',
         meetingProvider: event.meetingProvider || 'internal',
         meetingPlatform: event.meetingPlatform || '',
-        meetingInvitees: event.meetingInvitees || '',
-        meetingPassword: event.meetingPassword || '',
+        meetingInvitees: hasAccess ? (event.meetingInvitees || '') : '',
+        meetingPassword: hasAccess ? (event.meetingPassword || '') : '',
         meetingSpaceName: event.meetingSpaceName || '',
         meetingCreatedAt: event.meetingCreatedAt || null,
         liveStatus: computeLiveStatus(event),
-        registrationOpen: event.status === 'APPROVED' && event.registrationEnabled !== false
+        registrationOpen: event.status === 'APPROVED' && event.registrationEnabled !== false,
+        hasAccess: Boolean(hasAccess)
     };
 };
 
@@ -603,7 +605,8 @@ exports.getPublishedEvents = async (req, res) => {
     try {
         const events = await Event.find({ status: 'APPROVED', visibility: 'public' }).sort({ startDate: 1 });
         const counts = await registeredCounts(events.map((e) => e._id));
-        const data = events.map((e) => serializePublic(e.toObject(), counts[String(e._id)] || 0));
+        // Listing is public, never leak meeting links in the directory listing
+        const data = events.map((e) => serializePublic(e.toObject(), counts[String(e._id)] || 0, false));
         res.status(200).json({ success: true, count: data.length, data });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to load events.' });
@@ -616,8 +619,76 @@ exports.getPublishedEvent = async (req, res) => {
         const event = await Event.findOne({ slug: ref, status: 'APPROVED', visibility: 'public' });
         if (!event) return res.status(404).json({ success: false, message: 'Event not found or not published.' });
         const registered = await EventRegistration.countDocuments({ eventRef: event._id, status: { $ne: 'cancelled' } });
-        res.status(200).json({ success: true, data: serializePublic(event.toObject(), registered) });
+
+        let hasAccess = false;
+        let isHost = false;
+        let userRegistration = null;
+
+        if (req.user) {
+            const isAdmin = req.user.assignedRole === 'Admin';
+            const isCreator = event.submittedBy && String(event.submittedBy) === String(req.user._id || req.user.id);
+            if (isAdmin || isCreator) {
+                isHost = true;
+                hasAccess = true;
+            }
+
+            // Check if user is registered for this event
+            userRegistration = await EventRegistration.findOne({
+                eventRef: event._id,
+                $or: [
+                    { userId: req.user._id || req.user.id },
+                    ...(req.user.accountEmail ? [{ email: req.user.accountEmail.toLowerCase() }] : []),
+                    ...(req.user.email ? [{ email: req.user.email.toLowerCase() }] : []),
+                    ...(req.user.contactPhone ? [{ phone: req.user.contactPhone }] : []),
+                    ...(req.user.phone ? [{ phone: req.user.phone }] : [])
+                ],
+                status: 'confirmed'
+            });
+
+            if (userRegistration) {
+                hasAccess = true;
+                if (!userRegistration.userId) {
+                    userRegistration.userId = req.user._id || req.user.id;
+                    await userRegistration.save();
+                }
+            }
+        }
+
+        // Support lookup by booking ref (e.g. returning from checkout with ?booking=EMR-XXXX)
+        const bookingRefQuery = req.query?.booking;
+        if (!hasAccess && bookingRefQuery) {
+            const bookingMatch = await EventRegistration.findOne({
+                eventRef: event._id,
+                bookingRef: String(bookingRefQuery).trim(),
+                status: 'confirmed'
+            });
+            if (bookingMatch) {
+                hasAccess = true;
+                userRegistration = bookingMatch;
+                if (req.user && !userRegistration.userId) {
+                    userRegistration.userId = req.user._id || req.user.id;
+                    await userRegistration.save();
+                }
+            }
+        }
+
+        const serialized = serializePublic(event.toObject(), registered, hasAccess);
+        serialized.hasAccess = hasAccess;
+        serialized.isHost = isHost;
+        serialized.userRegistration = userRegistration ? {
+            bookingRef: userRegistration.bookingRef,
+            status: userRegistration.status,
+            paymentStatus: userRegistration.paymentStatus,
+            selectedDate: userRegistration.selectedDate,
+            selectedSlot: userRegistration.selectedSlot,
+            attended: Boolean(userRegistration.attended),
+            attendedAt: userRegistration.attendedAt || null,
+            feedback: userRegistration.feedback || null
+        } : null;
+
+        res.status(200).json({ success: true, data: serialized });
     } catch (error) {
+        console.error('getPublishedEvent error:', error);
         res.status(500).json({ success: false, message: 'Failed to load event.' });
     }
 };
@@ -629,6 +700,15 @@ exports.registerForEvent = async (req, res) => {
         if (!event) return res.status(404).json({ success: false, message: 'Event not found or not open for registration.' });
         if (event.registrationEnabled === false) {
             return res.status(400).json({ success: false, message: 'Registration for this event is currently closed.' });
+        }
+
+        // Require user to be authenticated before registering
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                requiresLogin: true,
+                message: 'Please sign in or create an account to register for this event.'
+            });
         }
 
         const { fullName, phone, email, city, selectedDate, selectedSlot } = req.body || {};
@@ -814,7 +894,7 @@ exports.registerForEvent = async (req, res) => {
                 success: true,
                 message: 'Payment required to complete registration.',
                 data: {
-                    bookingRef,
+                    bookingRef: registration.bookingRef,
                     paymentUrl: checkoutUrl,
                     tx_ref,
                     requiresPayment: true,
@@ -874,7 +954,15 @@ exports.verifyEventPayment = async (req, res) => {
                 if (tx.status === 'Completed') {
                     registration.paymentStatus = 'completed';
                     registration.status = 'confirmed';
+                    if (!registration.userId && tx.studentRef) {
+                        registration.userId = tx.studentRef;
+                    }
                     await registration.save();
+                    if (registration.userId) {
+                        await Event.findByIdAndUpdate(registration.eventRef, {
+                            $addToSet: { registeredUsers: registration.userId }
+                        });
+                    }
                 } else if (tx.status === 'Failed') {
                     registration.paymentStatus = 'failed';
                     await registration.save();
@@ -895,5 +983,193 @@ exports.verifyEventPayment = async (req, res) => {
     } catch (err) {
         console.error('verifyEventPayment error:', err);
         res.status(500).json({ success: false, message: 'Failed to verify payment.' });
+    }
+};
+
+// ────────────────────────────────────────────────────────────
+//  ATTENDEES, ATTENDANCE & FEEDBACK (STAGE 6)
+// ────────────────────────────────────────────────────────────
+
+// GET /api/admin/events/:id/attendees — view participant list & stats
+exports.getEventAttendees = async (req, res) => {
+    try {
+        const eventId = req.params.id;
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(eventId);
+        const event = await Event.findOne({
+            $or: [
+                { slug: eventId },
+                ...(isObjectId ? [{ _id: eventId }] : [])
+            ]
+        });
+        if (!event) return res.status(404).json({ success: false, message: 'Event not found.' });
+
+        const attendees = await EventRegistration.find({ eventRef: event._id })
+            .populate('userId', 'fullName accountEmail avatarUrl')
+            .sort({ createdAt: -1 });
+
+        const totalRegistrations = attendees.filter(a => a.status !== 'cancelled').length;
+        const totalAttended = attendees.filter(a => a.attended && a.status !== 'cancelled').length;
+        const attendanceRate = totalRegistrations > 0 ? Math.round((totalAttended / totalRegistrations) * 100) : 0;
+        const totalPaidAmount = attendees
+            .filter(a => a.paymentStatus === 'completed')
+            .reduce((sum, a) => sum + (Number(a.amountPaid) || 0), 0);
+
+        const ratings = attendees.map(a => a.feedback?.rating).filter(Boolean);
+        const averageRating = ratings.length > 0 ? Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)) : null;
+
+        res.status(200).json({
+            success: true,
+            data: {
+                event: {
+                    id: event._id,
+                    title: event.title,
+                    slug: event.slug,
+                    date: event.startDate,
+                    time: event.timeLabel || `${event.startTime} - ${event.endTime}`,
+                    location: event.venue || 'Online Live Stream',
+                    price: event.price
+                },
+                stats: {
+                    totalRegistrations,
+                    totalAttended,
+                    attendanceRate,
+                    totalPaidAmount,
+                    averageRating,
+                    feedbackCount: ratings.length
+                },
+                attendees
+            }
+        });
+    } catch (error) {
+        console.error('getEventAttendees error:', error);
+        res.status(500).json({ success: false, message: 'Failed to load attendees.' });
+    }
+};
+
+// PUT /api/admin/events/:id/attendees/:registrationId/attendance — manual admin check-in
+exports.updateAttendeeAttendance = async (req, res) => {
+    try {
+        const { registrationId } = req.params;
+        const { attended } = req.body;
+        const registration = await EventRegistration.findById(registrationId);
+        if (!registration) return res.status(404).json({ success: false, message: 'Registration not found.' });
+
+        registration.attended = Boolean(attended);
+        registration.attendedAt = attended ? (registration.attendedAt || new Date()) : null;
+        await registration.save();
+
+        res.status(200).json({
+            success: true,
+            message: `Attendance ${attended ? 'marked' : 'unmarked'} successfully.`,
+            data: registration
+        });
+    } catch (error) {
+        console.error('updateAttendeeAttendance error:', error);
+        res.status(500).json({ success: false, message: 'Failed to update attendance.' });
+    }
+};
+
+// POST /api/events/:id/attendance — student records attendance when joining
+exports.recordEventAttendance = async (req, res) => {
+    try {
+        const ref = req.params.id;
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(ref);
+        const event = await Event.findOne({
+            $or: [
+                { slug: ref },
+                ...(isObjectId ? [{ _id: ref }] : [])
+            ]
+        });
+        if (!event) return res.status(404).json({ success: false, message: 'Event not found.' });
+
+        const registration = await EventRegistration.findOne({
+            eventRef: event._id,
+            $or: [
+                ...(req.user ? [
+                    { userId: req.user._id || req.user.id },
+                    ...(req.user.accountEmail ? [{ email: req.user.accountEmail.toLowerCase() }] : []),
+                    ...(req.user.email ? [{ email: req.user.email.toLowerCase() }] : []),
+                    ...(req.user.phone ? [{ phone: req.user.phone }] : [])
+                ] : []),
+                ...(req.body?.bookingRef ? [{ bookingRef: req.body.bookingRef }] : []),
+                ...(req.query?.booking ? [{ bookingRef: req.query.booking }] : [])
+            ],
+            status: 'confirmed'
+        });
+
+        if (!registration) {
+            return res.status(403).json({ success: false, message: 'Confirmed registration required to record attendance.' });
+        }
+
+        if (!registration.attended) {
+            registration.attended = true;
+            registration.attendedAt = new Date();
+            await registration.save();
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Attendance recorded successfully.',
+            data: { attended: true, attendedAt: registration.attendedAt }
+        });
+    } catch (error) {
+        console.error('recordEventAttendance error:', error);
+        res.status(500).json({ success: false, message: 'Failed to record attendance.' });
+    }
+};
+
+// POST /api/events/:id/feedback — student submits event feedback
+exports.submitEventFeedback = async (req, res) => {
+    try {
+        const ref = req.params.id;
+        const { rating, comment } = req.body || {};
+        const parsedRating = Number(rating);
+        if (!parsedRating || parsedRating < 1 || parsedRating > 5) {
+            return res.status(400).json({ success: false, message: 'Rating must be between 1 and 5 stars.' });
+        }
+
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(ref);
+        const event = await Event.findOne({
+            $or: [
+                { slug: ref },
+                ...(isObjectId ? [{ _id: ref }] : [])
+            ]
+        });
+        if (!event) return res.status(404).json({ success: false, message: 'Event not found.' });
+
+        const registration = await EventRegistration.findOne({
+            eventRef: event._id,
+            $or: [
+                ...(req.user ? [
+                    { userId: req.user._id || req.user.id },
+                    ...(req.user.accountEmail ? [{ email: req.user.accountEmail.toLowerCase() }] : []),
+                    ...(req.user.email ? [{ email: req.user.email.toLowerCase() }] : []),
+                    ...(req.user.phone ? [{ phone: req.user.phone }] : [])
+                ] : []),
+                ...(req.body?.bookingRef ? [{ bookingRef: req.body.bookingRef }] : []),
+                ...(req.query?.booking ? [{ bookingRef: req.query.booking }] : [])
+            ],
+            status: 'confirmed'
+        });
+
+        if (!registration) {
+            return res.status(403).json({ success: false, message: 'Only confirmed attendees can submit feedback.' });
+        }
+
+        registration.feedback = {
+            rating: parsedRating,
+            comment: String(comment || '').trim(),
+            submittedAt: new Date()
+        };
+        await registration.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Thank you for your feedback!',
+            data: registration.feedback
+        });
+    } catch (error) {
+        console.error('submitEventFeedback error:', error);
+        res.status(500).json({ success: false, message: 'Failed to submit feedback.' });
     }
 };

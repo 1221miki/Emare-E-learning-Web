@@ -172,13 +172,57 @@ exports.sendAdminNotification = async (req, res) => {
 
 exports.getAdminNotificationSummary = async (req, res) => {
     try {
-        const [total, unread, latest] = await Promise.all([
+        const [total, unread] = await Promise.all([
             Notification.countDocuments(),
-            Notification.countDocuments({ isRead: false }),
-            Notification.find().sort('-createdAt').limit(5).lean()
+            Notification.countDocuments({ $or: [{ isRead: false }, { read: false }] })
         ]);
 
-        res.status(200).json({ success: true, data: { total, unread, recent: latest } });
+        // Aggregate unique broadcasts by title, message, and type to prevent duplicate recipient rows
+        const recentBroadcasts = await Notification.aggregate([
+            {
+                $group: {
+                    _id: {
+                        title: '$title',
+                        message: '$message',
+                        type: '$type'
+                    },
+                    totalRecipients: { $sum: 1 },
+                    unreadCount: {
+                        $sum: {
+                            $cond: [{ $or: [{ $eq: ['$isRead', false] }, { $eq: ['$read', false] }] }, 1, 0]
+                        }
+                    },
+                    latestAt: { $max: '$createdAt' },
+                    link: { $first: '$link' },
+                    source: { $first: '$metadata.source' }
+                }
+            },
+            { $sort: { latestAt: -1 } },
+            { $limit: 8 },
+            {
+                $project: {
+                    _id: 0,
+                    title: '$_id.title',
+                    message: '$_id.message',
+                    type: '$_id.type',
+                    totalRecipients: 1,
+                    unreadCount: 1,
+                    createdAt: '$latestAt',
+                    link: 1,
+                    source: 1
+                }
+            }
+        ]);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                total,
+                unread,
+                totalBroadcasts: recentBroadcasts.length,
+                recent: recentBroadcasts
+            }
+        });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }

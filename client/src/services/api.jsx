@@ -45,9 +45,9 @@ API.interceptors.response.use(
         if (error.response?.status === 401) {
             localStorage.removeItem('elms_token');
             localStorage.removeItem('elms_user');
-            const publicPaths = ['/login', '/register', '/', '/about', '/contact', '/help', '/privacy', '/terms', '/cookies', '/courses', '/search', '/categories', '/leaderboard', '/payment/callback', '/payment/success', '/payment/failed'];
+            const publicPaths = ['/login', '/register', '/', '/about', '/contact', '/help', '/privacy', '/terms', '/cookies', '/courses', '/search', '/categories', '/leaderboard', '/payment/callback', '/payment/success', '/payment/failed', '/events'];
             const currentPath = window.location.pathname;
-            const isPublic = publicPaths.some(p => currentPath === p || currentPath.startsWith('/courses/') || currentPath.startsWith('/instructors/') || currentPath.startsWith('/payment/'));
+            const isPublic = publicPaths.some(p => currentPath === p || currentPath.startsWith('/courses/') || currentPath.startsWith('/instructors/') || currentPath.startsWith('/payment/') || currentPath.startsWith('/events/'));
             if (!isPublic && currentPath !== '/login') {
                 // Preserve the page the user was on so they are returned here
                 // right after logging back in.
@@ -483,7 +483,11 @@ export const systemService = {
 export const contentService = {
     getPage: (page) => API.get(`/content/${page}`),
     savePage: (page, data) => API.put(`/content/${page}`, data),
-    getAll: () => API.get('/content')
+    getAll: () => API.get('/content'),
+    addItem: (page, item) => API.post(`/content/${page}/items`, item),
+    updateItem: (page, itemId, item) => API.put(`/content/${page}/items/${itemId}`, item),
+    deleteItem: (page, itemId) => API.delete(`/content/${page}/items/${itemId}`),
+    togglePublishItem: (page, itemId) => API.patch(`/content/${page}/items/${itemId}/toggle-publish`)
 };
 
 // ── Calendar API Calls (Admin) ────────────────────────────
@@ -511,15 +515,19 @@ export const eventService = {
     generateMeetingLink: (data) => API.post('/admin/events/meetings/generate', data),
     getCategories: () => API.get('/events/admin/categories'),
     // PUT /api/events/admin/validate/:id — unified { status, rejectionReason }
-    setStatus: (id, data) => API.put(`/events/admin/validate/${id}`, data)
+    setStatus: (id, data) => API.put(`/events/admin/validate/${id}`, data),
+    getAttendees: (id) => API.get(`/admin/events/${id}/attendees`),
+    updateAttendance: (id, regId, data) => API.put(`/admin/events/${id}/attendees/${regId}/attendance`, data)
 };
 
 // ── Public Events API (Visitor) ────────────────────────────
 export const publicEventService = {
     getAll: () => API.get('/events/published'),
-    getBySlug: (slug) => API.get(`/events/${slug}`),
+    getBySlug: (slug, params = {}) => API.get(`/events/${slug}`, { params }),
     register: (slug, data) => API.post(`/events/register/${slug}`, data),
-    verifyPayment: (txRef) => API.get(`/events/verify-payment/${txRef}`)
+    verifyPayment: (txRef) => API.get(`/events/verify-payment/${txRef}`),
+    recordAttendance: (slug) => API.post(`/events/${slug}/attendance`),
+    submitFeedback: (slug, data) => API.post(`/events/${slug}/feedback`, data)
 };
 
 // ── Newsletter API (Visitor) ────────────────────────────────

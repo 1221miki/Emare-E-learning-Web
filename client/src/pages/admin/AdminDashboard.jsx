@@ -442,13 +442,20 @@ export default function AdminDashboard() {
     const [certificateRecords, setCertificateRecords] = useState([]);
     const [certificateForm, setCertificateForm] = useState({ studentId: '', courseId: '', templateId: 'standard' });
     const [notificationForm, setNotificationForm] = useState({ audience: 'all', title: '', message: '', type: 'announcement', link: '', scheduleAt: '', reminder: false });
-    const [notificationSummary, setNotificationSummary] = useState({ total: 0, unread: 0, recent: [] });
+    const [notificationSummary, setNotificationSummary] = useState({ total: 0, unread: 0, totalBroadcasts: 0, recent: [] });
+    const [isRefreshingSummary, setIsRefreshingSummary] = useState(false);
     const [isNotificationSubmitting, setIsNotificationSubmitting] = useState(false);
     const [isUploadingAsset, setIsUploadingAsset] = useState(false);
     const [contentPages, setContentPages] = useState([]);
     const [selectedContentPage, setSelectedContentPage] = useState('home');
+    const [contentData, setContentData] = useState({});
     const [contentForm, setContentForm] = useState({ title: '', content: '' });
     const [isContentSaving, setIsContentSaving] = useState(false);
+    const [isContentLoading, setIsContentLoading] = useState(false);
+    const [cmsEditorMode, setCmsEditorMode] = useState('visual');
+    const [itemModalState, setItemModalState] = useState({ isOpen: false, mode: 'add', item: null });
+    const [itemFormData, setItemFormData] = useState({});
+    const [isItemSaving, setIsItemSaving] = useState(false);
     const [dbMetrics, setDbMetrics] = useState({ databaseName: 'unknown', collections: [], dataSizeBytes: 0, indexSizeBytes: 0, storageSizeBytes: 0, objects: 0 });
     const [dbActionLoading, setDbActionLoading] = useState({ backup: false, restore: false, optimize: false });
     const [auditLogs, setAuditLogs] = useState([]);
@@ -607,10 +614,30 @@ export default function AdminDashboard() {
 
     const fetchNotificationSummary = async () => {
         try {
+            setIsRefreshingSummary(true);
             const response = await notificationService.getAdminSummary();
-            setNotificationSummary(response.data?.data || { total: 0, unread: 0, recent: [] });
+            setNotificationSummary(response.data?.data || { total: 0, unread: 0, totalBroadcasts: 0, recent: [] });
         } catch (error) {
             console.error('Error fetching notification summary:', error);
+        } finally {
+            setIsRefreshingSummary(false);
+        }
+    };
+
+    const loadContentPageData = async (pageKey) => {
+        try {
+            setIsContentLoading(true);
+            const response = await contentService.getPage(pageKey);
+            const page = response.data?.data || { title: '', content: {} };
+            setContentData(page.content || {});
+            setContentForm({
+                title: page.title || '',
+                content: typeof page.content === 'string' ? page.content : JSON.stringify(page.content, null, 2)
+            });
+        } catch (error) {
+            console.error('Error loading content page:', error);
+        } finally {
+            setIsContentLoading(false);
         }
     };
 
@@ -619,9 +646,8 @@ export default function AdminDashboard() {
             const response = await contentService.getAll();
             const pages = response.data?.data || [];
             setContentPages(pages);
-            if (!pages.find((page) => page.pageKey === selectedContentPage)) {
-                setSelectedContentPage('home');
-            }
+            const currentKey = selectedContentPage || 'home';
+            await loadContentPageData(currentKey);
         } catch (error) {
             console.error('Error fetching content pages:', error);
         }
@@ -910,16 +936,7 @@ export default function AdminDashboard() {
 
     const handleContentPageChange = async (pageKey) => {
         setSelectedContentPage(pageKey);
-        try {
-            const response = await contentService.getPage(pageKey);
-            const page = response.data?.data || { title: '', content: {} };
-            setContentForm({
-                title: page.title || '',
-                content: typeof page.content === 'string' ? page.content : JSON.stringify(page.content, null, 2)
-            });
-        } catch (error) {
-            console.error('Error loading content page:', error);
-        }
+        await loadContentPageData(pageKey);
     };
 
     const handleSaveContent = async (e) => {
@@ -938,12 +955,93 @@ export default function AdminDashboard() {
                 title: contentForm.title,
                 content: parsedContent
             });
-            showNotification('Content saved successfully.');
+            showNotification('Content saved successfully to MongoDB.');
+            await loadContentPageData(selectedContentPage);
             fetchContentPages();
         } catch (error) {
             alert(error.response?.data?.message || 'Failed to save content.');
         } finally {
             setIsContentSaving(false);
+        }
+    };
+
+    const handleSaveVisualContent = async (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        try {
+            setIsContentSaving(true);
+            await contentService.savePage(selectedContentPage, {
+                title: contentForm.title || `${selectedContentPage.charAt(0).toUpperCase() + selectedContentPage.slice(1)} Content`,
+                content: contentData
+            });
+            showNotification('Page content permanently saved to MongoDB!');
+            await loadContentPageData(selectedContentPage);
+            fetchContentPages();
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to save content.');
+        } finally {
+            setIsContentSaving(false);
+        }
+    };
+
+    const handleTogglePublishItem = async (itemId) => {
+        try {
+            await contentService.togglePublishItem(selectedContentPage, itemId);
+            showNotification('Item publish status updated.');
+            await loadContentPageData(selectedContentPage);
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to update publish status.');
+        }
+    };
+
+    const handleDeleteItem = async (itemId) => {
+        if (!window.confirm('Are you sure you want to delete this item? It will be permanently removed from MongoDB.')) return;
+        try {
+            await contentService.deleteItem(selectedContentPage, itemId);
+            showNotification('Item deleted successfully.');
+            await loadContentPageData(selectedContentPage);
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to delete item.');
+        }
+    };
+
+    const handleOpenAddItemModal = () => {
+        setItemModalState({ isOpen: true, mode: 'add', item: null });
+        if (selectedContentPage === 'faq') {
+            setItemFormData({ question: '', answer: '', isPublished: true });
+        } else if (selectedContentPage === 'banners') {
+            setItemFormData({ title: '', subtitle: '', badge: 'ANNOUNCEMENT', link: '/courses', isPublished: true });
+        } else if (selectedContentPage === 'testimonials') {
+            setItemFormData({ name: '', role: 'Student', quote: '', rating: 5, isPublished: true });
+        } else if (selectedContentPage === 'news') {
+            setItemFormData({ title: '', body: '', tag: 'Platform Update', date: new Date().toISOString().split('T')[0], isPublished: true });
+        } else if (selectedContentPage === 'blogs') {
+            setItemFormData({ title: '', body: '', author: 'Emare Team', tag: 'Technology', readTime: '5 min read', date: new Date().toISOString().split('T')[0], isPublished: true });
+        }
+    };
+
+    const handleOpenEditItemModal = (item) => {
+        setItemModalState({ isOpen: true, mode: 'edit', item });
+        setItemFormData({ ...item });
+    };
+
+    const handleSaveItemModal = async (e) => {
+        e.preventDefault();
+        try {
+            setIsItemSaving(true);
+            if (itemModalState.mode === 'add') {
+                await contentService.addItem(selectedContentPage, itemFormData);
+                showNotification('Item added successfully to MongoDB!');
+            } else {
+                const itemId = itemModalState.item.id || itemModalState.item._id;
+                await contentService.updateItem(selectedContentPage, itemId, itemFormData);
+                showNotification('Item updated successfully in MongoDB!');
+            }
+            setItemModalState({ isOpen: false, mode: 'add', item: null });
+            await loadContentPageData(selectedContentPage);
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to save item.');
+        } finally {
+            setIsItemSaving(false);
         }
     };
 
@@ -4515,92 +4613,994 @@ const resetCalendarForm = () => {
         </div>
     );
 
-    const renderCMS = () => (
-        <div style={s.tabContent}>
-            <div style={s.sectionHeader}>
-                <h2 style={s.sectionTitle}>CMS & Communications</h2>
-                <p style={s.sectionSub}>Manage homepage content, about page, FAQ, contact info, policies, banners, testimonials, news, and blogs.</p>
-            </div>
-            <div style={{ display: 'grid', gap: '24px' }}>
-                <div style={s.card}>
-                    <h3 style={s.cardTitle}>Notification Management</h3>
-                    <form onSubmit={handleSendNotification} style={{ display: 'grid', gap: '12px' }}>
-                        <label style={s.label}>Audience</label>
-                        <select value={notificationForm.audience} onChange={(e) => setNotificationForm({ ...notificationForm, audience: e.target.value })} style={s.select}>
-                            <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Users</option>
-                            <option value="students" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Students</option>
-                            <option value="instructors" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Instructors</option>
-                        </select>
-                        <label style={s.label}>Title</label>
-                        <input value={notificationForm.title} onChange={(e) => setNotificationForm({ ...notificationForm, title: e.target.value })} placeholder="Enter a notification title" style={s.input} />
-                        <label style={s.label}>Message</label>
-                        <textarea value={notificationForm.message} onChange={(e) => setNotificationForm({ ...notificationForm, message: e.target.value })} placeholder="Write the announcement or reminder" rows="4" style={s.input}></textarea>
-                        <label style={s.label}>Type</label>
-                        <select value={notificationForm.type} onChange={(e) => setNotificationForm({ ...notificationForm, type: e.target.value })} style={s.select}>
-                            <option value="announcement" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Announcement</option>
-                            <option value="system" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>System</option>
-                            <option value="assignment" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Assignment</option>
-                            <option value="certificate" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Certificate</option>
-                        </select>
-                        <label style={s.label}>Link (optional)</label>
-                        <input value={notificationForm.link} onChange={(e) => setNotificationForm({ ...notificationForm, link: e.target.value })} placeholder="/student/courses" style={s.input} />
-                        <label style={s.label}>Schedule for later</label>
-                        <input type="datetime-local" value={notificationForm.scheduleAt} onChange={(e) => setNotificationForm({ ...notificationForm, scheduleAt: e.target.value })} style={s.input} />
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: colors.textMuted, cursor: 'pointer' }}>
-                            <input type="checkbox" checked={notificationForm.reminder} onChange={(e) => setNotificationForm({ ...notificationForm, reminder: e.target.checked })} />
-                            Mark as reminder message
-                        </label>
-                        <button type="submit" disabled={isNotificationSubmitting} style={{ ...s.primaryBtn, opacity: isNotificationSubmitting ? 0.7 : 1 }}>
-                            {isNotificationSubmitting ? 'Sending--' : 'Send Notification'}
-                        </button>
-                    </form>
-                </div>
+    const renderCMS = () => {
+        const pageMeta = {
+            home: { name: 'Homepage Content', path: '/', isList: false, icon: '🏠' },
+            about: { name: 'About Page', path: '/about', isList: false, icon: 'ℹ️' },
+            faq: { name: 'FAQ Items', path: '/help', isList: true, itemLabel: 'FAQ', icon: '❓' },
+            contact: { name: 'Contact & Info', path: '/#contact', isList: false, icon: '📞' },
+            privacy: { name: 'Privacy Policy', path: '/privacy', isList: false, icon: '🔒' },
+            terms: { name: 'Terms & Conditions', path: '/terms', isList: false, icon: '📜' },
+            banners: { name: 'Banners', path: '/', isList: true, itemLabel: 'Banner', icon: '📢' },
+            testimonials: { name: 'Testimonials', path: '/', isList: true, itemLabel: 'Testimonial', icon: '⭐' },
+            news: { name: 'News Updates', path: '/', isList: true, itemLabel: 'News Item', icon: '📰' },
+            blogs: { name: 'Blogs & Articles', path: '/', isList: true, itemLabel: 'Blog Post', icon: '✍️' }
+        };
 
-                <div style={s.card}>
-                    <h3 style={s.cardTitle}>Broadcast Overview</h3>
-                    <div style={{ display: 'grid', gap: '10px' }}>
-                        <div style={{ padding: '12px', borderRadius: '12px', background: colors.bgInput }}>
-                            <strong>Total Notifications:</strong> {notificationSummary.total}
+        const activeMeta = pageMeta[selectedContentPage] || { name: selectedContentPage, path: '/', isList: false, icon: '📄' };
+        const items = Array.isArray(contentData?.items) ? contentData.items : [];
+
+        return (
+            <div style={s.tabContent}>
+                <div style={s.sectionHeader}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', width: '100%' }}>
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <h2 style={s.sectionTitle}>CMS & Communications</h2>
+                                <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '12px', background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.25)' }}>
+                                    Production Ready
+                                </span>
+                            </div>
+                            <p style={s.sectionSub}>Manage homepage content, about page, FAQs, contact info, legal policies, banners, testimonials, news, and blogs permanently in MongoDB.</p>
                         </div>
-                        <div style={{ padding: '12px', borderRadius: '12px', background: colors.bgInput }}>
-                            <strong>Unread:</strong> {notificationSummary.unread}
-                        </div>
-                        <div style={{ padding: '12px', borderRadius: '12px', background: colors.bgInput }}>
-                            <strong>Recent:</strong> {notificationSummary.recent?.length ? notificationSummary.recent.map((item) => item.title).join(', ') : 'No recent broadcasts.'}
-                        </div>
+                        <a
+                            href={activeMeta.path}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '8px 14px', color: colors.text, fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}
+                        >
+                            <ExternalLink size={13} /> View {activeMeta.name} on Website ↗
+                        </a>
                     </div>
-                    <button style={{...s.secondaryBtn, marginTop: '12px'}} onClick={fetchNotificationSummary}>Refresh Summary</button>
                 </div>
 
-                <div style={s.card}>
-                    <h3 style={s.cardTitle}>Content Management</h3>
-                    <div style={{ display: 'grid', gap: '16px' }}>
-                        <select value={selectedContentPage} onChange={(e) => handleContentPageChange(e.target.value)} style={s.select}>
-                            <option value="home" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Homepage Content</option>
-                            <option value="about" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>About Page</option>
-                            <option value="faq" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>FAQ</option>
-                            <option value="contact" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Contact Page</option>
-                            <option value="privacy" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Privacy Policy</option>
-                            <option value="terms" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Terms and Conditions</option>
-                            <option value="banners" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Banner Management</option>
-                            <option value="testimonials" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Testimonials</option>
-                            <option value="news" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>News</option>
-                            <option value="blogs" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Blogs</option>
-                        </select>
-                        <form onSubmit={handleSaveContent} style={{ display: 'grid', gap: '12px' }}>
-                            <label style={s.label}>Page Title</label>
-                            <input value={contentForm.title} onChange={(e) => setContentForm({ ...contentForm, title: e.target.value })} style={s.input} />
-                            <label style={s.label}>Content JSON / Text</label>
-                            <textarea value={contentForm.content} onChange={(e) => setContentForm({ ...contentForm, content: e.target.value })} rows="10" style={{ ...s.input, minHeight: '220px', fontFamily: 'monospace' }} />
-                            <button type="submit" disabled={isContentSaving} style={{ ...s.primaryBtn, opacity: isContentSaving ? 0.7 : 1 }}>
-                                {isContentSaving ? 'Saving--' : 'Save Content'}
-                            </button>
+                <div style={{ display: 'grid', gap: '24px' }}>
+                    {/* ── 1. NOTIFICATION MANAGEMENT ─────────────────── */}
+                    <div style={s.card}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <Megaphone size={18} style={{ color: colors.primary }} />
+                                <h3 style={{ ...s.cardTitle, margin: 0 }}>Notification Management</h3>
+                            </div>
+                            <span style={{ fontSize: '12px', color: colors.textMuted }}>Broadcast announcements & updates</span>
+                        </div>
+                        <form onSubmit={handleSendNotification} style={{ display: 'grid', gap: '14px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                                <div>
+                                    <label style={s.label}>Audience</label>
+                                    <select value={notificationForm.audience} onChange={(e) => setNotificationForm({ ...notificationForm, audience: e.target.value })} style={s.select}>
+                                        <option value="all" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>All Users</option>
+                                        <option value="students" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Students</option>
+                                        <option value="instructors" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Instructors</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={s.label}>Notification Type</label>
+                                    <select value={notificationForm.type} onChange={(e) => setNotificationForm({ ...notificationForm, type: e.target.value })} style={s.select}>
+                                        <option value="announcement" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Announcement</option>
+                                        <option value="system" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>System Update</option>
+                                        <option value="assignment" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Assignment</option>
+                                        <option value="certificate" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Certificate</option>
+                                        <option value="event" style={{ background: colors.bgCard || "#1e293b", color: colors.text || "#ffffff" }}>Event</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={s.label}>Notification Title</label>
+                                <input value={notificationForm.title} onChange={(e) => setNotificationForm({ ...notificationForm, title: e.target.value })} placeholder="e.g. Platform update: Live coding masterclass scheduled" style={s.input} />
+                            </div>
+
+                            <div>
+                                <label style={s.label}>Message Content</label>
+                                <textarea value={notificationForm.message} onChange={(e) => setNotificationForm({ ...notificationForm, message: e.target.value })} placeholder="Write the announcement or alert message here..." rows="3" style={s.input}></textarea>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                                <div>
+                                    <label style={s.label}>Action Link (optional)</label>
+                                    <input value={notificationForm.link} onChange={(e) => setNotificationForm({ ...notificationForm, link: e.target.value })} placeholder="/student/courses or /events" style={s.input} />
+                                </div>
+                                <div>
+                                    <label style={s.label}>Schedule for Later (optional)</label>
+                                    <input type="datetime-local" value={notificationForm.scheduleAt} onChange={(e) => setNotificationForm({ ...notificationForm, scheduleAt: e.target.value })} style={s.input} />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginTop: '6px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: colors.textMuted, cursor: 'pointer', fontSize: '13px' }}>
+                                    <input type="checkbox" checked={notificationForm.reminder} onChange={(e) => setNotificationForm({ ...notificationForm, reminder: e.target.checked })} />
+                                    Mark as high-priority reminder message
+                                </label>
+                                <button type="submit" disabled={isNotificationSubmitting} style={{ ...s.primaryBtn, minWidth: '180px', opacity: isNotificationSubmitting ? 0.7 : 1 }}>
+                                    {isNotificationSubmitting ? 'Sending Broadcast...' : '📢 Send Broadcast'}
+                                </button>
+                            </div>
                         </form>
                     </div>
+
+                    {/* ── 2. BROADCAST OVERVIEW ──────────────────────── */}
+                    <div style={s.card}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <Bell size={18} style={{ color: '#38bdf8' }} />
+                                <h3 style={{ ...s.cardTitle, margin: 0 }}>Broadcast Overview</h3>
+                            </div>
+                            <button
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '6px 14px', color: colors.text, fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+                                onClick={fetchNotificationSummary}
+                                disabled={isRefreshingSummary}
+                            >
+                                <RefreshCw size={13} className={isRefreshingSummary ? 'audit-spin' : ''} /> {isRefreshingSummary ? 'Refreshing...' : 'Refresh Summary'}
+                            </button>
+                        </div>
+
+                        {/* Metric cards */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '20px' }}>
+                            <div style={{ padding: '16px', borderRadius: '14px', background: colors.bgInput, border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <span style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '600', textTransform: 'uppercase' }}>Total Delivered</span>
+                                <span style={{ fontSize: '26px', fontWeight: '800', color: colors.text }}>{notificationSummary.total || 0}</span>
+                                <span style={{ fontSize: '11px', color: colors.textMuted }}>Delivered messages</span>
+                            </div>
+                            <div style={{ padding: '16px', borderRadius: '14px', background: colors.bgInput, border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <span style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '600', textTransform: 'uppercase' }}>Unread Deliveries</span>
+                                <span style={{ fontSize: '26px', fontWeight: '800', color: '#f59e0b' }}>{notificationSummary.unread || 0}</span>
+                                <span style={{ fontSize: '11px', color: colors.textMuted }}>Pending student/instructor reads</span>
+                            </div>
+                            <div style={{ padding: '16px', borderRadius: '14px', background: colors.bgInput, border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <span style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '600', textTransform: 'uppercase' }}>Broadcast Campaigns</span>
+                                <span style={{ fontSize: '26px', fontWeight: '800', color: '#22c55e' }}>{notificationSummary.totalBroadcasts || notificationSummary.recent?.length || 0}</span>
+                                <span style={{ fontSize: '11px', color: colors.textMuted }}>Distinct broadcast campaigns</span>
+                            </div>
+                        </div>
+
+                        {/* Recent broadcasts list */}
+                        <div>
+                            <h4 style={{ fontSize: '13px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: colors.textMuted, marginBottom: '12px' }}>
+                                Recent Broadcast Campaigns
+                            </h4>
+                            {notificationSummary.recent && notificationSummary.recent.length > 0 ? (
+                                <div style={{ display: 'grid', gap: '10px' }}>
+                                    {notificationSummary.recent.map((b, i) => (
+                                        <div key={i} style={{ padding: '14px 16px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                                            <div style={{ flex: '1 1 300px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                    <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '6px', background: b.type === 'announcement' ? 'rgba(34,197,94,0.15)' : 'rgba(56,189,248,0.15)', color: b.type === 'announcement' ? '#22c55e' : '#38bdf8', textTransform: 'uppercase' }}>
+                                                        {b.type || 'Broadcast'}
+                                                    </span>
+                                                    <strong style={{ fontSize: '14px', color: colors.text }}>{b.title}</strong>
+                                                </div>
+                                                <p style={{ margin: 0, fontSize: '13px', color: colors.textMuted, lineHeight: 1.5, maxWidth: '680px' }}>
+                                                    {b.message}
+                                                </p>
+                                                {b.link && (
+                                                    <span style={{ fontSize: '11px', color: colors.primary, marginTop: '4px', display: 'inline-block' }}>
+                                                        🔗 Link: {b.link}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                                                <div style={{ display: 'flex', gap: '6px' }}>
+                                                    <span style={{ fontSize: '11px', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '6px', color: colors.text }}>
+                                                        👥 {b.totalRecipients || 1} recipients
+                                                    </span>
+                                                    <span style={{ fontSize: '11px', background: 'rgba(245,158,11,0.1)', padding: '2px 8px', borderRadius: '6px', color: '#f59e0b' }}>
+                                                        📬 {b.unreadCount || 0} unread
+                                                    </span>
+                                                </div>
+                                                <span style={{ fontSize: '11px', color: colors.textMuted }}>
+                                                    {b.createdAt ? new Date(b.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div style={{ padding: '24px', textAlign: 'center', borderRadius: '12px', background: colors.bgInput, color: colors.textMuted, fontSize: '13px' }}>
+                                    No broadcast campaigns recorded yet. Send your first announcement above.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* ── 3. CONTENT MANAGEMENT ──────────────────────── */}
+                    <div style={s.card}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <Globe size={20} style={{ color: colors.primary }} />
+                                <div>
+                                    <h3 style={{ ...s.cardTitle, margin: 0 }}>Content Management (10 Modules)</h3>
+                                    <span style={{ fontSize: '12px', color: colors.textMuted }}>Select a page to edit content and save permanently to MongoDB</span>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <button
+                                    onClick={() => setCmsEditorMode('visual')}
+                                    style={{
+                                        padding: '7px 14px',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        background: cmsEditorMode === 'visual' ? colors.primary : colors.bgInput,
+                                        color: cmsEditorMode === 'visual' ? '#ffffff' : colors.textMuted,
+                                        border: `1px solid ${cmsEditorMode === 'visual' ? colors.primary : colors.border}`
+                                    }}
+                                >
+                                    ✨ Visual Editor
+                                </button>
+                                <button
+                                    onClick={() => setCmsEditorMode('json')}
+                                    style={{
+                                        padding: '7px 14px',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        background: cmsEditorMode === 'json' ? colors.primary : colors.bgInput,
+                                        color: cmsEditorMode === 'json' ? '#ffffff' : colors.textMuted,
+                                        border: `1px solid ${cmsEditorMode === 'json' ? colors.primary : colors.border}`
+                                    }}
+                                >
+                                    💻 JSON Mode
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Page Selector Tabs */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px', marginBottom: '24px' }}>
+                            {Object.entries(pageMeta).map(([key, meta]) => {
+                                const isSelected = selectedContentPage === key;
+                                return (
+                                    <button
+                                        key={key}
+                                        onClick={() => handleContentPageChange(key)}
+                                        style={{
+                                            padding: '10px 8px',
+                                            borderRadius: '10px',
+                                            fontSize: '12px',
+                                            fontWeight: isSelected ? '700' : '600',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            textAlign: 'center',
+                                            background: isSelected ? `${colors.primary}18` : colors.bgInput,
+                                            border: `1.5px solid ${isSelected ? colors.primary : colors.border}`,
+                                            color: isSelected ? colors.primary : colors.text,
+                                            transition: 'all 0.15s ease'
+                                        }}
+                                    >
+                                        <span style={{ fontSize: '18px' }}>{meta.icon}</span>
+                                        <span>{meta.name}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Loading indicator */}
+                        {isContentLoading ? (
+                            <div style={{ padding: '40px', textAlign: 'center', color: colors.textMuted }}>
+                                <RefreshCw size={24} className="audit-spin" style={{ margin: '0 auto 12px' }} />
+                                <p style={{ margin: 0, fontSize: '14px' }}>Loading content from MongoDB...</p>
+                            </div>
+                        ) : cmsEditorMode === 'json' ? (
+                            /* ── JSON EDITOR FALLBACK ─────────────── */
+                            <form onSubmit={handleSaveContent} style={{ display: 'grid', gap: '14px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <label style={s.label}>Page Title</label>
+                                    <span style={{ fontSize: '11px', color: colors.textMuted }}>Key: {selectedContentPage}</span>
+                                </div>
+                                <input value={contentForm.title} onChange={(e) => setContentForm({ ...contentForm, title: e.target.value })} style={s.input} />
+                                <label style={s.label}>Raw Content JSON</label>
+                                <textarea value={contentForm.content} onChange={(e) => setContentForm({ ...contentForm, content: e.target.value })} rows="12" style={{ ...s.input, minHeight: '260px', fontFamily: 'monospace', fontSize: '13px' }} />
+                                <button type="submit" disabled={isContentSaving} style={{ ...s.primaryBtn, justifySelf: 'start', minWidth: '160px', opacity: isContentSaving ? 0.7 : 1 }}>
+                                    {isContentSaving ? 'Saving to DB...' : '💾 Save Raw JSON'}
+                                </button>
+                            </form>
+                        ) : (
+                            /* ── VISUAL FORM EDITOR ───────────────── */
+                            <div>
+                                {activeMeta.isList ? (
+                                    /* List-Based Management (faq, banners, testimonials, news, blogs) */
+                                    <div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                                            <div>
+                                                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: colors.text }}>
+                                                    {activeMeta.name} ({items.length} {items.length === 1 ? 'item' : 'items'})
+                                                </h4>
+                                                <span style={{ fontSize: '12px', color: colors.textMuted }}>
+                                                    {items.filter(i => i.isPublished !== false).length} published on live website
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={handleOpenAddItemModal}
+                                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: colors.primary, color: '#ffffff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                                            >
+                                                <Plus size={15} /> Add New {activeMeta.itemLabel || 'Item'}
+                                            </button>
+                                        </div>
+
+                                        {items.length > 0 ? (
+                                            <div style={{ display: 'grid', gap: '12px' }}>
+                                                {items.map((item, idx) => {
+                                                    const isPub = item.isPublished !== false;
+                                                    const itemId = item.id || item._id || `item_${idx}`;
+                                                    return (
+                                                        <div key={itemId} style={{ padding: '16px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                                                            <div style={{ flex: '1 1 320px' }}>
+                                                                {/* FAQ Layout */}
+                                                                {selectedContentPage === 'faq' && (
+                                                                    <div>
+                                                                        <h5 style={{ margin: '0 0 6px', fontSize: '15px', fontWeight: '700', color: colors.text }}>
+                                                                            Q: {item.question || 'Untitled Question'}
+                                                                        </h5>
+                                                                        <p style={{ margin: 0, fontSize: '13px', color: colors.textMuted, lineHeight: 1.6 }}>
+                                                                            A: {item.answer || 'No answer provided.'}
+                                                                        </p>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Banner Layout */}
+                                                                {selectedContentPage === 'banners' && (
+                                                                    <div>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                                            {item.badge && (
+                                                                                <span style={{ fontSize: '11px', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', background: 'rgba(234,179,8,0.15)', color: '#eab308' }}>
+                                                                                    {item.badge}
+                                                                                </span>
+                                                                            )}
+                                                                            <h5 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: colors.text }}>
+                                                                                {item.title || 'Banner Title'}
+                                                                            </h5>
+                                                                        </div>
+                                                                        <p style={{ margin: '4px 0 0', fontSize: '13px', color: colors.textMuted }}>
+                                                                            {item.subtitle || ''}
+                                                                        </p>
+                                                                        {item.link && (
+                                                                            <span style={{ fontSize: '12px', color: colors.primary, marginTop: '4px', display: 'inline-block' }}>
+                                                                                Target Link: {item.link}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Testimonial Layout */}
+                                                                {selectedContentPage === 'testimonials' && (
+                                                                    <div>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                                            <h5 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: colors.text }}>
+                                                                                {item.name || 'Anonymous'}
+                                                                            </h5>
+                                                                            <span style={{ fontSize: '12px', color: colors.textMuted }}>• {item.role || 'Student'}</span>
+                                                                            <span style={{ fontSize: '12px', color: '#f59e0b' }}>
+                                                                                {'★'.repeat(item.rating || 5)}
+                                                                            </span>
+                                                                        </div>
+                                                                        <p style={{ margin: '6px 0 0', fontSize: '13px', color: colors.textMuted, fontStyle: 'italic', lineHeight: 1.5 }}>
+                                                                            "{item.quote || ''}"
+                                                                        </p>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* News Layout */}
+                                                                {selectedContentPage === 'news' && (
+                                                                    <div>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                                            {item.tag && (
+                                                                                <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '4px', background: 'rgba(56,189,248,0.15)', color: '#38bdf8' }}>
+                                                                                    {item.tag}
+                                                                                </span>
+                                                                            )}
+                                                                            <h5 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: colors.text }}>
+                                                                                {item.title || 'News Headline'}
+                                                                            </h5>
+                                                                            {item.date && (
+                                                                                <span style={{ fontSize: '11px', color: colors.textMuted }}>• {item.date}</span>
+                                                                            )}
+                                                                        </div>
+                                                                        <p style={{ margin: '6px 0 0', fontSize: '13px', color: colors.textMuted, lineHeight: 1.5 }}>
+                                                                            {item.body || ''}
+                                                                        </p>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Blog Layout */}
+                                                                {selectedContentPage === 'blogs' && (
+                                                                    <div>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                                            {item.tag && (
+                                                                                <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '4px', background: 'rgba(168,85,247,0.15)', color: '#a855f7' }}>
+                                                                                    {item.tag}
+                                                                                </span>
+                                                                            )}
+                                                                            <h5 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: colors.text }}>
+                                                                                {item.title || 'Blog Post Title'}
+                                                                            </h5>
+                                                                            {item.readTime && (
+                                                                                <span style={{ fontSize: '11px', color: colors.textMuted }}>• {item.readTime}</span>
+                                                                            )}
+                                                                        </div>
+                                                                        <p style={{ margin: '6px 0 0', fontSize: '13px', color: colors.textMuted, lineHeight: 1.5 }}>
+                                                                            {item.body || ''}
+                                                                        </p>
+                                                                        <span style={{ fontSize: '11px', color: colors.textMuted, marginTop: '4px', display: 'inline-block' }}>
+                                                                            By {item.author || 'Emare Team'} {item.date ? `on ${item.date}` : ''}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Item Action Buttons */}
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                <button
+                                                                    onClick={() => handleTogglePublishItem(itemId)}
+                                                                    title="Click to toggle publish status on live site"
+                                                                    style={{
+                                                                        padding: '5px 10px',
+                                                                        borderRadius: '20px',
+                                                                        fontSize: '11px',
+                                                                        fontWeight: '700',
+                                                                        cursor: 'pointer',
+                                                                        border: 'none',
+                                                                        background: isPub ? 'rgba(34,197,94,0.15)' : 'rgba(148,163,184,0.15)',
+                                                                        color: isPub ? '#22c55e' : '#94a3b8'
+                                                                    }}
+                                                                >
+                                                                    {isPub ? '● Published' : '○ Draft'}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleOpenEditItemModal(item)}
+                                                                    style={{ ...s.actionBtn, padding: '6px 10px', color: colors.primary, borderColor: colors.border }}
+                                                                >
+                                                                    <Edit size={13} /> Edit
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteItem(itemId)}
+                                                                    style={{ ...s.actionBtn, padding: '6px 10px', color: colors.danger, borderColor: colors.border }}
+                                                                >
+                                                                    <Trash2 size={13} /> Delete
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div style={{ padding: '36px', textAlign: 'center', background: colors.bgInput, borderRadius: '12px', border: `1px dashed ${colors.border}` }}>
+                                                <p style={{ margin: '0 0 12px', color: colors.textMuted, fontSize: '14px' }}>
+                                                    No items have been added to {activeMeta.name} yet.
+                                                </p>
+                                                <button
+                                                    onClick={handleOpenAddItemModal}
+                                                    style={{ ...s.primaryBtn, padding: '8px 18px', fontSize: '13px' }}
+                                                >
+                                                    <Plus size={14} /> Add First {activeMeta.itemLabel || 'Item'}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    /* Single-Page Form (home, about, contact, privacy, terms) */
+                                    <form onSubmit={handleSaveVisualContent} style={{ display: 'grid', gap: '16px' }}>
+                                        {/* Homepage Editor */}
+                                        {selectedContentPage === 'home' && (
+                                            <>
+                                                <div>
+                                                    <label style={s.label}>Hero Main Title</label>
+                                                    <input
+                                                        value={contentData.heroTitle ?? 'Welcome to Emare ICT Hub'}
+                                                        onChange={(e) => setContentData({ ...contentData, heroTitle: e.target.value })}
+                                                        placeholder="Main headline displayed in landing hero"
+                                                        style={s.input}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={s.label}>Hero Subtitle / Value Proposition</label>
+                                                    <textarea
+                                                        value={contentData.heroSubtitle ?? 'Master In-Demand Tech Skills, Build Your Future, and Become Job Ready.'}
+                                                        onChange={(e) => setContentData({ ...contentData, heroSubtitle: e.target.value })}
+                                                        rows="3"
+                                                        style={s.input}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={s.label}>Trust Badge / Top Micro-Banner</label>
+                                                    <input
+                                                        value={contentData.heroBadge ?? '🎓 Trusted by 2,500+ learners across Ethiopia'}
+                                                        onChange={(e) => setContentData({ ...contentData, heroBadge: e.target.value })}
+                                                        placeholder="e.g. 🎓 Trusted by 2,500+ learners across Ethiopia"
+                                                        style={s.input}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={s.label}>Platform Highlights / Feature Tags (comma-separated)</label>
+                                                    <input
+                                                        value={Array.isArray(contentData.stats) ? contentData.stats.join(', ') : (contentData.stats || '')}
+                                                        onChange={(e) => setContentData({ ...contentData, stats: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                                                        placeholder="Expert-led training, Flexible learning, Career growth"
+                                                        style={s.input}
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {/* About Page Editor */}
+                                        {selectedContentPage === 'about' && (
+                                            <>
+                                                <div>
+                                                    <label style={s.label}>About Headline</label>
+                                                    <input
+                                                        value={contentData.headline ?? 'Digital Innovation and System Development Center'}
+                                                        onChange={(e) => setContentData({ ...contentData, headline: e.target.value })}
+                                                        style={s.input}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={s.label}>Main Story / Organization Overview</label>
+                                                    <textarea
+                                                        value={contentData.body ?? ''}
+                                                        onChange={(e) => setContentData({ ...contentData, body: e.target.value })}
+                                                        rows="5"
+                                                        style={s.input}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={s.label}>Mission Statement</label>
+                                                    <textarea
+                                                        value={contentData.mission ?? ''}
+                                                        onChange={(e) => setContentData({ ...contentData, mission: e.target.value })}
+                                                        rows="3"
+                                                        style={s.input}
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {/* Contact & Footer Editor */}
+                                        {selectedContentPage === 'contact' && (
+                                            <>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                                                    <div>
+                                                        <label style={s.label}>Primary Support Email</label>
+                                                        <input
+                                                            value={contentData.email ?? 'info@emareicthub.com'}
+                                                            onChange={(e) => setContentData({ ...contentData, email: e.target.value })}
+                                                            style={s.input}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label style={s.label}>Secondary Email</label>
+                                                        <input
+                                                            value={contentData.secondaryEmail ?? 'emareicthub@gmail.com'}
+                                                            onChange={(e) => setContentData({ ...contentData, secondaryEmail: e.target.value })}
+                                                            style={s.input}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                                                    <div>
+                                                        <label style={s.label}>Primary Phone Number</label>
+                                                        <input
+                                                            value={contentData.phone ?? '+251 914 362 720'}
+                                                            onChange={(e) => setContentData({ ...contentData, phone: e.target.value })}
+                                                            style={s.input}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label style={s.label}>Secondary Phone Number</label>
+                                                        <input
+                                                            value={contentData.secondaryPhone ?? '+251 905 050 698'}
+                                                            onChange={(e) => setContentData({ ...contentData, secondaryPhone: e.target.value })}
+                                                            style={s.input}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                                                    <div>
+                                                        <label style={s.label}>Physical Address / Location</label>
+                                                        <input
+                                                            value={contentData.address ?? 'Debre Berhan, Ethiopia'}
+                                                            onChange={(e) => setContentData({ ...contentData, address: e.target.value })}
+                                                            style={s.input}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label style={s.label}>Business / Opening Hours</label>
+                                                        <input
+                                                            value={contentData.openingHours ?? '08:30 AM - 18:00 PM'}
+                                                            onChange={(e) => setContentData({ ...contentData, openingHours: e.target.value })}
+                                                            style={s.input}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {/* Privacy Policy Editor */}
+                                        {selectedContentPage === 'privacy' && (
+                                            <>
+                                                <div>
+                                                    <label style={s.label}>Page Title</label>
+                                                    <input
+                                                        value={contentForm.title || 'Privacy Policy'}
+                                                        onChange={(e) => setContentForm({ ...contentForm, title: e.target.value })}
+                                                        style={s.input}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={s.label}>Last Updated Notice</label>
+                                                    <input
+                                                        value={contentData.lastUpdated ?? 'October 2023'}
+                                                        onChange={(e) => setContentData({ ...contentData, lastUpdated: e.target.value })}
+                                                        placeholder="e.g. October 2026"
+                                                        style={s.input}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={s.label}>Privacy Policy Full Text</label>
+                                                    <textarea
+                                                        value={contentData.body ?? ''}
+                                                        onChange={(e) => setContentData({ ...contentData, body: e.target.value })}
+                                                        rows="10"
+                                                        style={{ ...s.input, minHeight: '220px', lineHeight: 1.6 }}
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {/* Terms & Conditions Editor */}
+                                        {selectedContentPage === 'terms' && (
+                                            <>
+                                                <div>
+                                                    <label style={s.label}>Page Title</label>
+                                                    <input
+                                                        value={contentForm.title || 'Terms and Conditions'}
+                                                        onChange={(e) => setContentForm({ ...contentForm, title: e.target.value })}
+                                                        style={s.input}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={s.label}>Last Updated Notice</label>
+                                                    <input
+                                                        value={contentData.lastUpdated ?? 'October 2023'}
+                                                        onChange={(e) => setContentData({ ...contentData, lastUpdated: e.target.value })}
+                                                        placeholder="e.g. October 2026"
+                                                        style={s.input}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={s.label}>Terms & Conditions Full Text</label>
+                                                    <textarea
+                                                        value={contentData.body ?? ''}
+                                                        onChange={(e) => setContentData({ ...contentData, body: e.target.value })}
+                                                        rows="10"
+                                                        style={{ ...s.input, minHeight: '220px', lineHeight: 1.6 }}
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
+
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: colors.textMuted, fontSize: '13px', cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={contentData.isPublished !== false}
+                                                    onChange={(e) => setContentData({ ...contentData, isPublished: e.target.checked })}
+                                                />
+                                                Content published and visible to visitors
+                                            </label>
+                                            <button
+                                                type="submit"
+                                                disabled={isContentSaving}
+                                                style={{ ...s.primaryBtn, minWidth: '180px', opacity: isContentSaving ? 0.7 : 1 }}
+                                            >
+                                                {isContentSaving ? 'Saving Changes...' : '💾 Save Changes Permanently'}
+                                            </button>
+                                        </div>
+                                    </form>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
+
+                {/* ── ADD / EDIT ITEM MODAL ───────────────────────── */}
+                {itemModalState.isOpen && (
+                    <div style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.65)',
+                        backdropFilter: 'blur(4px)',
+                        zIndex: 9999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '20px'
+                    }}>
+                        <div style={{
+                            background: colors.bgCard,
+                            border: `1px solid ${colors.border}`,
+                            borderRadius: '16px',
+                            width: '100%',
+                            maxWidth: '560px',
+                            padding: '24px',
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+                            display: 'grid',
+                            gap: '16px'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: colors.text }}>
+                                    {itemModalState.mode === 'add' ? `Add New ${activeMeta.itemLabel || 'Item'}` : `Edit ${activeMeta.itemLabel || 'Item'}`}
+                                </h3>
+                                <button
+                                    onClick={() => setItemModalState({ isOpen: false, mode: 'add', item: null })}
+                                    style={{ background: 'transparent', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: '4px' }}
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSaveItemModal} style={{ display: 'grid', gap: '14px' }}>
+                                {/* FAQ Inputs */}
+                                {selectedContentPage === 'faq' && (
+                                    <>
+                                        <div>
+                                            <label style={s.label}>Question *</label>
+                                            <input
+                                                required
+                                                value={itemFormData.question || ''}
+                                                onChange={(e) => setItemFormData({ ...itemFormData, question: e.target.value })}
+                                                placeholder="e.g. How do I enroll in a course?"
+                                                style={s.input}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={s.label}>Answer *</label>
+                                            <textarea
+                                                required
+                                                rows="4"
+                                                value={itemFormData.answer || ''}
+                                                onChange={(e) => setItemFormData({ ...itemFormData, answer: e.target.value })}
+                                                placeholder="Provide a clear, helpful response..."
+                                                style={s.input}
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Banner Inputs */}
+                                {selectedContentPage === 'banners' && (
+                                    <>
+                                        <div>
+                                            <label style={s.label}>Banner Title *</label>
+                                            <input
+                                                required
+                                                value={itemFormData.title || ''}
+                                                onChange={(e) => setItemFormData({ ...itemFormData, title: e.target.value })}
+                                                placeholder="e.g. New Masterclass Added This Week"
+                                                style={s.input}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={s.label}>Subtitle / Description</label>
+                                            <input
+                                                value={itemFormData.subtitle || ''}
+                                                onChange={(e) => setItemFormData({ ...itemFormData, subtitle: e.target.value })}
+                                                placeholder="Explore modern coding programs and start today."
+                                                style={s.input}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                            <div>
+                                                <label style={s.label}>Badge Tag</label>
+                                                <input
+                                                    value={itemFormData.badge || ''}
+                                                    onChange={(e) => setItemFormData({ ...itemFormData, badge: e.target.value })}
+                                                    placeholder="e.g. NEW or PROMO"
+                                                    style={s.input}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={s.label}>Target Link</label>
+                                                <input
+                                                    value={itemFormData.link || ''}
+                                                    onChange={(e) => setItemFormData({ ...itemFormData, link: e.target.value })}
+                                                    placeholder="/courses or /events"
+                                                    style={s.input}
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Testimonials Inputs */}
+                                {selectedContentPage === 'testimonials' && (
+                                    <>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
+                                            <div>
+                                                <label style={s.label}>Student / Client Name *</label>
+                                                <input
+                                                    required
+                                                    value={itemFormData.name || ''}
+                                                    onChange={(e) => setItemFormData({ ...itemFormData, name: e.target.value })}
+                                                    placeholder="e.g. Dawit Abebe"
+                                                    style={s.input}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={s.label}>Role / Program</label>
+                                                <input
+                                                    value={itemFormData.role || ''}
+                                                    onChange={(e) => setItemFormData({ ...itemFormData, role: e.target.value })}
+                                                    placeholder="e.g. Full Stack Student"
+                                                    style={s.input}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label style={s.label}>Rating (Stars)</label>
+                                            <select
+                                                value={itemFormData.rating || 5}
+                                                onChange={(e) => setItemFormData({ ...itemFormData, rating: Number(e.target.value) })}
+                                                style={s.select}
+                                            >
+                                                <option value={5}>⭐⭐⭐⭐⭐ (5 Stars)</option>
+                                                <option value={4}>⭐⭐⭐⭐ (4 Stars)</option>
+                                                <option value={3}>⭐⭐⭐ (3 Stars)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label style={s.label}>Quote / Testimonial *</label>
+                                            <textarea
+                                                required
+                                                rows="4"
+                                                value={itemFormData.quote || ''}
+                                                onChange={(e) => setItemFormData({ ...itemFormData, quote: e.target.value })}
+                                                placeholder="Write their experience with Emare..."
+                                                style={s.input}
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* News Inputs */}
+                                {selectedContentPage === 'news' && (
+                                    <>
+                                        <div>
+                                            <label style={s.label}>News Headline *</label>
+                                            <input
+                                                required
+                                                value={itemFormData.title || ''}
+                                                onChange={(e) => setItemFormData({ ...itemFormData, title: e.target.value })}
+                                                placeholder="e.g. Platform update released"
+                                                style={s.input}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                            <div>
+                                                <label style={s.label}>Category / Tag</label>
+                                                <input
+                                                    value={itemFormData.tag || ''}
+                                                    onChange={(e) => setItemFormData({ ...itemFormData, tag: e.target.value })}
+                                                    placeholder="e.g. Feature Update"
+                                                    style={s.input}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={s.label}>Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={itemFormData.date || ''}
+                                                    onChange={(e) => setItemFormData({ ...itemFormData, date: e.target.value })}
+                                                    style={s.input}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label style={s.label}>News Details *</label>
+                                            <textarea
+                                                required
+                                                rows="4"
+                                                value={itemFormData.body || ''}
+                                                onChange={(e) => setItemFormData({ ...itemFormData, body: e.target.value })}
+                                                placeholder="Write the full announcement..."
+                                                style={s.input}
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Blogs Inputs */}
+                                {selectedContentPage === 'blogs' && (
+                                    <>
+                                        <div>
+                                            <label style={s.label}>Article Title *</label>
+                                            <input
+                                                required
+                                                value={itemFormData.title || ''}
+                                                onChange={(e) => setItemFormData({ ...itemFormData, title: e.target.value })}
+                                                placeholder="e.g. Why Online Learning is Thriving"
+                                                style={s.input}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '12px' }}>
+                                            <div>
+                                                <label style={s.label}>Author</label>
+                                                <input
+                                                    value={itemFormData.author || ''}
+                                                    onChange={(e) => setItemFormData({ ...itemFormData, author: e.target.value })}
+                                                    placeholder="e.g. Emare Team"
+                                                    style={s.input}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={s.label}>Category</label>
+                                                <input
+                                                    value={itemFormData.tag || ''}
+                                                    onChange={(e) => setItemFormData({ ...itemFormData, tag: e.target.value })}
+                                                    placeholder="e.g. Education"
+                                                    style={s.input}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={s.label}>Read Time</label>
+                                                <input
+                                                    value={itemFormData.readTime || ''}
+                                                    onChange={(e) => setItemFormData({ ...itemFormData, readTime: e.target.value })}
+                                                    placeholder="e.g. 5 min read"
+                                                    style={s.input}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label style={s.label}>Article Content / Summary *</label>
+                                            <textarea
+                                                required
+                                                rows="4"
+                                                value={itemFormData.body || ''}
+                                                onChange={(e) => setItemFormData({ ...itemFormData, body: e.target.value })}
+                                                placeholder="Write the article content..."
+                                                style={s.input}
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: colors.textMuted, fontSize: '13px', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={itemFormData.isPublished !== false}
+                                            onChange={(e) => setItemFormData({ ...itemFormData, isPublished: e.target.checked })}
+                                        />
+                                        Publish immediately on website
+                                    </label>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setItemModalState({ isOpen: false, mode: 'add', item: null })}
+                                            style={s.secondaryBtn}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={isItemSaving}
+                                            style={{ ...s.primaryBtn, opacity: isItemSaving ? 0.7 : 1 }}
+                                        >
+                                            {isItemSaving ? 'Saving...' : itemModalState.mode === 'add' ? 'Save Item' : 'Update Item'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
             </div>
-        </div>
-    );
+        );
+    };
 
     const renderAuditLogs = () => (
         <div style={s.tabContent}>

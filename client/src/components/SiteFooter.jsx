@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 import { FaFacebookF, FaTiktok, FaTelegramPlane, FaInstagram, FaLinkedinIn } from 'react-icons/fa';
 import { useTheme } from '../context/ThemeContext';
+import { contentService } from '../services/api';
 
 /**
  * Shared site footer block: contact info bar (white), Google map embed,
@@ -11,6 +12,19 @@ import { useTheme } from '../context/ThemeContext';
  */
 export default function SiteFooter() {
     const { colors } = useTheme();
+    const [contactInfo, setContactInfo] = useState(null);
+
+    useEffect(() => {
+        let isMounted = true;
+        contentService.getPage('contact')
+            .then(res => {
+                if (isMounted && res.data?.data?.content) {
+                    setContactInfo(res.data.data.content);
+                }
+            })
+            .catch(err => console.error('Failed to load contact info for footer:', err));
+        return () => { isMounted = false; };
+    }, []);
 
     const s = {
         mapWrap: { width: '100%', lineHeight: 0 },
@@ -60,7 +74,7 @@ export default function SiteFooter() {
                         </div>
                         <div>
                             <h4 style={s.infoTitle}>Address</h4>
-                            <p style={s.infoText}>Debre Berhan</p>
+                            <p style={s.infoText}>{contactInfo?.address || 'Debre Berhan'}</p>
                         </div>
                     </div>
 
@@ -71,8 +85,14 @@ export default function SiteFooter() {
                         </div>
                         <div>
                             <h4 style={s.infoTitle}>Call For Query</h4>
-                            <a href="tel:+251914362720" style={s.infoLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>+251 914 362 720</a>
-                            <a href="tel:+251905050698" style={s.infoLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>+251 905 050 698</a>
+                            <a href={`tel:${(contactInfo?.phone || '+251914362720').replace(/\s+/g, '')}`} style={s.infoLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>
+                                {contactInfo?.phone || '+251 914 362 720'}
+                            </a>
+                            {(contactInfo?.secondaryPhone || contactInfo === null) && (
+                                <a href={`tel:${(contactInfo?.secondaryPhone || '+251905050698').replace(/\s+/g, '')}`} style={s.infoLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>
+                                    {contactInfo?.secondaryPhone || '+251 905 050 698'}
+                                </a>
+                            )}
                         </div>
                     </div>
 
@@ -83,8 +103,14 @@ export default function SiteFooter() {
                         </div>
                         <div>
                             <h4 style={s.infoTitle}>Send Us Message</h4>
-                            <a href="mailto:info@emareicthub.com" style={s.infoLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>info@emareicthub.com</a>
-                            <a href="mailto:emareicthub@gmail.com" style={s.infoLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>emareicthub@gmail.com</a>
+                            <a href={`mailto:${contactInfo?.email || 'info@emareicthub.com'}`} style={s.infoLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>
+                                {contactInfo?.email || 'info@emareicthub.com'}
+                            </a>
+                            {(contactInfo?.secondaryEmail || contactInfo === null) && (
+                                <a href={`mailto:${contactInfo?.secondaryEmail || 'emareicthub@gmail.com'}`} style={s.infoLink} onMouseEnter={linkHover} onMouseLeave={linkLeave}>
+                                    {contactInfo?.secondaryEmail || 'emareicthub@gmail.com'}
+                                </a>
+                            )}
                         </div>
                     </div>
 
@@ -95,7 +121,7 @@ export default function SiteFooter() {
                         </div>
                         <div>
                             <h4 style={s.infoTitle}>Opening Hours</h4>
-                            <p style={s.infoText}>08:30 AM - 18:00 PM</p>
+                            <p style={s.infoText}>{contactInfo?.openingHours || '08:30 AM - 18:00 PM'}</p>
                         </div>
                     </div>
 

@@ -37,6 +37,7 @@ vi.mock('../services/api.jsx', () => ({
   },
   userService: { getPublicStats: vi.fn().mockResolvedValue({ data: { data: {} } }) },
   liveSessionService: { reserveSeat: vi.fn() },
+  eventService: { getPublished: vi.fn().mockResolvedValue({ data: { data: [] } }) },
 }));
 
 beforeEach(() => {
