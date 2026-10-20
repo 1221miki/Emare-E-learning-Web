@@ -11,8 +11,8 @@ const API_BASE_URL = (() => {
     const fromEnv = (import.meta.env.VITE_API_URL || '').trim();
     if (fromEnv) return fromEnv;
     if (import.meta.env.DEV) return '/api';
-    if (window.location.hostname.endsWith('.netlify.app')) {
-        return 'https://ayires.onrender.com/api';
+    if (window.location.hostname.endsWith('.netlify.app') || window.location.hostname.endsWith('.vercel.app')) {
+        return 'https://asamenew.onrender.com/api';
     }
     return '/api';
 })();

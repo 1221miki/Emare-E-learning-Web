@@ -4,8 +4,8 @@ const SOCKET_URL = (() => {
     const fromEnv = (import.meta.env.VITE_API_URL || '').trim();
     if (fromEnv) return fromEnv.replace('/api', '');
     if (import.meta.env.DEV) return '';
-    if (window.location.hostname.endsWith('.netlify.app')) {
-        return 'https://ayires.onrender.com';
+    if (window.location.hostname.endsWith('.netlify.app') || window.location.hostname.endsWith('.vercel.app')) {
+        return 'https://asamenew.onrender.com';
     }
     return '';
 })();
