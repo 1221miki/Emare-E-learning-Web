@@ -380,9 +380,13 @@ export const liveSessionService = {
     uploadRecording: (id, formData) => API.post(`/live-sessions/${id}/recording/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
     }),
+    autoSaveRecording: (id, formData) => API.post(`/live-sessions/${id}/recording/auto-save`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
     getSessionRecording: (id) => API.get(`/live-sessions/${id}/recording`),
     getRecordingsByCourse: (courseId) => API.get(`/live-sessions/recordings/course/${courseId}`),
     getStudentRecordings: () => API.get('/live-sessions/recordings/student'),
+    getRecordingById: (id) => API.get(`/live-sessions/recordings/${id}`),
     updateRecording: (id, data) => API.put(`/live-sessions/recordings/${id}`, data),
     publishRecording: (id) => API.post(`/live-sessions/recordings/${id}/publish`),
     unpublishRecording: (id) => API.post(`/live-sessions/recordings/${id}/unpublish`),

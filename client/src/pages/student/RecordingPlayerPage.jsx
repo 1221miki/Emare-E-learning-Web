@@ -9,6 +9,7 @@ import {
     SkipBack, SkipForward, Settings2, Film, User, BookOpen,
     CalendarDays, Clock, AlertCircle, Loader, ExternalLink
 } from 'lucide-react';
+import { isYouTubeUrl, getYouTubeEmbedUrl } from '../../utils/videoPlayer';
 
 // ── Helpers ───────────────────────────────────────────────
 const fmtTime = (sec) => {
@@ -31,9 +32,11 @@ const RESUME_KEY = (id) => `rec_progress_${id}`;
 
 // Detect if a URL is an embeddable iframe (YouTube, Vimeo, Zoom, etc.)
 const isEmbedUrl = (url = '') =>
+    isYouTubeUrl(url) ||
     url.includes('youtube.com/embed') ||
     url.includes('youtu.be') ||
     url.includes('player.vimeo.com') ||
+    url.includes('vimeo.com') ||
     url.includes('zoom.us/rec');
 
 // Detect if a URL is a meeting platform link (not a direct video file)
@@ -45,7 +48,10 @@ const isMeetingUrl = (url = '') =>
 
 // Detect if URL is a playable video file
 const isVideoFile = (url = '') =>
-    /\.(mp4|webm|mov|avi|mkv|ogv)(\?|$)/i.test(url);
+    /\.(mp4|webm|mov|avi|mkv|ogv)(\?|$)/i.test(url) ||
+    url.includes('/video/upload/') ||
+    url.includes('cloudinary.com') ||
+    url.includes('/uploads/recordings/');
 
 export default function RecordingPlayerPage() {
     const { id } = useParams();
@@ -87,42 +93,55 @@ export default function RecordingPlayerPage() {
             setLoading(true);
             setError(null);
             try {
-                const role = user.assignedRole;
-
                 let found = null;
 
-                if (role === 'Instructor' || role === 'Admin') {
-                    // Instructors/admins fetch from their own recordings list
-                    const res = await liveSessionService.getInstructorRecordings();
-                    const recs = res.data?.data || [];
-                    found = recs.find(r => r._id === id);
-                    if (!found) {
-                        // Maybe it's another instructor's course — try student endpoint
-                        const res2 = await liveSessionService.getStudentRecordings().catch(() => ({ data: { data: [] } }));
-                        found = (res2.data?.data || []).find(r => r._id === id);
-                    }
-                    if (found) setHasAccess(true);
-                } else {
-                    // Student — fetch from enrolled-course recordings
-                    const res = await liveSessionService.getStudentRecordings();
-                    const recs = res.data?.data || [];
-                    found = recs.find(r => r._id === id);
-
-                    if (found) {
-                        // Verify cleared enrollment
-                        const enrollRes = await enrollmentService.getMyStatus();
-                        const enrollments = enrollRes.data?.data || [];
-                        const courseId = String(found.course?._id || found.course || '');
-                        const cleared = enrollments.some(e => {
-                            const eCid = String(e.courseRef?._id || e.courseRef || '');
-                            return eCid === courseId &&
-                                (e.paymentStatus === 'Cleared' || e.tuitionClearanceFlag === true);
-                        });
-                        if (!cleared) {
-                            setError('You must be enrolled in this course to watch this recording.');
-                            return;
-                        }
+                // 1. First try secure endpoint getRecordingById (validates enrollment on server)
+                try {
+                    const res = await liveSessionService.getRecordingById(id);
+                    if (res.data?.data) {
+                        found = res.data.data;
                         setHasAccess(true);
+                    }
+                } catch (secErr) {
+                    if (secErr.response?.status === 403) {
+                        setError(secErr.response?.data?.message || 'You must be enrolled in this course to watch this recording.');
+                        setLoading(false);
+                        return;
+                    }
+                }
+
+                // 2. Fallback to list endpoints if not found via direct ID
+                if (!found) {
+                    const role = user.assignedRole;
+                    if (role === 'Instructor' || role === 'Admin') {
+                        const res = await liveSessionService.getInstructorRecordings().catch(() => ({ data: { data: [] } }));
+                        const recs = res.data?.data || [];
+                        found = recs.find(r => r._id === id);
+                        if (!found) {
+                            const res2 = await liveSessionService.getStudentRecordings().catch(() => ({ data: { data: [] } }));
+                            found = (res2.data?.data || []).find(r => r._id === id);
+                        }
+                        if (found) setHasAccess(true);
+                    } else {
+                        const res = await liveSessionService.getStudentRecordings().catch(() => ({ data: { data: [] } }));
+                        const recs = res.data?.data || [];
+                        found = recs.find(r => r._id === id);
+
+                        if (found) {
+                            const enrollRes = await enrollmentService.getMyStatus();
+                            const enrollments = enrollRes.data?.data || [];
+                            const courseId = String(found.course?._id || found.course || '');
+                            const cleared = enrollments.some(e => {
+                                const eCid = String(e.courseRef?._id || e.courseRef || '');
+                                return eCid === courseId &&
+                                    (e.paymentStatus === 'Cleared' || e.tuitionClearanceFlag === true);
+                            });
+                            if (!cleared) {
+                                setError('You must be enrolled in this course to watch this recording.');
+                                return;
+                            }
+                            setHasAccess(true);
+                        }
                     }
                 }
 
@@ -220,7 +239,8 @@ export default function RecordingPlayerPage() {
     };
 
     // ── Classify the video URL ─────────────────────────────
-    const videoUrl  = recording?.videoUrl || '';
+    const videoUrl  = recording?.videoUrl || recording?.liveSession?.meetingLink || '';
+    const embedSrc  = isYouTubeUrl(videoUrl) ? getYouTubeEmbedUrl(videoUrl) : videoUrl;
     const useEmbed  = isEmbedUrl(videoUrl);
     const useMeeting = isMeetingUrl(videoUrl);
     const useNative = isVideoFile(videoUrl) && !useEmbed;
@@ -281,9 +301,10 @@ export default function RecordingPlayerPage() {
                     {useEmbed && (
                         <div style={{ position: 'relative', paddingTop: '56.25%' }}>
                             <iframe
-                                src={videoUrl}
+                                src={embedSrc}
                                 title={recording.title}
-                                allow="autoplay; fullscreen; picture-in-picture"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                                allowFullScreen
                                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
                             />
                         </div>

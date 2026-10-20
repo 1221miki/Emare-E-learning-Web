@@ -7,6 +7,7 @@ import {
 import { liveSessionService } from '../../../services/api';
 import RecordingPlayerModal from '../../RecordingPlayerModal';
 import JitsiMeetingModal from '../../JitsiMeetingModal';
+import RecordingStatusBadge from '../../RecordingStatusBadge';
 import { isMeetingUrl } from '../../../utils/videoPlayer';
 
 // ── helpers ───────────────────────────────────────────────
@@ -95,19 +96,19 @@ export default function LiveSessionsTab(dash) {
             const res = await liveSessionService.joinSession(session._id);
             const link = res.data?.data?.meetingLink || session.meetingLink;
             if (link) {
-                if (isMeetingUrl(link)) {
+                if (/zoom\.us\/j\//i.test(link)) {
                     window.open(link, '_blank', 'noopener,noreferrer');
                 } else {
-                    setActiveMeeting(link);
+                    setActiveMeeting({ url: link, session });
                 }
             }
         } catch (err) {
             const link = session.meetingLink;
             if (link) {
-                if (isMeetingUrl(link)) {
+                if (/zoom\.us\/j\//i.test(link)) {
                     window.open(link, '_blank', 'noopener,noreferrer');
                 } else {
-                    setActiveMeeting(link);
+                    setActiveMeeting({ url: link, session });
                 }
             } else {
                 alert(err?.response?.data?.message || 'Could not join. Please try again.');
@@ -223,54 +224,77 @@ export default function LiveSessionsTab(dash) {
     };
 
     // ── Recording card component ───────────────────────────
-    const RecordingCard = ({ rec }) => (
-        <div style={{ ...card('#a5b4fc'), display: 'flex', gap: '16px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-            {/* Thumbnail */}
-            <div style={{ width: '140px', height: '82px', borderRadius: '8px', flexShrink: 0, overflow: 'hidden', background: rec.thumbnailUrl ? `url(${rec.thumbnailUrl}) center/cover` : 'rgba(99,102,241,0.12)', border: `1px solid ${c.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {!rec.thumbnailUrl && <Film size={28} color="#a5b4fc" />}
-            </div>
+    const RecordingCard = ({ rec }) => {
+        const isReady = rec.status === 'ready' || rec.status === 'available' || !!rec.videoUrl;
+        const isProcessing = rec.status === 'processing';
+        const isRecording = rec.status === 'recording';
 
-            {/* Info */}
-            <div style={{ flex: 1, minWidth: '200px' }}>
-                <h3 style={{ color: c.text, fontSize: '15px', fontWeight: '800', margin: '0 0 6px' }}>{rec.title}</h3>
-                {rec.description && (
-                    <p style={{ color: c.textMuted, fontSize: '13px', margin: '0 0 8px', lineHeight: 1.5 }}>{rec.description}</p>
-                )}
-                <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: c.textMuted, flexWrap: 'wrap' }}>
-                    {rec.course?.courseTitle && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            <BookOpen size={12} /> {rec.course.courseTitle}
-                        </span>
+        return (
+            <div style={{ ...card('#a5b4fc'), display: 'flex', gap: '16px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                {/* Thumbnail */}
+                <div style={{ width: '140px', height: '82px', borderRadius: '8px', flexShrink: 0, overflow: 'hidden', background: rec.thumbnailUrl ? `url(${rec.thumbnailUrl}) center/cover` : 'rgba(99,102,241,0.12)', border: `1px solid ${c.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {!rec.thumbnailUrl && <Film size={28} color="#a5b4fc" />}
+                </div>
+
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                        <h3 style={{ color: c.text, fontSize: '15px', fontWeight: '800', margin: 0 }}>{rec.title}</h3>
+                        <RecordingStatusBadge status={rec.status || (rec.videoUrl ? 'ready' : 'processing')} />
+                    </div>
+                    {rec.description && (
+                        <p style={{ color: c.textMuted, fontSize: '13px', margin: '0 0 8px', lineHeight: 1.5 }}>{rec.description}</p>
                     )}
-                    {rec.instructor?.fullName && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            <User size={12} /> {rec.instructor.fullName}
-                        </span>
-                    )}
-                    {rec.publishedAt && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            <CalendarDays size={12} /> {fmtDate(rec.publishedAt)}
-                        </span>
-                    )}
-                    {rec.duration > 0 && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            <Clock size={12} /> {fmtDur(rec.duration)}
-                        </span>
+                    <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: c.textMuted, flexWrap: 'wrap' }}>
+                        {rec.course?.courseTitle && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <BookOpen size={12} /> {rec.course.courseTitle}
+                            </span>
+                        )}
+                        {rec.instructor?.fullName && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <User size={12} /> {rec.instructor.fullName}
+                            </span>
+                        )}
+                        {rec.publishedAt && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <CalendarDays size={12} /> {fmtDate(rec.publishedAt)}
+                            </span>
+                        )}
+                        {rec.duration > 0 && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <Clock size={12} /> {fmtDur(rec.duration)}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                {/* Watch button */}
+                <div style={{ flexShrink: 0 }}>
+                    {isReady ? (
+                        <button
+                            onClick={() => setActiveRecording(rec)}
+                            style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 20px', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '7px', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}
+                        >
+                            <Play size={14} fill="#fff" /> Watch Recording
+                        </button>
+                    ) : isProcessing ? (
+                        <div style={{ background: 'rgba(234,179,8,0.12)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: '8px', padding: '9px 16px', color: '#facc15', fontSize: '12px', fontWeight: '700' }}>
+                            ⏳ Processing Video...
+                        </div>
+                    ) : isRecording ? (
+                        <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '9px 16px', color: '#f87171', fontSize: '12px', fontWeight: '700' }}>
+                            🔴 Class In Progress...
+                        </div>
+                    ) : (
+                        <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '9px 16px', color: '#f87171', fontSize: '12px', fontWeight: '700' }}>
+                            ✕ Recording Unavailable
+                        </div>
                     )}
                 </div>
             </div>
-
-            {/* Watch button */}
-            <div style={{ flexShrink: 0 }}>
-                <button
-                    onClick={() => setActiveRecording(rec)}
-                    style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 20px', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '7px', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}
-                >
-                    <Play size={14} fill="#fff" /> Watch Recording
-                </button>
-            </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <div>
@@ -424,7 +448,9 @@ export default function LiveSessionsTab(dash) {
             {/* Jitsi Meeting Modal */}
             {activeMeeting && (
                 <JitsiMeetingModal
-                    meetingUrl={activeMeeting}
+                    meetingUrl={activeMeeting.url || activeMeeting}
+                    session={activeMeeting.session || null}
+                    isInstructor={false}
                     onClose={() => setActiveMeeting(null)}
                 />
             )}

@@ -55,7 +55,7 @@ const LiveRecordingSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['processing', 'available', 'failed', 'draft'],
+        enum: ['recording', 'processing', 'ready', 'failed', 'available', 'draft'],
         default: 'processing',
         index: true
     },

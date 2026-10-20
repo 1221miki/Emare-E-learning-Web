@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     X, Play, Pause, Volume2, VolumeX, Maximize, Minimize,
-    SkipBack, SkipForward, Settings2, Film, ExternalLink
+    SkipBack, SkipForward, Settings2, Film, ExternalLink, Link2, Check, AlertCircle, Loader
 } from 'lucide-react';
 import JitsiMeetingModal from './JitsiMeetingModal';
+import { useAuth } from '../context/AuthContext';
+import { liveSessionService } from '../services/api';
+import { isYouTubeUrl, getYouTubeEmbedUrl, isMeetingUrl as isMeetingUrlHelper } from '../utils/videoPlayer';
 
 const fmtTime = (sec) => {
     if (!sec || isNaN(sec)) return '0:00';
@@ -17,20 +20,36 @@ const fmtTime = (sec) => {
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 const RESUME_KEY = (id) => `rec_progress_${id}`;
 
+const getNormalizedEmbedUrl = (url = '') => {
+    if (!url) return '';
+    if (isYouTubeUrl(url)) return getYouTubeEmbedUrl(url);
+    const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+    if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    return url;
+};
+
 const isEmbedUrl = (url = '') =>
+    isYouTubeUrl(url) ||
     url.includes('youtube.com/embed') || url.includes('youtu.be') ||
-    url.includes('player.vimeo.com') || url.includes('zoom.us/rec');
+    url.includes('player.vimeo.com') || url.includes('vimeo.com') || url.includes('zoom.us/rec');
 
 const isMeetingUrl = (url = '') =>
-    url.includes('meet.jit.si') || url.includes('meet.google.com') || url.includes('teams.microsoft.com');
+    isMeetingUrlHelper ? isMeetingUrlHelper(url) : (url.includes('meet.jit.si') || url.includes('meet.google.com') || url.includes('teams.microsoft.com'));
 
 const isZoomMeetingUrl = (url = '') =>
     url.includes('zoom.us/j/');
 
 const isVideoFile = (url = '') =>
-    /\.(mp4|webm|mov|avi|mkv|ogv)(\?|$)/i.test(url);
+    /\.(mp4|webm|mov|avi|mkv|ogv)(\?|$)/i.test(url) ||
+    url.includes('/video/upload/') ||
+    url.includes('cloudinary.com') ||
+    url.includes('/uploads/recordings/');
 
-export default function RecordingPlayerModal({ recording, onClose }) {
+export default function RecordingPlayerModal({ recording: initialRecording, onClose }) {
+    const { user } = useAuth();
+    const isInstructorOrAdmin = user?.assignedRole === 'Instructor' || user?.assignedRole === 'Admin';
+
+    const [currentRec, setCurrentRec] = useState(initialRecording);
     const videoRef      = useRef(null);
     const playerWrapRef = useRef(null);
     const saveRef       = useRef(null);
@@ -47,12 +66,43 @@ export default function RecordingPlayerModal({ recording, onClose }) {
     const [showControls,  setShowControls]  = useState(true);
     const [inlineMeeting, setInlineMeeting] = useState(null);
 
-    const videoUrl = recording?.videoUrl || '';
+    // Quick add URL state if no videoUrl is present
+    const [inputUrl, setInputUrl] = useState('');
+    const [savingUrl, setSavingUrl] = useState(false);
+    const [saveError, setSaveError] = useState(null);
+
+    const recording = currentRec || {};
+    const rawVideoUrl = recording.videoUrl || recording.liveSession?.meetingLink || recording.meetingLink || '';
+    const videoUrl = rawVideoUrl;
+    const embedSrc = getNormalizedEmbedUrl(videoUrl);
+
     const useEmbed        = isEmbedUrl(videoUrl);
     const useMeeting      = isMeetingUrl(videoUrl);
     const useZoomMeeting  = isZoomMeetingUrl(videoUrl);
     const useNative       = isVideoFile(videoUrl) && !useEmbed;
     const useExternal     = !useEmbed && !useMeeting && !useZoomMeeting && !useNative && videoUrl;
+
+    const handleSaveRecordingUrl = async (urlToSave) => {
+        const finalUrl = (urlToSave || inputUrl).trim();
+        if (!finalUrl) {
+            setSaveError('Please enter a valid URL.');
+            return;
+        }
+        setSavingUrl(true);
+        setSaveError(null);
+        try {
+            const res = await liveSessionService.updateRecording(recording._id, {
+                videoUrl: finalUrl,
+                status: 'available'
+            });
+            const updated = res.data?.data || { ...recording, videoUrl: finalUrl, status: 'available' };
+            setCurrentRec(updated);
+        } catch (err) {
+            setSaveError(err.response?.data?.message || 'Failed to update recording URL.');
+        } finally {
+            setSavingUrl(false);
+        }
+    };
 
     // Restore saved position
     useEffect(() => {
@@ -179,9 +229,10 @@ export default function RecordingPlayerModal({ recording, onClose }) {
                     {useEmbed && (
                         <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                             <iframe
-                                src={videoUrl}
+                                src={embedSrc}
                                 title={recording.title}
-                                allow="autoplay; fullscreen; picture-in-picture"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                                allowFullScreen
                                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
                             />
                         </div>
@@ -286,14 +337,64 @@ export default function RecordingPlayerModal({ recording, onClose }) {
 
                     {/* No video */}
                     {!videoUrl && (
-                        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '40px', textAlign: 'center' }}>
-                            <Film size={56} color="#475569" />
-                            <div>
-                                <p style={{ color: '#e2e8f0', margin: '0 0 8px', fontWeight: '700', fontSize: '18px' }}>Recording Not Available Yet</p>
-                                <p style={{ color: '#94a3b8', margin: 0, fontSize: '14px', maxWidth: '360px', lineHeight: 1.6 }}>
-                                    The instructor is still processing this recording. Please check back later.
-                                </p>
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '30px', textAlign: 'center', background: 'radial-gradient(ellipse at center, #1e293b 0%, #090d16 100%)' }}>
+                            <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Film size={32} color="#a5b4fc" />
                             </div>
+
+                            {isInstructorOrAdmin ? (
+                                <div style={{ maxWidth: '440px', width: '100%' }}>
+                                    <h3 style={{ color: '#fff', margin: '0 0 6px', fontWeight: '800', fontSize: '18px' }}>
+                                        Add Recording Video URL
+                                    </h3>
+                                    <p style={{ color: '#94a3b8', margin: '0 0 16px', fontSize: '13px', lineHeight: 1.5 }}>
+                                        Paste a YouTube, Vimeo, direct MP4, or meeting link to make this session playable for your students.
+                                    </p>
+
+                                    {recording.liveSession?.meetingLink && (
+                                        <div style={{ marginBottom: '14px' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleSaveRecordingUrl(recording.liveSession.meetingLink)}
+                                                disabled={savingUrl}
+                                                style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', color: '#4ade80', borderRadius: '8px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                                            >
+                                                <Link2 size={13} /> Use Session Meeting Link
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    <form onSubmit={(e) => { e.preventDefault(); handleSaveRecordingUrl(); }} style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                                        <input
+                                            type="url"
+                                            value={inputUrl}
+                                            onChange={(e) => { setInputUrl(e.target.value); setSaveError(null); }}
+                                            placeholder="https://www.youtube.com/watch?v=... or MP4 URL"
+                                            style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)', color: '#fff', fontSize: '13px', outline: 'none' }}
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={savingUrl || !inputUrl.trim()}
+                                            style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 18px', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', opacity: (!inputUrl.trim() || savingUrl) ? 0.6 : 1, whiteSpace: 'nowrap' }}
+                                        >
+                                            {savingUrl ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />} Save & Play
+                                        </button>
+                                    </form>
+
+                                    {saveError && (
+                                        <p style={{ color: '#f87171', fontSize: '12px', margin: '8px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                            <AlertCircle size={13} /> {saveError}
+                                        </p>
+                                    )}
+                                </div>
+                            ) : (
+                                <div>
+                                    <p style={{ color: '#e2e8f0', margin: '0 0 8px', fontWeight: '700', fontSize: '18px' }}>Recording Not Available Yet</p>
+                                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '14px', maxWidth: '360px', lineHeight: 1.6 }}>
+                                        The instructor has not uploaded a video for this session yet. Please check back later.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

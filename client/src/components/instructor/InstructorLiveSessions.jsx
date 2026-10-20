@@ -11,6 +11,7 @@ import LiveSessionFormModal from './LiveSessionFormModal';
 import RecordingPlayerModal from '../RecordingPlayerModal';
 import JitsiMeetingModal from '../JitsiMeetingModal';
 import RecordingManagementModal from './RecordingManagementModal';
+import RecordingStatusBadge from '../RecordingStatusBadge';
 import { isMeetingUrl } from '../../utils/videoPlayer';
 
 const StatusBadge = ({ status }) => {
@@ -88,10 +89,10 @@ export default function InstructorLiveSessions({ courses = [] }) {
             setSessions(prev => prev.map(s => s._id === session._id ? res.data.data : s));
             flash('success', 'Session started — students have been notified.');
             if (session.meetingLink) {
-                if (isMeetingUrl(session.meetingLink)) {
+                if (/zoom\.us\/j\//i.test(session.meetingLink)) {
                     window.open(session.meetingLink, '_blank', 'noopener,noreferrer');
                 } else {
-                    setActiveMeeting(session.meetingLink);
+                    setActiveMeeting({ url: session.meetingLink, session });
                 }
             }
         } catch (err) {
@@ -379,9 +380,7 @@ export default function InstructorLiveSessions({ courses = [] }) {
                                     <div style={{ flex: 1, minWidth: '180px' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px', flexWrap: 'wrap' }}>
                                             <h3 style={{ color: c.text, fontSize: '14px', fontWeight: '700', margin: 0 }}>{rec.title}</h3>
-                                            <span style={{ padding: '2px 9px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', background: 'rgba(34,197,94,0.15)', color: '#4ade80' }}>
-                                                Auto-published ✓
-                                            </span>
+                                            <RecordingStatusBadge status={rec.status || (rec.videoUrl ? 'ready' : 'processing')} />
                                         </div>
                                         <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: c.textMuted, flexWrap: 'wrap' }}>
                                             {rec.course?.courseTitle && <span><BookOpen size={11} style={{ marginRight: 3 }} />{rec.course.courseTitle}</span>}
@@ -390,7 +389,7 @@ export default function InstructorLiveSessions({ courses = [] }) {
                                         </div>
                                     </div>
 
-                                    {/* Play + Delete */}
+                                    {/* Play / Upload + Delete */}
                                     <div style={{ display: 'flex', gap: '8px', flexShrink: 0, alignItems: 'center' }}>
                                         <button
                                             onClick={() => setActiveRecording(rec)}
@@ -398,7 +397,14 @@ export default function InstructorLiveSessions({ courses = [] }) {
                                         >
                                             <Play size={13} fill="#fff" /> Play Recording
                                         </button>
-                                        <button onClick={() => handleDeleteRecording(rec)} disabled={processingId === rec._id + '_del'} style={{ ...btn('transparent', '#f87171'), border: '1px solid rgba(239,68,68,0.25)', fontSize: '11px', padding: '5px 10px' }}>
+                                        <button
+                                            onClick={() => openRecordingModal(null, rec)}
+                                            style={{ ...btn('transparent', c.textMuted), border: `1px solid ${c.border}`, fontSize: '11px', padding: '7px 11px' }}
+                                            title="Upload file or change URL"
+                                        >
+                                            <Upload size={12} /> {rec.videoUrl ? 'Edit URL' : 'Upload'}
+                                        </button>
+                                        <button onClick={() => handleDeleteRecording(rec)} disabled={processingId === rec._id + '_del'} style={{ ...btn('transparent', '#f87171'), border: '1px solid rgba(239,68,68,0.25)', fontSize: '11px', padding: '7px 11px' }}>
                                             <Trash2 size={12} /> {processingId === rec._id + '_del' ? '…' : 'Delete'}
                                         </button>
                                     </div>
@@ -432,8 +438,14 @@ export default function InstructorLiveSessions({ courses = [] }) {
             {/* Jitsi Meeting Modal */}
             {activeMeeting && (
                 <JitsiMeetingModal
-                    meetingUrl={activeMeeting}
-                    onClose={() => setActiveMeeting(null)}
+                    meetingUrl={typeof activeMeeting === 'string' ? activeMeeting : activeMeeting.url}
+                    session={typeof activeMeeting === 'object' ? activeMeeting.session : null}
+                    isInstructor={true}
+                    onRecordingComplete={() => fetchData()}
+                    onClose={() => {
+                        setActiveMeeting(null);
+                        fetchData();
+                    }}
                 />
             )}
 

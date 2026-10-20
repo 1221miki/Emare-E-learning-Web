@@ -28,7 +28,7 @@ const uploadBuffer = (buffer, folder, resourceType = 'auto', timeoutMs = LARGE_S
       resolve(result);
     };
 
-    if (resourceType === 'video') {
+    if (resourceType === 'video' && typeof cloudinary.uploader.upload_chunked_stream === 'function') {
       uploadStream = cloudinary.uploader.upload_chunked_stream(
         uploadOptions,
         (error, result) => {

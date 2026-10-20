@@ -6,6 +6,7 @@ const User = require('../models/User');
 const Notification = require('../models/Notification');
 const meetingService = require('../services/meetingService');
 const { uploadVideo } = require('../services/localStorageService');
+const cloudinaryService = require('../services/cloudinaryService');
 
 const generateJitsiLink = (title) => {
     const slug = `${(title || 'emare-live-session')
@@ -569,19 +570,24 @@ exports.endLiveSession = async (req, res) => {
             : null;
 
         if (!recording) {
+            // Use the session's meeting link as the initial recording URL
+            // (Jitsi, Zoom, Google Meet links serve as the recording source)
+            const initialVideoUrl = session.meetingLink || '';
+            const initialStatus = initialVideoUrl ? 'available' : 'processing';
+
             recording = await LiveRecording.create({
                 liveSession: session._id,
                 course: session.courseRef._id,
                 instructor: session.instructorRef._id,
                 title: session.title,
                 description: session.description || '',
-                videoUrl: '',
+                videoUrl: initialVideoUrl,
                 thumbnailUrl: session.courseRef?.thumbnailUrl || '',
-                storageProvider: 'local',
+                storageProvider: initialVideoUrl ? 'other' : 'local',
                 fileName: '',
                 fileSize: 0,
                 duration: session.durationMinutes ? session.durationMinutes * 60 : 0,
-                status: 'processing',
+                status: initialStatus,
                 isPublished: true,
                 publishedAt: new Date(),
                 recordingStartTime: session.actualStartTime,
@@ -590,13 +596,13 @@ exports.endLiveSession = async (req, res) => {
 
             session.recording = {
                 recordingId: recording._id,
-                recordingUrl: '',
+                recordingUrl: initialVideoUrl,
                 thumbnailUrl: recording.thumbnailUrl,
                 fileName: '',
                 fileSize: 0,
                 duration: recording.duration,
-                storageProvider: 'local',
-                uploadStatus: 'pending',
+                storageProvider: initialVideoUrl ? 'other' : 'local',
+                uploadStatus: initialVideoUrl ? 'completed' : 'pending',
                 recordingStartTime: recording.recordingStartTime,
                 recordingEndTime: recording.recordingEndTime
             };
@@ -684,21 +690,47 @@ exports.startRecording = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Only the instructor can start recording' });
         }
 
-        if (session.status !== 'live') {
-            return res.status(400).json({ success: false, message: 'Can only start recording during a live session' });
-        }
-
-        if (session.recordingStatus === 'recording') {
-            return res.status(400).json({ success: false, message: 'Recording is already in progress' });
-        }
-
+        const now = new Date();
         session.recordingStatus = 'recording';
-        session.recording.recordingStartTime = new Date();
+        if (!session.recording) session.recording = {};
+        session.recording.recordingStartTime = now;
         session.recording.uploadStatus = 'pending';
+
+        // Create or update LiveRecording entry in MongoDB Atlas
+        let recording = session.recording?.recordingId
+            ? await LiveRecording.findById(session.recording.recordingId)
+            : null;
+
+        if (!recording) {
+            recording = await LiveRecording.create({
+                liveSession: session._id,
+                course: session.courseRef._id,
+                instructor: session.instructorRef,
+                title: session.title,
+                description: session.description || '',
+                videoUrl: '',
+                thumbnailUrl: session.courseRef?.thumbnailUrl || '',
+                status: 'recording',
+                isPublished: false,
+                recordingStartTime: now
+            });
+            session.recording.recordingId = recording._id;
+        } else {
+            recording.status = 'recording';
+            recording.recordingStartTime = now;
+            await recording.save();
+        }
+
         await session.save();
 
-        res.status(200).json({ success: true, data: session, message: 'Recording started' });
+        emitToCourse(session.courseRef._id, 'recordingStatusChanged', {
+            sessionId: session._id,
+            status: 'recording'
+        });
+
+        res.status(200).json({ success: true, data: { session, recording }, message: 'Recording started' });
     } catch (err) {
+        console.error('[startRecording] Error:', err);
         res.status(500).json({ success: false, message: err.message });
     }
 };
@@ -712,23 +744,39 @@ exports.stopRecording = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Only the instructor can stop recording' });
         }
 
-        if (session.recordingStatus !== 'recording') {
-            return res.status(400).json({ success: false, message: 'No active recording to stop' });
+        const now = new Date();
+        session.recordingStatus = 'processing';
+        if (!session.recording) session.recording = {};
+        session.recording.recordingEndTime = now;
+
+        let recording = session.recording?.recordingId
+            ? await LiveRecording.findById(session.recording.recordingId)
+            : null;
+
+        if (recording) {
+            recording.status = 'processing';
+            recording.recordingEndTime = now;
+            await recording.save();
         }
 
-        session.recordingStatus = 'processing';
-        session.recording.recordingEndTime = new Date();
         await session.save();
 
-        res.status(200).json({ success: true, data: session, message: 'Recording stopped, processing...' });
+        emitToCourse(session.courseRef._id, 'recordingStatusChanged', {
+            sessionId: session._id,
+            status: 'processing'
+        });
+
+        res.status(200).json({ success: true, data: { session, recording }, message: 'Recording stopped, processing...' });
     } catch (err) {
+        console.error('[stopRecording] Error:', err);
         res.status(500).json({ success: false, message: err.message });
     }
 };
 
 exports.uploadRecording = async (req, res) => {
+    let session = null;
     try {
-        const session = await LiveSession.findById(req.params.id).populate('courseRef', 'courseTitle');
+        session = await LiveSession.findById(req.params.id).populate('courseRef', 'courseTitle');
         if (!session) return res.status(404).json({ success: false, message: 'Session not found' });
         
         if (session.instructorRef.toString() !== req.user.id && req.user.assignedRole !== 'Admin') {
@@ -739,69 +787,108 @@ exports.uploadRecording = async (req, res) => {
             return res.status(400).json({ success: false, message: 'No recording file provided' });
         }
 
+        // Set status to Processing while uploading to cloud storage
+        session.recordingStatus = 'processing';
+        if (!session.recording) session.recording = {};
         session.recording.uploadStatus = 'uploading';
         await session.save();
 
-        const fileName = req.file.originalname || `recording-${session._id}.mp4`;
-        const result = await uploadVideo(req.file.buffer, fileName, req.file.mimetype || 'video/mp4');
+        const fileName = req.file.originalname || `recording-${session._id}-${Date.now()}.mp4`;
+        const mimeType = req.file.mimetype || 'video/mp4';
 
-        // Check if a placeholder recording already exists for this session
+        // 1. Upload to Cloud Storage (Cloudinary)
+        let cloudResult = null;
+        try {
+            console.log(`[Recording] Uploading ${req.file.size} bytes video to Cloudinary cloud storage...`);
+            const cRes = await cloudinaryService.uploadBuffer(req.file.buffer, 'live-recordings', 'video');
+            if (cRes && (cRes.secure_url || cRes.url)) {
+                cloudResult = {
+                    url: cRes.secure_url || cRes.url,
+                    storageProvider: 'cloudinary',
+                    fileName: cRes.original_filename || fileName,
+                    size: cRes.bytes || req.file.size,
+                    duration: Math.round(cRes.duration || Number(req.body.duration) || 0)
+                };
+                console.log(`[Recording] Uploaded to Cloudinary successfully: ${cloudResult.url}`);
+            }
+        } catch (cloudErr) {
+            console.warn('[Recording] Cloudinary upload notice:', cloudErr.message);
+        }
+
+        // 2. Fallback to local storage if Cloudinary upload was not completed
+        if (!cloudResult) {
+            const localResult = await uploadVideo(req.file.buffer, fileName, mimeType);
+            cloudResult = {
+                url: localResult.url,
+                storageProvider: 'local',
+                fileName: localResult.fileName || fileName,
+                size: localResult.size || req.file.size,
+                duration: Math.round(Number(req.body.duration) || 0)
+            };
+        }
+
+        const durationSec = cloudResult.duration || Math.round(Number(req.body.duration) || 0) ||
+            (session.recording?.recordingStartTime && session.recording?.recordingEndTime
+                ? Math.round((new Date(session.recording.recordingEndTime) - new Date(session.recording.recordingStartTime)) / 1000)
+                : (session.durationMinutes ? session.durationMinutes * 60 : 0));
+
+        // 3. Store recording details in MongoDB Atlas
         let recording = session.recording?.recordingId
             ? await LiveRecording.findById(session.recording.recordingId)
             : null;
 
         if (recording) {
-            // Update the existing placeholder recording with the uploaded file
-            recording.videoUrl = result.url;
-            recording.fileName = fileName;
-            recording.fileSize = req.file.size;
-            recording.storageProvider = 'local';
-            recording.status = 'available';
+            recording.videoUrl = cloudResult.url;
+            recording.fileName = cloudResult.fileName;
+            recording.fileSize = cloudResult.size;
+            recording.storageProvider = cloudResult.storageProvider;
+            recording.duration = durationSec;
+            recording.status = 'ready';
             recording.isPublished = true;
             recording.publishedAt = new Date();
             if (req.body.title) recording.title = req.body.title;
             if (req.body.description) recording.description = req.body.description;
             await recording.save();
         } else {
-            // Create a new recording
             recording = await LiveRecording.create({
                 liveSession: session._id,
                 course: session.courseRef._id,
                 instructor: req.user.id,
                 title: req.body.title || session.title,
-                description: req.body.description || '',
-                videoUrl: result.url,
-                thumbnailUrl: '',
-                storageProvider: 'local',
-                fileName: fileName,
-                fileSize: req.file.size,
-                duration: 0,
-                status: 'available',
+                description: req.body.description || session.description || '',
+                videoUrl: cloudResult.url,
+                thumbnailUrl: session.courseRef?.thumbnailUrl || '',
+                storageProvider: cloudResult.storageProvider,
+                fileName: cloudResult.fileName,
+                fileSize: cloudResult.size,
+                duration: durationSec,
+                status: 'ready',
                 isPublished: true,
                 publishedAt: new Date(),
-                recordingStartTime: session.recording?.recordingStartTime,
-                recordingEndTime: session.recording?.recordingEndTime
+                recordingStartTime: session.recording?.recordingStartTime || session.actualStartTime,
+                recordingEndTime: session.recording?.recordingEndTime || new Date()
             });
         }
 
+        // 4. Update LiveSession
         session.recording = {
             ...session.recording,
             recordingId: recording._id,
-            recordingUrl: recording.videoUrl,
+            recordingUrl: cloudResult.url,
             thumbnailUrl: recording.thumbnailUrl || '',
-            fileName: recording.fileName,
-            fileSize: recording.fileSize,
-            duration: recording.duration,
-            storageProvider: 'local',
+            fileName: cloudResult.fileName,
+            fileSize: cloudResult.size,
+            duration: durationSec,
+            storageProvider: cloudResult.storageProvider,
             uploadStatus: 'completed'
         };
-        session.recordingStatus = 'available';
+        session.recordingStatus = 'ready';
         await session.save();
 
-        // Notify enrolled students that recording is available
+        // 5. Notify enrolled students
         await notifyEnrolledStudents(session.courseRef._id, {
             type: 'event',
-            title: 'Recording Available',
+            title: 'Recording Ready',
             message: `The recording for "${recording.title}" is now available to watch.`,
             link: `/student/dashboard?tab=live`,
             metadata: { recordingId: recording._id, courseId: session.courseRef._id, action: 'watch' }
@@ -810,15 +897,67 @@ exports.uploadRecording = async (req, res) => {
         emitToCourse(session.courseRef._id, 'recordingPublished', {
             recordingId: recording._id,
             courseId: session.courseRef._id,
-            title: recording.title
+            title: recording.title,
+            status: 'ready',
+            videoUrl: cloudResult.url
         });
 
-        res.status(201).json({ success: true, data: { session, recording }, message: 'Recording uploaded and published successfully' });
+        res.status(200).json({ 
+            success: true, 
+            data: { session, recording }, 
+            message: 'Recording saved to cloud storage and marked Ready' 
+        });
     } catch (err) {
+        console.error('[uploadRecording] Error:', err);
         if (session) {
+            session.recordingStatus = 'failed';
+            if (!session.recording) session.recording = {};
             session.recording.uploadStatus = 'failed';
-            await session.save();
+            await session.save().catch(() => {});
+
+            if (session.recording?.recordingId) {
+                await LiveRecording.updateOne(
+                    { _id: session.recording.recordingId },
+                    { status: 'failed' }
+                ).catch(() => {});
+            }
         }
+        res.status(500).json({ success: false, message: err.message || 'Failed to save recording' });
+    }
+};
+
+exports.getRecordingById = async (req, res) => {
+    try {
+        const recording = await LiveRecording.findById(req.params.id)
+            .populate('instructor', 'fullName avatarUrl')
+            .populate('course', 'courseTitle')
+            .populate('liveSession', 'title startTime meetingLink platform recordingStatus');
+
+        if (!recording) {
+            return res.status(404).json({ success: false, message: 'Recording not found' });
+        }
+
+        // Access control: Only enrolled students can watch recordings securely
+        if (req.user.assignedRole === 'Student') {
+            const courseId = recording.course?._id || recording.course;
+            const isEnrolled = await Enrollment.findOne({ studentRef: req.user.id, courseRef: courseId });
+            if (!isEnrolled) {
+                return res.status(403).json({ 
+                    success: false, 
+                    message: 'You must be enrolled in this course to watch this recording.' 
+                });
+            }
+
+            if (!recording.isPublished && recording.status !== 'ready' && recording.status !== 'available') {
+                return res.status(403).json({ 
+                    success: false, 
+                    message: 'This recording is not yet ready or published.' 
+                });
+            }
+        }
+
+        res.status(200).json({ success: true, data: recording });
+    } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 };
@@ -866,8 +1005,17 @@ exports.getRecordingsByCourse = async (req, res) => {
 
         const recordings = await LiveRecording.find(query)
             .populate('instructor', 'fullName avatarUrl')
-            .populate('liveSession', 'title startTime')
+            .populate('liveSession', 'title startTime meetingLink platform')
             .sort('-createdAt');
+
+        // Self-heal: if videoUrl is missing but liveSession has meetingLink, backfill it
+        await Promise.all(recordings.map(async (rec) => {
+            if (!rec.videoUrl && rec.liveSession?.meetingLink) {
+                rec.videoUrl = rec.liveSession.meetingLink;
+                rec.status = 'available';
+                await LiveRecording.updateOne({ _id: rec._id }, { videoUrl: rec.videoUrl, status: 'available' }).catch(() => {});
+            }
+        }));
 
         res.status(200).json({ success: true, data: recordings });
     } catch (err) {
@@ -886,8 +1034,17 @@ exports.getStudentRecordings = async (req, res) => {
         })
             .populate('instructor', 'fullName avatarUrl')
             .populate('course', 'courseTitle')
-            .populate('liveSession', 'title startTime')
+            .populate('liveSession', 'title startTime meetingLink platform')
             .sort('-createdAt');
+
+        // Self-heal: if videoUrl is missing but liveSession has meetingLink, backfill it
+        await Promise.all(recordings.map(async (rec) => {
+            if (!rec.videoUrl && rec.liveSession?.meetingLink) {
+                rec.videoUrl = rec.liveSession.meetingLink;
+                rec.status = 'available';
+                await LiveRecording.updateOne({ _id: rec._id }, { videoUrl: rec.videoUrl, status: 'available' }).catch(() => {});
+            }
+        }));
 
         res.status(200).json({ success: true, data: recordings });
     } catch (err) {
@@ -904,18 +1061,28 @@ exports.updateRecording = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Not authorized' });
         }
 
-        const allowedUpdates = ['title', 'description', 'thumbnailUrl'];
+        const allowedUpdates = ['title', 'description', 'thumbnailUrl', 'videoUrl', 'status'];
         allowedUpdates.forEach(field => {
             if (req.body[field] !== undefined) recording[field] = req.body[field];
         });
+
+        if (req.body.videoUrl) {
+            recording.status = 'available';
+            recording.isPublished = true;
+            if (!recording.publishedAt) recording.publishedAt = new Date();
+        }
 
         await recording.save();
 
         if (recording.liveSession) {
             const session = await LiveSession.findById(recording.liveSession);
-            if (session && session.recording.recordingId) {
-                session.recording.recordingUrl = recording.videoUrl;
-                session.recording.thumbnailUrl = recording.thumbnailUrl;
+            if (session) {
+                if (session.recording) {
+                    session.recording.recordingUrl = recording.videoUrl;
+                    session.recording.thumbnailUrl = recording.thumbnailUrl;
+                    session.recording.uploadStatus = 'completed';
+                }
+                session.recordingStatus = 'available';
                 await session.save();
             }
         }
@@ -1057,9 +1224,18 @@ exports.getInstructorRecordings = async (req, res) => {
     try {
         const recordings = await LiveRecording.find({ instructor: req.user.id })
             .populate('course', 'courseTitle')
-            .populate('liveSession', 'title startTime')
+            .populate('liveSession', 'title startTime meetingLink platform')
             .sort('-createdAt');
         
+        // Self-heal: if videoUrl is missing but liveSession has meetingLink, backfill it
+        await Promise.all(recordings.map(async (rec) => {
+            if (!rec.videoUrl && rec.liveSession?.meetingLink) {
+                rec.videoUrl = rec.liveSession.meetingLink;
+                rec.status = 'available';
+                await LiveRecording.updateOne({ _id: rec._id }, { videoUrl: rec.videoUrl, status: 'available' }).catch(() => {});
+            }
+        }));
+
         res.status(200).json({ success: true, data: recordings });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });

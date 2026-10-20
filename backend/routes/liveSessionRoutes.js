@@ -30,7 +30,8 @@ const {
     unpublishRecording,
     deleteRecording,
     getInstructorSessions,
-    getInstructorRecordings
+    getInstructorRecordings,
+    getRecordingById
 } = require('../controllers/liveSessionController');
 
 router.get('/upcoming', optionalProtect, getUpcomingSessions);
@@ -60,10 +61,12 @@ router.post('/:id/join', joinLiveSession);
 router.post('/:id/recording/start', denySuspendedActions, authorizeRoles('Instructor', 'Admin'), startRecording);
 router.post('/:id/recording/stop', denySuspendedActions, authorizeRoles('Instructor', 'Admin'), stopRecording);
 router.post('/:id/recording/upload', denySuspendedActions, authorizeRoles('Instructor', 'Admin'), uploadVideo.single('recording'), uploadRecording);
+router.post('/:id/recording/auto-save', denySuspendedActions, authorizeRoles('Instructor', 'Admin'), uploadVideo.single('recording'), uploadRecording);
 router.get('/:id/recording', getSessionRecording);
 
 router.get('/recordings/course/:courseId', getRecordingsByCourse);
 router.get('/recordings/student', authorizeRoles('Student'), getStudentRecordings);
+router.get('/recordings/:id', getRecordingById);
 router.put('/recordings/:id', denySuspendedActions, authorizeRoles('Instructor', 'Admin'), updateRecording);
 router.post('/recordings/:id/publish', denySuspendedActions, authorizeRoles('Instructor', 'Admin'), publishRecording);
 router.post('/recordings/:id/unpublish', denySuspendedActions, authorizeRoles('Instructor', 'Admin'), unpublishRecording);

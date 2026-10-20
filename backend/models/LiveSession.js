@@ -70,7 +70,7 @@ const LiveSessionSchema = new mongoose.Schema({
     },
     recordingStatus: {
         type: String,
-        enum: ['not_started', 'recording', 'processing', 'available', 'failed'],
+        enum: ['not_started', 'recording', 'processing', 'ready', 'failed', 'available'],
         default: 'not_started'
     },
     recording: {
