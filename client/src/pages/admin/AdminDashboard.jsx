@@ -526,16 +526,29 @@ export default function AdminDashboard() {
     ]);
     const [roleSearch, setRoleSearch] = useState('');
     const [isSecurityStatusExpanded, setIsSecurityStatusExpanded] = useState(false);
-    const [permissionsMatrix, setPermissionsMatrix] = useState([
-        { id: 'view_analytics', label: 'View Platform Analytics', category: 'Analytics', a: true, i: true, s: false, m: true, st: false },
-        { id: 'manage_users', label: 'Manage User Accounts & Roles', category: 'Administration', a: true, i: false, s: false, m: false, st: false },
-        { id: 'create_courses', label: 'Create & Publish Courses', category: 'Academics', a: true, i: true, s: false, m: false, st: false },
-        { id: 'take_quizzes', label: 'Access Learning Materials & Quizzes', category: 'Learning', a: true, i: true, s: true, m: false, st: false },
-        { id: 'moderate_content', label: 'Moderate Discussions & Reviews', category: 'Moderation', a: true, i: false, s: false, m: true, st: false },
-        { id: 'support_tickets', label: 'Handle Helpdesk & Inquiries', category: 'Support', a: true, i: false, s: false, m: false, st: true },
-        { id: 'system_settings', label: 'Manage System Settings & Keys', category: 'Administration', a: true, i: false, s: false, m: false, st: false },
-        { id: 'export_reports', label: 'Export Audit & Financial Reports', category: 'Reports', a: true, i: true, s: false, m: false, st: false },
-    ]);
+    const [permissionsMatrix, setPermissionsMatrix] = useState(() => {
+        try {
+            const saved = window.localStorage.getItem('rbacPermissionsMatrix');
+            if (saved) return JSON.parse(saved);
+        } catch (_) {}
+        return [
+            { id: 'view_analytics', label: 'View Platform Analytics', category: 'Analytics', a: true, i: true, s: false, m: true, st: false },
+            { id: 'manage_users', label: 'Manage User Accounts & Roles', category: 'Administration', a: true, i: false, s: false, m: false, st: false },
+            { id: 'create_courses', label: 'Create & Publish Courses', category: 'Academics', a: true, i: true, s: false, m: false, st: false },
+            { id: 'take_quizzes', label: 'Access Learning Materials & Quizzes', category: 'Learning', a: true, i: true, s: true, m: false, st: false },
+            { id: 'moderate_content', label: 'Moderate Discussions & Reviews', category: 'Moderation', a: true, i: false, s: false, m: true, st: false },
+            { id: 'support_tickets', label: 'Handle Helpdesk & Inquiries', category: 'Support', a: true, i: false, s: false, m: false, st: true },
+            { id: 'system_settings', label: 'Manage System Settings & Keys', category: 'Administration', a: true, i: false, s: false, m: false, st: false },
+            { id: 'export_reports', label: 'Export Audit & Financial Reports', category: 'Reports', a: true, i: true, s: false, m: false, st: false },
+        ];
+    });
+    const [workingPermissionsMatrix, setWorkingPermissionsMatrix] = useState(permissionsMatrix);
+
+    useEffect(() => {
+        if (isManagePermissionsModalOpen) {
+            setWorkingPermissionsMatrix(permissionsMatrix.map(row => ({ ...row })));
+        }
+    }, [isManagePermissionsModalOpen, permissionsMatrix]);
 
     useEffect(() => {
         const savedTemplates = window.localStorage.getItem('certificateTemplates');
@@ -3037,18 +3050,26 @@ const resetCalendarForm = () => {
         };
 
         const handlePermissionToggle = (index, roleKey, value) => {
-            const newMatrix = [...permissionsMatrix];
-            newMatrix[index][roleKey] = value;
-            setPermissionsMatrix(newMatrix);
+            setWorkingPermissionsMatrix(prev => prev.map((row, i) => i === index ? { ...row, [roleKey]: value } : { ...row }));
+        };
+
+        const handleCancelPermissions = () => {
+            setWorkingPermissionsMatrix(permissionsMatrix.map(row => ({ ...row })));
+            setIsManagePermissionsModalOpen(false);
         };
 
         const handleSavePermissions = () => {
             setIsSavingPermissions(true);
             setTimeout(() => {
+                const updated = workingPermissionsMatrix.map(row => ({ ...row }));
+                setPermissionsMatrix(updated);
+                try {
+                    window.localStorage.setItem('rbacPermissionsMatrix', JSON.stringify(updated));
+                } catch (_) {}
                 setIsSavingPermissions(false);
                 setIsManagePermissionsModalOpen(false);
                 showNotification('Role permissions successfully updated across the platform.');
-            }, 600);
+            }, 400);
         };
 
         const confirmDeleteRole = () => {
@@ -3540,14 +3561,20 @@ const resetCalendarForm = () => {
                 </Modal>
 
                 {/* 2. Manage 5-Role Permissions Matrix Modal */}
-                <Modal isOpen={isManagePermissionsModalOpen} onClose={() => setIsManagePermissionsModalOpen(false)} title="Platform Roles & Permissions Matrix (5 Roles)">
-                    <div style={{ padding: '24px', minWidth: '720px', maxWidth: '880px' }}>
+                <Modal 
+                    isOpen={isManagePermissionsModalOpen} 
+                    onClose={handleCancelPermissions} 
+                    title="Platform Roles & Permissions Matrix (5 Roles)"
+                    maxWidth="880px"
+                    scrollable={true}
+                >
+                    <div style={{ width: '100%', boxSizing: 'border-box' }}>
                         <p style={{ color: colors.textMuted, fontSize: '13px', marginBottom: '20px', marginTop: 0 }}>
                             Configure granular platform capabilities across Super Admin, Instructor, Student, Moderator, and Support Staff roles. Changes are stored in active platform memory.
                         </p>
                         
-                        <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '12px', overflow: 'hidden' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                        <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '12px', overflowX: 'auto', width: '100%' }}>
+                            <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                                 <thead>
                                     <tr style={{ borderBottom: `1px solid ${colors.border}`, background: colors.bgCard }}>
                                         <th style={{ padding: '14px 18px', color: colors.text, fontWeight: '700' }}>Permission Module</th>
@@ -3559,7 +3586,7 @@ const resetCalendarForm = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {permissionsMatrix.map((row, i) => (
+                                    {workingPermissionsMatrix.map((row, i) => (
                                         <tr key={row.id} style={{ borderBottom: `1px solid ${colors.border}`, background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
                                             <td style={{ padding: '13px 18px' }}>
                                                 <div style={{ color: colors.text, fontWeight: '600' }}>{row.label}</div>
@@ -3567,15 +3594,15 @@ const resetCalendarForm = () => {
                                             </td>
                                             {/* Super Admin */}
                                             <td style={{ padding: '13px 12px', textAlign: 'center' }}>
-                                                <input type="checkbox" checked={row.a} onChange={(e) => handlePermissionToggle(i, 'a', e.target.checked)} style={{ accentColor: '#22c55e', cursor: 'pointer', width: '17px', height: '17px' }} />
+                                                <input type="checkbox" checked={Boolean(row.a)} onChange={(e) => handlePermissionToggle(i, 'a', e.target.checked)} style={{ accentColor: '#22c55e', cursor: 'pointer', width: '17px', height: '17px' }} />
                                             </td>
                                             {/* Instructor */}
                                             <td style={{ padding: '13px 12px', textAlign: 'center' }}>
-                                                <input type="checkbox" checked={row.i} onChange={(e) => handlePermissionToggle(i, 'i', e.target.checked)} style={{ accentColor: '#3b82f6', cursor: 'pointer', width: '17px', height: '17px' }} />
+                                                <input type="checkbox" checked={Boolean(row.i)} onChange={(e) => handlePermissionToggle(i, 'i', e.target.checked)} style={{ accentColor: '#3b82f6', cursor: 'pointer', width: '17px', height: '17px' }} />
                                             </td>
                                             {/* Student */}
                                             <td style={{ padding: '13px 12px', textAlign: 'center' }}>
-                                                <input type="checkbox" checked={row.s} onChange={(e) => handlePermissionToggle(i, 's', e.target.checked)} style={{ accentColor: '#10b981', cursor: 'pointer', width: '17px', height: '17px' }} />
+                                                <input type="checkbox" checked={Boolean(row.s)} onChange={(e) => handlePermissionToggle(i, 's', e.target.checked)} style={{ accentColor: '#10b981', cursor: 'pointer', width: '17px', height: '17px' }} />
                                             </td>
                                             {/* Moderator */}
                                             <td style={{ padding: '13px 12px', textAlign: 'center' }}>
@@ -3591,9 +3618,42 @@ const resetCalendarForm = () => {
                             </table>
                         </div>
                         
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '22px' }}>
-                            <button onClick={() => setIsManagePermissionsModalOpen(false)} style={{ background: 'transparent', border: `1px solid ${colors.border}`, color: colors.textMuted, padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
-                            <button onClick={handleSavePermissions} disabled={isSavingPermissions} style={{ background: '#22c55e', border: 'none', color: '#ffffff', padding: '9px 24px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: isSavingPermissions ? 'not-allowed' : 'pointer', opacity: isSavingPermissions ? 0.7 : 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', marginTop: '22px', paddingTop: '16px', borderTop: `1px solid ${colors.border}` }}>
+                            <button 
+                                type="button" 
+                                onClick={handleCancelPermissions} 
+                                style={{ 
+                                    background: 'transparent', 
+                                    border: `1px solid ${colors.border}`, 
+                                    color: colors.textMuted, 
+                                    padding: '9px 20px', 
+                                    borderRadius: '8px', 
+                                    fontSize: '13px', 
+                                    fontWeight: '600', 
+                                    cursor: 'pointer' 
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={handleSavePermissions} 
+                                disabled={isSavingPermissions} 
+                                style={{ 
+                                    background: '#22c55e', 
+                                    border: 'none', 
+                                    color: '#ffffff', 
+                                    padding: '9px 24px', 
+                                    borderRadius: '8px', 
+                                    fontSize: '13px', 
+                                    fontWeight: '700', 
+                                    cursor: isSavingPermissions ? 'not-allowed' : 'pointer', 
+                                    opacity: isSavingPermissions ? 0.7 : 1,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}
+                            >
                                 {isSavingPermissions ? 'Saving...' : 'Apply RBAC Changes'}
                             </button>
                         </div>
@@ -3732,28 +3792,7 @@ const resetCalendarForm = () => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '24px' }}>
-                <div style={s.card}>
-                    <h3 style={s.cardTitle}>Grade Distribution</h3>
-                    {analytics?.gradeDistribution?.length ? (
-                        <div style={{ width: '100%', height: '260px' }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={analytics.gradeDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} fill={colors.primary} label={{ fill: colors.text, fontSize: 11 }}>
-                                        {analytics.gradeDistribution.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={[colors.primary, colors.accent, colors.success, colors.warning, colors.danger][index % 5]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip contentStyle={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '8px', color: colors.text }} />
-                                    <Legend wrapperStyle={{ color: colors.text }} layout="vertical" verticalAlign="middle" align="right" />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                    ) : (
-                        <div style={s.emptyState}>No grade distribution data available.</div>
-                    )}
-                </div>
-
+            <div style={{ marginTop: '24px' }}>
                 <div style={s.card}>
                     <h3 style={s.cardTitle}>Instructor Statistics</h3>
                     <div style={{ display: 'grid', gap: '12px' }}>
@@ -3771,7 +3810,7 @@ const resetCalendarForm = () => {
                         </div>
                     </div>
                     {analytics?.instructorCourseCounts?.length ? (
-                        <div style={{ marginTop: '18px', display: 'grid', gap: '10px' }}>
+                        <div style={{ marginTop: '18px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '10px' }}>
                             {analytics.instructorCourseCounts.map((inst, idx) => (
                                 <div key={idx} style={{ padding: '12px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
                                     <div style={{ color: colors.text, fontWeight: '700' }}>{inst.instructorName}</div>
@@ -3780,24 +3819,6 @@ const resetCalendarForm = () => {
                             ))}
                         </div>
                     ) : null}
-                </div>
-            </div>
-
-            <div style={{ display: 'grid', gap: '18px', marginTop: '24px' }}>
-                <div style={s.card}>
-                    <h3 style={s.cardTitle}>Top Performers</h3>
-{analytics?.topPerformers?.length ? (
-                        <div style={{ display: 'grid', gap: '12px' }}>
-                            {analytics.topPerformers.map((student, index) => (
-                                <div key={index} style={{ padding: '14px', borderRadius: '12px', background: colors.bgInput, border: `1px solid ${colors.border}` }}>
-                                    <div style={{ color: colors.text, fontWeight: '700' }}>{student.studentName}</div>
-                                    <div style={{ color: colors.textMuted, fontSize: '13px' }}>{student.avgScore}% avg score -- {student.totalAttempts} attempts</div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div style={s.emptyState}>No top performer data available.</div>
-                    )}
                 </div>
             </div>
         </div>

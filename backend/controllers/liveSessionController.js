@@ -16,6 +16,12 @@ const generateJitsiLink = (title) => {
     return `https://meet.jit.si/${slug}`;
 };
 
+const generateGoogleMeetLink = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz';
+    const r = (len) => Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    return `https://meet.google.com/${r(3)}-${r(4)}-${r(3)}`;
+};
+
 const isValidHttpUrl = (value) => {
     try {
         const u = new URL(String(value).trim());
@@ -83,7 +89,7 @@ exports.getIntegrationStatus = async (req, res) => {
 exports.generateSessionMeetingLink = async (req, res) => {
     try {
         const { platform, title = '', startTime, durationMinutes } = req.body || {};
-        const normalizedPlatform = ['Zoom', 'Jitsi Meet', 'Custom'].includes(platform)
+        const normalizedPlatform = ['Zoom', 'Google Meet', 'Jitsi Meet', 'Custom'].includes(platform)
             ? platform
             : 'Jitsi Meet';
 
@@ -92,6 +98,13 @@ exports.generateSessionMeetingLink = async (req, res) => {
                 success: false,
                 code: 'MANUAL_LINK_REQUIRED',
                 message: 'Custom meetings use a manually entered link. Paste any valid meeting URL in the Meeting Link field.'
+            });
+        }
+
+        if (normalizedPlatform === 'Google Meet') {
+            return res.status(200).json({
+                success: true,
+                data: { url: generateGoogleMeetLink(), provider: 'googleMeet', generated: true }
             });
         }
 
@@ -291,16 +304,18 @@ exports.getStudentLiveSessions = async (req, res) => {
 exports.createLiveSession = async (req, res) => {
     try {
         const { title, platform = 'Jitsi Meet', meetingLink, ...rest } = req.body;
-        const normalizedPlatform = ['Zoom', 'Jitsi Meet', 'Custom'].includes(platform) ? platform : 'Jitsi Meet';
+        const normalizedPlatform = ['Zoom', 'Google Meet', 'Jitsi Meet', 'Custom'].includes(platform) ? platform : 'Jitsi Meet';
 
         let resolvedLink = (meetingLink || '').trim();
         if (!resolvedLink && normalizedPlatform === 'Jitsi Meet') {
             resolvedLink = generateJitsiLink(title);
+        } else if (!resolvedLink && normalizedPlatform === 'Google Meet') {
+            resolvedLink = generateGoogleMeetLink();
         }
         if (!resolvedLink) {
             return res.status(400).json({
                 success: false,
-                message: `A meeting link is required for ${normalizedPlatform} sessions. Generate one automatically (Jitsi) or paste a valid URL.`
+                message: `A meeting link is required for ${normalizedPlatform} sessions. Generate one automatically or paste a valid URL.`
             });
         }
         if (!isValidHttpUrl(resolvedLink)) {
@@ -312,6 +327,7 @@ exports.createLiveSession = async (req, res) => {
 
         const PLATFORM_TO_PROVIDER = {
             'Zoom': 'zoom',
+            'Google Meet': 'googleMeet',
             'Jitsi Meet': 'jitsi',
             'Custom': 'custom'
         };

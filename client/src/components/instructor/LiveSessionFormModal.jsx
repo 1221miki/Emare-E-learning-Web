@@ -52,7 +52,9 @@ export default function LiveSessionFormModal({ courses = [], session = null, onS
         if (!link) {
             e.meetingLink = form.platform === 'Jitsi Meet'
                 ? 'Click "Generate Link" to create a Jitsi room.'
-                : 'A meeting link is required.';
+                : form.platform === 'Google Meet'
+                    ? 'Click "Generate Link" or paste your Google Meet link.'
+                    : 'A meeting link is required.';
         } else {
             try { new URL(link); } catch { e.meetingLink = 'Must be a valid URL (http/https).'; }
         }
@@ -190,8 +192,17 @@ export default function LiveSessionFormModal({ courses = [], session = null, onS
                     <div>
                         <label style={lbl}>Meeting Platform</label>
                         <select style={inp(false)} value={form.platform} onChange={e => {
-                            set('platform', e.target.value);
+                            const nextPlatform = e.target.value;
+                            set('platform', nextPlatform);
                             setLinkMsg(null);
+                            // Clear link if it belongs to a different platform
+                            if (form.meetingLink && (
+                                (form.meetingLink.includes('meet.jit.si') && nextPlatform !== 'Jitsi Meet') ||
+                                (form.meetingLink.includes('meet.google.com') && nextPlatform !== 'Google Meet') ||
+                                (form.meetingLink.includes('zoom.us') && nextPlatform !== 'Zoom')
+                            )) {
+                                set('meetingLink', '');
+                            }
                         }}>
                             {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
@@ -205,7 +216,7 @@ export default function LiveSessionFormModal({ courses = [], session = null, onS
                             style={inp(errors.meetingLink)}
                             value={form.meetingLink}
                             onChange={e => { set('meetingLink', e.target.value); setErrors(prev => ({ ...prev, meetingLink: undefined })); }}
-                            placeholder="https://…"
+                            placeholder={form.platform === 'Google Meet' ? 'https://meet.google.com/xxx-yyyy-zzz' : 'https://…'}
                         />
                         {errors.meetingLink && <p style={errTxt}>{errors.meetingLink}</p>}
                         {linkMsg && (
@@ -213,13 +224,21 @@ export default function LiveSessionFormModal({ courses = [], session = null, onS
                                 {linkMsg.type === 'success' ? '✓ ' : linkMsg.type === 'error' ? '⚠ ' : 'ℹ '}{linkMsg.text}
                             </p>
                         )}
-                        {form.platform !== 'Custom' && (
-                            <button type="button" onClick={handleGenerateLink} disabled={generating}
-                                style={{ marginTop: '8px', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc', borderRadius: '7px', padding: '7px 14px', fontWeight: '700', fontSize: '12px', cursor: generating ? 'wait' : 'pointer', opacity: generating ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                {generating ? <Loader size={12} className="spin" /> : <Link2 size={12} />}
-                                {generating ? 'Generating…' : 'Generate Link'}
-                            </button>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                            {form.platform !== 'Custom' && (
+                                <button type="button" onClick={handleGenerateLink} disabled={generating}
+                                    style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc', borderRadius: '7px', padding: '7px 14px', fontWeight: '700', fontSize: '12px', cursor: generating ? 'wait' : 'pointer', opacity: generating ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                    {generating ? <Loader size={12} className="spin" /> : <Link2 size={12} />}
+                                    {generating ? 'Generating…' : 'Generate Link'}
+                                </button>
+                            )}
+                            {form.platform === 'Google Meet' && (
+                                <a href="https://meet.google.com/new" target="_blank" rel="noopener noreferrer"
+                                    style={{ textDecoration: 'none', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#34d399', borderRadius: '7px', padding: '7px 14px', fontWeight: '700', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    Open Google Meet ↗
+                                </a>
+                            )}
+                        </div>
                     </div>
 
                     {/* Password */}

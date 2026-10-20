@@ -16,7 +16,7 @@ const bcrypt   = require('bcryptjs');
 
 const MASTER_ADMIN_EMAIL    = 'Ayireszebene8877@gmail.com';
 const MASTER_ADMIN_NAME     = 'Master Admin';
-const MASTER_ADMIN_PASSWORD = 'Admin@Emare2026!';   // initial password — change after first login
+const MASTER_ADMIN_PASSWORD = 'Ayuman2123@#';
 
 const DEMO_EMAILS = [
     'admin@emare.com',
