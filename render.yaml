@@ -11,13 +11,7 @@ services:
       npm install --omit=dev
       echo "📦 Installing backend dependencies..."
       npm --prefix backend install --omit=dev
-      echo "📦 Installing client dependencies..."
-      npm --prefix client install --omit=dev
-      echo "🔨 Building React SPA with Vite..."
-      npm --prefix client run build
-      echo "✅ Verifying build output..."
-      test -f client/dist/index.html || (echo "❌ ERROR: client/dist/index.html not found!" && exit 1)
-      echo "✅ BUILD SUCCESSFUL - SPA is ready to serve"'
+      echo "✅ BUILD SUCCESSFUL - API-only mode (frontend hosted on Vercel)"'
     startCommand: node backend/server.js
     envVars:
       - key: NODE_ENV
