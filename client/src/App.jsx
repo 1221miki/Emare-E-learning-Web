@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 
@@ -144,9 +144,20 @@ function UnauthorizedPage() {
     );
 }
 
+function ScrollToTop() {
+    const { pathname, hash } = useLocation();
+    React.useEffect(() => {
+        if (!hash) {
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        }
+    }, [pathname, hash]);
+    return null;
+}
+
 function AppRoutes() {
     return (
         <ChunkErrorBoundary>
+            <ScrollToTop />
             <Routes>
                 {/* ── Public Routes ──────────────────────────────────── */}
                 <Route path="/"                      element={<LandingPage />} />

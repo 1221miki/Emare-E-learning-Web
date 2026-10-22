@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -7,6 +7,7 @@ export default function Navbar() {
     const { isAuthenticated, user, logout } = useAuth();
     const { theme, toggleTheme, colors } = useTheme();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [currentLang, setCurrentLang] = useState('en');
     const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
@@ -58,6 +59,19 @@ export default function Navbar() {
     const getProfileNavState = () => {
         if (user?.assignedRole === 'Admin') return { activeTab: 'profile' };
         return undefined;
+    };
+
+    const handleHomeClick = (e) => {
+        if (location.pathname === '/') {
+            if (e) e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            navigate('/');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setTimeout(() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 60);
+        }
     };
 
     const goToSection = (id) => {
@@ -144,7 +158,14 @@ export default function Navbar() {
 
             <nav style={s.navbar}>
                 <div style={s.logoBox}>
-                    <Link to="/" className="emare-nav-logo-link" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Link
+                        to="/"
+                        onClick={handleHomeClick}
+                        className="emare-nav-logo-link"
+                        style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
+                        title="Emare ICT Hub — Home"
+                        aria-label="Home"
+                    >
                         <img src="/images/image.png" alt="Emare ICT Hub" className="emare-nav-logo-img notranslate" style={s.logoMark} />
                         <span className="emare-nav-logo-text notranslate" style={s.logoText}>EMARE ICT HUB ELMS</span>
                     </Link>

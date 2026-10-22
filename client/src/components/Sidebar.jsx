@@ -42,6 +42,19 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
         return undefined;
     };
 
+    const handleHomeClick = (e) => {
+        if (location.pathname === '/') {
+            if (e) e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            navigate('/');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setTimeout(() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 60);
+        }
+    };
+
     // Fallback default nav items if not provided by parent
     const effectiveNavItems = (navItems && navItems.length > 0) ? navItems : (() => {
         const role = user?.assignedRole;
@@ -211,7 +224,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
             {/* ── HEADER: LOGO & ACTIONS ─────────────────────────────────── */}
             {!isEffectiveCollapsed ? (
                 <div style={styles.headerBox}>
-                    <Link to="/" style={{ ...styles.logoBox, cursor: 'pointer', textDecoration: 'none' }} className="transition-opacity hover:opacity-90">
+                    <Link to="/" onClick={handleHomeClick} style={{ ...styles.logoBox, cursor: 'pointer', textDecoration: 'none' }} title="Emare ICT Hub — Home" className="transition-opacity hover:opacity-90">
                         <img src="/images/Real Emare ICT Hub logo.png" alt="Emare ICT Hub Logo" className="h-9 w-9 bg-transparent object-contain" />
                         <span style={{ color: colors.text, fontSize: '16px', fontWeight: '700', whiteSpace: 'nowrap' }}>Emare ICT Hub</span>
                     </Link>
@@ -224,7 +237,7 @@ export default function Sidebar({ navItems = [], activeTab, onTabChange, extraBo
                 </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px', flexShrink: 0 }}>
-                    <Link to="/" style={{ cursor: 'pointer', textDecoration: 'none' }} title="Emare ICT Hub" className="transition-opacity hover:opacity-90">
+                    <Link to="/" onClick={handleHomeClick} style={{ cursor: 'pointer', textDecoration: 'none' }} title="Emare ICT Hub — Home" className="transition-opacity hover:opacity-90">
                         <img src="/images/Real Emare ICT Hub logo.png" alt="Emare ICT Hub Logo" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
                     </Link>
                 </div>
